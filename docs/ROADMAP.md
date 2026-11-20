@@ -25,7 +25,7 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Combine multiple packages with deterministic overlay precedence
 - [ ] Add package reorder and removal controls
 - [ ] Confirm precedence against upstream Open Rails content lookup behavior
-- [ ] Adapt STFReader's stream/factory seam to the virtual content store (design audited; see Milestone 2E)
+- [x] Integrate upstream STFReader with the virtual content store and nested include resolver (see Milestone 2E)
 - [ ] Adapt SBR binary readers to browser-provided streams
 - [ ] Parse real route and track metadata from a supported content sample
 
