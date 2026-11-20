@@ -89,11 +89,11 @@ namespace ORTS.Common
                 (maximumDynamicBrakeForceNewtons + maximumFrictionBrakeForceNewtons);
             var speed = Math.Abs(speedMetersPerSecond);
 
-            var dynamicLimit = maximumDynamicBrakeForceNewtons;
-            if (speed > 0)
-                dynamicLimit = Math.Min(dynamicLimit, maximumDynamicBrakePowerWatts / speed);
-            else if (maximumDynamicBrakePowerWatts == 0)
-                dynamicLimit = 0;
+            // Dynamic braking requires wheel motion; at standstill the requested
+            // braking effort is supplied by the friction brake instead.
+            var dynamicLimit = speed > 0
+                ? Math.Min(maximumDynamicBrakeForceNewtons, maximumDynamicBrakePowerWatts / speed)
+                : 0;
 
             var dynamicForce = Math.Min(requestedTotal, dynamicLimit);
             var frictionForce = Math.Min(
