@@ -35,11 +35,21 @@ public sealed class RollingStockMetadataReader
                     {
                         new STFReader.TokenProcessor("name", () => metadata.Name = reader.ReadStringBlock(metadata.Name)),
                         new STFReader.TokenProcessor("type", () => metadata.EngineType = reader.ReadStringBlock(null)),
+                        new STFReader.TokenProcessor("mass", () => metadata.MassKilograms = reader.ReadFloatBlock(STFReader.UNITS.Mass, null)),
+                        new STFReader.TokenProcessor("size", () =>
+                        {
+                            reader.MustMatch("(");
+                            metadata.WidthMeters = reader.ReadFloat(STFReader.UNITS.Distance, null);
+                            metadata.HeightMeters = reader.ReadFloat(STFReader.UNITS.Distance, null);
+                            metadata.LengthMeters = reader.ReadFloat(STFReader.UNITS.Distance, null);
+                            reader.MustMatch(")");
+                        }),
                         new STFReader.TokenProcessor("maxpower", () => metadata.MaximumPowerWatts = reader.ReadFloatBlock(STFReader.UNITS.Power, null)),
                         new STFReader.TokenProcessor("ortsdieseltransmissionefficiency", () => metadata.TransmissionEfficiency = reader.ReadFloatBlock(STFReader.UNITS.None, 1f)),
                         new STFReader.TokenProcessor("maxforce", () => metadata.MaximumTractiveForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
                         new STFReader.TokenProcessor("maxcontinuousforce", () => metadata.MaximumContinuousForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
                         new STFReader.TokenProcessor("dynamicbrakesmaximumforce", () => metadata.MaximumDynamicBrakeForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
+                        new STFReader.TokenProcessor("maxbrakeforce", () => metadata.MaximumBrakeForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
                         new STFReader.TokenProcessor("maxvelocity", () => metadata.MaximumSpeedMetersPerSecond = reader.ReadFloatBlock(STFReader.UNITS.Speed, null)),
                         new STFReader.TokenProcessor("description", () => metadata.Description = reader.ReadStringBlock(null))
                     });
@@ -106,6 +116,11 @@ public sealed class EngineMetadata(string name)
 {
     public string Name { get; set; } = name;
     public string? EngineType { get; set; }
+    public float? MassKilograms { get; set; }
+    public float? WidthMeters { get; set; }
+    public float? HeightMeters { get; set; }
+    public float? LengthMeters { get; set; }
+    public float? MaximumBrakeForceNewtons { get; set; }
     public float? MaximumPowerWatts { get; set; }
     public float TransmissionEfficiency { get; set; } = 1f;
     public float? MaximumTractiveForceNewtons { get; set; }
