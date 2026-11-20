@@ -16,8 +16,9 @@ body {
 }
 
 .shell {
-    width: min(680px, calc(100% - 32px));
-    padding: 36px;
+    width: min(760px, calc(100% - 32px));
+    margin: 24px 0;
+    padding: clamp(22px, 5vw, 36px);
     border: 1px solid #405666;
     border-radius: 18px;
     background: #172630;
@@ -32,7 +33,54 @@ body {
 }
 
 h1 { margin: 12px 0; font-size: clamp(2rem, 8vw, 3.5rem); }
-.status { color: #8ee0ad; font-weight: 700; }
-.note { color: #bdcbd4; line-height: 1.6; }
+h2 { margin-top: 0; }
+.status, .success { color: #8ee0ad; font-weight: 700; }
+.note, .hint { color: #bdcbd4; line-height: 1.6; }
 
+.import-panel {
+    margin-top: 28px;
+    padding: 22px;
+    border: 1px solid #405666;
+    border-radius: 14px;
+    background: #101d26;
+}
+
+input[type="file"] {
+    max-width: 100%;
+    padding: 12px;
+    border: 1px solid #526b7b;
+    border-radius: 8px;
+    background: #203541;
+    color: #edf3f7;
+}
+
+.error {
+    padding: 12px;
+    border: 1px solid #a65b5b;
+    border-radius: 8px;
+    color: #ffbaba;
+    overflow-wrap: anywhere;
+}
+
+.package-summary {
+    margin-top: 20px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #1c382e;
+    overflow-wrap: anywhere;
+}
+
+.path-list {
+    max-height: 340px;
+    overflow: auto;
+    padding-left: 22px;
+}
+
+.path-list li {
+    margin: 8px 0;
+    color: #bdcbd4;
+    overflow-wrap: anywhere;
+}
+
+.path-list code { color: #a8d9e5; }
 #blazor-error-ui { display: none; }
