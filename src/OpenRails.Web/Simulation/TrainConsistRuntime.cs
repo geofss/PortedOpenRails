@@ -127,13 +127,15 @@ public sealed class TrainConsistRuntime
             forces[i + 1] = new TrainCarForceState(0, 0, 0, coachBrake, 0, 0, 0);
         }
 
+        var speed = SpeedMetersPerSecond;
         LastNetForceNewtons = TrainConsistIntegrator.Advance(
             positions,
             masses,
             forces,
-            ref SpeedMetersPerSecond,
+            ref speed,
             elapsedSeconds,
             maximumSpeedMetersPerSecond);
+        SpeedMetersPerSecond = speed;
 
         return LastNetForceNewtons;
     }
