@@ -69,7 +69,7 @@ public sealed class RollingStockMetadataReader
         if (!path.EndsWith(".wag", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("A wagon metadata path must end in .wag.", nameof(filePath));
 
-        lock (FactoryLock)
+        lock (StfReaderAccess.SyncRoot)
         {
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(contentStore);
             using var reader = new STFReader(path, useTree: false);
