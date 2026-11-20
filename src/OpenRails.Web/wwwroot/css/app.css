@@ -1,0 +1,38 @@
+:root {
+    color-scheme: dark;
+    font-family: system-ui, sans-serif;
+    background: #101820;
+    color: #edf3f7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at top, #243746, #101820 65%);
+}
+
+.shell {
+    width: min(680px, calc(100% - 32px));
+    padding: 36px;
+    border: 1px solid #405666;
+    border-radius: 18px;
+    background: #172630;
+    box-shadow: 0 18px 60px #0006;
+}
+
+.eyebrow {
+    color: #80c7d8;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .16em;
+}
+
+h1 { margin: 12px 0; font-size: clamp(2rem, 8vw, 3.5rem); }
+.status { color: #8ee0ad; font-weight: 700; }
+.note { color: #bdcbd4; line-height: 1.6; }
+
+#blazor-error-ui { display: none; }
