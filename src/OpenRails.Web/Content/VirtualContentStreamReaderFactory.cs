@@ -29,6 +29,7 @@ public sealed class VirtualContentStreamReaderFactory
                 stream,
                 Encoding.UTF8,
                 detectEncodingFromByteOrderMarks: true,
+                bufferSize: 1024,
                 leaveOpen: false);
 
             simisSignature = reader.ReadLine();
