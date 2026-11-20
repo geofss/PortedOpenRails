@@ -45,11 +45,11 @@ public sealed class TrainConsistRuntimeTests
             LengthMeters = 18,
             MaximumTractiveForceNewtons = 100_000,
             MaximumSpeedMetersPerSecond = 40,
-            MaximumBrakeForceNewtons = 80_000
+            MaximumBrakeForceNewtons = 180_000
         };
         var wagons = new[]
         {
-            new WagonMetadata("Coach A") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 90_000 },
+            new WagonMetadata("Coach A") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 110_000 },
             new WagonMetadata("Coach B") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 90_000 }
         };
         var train = TrainConsistRuntime.Create(engine, wagons, leadPositionMeters: 50, initialSpeedMetersPerSecond: 5);
@@ -58,9 +58,9 @@ public sealed class TrainConsistRuntimeTests
 
         Assert.Equal(0, train.SpeedMetersPerSecond, 6);
         var positions = train.VehiclePositionsMeters;
-        Assert.Equal(54.1666667, positions[0], 5);
-        Assert.Equal(35.1666667, positions[1], 5);
-        Assert.Equal(15.1666667, positions[2], 5);
+        Assert.Equal(53.75, positions[0], 5);
+        Assert.Equal(34.75, positions[1], 5);
+        Assert.Equal(14.75, positions[2], 5);
     }
 
     [Fact]
