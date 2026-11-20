@@ -10,8 +10,6 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class RollingStockMetadataReader
 {
-    private static readonly object FactoryLock = new();
-
     public EngineMetadata ReadEngine(IVirtualContentStore contentStore, string filePath)
     {
         ArgumentNullException.ThrowIfNull(contentStore);
@@ -19,7 +17,7 @@ public sealed class RollingStockMetadataReader
         if (!path.EndsWith(".eng", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("An engine metadata path must end in .eng.", nameof(filePath));
 
-        lock (FactoryLock)
+        lock (StfReaderAccess.SyncRoot)
         {
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(contentStore);
             using var reader = new STFReader(path, useTree: false);
