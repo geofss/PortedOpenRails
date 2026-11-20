@@ -76,10 +76,13 @@
 
         try
         {
-            foreach (var file in args.GetMultipleFiles(20))
+            var selectedFiles = args.GetMultipleFiles(20);
+            for (var i = selectedFiles.Count - 1; i >= 0; i--)
             {
+                var file = selectedFiles[i];
                 var store = await BrowserZipPackageLoader.LoadAsync(file);
-                var packageName = GetUniquePackageName(file.Name);\n                layers.Insert(0, new PackageLayer(packageName, store));
+                var packageName = GetUniquePackageName(file.Name);
+                layers.Insert(0, new PackageLayer(packageName, store));
             }
 
             RebuildComposite();
@@ -98,19 +101,25 @@
         }
     }
 
+    private string GetUniquePackageName(string fileName)
+    {
+        var name = fileName;
+        var suffix = 2;
+        while (layers.Any(layer => layer.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            name = $"{fileName} ({suffix++})";
+        return name;
+    }
+
     private void RebuildComposite()
     {
-        composite?.Dispose();
+        // Composite stores are views over package layers. Keep the layers alive
+        // when replacing the view; dispose the stores only when the page closes.
         composite = layers.Count == 0 ? null : new CompositeContentStore(layers);
     }
 
     public void Dispose()
     {
-        composite?.Dispose();
-        if (composite is null)
-        {
-            foreach (var layer in layers)
-                layer.Store.Dispose();
-        }
+        foreach (var layer in layers)
+            layer.Store.Dispose();
     }
 }
