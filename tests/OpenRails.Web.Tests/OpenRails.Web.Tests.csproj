@@ -32,5 +32,6 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteDiscoveryService.cs" Link="Parsing/RouteDiscoveryService.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockMetadataReader.cs" Link="Parsing/RollingStockMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockDiscoveryService.cs" Link="Parsing/RollingStockDiscoveryService.cs" />
   </ItemGroup>
 </Project>
