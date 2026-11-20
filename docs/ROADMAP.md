@@ -25,11 +25,11 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Combine multiple packages with deterministic overlay precedence
 - [ ] Add package reorder and removal controls
 - [ ] Confirm precedence against upstream Open Rails content lookup behavior
-- [ ] Adapt STFReader's stream/factory seam to the virtual content store
+- [ ] Adapt STFReader's stream/factory seam to the virtual content store (design audited; see Milestone 2E)
 - [ ] Adapt SBR binary readers to browser-provided streams
 - [ ] Parse real route and track metadata from a supported content sample
 
-See [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md), [Milestone 2C Browser ZIP Import](MILESTONE_2C_BROWSER_ZIP_IMPORT.md), and [Milestone 2D Multi-Package Content Manager](MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md).
+See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md), [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md), [Milestone 2C Browser ZIP Import](MILESTONE_2C_BROWSER_ZIP_IMPORT.md), and [Milestone 2D Multi-Package Content Manager](MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md).
 
 ## Milestone 3 — Portable simulation core
 - [ ] Isolate portable simulation/domain code from MonoGame and Windows APIs
