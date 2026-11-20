@@ -28,11 +28,11 @@ public sealed class RollingStockMetadataReaderTests
 
         Assert.Equal("Test Locomotive", result.Name);
         Assert.Equal("Diesel", result.EngineType);
-        Assert.Equal(2_000_000f, result.MaximumPowerWatts, 0);
-        Assert.Equal(300_000f, result.MaximumTractiveForceNewtons, 0);
-        Assert.Equal(250_000f, result.MaximumContinuousForceNewtons, 0);
-        Assert.Equal(120_000f, result.MaximumDynamicBrakeForceNewtons, 0);
-        Assert.Equal(120f / 3.6f, result.MaximumSpeedMetersPerSecond, 2);
+        Assert.Equal(2_000_000f, result.MaximumPowerWatts!.Value, 0);
+        Assert.Equal(300_000f, result.MaximumTractiveForceNewtons!.Value, 0);
+        Assert.Equal(250_000f, result.MaximumContinuousForceNewtons!.Value, 0);
+        Assert.Equal(120_000f, result.MaximumDynamicBrakeForceNewtons!.Value, 0);
+        Assert.Equal(120f / 3.6f, result.MaximumSpeedMetersPerSecond!.Value, 2);
         Assert.Equal("A test locomotive", result.Description);
     }
 
@@ -57,13 +57,13 @@ public sealed class RollingStockMetadataReaderTests
 
         Assert.Equal("Passenger Coach", result.Name);
         Assert.Equal("Carriage", result.WagonType);
-        Assert.Equal(40_000f, result.MassKilograms, 0);
-        Assert.Equal(2.8f, result.WidthMeters, 2);
-        Assert.Equal(3.9f, result.HeightMeters, 2);
-        Assert.Equal(20f, result.LengthMeters, 2);
+        Assert.Equal(40_000f, result.MassKilograms!.Value, 0);
+        Assert.Equal(2.8f, result.WidthMeters!.Value, 2);
+        Assert.Equal(3.9f, result.HeightMeters!.Value, 2);
+        Assert.Equal(20f, result.LengthMeters!.Value, 2);
         Assert.Equal(4, result.NumberOfAxles);
         Assert.Equal("Air_single_pipe", result.BrakeSystemType);
-        Assert.Equal(80_000f, result.MaximumBrakeForceNewtons, 0);
+        Assert.Equal(80_000f, result.MaximumBrakeForceNewtons!.Value, 0);
     }
 
     [Fact]
