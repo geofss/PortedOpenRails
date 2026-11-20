@@ -18,10 +18,16 @@
 See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md) for parser, format, IO, and browser virtual-filesystem findings.
 
 ## Milestone 2 — Browser content pipeline
-- [ ] Design browser virtual-filesystem interfaces
-- [ ] Support user-selected content packages and ZIP-backed content
-- [ ] Preserve MSTS/OR virtual paths, package references, and override order
+- [x] Define a browser-independent virtual content store interface
+- [x] Normalize MSTS/OR logical paths and safely resolve relative includes
+- [x] Index read-only ZIP packages with path-traversal and size-limit checks
+- [ ] Connect user-selected browser files to the ZIP content store
+- [ ] Preserve package references and override/load order
+- [ ] Adapt STFReader's stream/factory seam to the virtual content store
+- [ ] Adapt SBR binary readers to browser-provided streams
 - [ ] Parse real route and track metadata from a supported content sample
+
+See [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md) for the first implementation slice and its current boundaries.
 
 ## Milestone 3 — Portable simulation core
 - [ ] Isolate portable simulation/domain code from MonoGame and Windows APIs
@@ -67,7 +73,7 @@ A full port means real route and train content can be loaded, a real activity/ti
 - Keep third-party dependency and asset licensing visible.
 - Test each extracted subsystem independently and compare behavior with upstream Open Rails.
 - Keep mobile browser performance in scope from the beginning.
-  
+
 ## Architecture record
 
 See [Full Simulator Architecture Audit](MILESTONE_2_ARCHITECTURE_AUDIT.md) for the inspected source-tree scope, dependency blockers, subsystem classification, and implementation order.
