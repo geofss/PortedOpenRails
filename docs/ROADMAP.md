@@ -15,6 +15,8 @@
 - [x] Complete the initial full-simulator architecture audit
 - [ ] Complete file-level dependency inventory for parser, format, IO, and simulation core
 
+See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md) for parser, format, IO, and browser virtual-filesystem findings.
+
 ## Milestone 2 — Browser content pipeline
 - [ ] Design browser virtual-filesystem interfaces
 - [ ] Support user-selected content packages and ZIP-backed content
