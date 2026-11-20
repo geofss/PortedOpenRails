@@ -39,4 +39,4 @@
 
 ## Status
 
-This document records the source audit and integration design. It does **not** claim that STFReader has already been ported or that real route files can yet be parsed. The next implementation step is the virtual stream factory plus a focused include-resolution adaptation and tests.
+This document records the source audit and integration design. It does **not** claim that STFReader has already been ported or that real route files can yet be parsed. The virtual stream factory and focused include-path resolver are now implemented in `VirtualContentStreamReaderFactory`, with regression tests for SIMIS signature handling, UTF-16 BOM detection, missing files, relative includes, and root-escape rejection. The adapter deliberately matches the upstream factory method shape but does not yet implement the upstream interface because the upstream parser source has not yet been imported. CI must validate this adapter before parser-source integration.
