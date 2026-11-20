@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -21,10 +21,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore
+      - name: Restore controller tests
+        run: dotnet restore tests/OpenRails.Web.Tests/OpenRails.Web.Tests.csproj
+
+      - name: Run controller regression tests
+        run: dotnet test tests/OpenRails.Web.Tests/OpenRails.Web.Tests.csproj --configuration Release --no-restore
+
+      - name: Restore WebAssembly app
         run: dotnet restore src/OpenRails.Web/OpenRails.Web.csproj
 
-      - name: Publish
+      - name: Publish WebAssembly app
         run: dotnet publish src/OpenRails.Web/OpenRails.Web.csproj --configuration Release --no-restore --output artifacts/publish
 
       - name: Set GitHub Pages base path
@@ -38,7 +44,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push'
-    needs: build
+    needs: test-and-build
     runs-on: ubuntu-latest
     permissions:
       pages: write
