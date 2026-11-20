@@ -24,6 +24,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainPhysicsStep.cs" Link="Simulation/TrainPhysicsStep.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistIntegrator.cs" Link="Simulation/TrainConsistIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveEffortCalculator.cs" Link="Simulation/LocomotiveEffortCalculator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistRuntime.cs" Link="Simulation/TrainConsistRuntime.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/CompositeContentStore.cs" Link="Content/CompositeContentStore.cs" />
