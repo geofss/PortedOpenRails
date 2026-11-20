@@ -39,7 +39,7 @@ public class TrainMotionIntegratorTests
 
         // Accelerate from 8 to 10 m/s for 0.5 s, then cruise for 2.5 s.
         Assert.Equal(10, speed, 8);
-        Assert.Equal(27.5, position, 8);
+        Assert.Equal(29.5, position, 8);
     }
 
     [Fact]
