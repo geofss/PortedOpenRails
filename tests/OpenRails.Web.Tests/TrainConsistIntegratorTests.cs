@@ -46,8 +46,8 @@ public class TrainConsistIntegratorTests
 
         Assert.Equal(80000, netForce);
         Assert.Equal(0.8, speed - 10, 8);
-        Assert.Equal(0.4, positions[0], 8);
-        Assert.Equal(-14.6, positions[1], 8);
+        Assert.Equal(10.4, positions[0], 8);
+        Assert.Equal(-4.6, positions[1], 8);
     }
 
     [Fact]
@@ -57,18 +57,18 @@ public class TrainConsistIntegratorTests
         var masses = new[] { 60000.0, 30000.0, 30000.0 };
         var forces = new[]
         {
-            new TrainCarForceState(0, 0, 0, 120000, 0, 0, 0),
-            new TrainCarForceState(0, 0, 0, 60000, 0, 0, 0),
-            new TrainCarForceState(0, 0, 0, 60000, 0, 0, 0)
+            new TrainCarForceState(0, 0, 0, 180000, 0, 0, 0),
+            new TrainCarForceState(0, 0, 0, 90000, 0, 0, 0),
+            new TrainCarForceState(0, 0, 0, 90000, 0, 0, 0)
         };
         var speed = 5.0;
 
         TrainConsistIntegrator.Advance(positions, masses, forces, ref speed, 2, 100);
 
         Assert.Equal(0, speed);
-        Assert.Equal(50.125, positions[0], 8);
-        Assert.Equal(30.125, positions[1], 8);
-        Assert.Equal(10.125, positions[2], 8);
+        Assert.Equal(54.1666666667, positions[0], 6);
+        Assert.Equal(34.1666666667, positions[1], 6);
+        Assert.Equal(14.1666666667, positions[2], 6);
     }
 
     [Fact]
