@@ -51,16 +51,16 @@ public class LocomotiveEffortCalculatorTests
             1, 50000, 200000, 60000, 10);
 
         Assert.Equal(20000, effort.DynamicBrakeForceNewtons);
-        Assert.Equal(30000, effort.FrictionBrakeForceNewtons);
+        Assert.Equal(60000, effort.FrictionBrakeForceNewtons);
     }
 
     [Fact]
-    public void BrakeEffort_AtStandstillCanUseMaximumDynamicForce()
+    public void BrakeEffort_AtStandstillUsesFrictionBrakes()
     {
         var effort = LocomotiveEffortCalculator.CalculateBrakeEffort(
             1, 50000, 1000, 60000, 0);
 
-        Assert.Equal(50000, effort.DynamicBrakeForceNewtons);
+        Assert.Equal(0, effort.DynamicBrakeForceNewtons);
         Assert.Equal(60000, effort.FrictionBrakeForceNewtons);
     }
 
