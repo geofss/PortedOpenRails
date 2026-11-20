@@ -21,5 +21,6 @@
     <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/CompositeContentStore.cs" Link="Content/CompositeContentStore.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/VirtualContentStreamReaderFactory.cs" Link="Content/VirtualContentStreamReaderFactory.cs" />
   </ItemGroup>
 </Project>
