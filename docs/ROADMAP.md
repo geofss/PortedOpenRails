@@ -21,13 +21,13 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Define a browser-independent virtual content store interface
 - [x] Normalize MSTS/OR logical paths and safely resolve relative includes
 - [x] Index read-only ZIP packages with path-traversal and size-limit checks
-- [ ] Connect user-selected browser files to the ZIP content store
+- [x] Connect user-selected browser ZIP files to the virtual content store
 - [ ] Preserve package references and override/load order
 - [ ] Adapt STFReader's stream/factory seam to the virtual content store
 - [ ] Adapt SBR binary readers to browser-provided streams
 - [ ] Parse real route and track metadata from a supported content sample
 
-See [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md) for the first implementation slice and its current boundaries.
+See [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md) and [Milestone 2C Browser ZIP Import](MILESTONE_2C_BROWSER_ZIP_IMPORT.md).
 
 ## Milestone 3 — Portable simulation core
 - [ ] Isolate portable simulation/domain code from MonoGame and Windows APIs
