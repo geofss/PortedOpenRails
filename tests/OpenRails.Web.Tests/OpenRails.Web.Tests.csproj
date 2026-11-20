@@ -20,6 +20,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/AccelerationController.cs" Link="Upstream/AccelerationController.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SmoothedData.cs" Link="Simulation/SmoothedData.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainMotionIntegrator.cs" Link="Simulation/TrainMotionIntegrator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainForceCalculator.cs" Link="Simulation/TrainForceCalculator.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/CompositeContentStore.cs" Link="Content/CompositeContentStore.cs" />
