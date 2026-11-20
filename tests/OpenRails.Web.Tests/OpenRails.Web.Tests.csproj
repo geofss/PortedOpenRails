@@ -24,5 +24,6 @@
     <Compile Include="../../src/OpenRails.Web/Content/VirtualContentStreamReaderFactory.cs" Link="Content/VirtualContentStreamReaderFactory.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/STFReader.cs" Link="Parsing/STFReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteDiscoveryService.cs" Link="Parsing/RouteDiscoveryService.cs" />
   </ItemGroup>
 </Project>
