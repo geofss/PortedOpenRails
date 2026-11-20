@@ -1,4 +1,5 @@
 using System.Text;
+using Orts.Parsers.Msts;
 
 namespace OpenRails.Web.Content;
 
@@ -6,7 +7,7 @@ namespace OpenRails.Web.Content;
 /// Opens STF text sources from the browser virtual content namespace.
 /// The method signature intentionally matches the upstream STFReader factory seam.
 /// </summary>
-public sealed class VirtualContentStreamReaderFactory
+public sealed class VirtualContentStreamReaderFactory : IStreamReaderFactory, IStfIncludePathResolver
 {
     private readonly IVirtualContentStore contentStore;
 
@@ -19,7 +20,7 @@ public sealed class VirtualContentStreamReaderFactory
     /// Opens a virtual file, reads its optional first-line SIMIS signature, and
     /// returns a reader positioned at the first content line.
     /// </summary>
-    public StreamReader GetStreamReader(string name, out string? simisSignature)
+    public StreamReader GetStreamReader(string name, out string simisSignature)
     {
         var virtualPath = VirtualPath.Normalize(name);
         var stream = contentStore.OpenRead(virtualPath);
@@ -32,7 +33,7 @@ public sealed class VirtualContentStreamReaderFactory
                 bufferSize: 1024,
                 leaveOpen: false);
 
-            simisSignature = reader.ReadLine();
+            simisSignature = reader.ReadLine()!;
             return reader;
         }
         catch
