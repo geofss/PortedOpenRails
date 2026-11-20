@@ -9,8 +9,6 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class RouteMetadataReader
 {
-    private static readonly object FactoryLock = new();
-
     public RouteMetadata Read(IVirtualContentStore contentStore, string routeFilePath)
     {
         ArgumentNullException.ThrowIfNull(contentStore);
@@ -18,7 +16,7 @@ public sealed class RouteMetadataReader
 
         // Upstream STFReader exposes a one-shot static factory injection point.
         // Serialize construction/parsing so concurrent route loads cannot exchange factories.
-        lock (FactoryLock)
+        lock (StfReaderAccess.SyncRoot)
         {
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(contentStore);
             using var reader = new STFReader(virtualPath, useTree: false);
