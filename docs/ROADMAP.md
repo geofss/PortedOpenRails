@@ -27,7 +27,9 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [ ] Confirm precedence against upstream Open Rails content lookup behavior
 - [x] Integrate upstream STFReader with the virtual content store and nested include resolver (see Milestone 2E)
 - [ ] Adapt SBR binary readers to browser-provided streams
-- [ ] Parse real route and track metadata from a supported content sample
+- [x] Parse real route metadata from user-imported ZIP content using upstream STFReader
+- [x] Add route selection UI: built-in preview or import a route ZIP and select parsed .trk metadata
+- [ ] Parse track metadata from a supported content sample
 
 See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md), [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md), [Milestone 2C Browser ZIP Import](MILESTONE_2C_BROWSER_ZIP_IMPORT.md), and [Milestone 2D Multi-Package Content Manager](MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md).
 
