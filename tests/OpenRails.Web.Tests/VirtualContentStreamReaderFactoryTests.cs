@@ -10,7 +10,7 @@ public sealed class VirtualContentStreamReaderFactoryTests
     [Fact]
     public void GetStreamReaderReadsSimisSignatureAndLeavesContentPositioned()
     {
-        using var store = CreateStore(("ROUTES/Test/route.trk", "SIMISA@@@@@@@@@@JINX0T0t\\nRouteData"));
+        using var store = CreateStore(("ROUTES/Test/route.trk", "SIMISA@@@@@@@@@@JINX0T0t\nRouteData"));
         var factory = new VirtualContentStreamReaderFactory(store);
 
         using var reader = factory.GetStreamReader("routes/test/route.trk", out var signature);
@@ -23,7 +23,7 @@ public sealed class VirtualContentStreamReaderFactoryTests
     public void GetStreamReaderSupportsUtf16Bom()
     {
         var content = Encoding.Unicode.GetPreamble()
-            .Concat(Encoding.Unicode.GetBytes("SIMISA UTF16\\nRouteData"))
+            .Concat(Encoding.Unicode.GetBytes("SIMISA UTF16\nRouteData"))
             .ToArray();
         using var store = CreateStore(("route.trk", content));
         var factory = new VirtualContentStreamReaderFactory(store);
