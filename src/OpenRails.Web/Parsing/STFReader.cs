@@ -1404,10 +1404,10 @@ namespace Orts.Parsers.Msts
             if ((validUnits & UNITS.Resistance) > 0)
                 switch (suffix)
                 {
-                    case "": return 1.0;
+                    case "": return 1.0f;
                     case "n/m/s": return 1;
                     case "ns/m": return 1;
-                    case "lbf/mph": return 9.9503884;  // 1 lbf = 4.4482216, 1 mph = 0.44704 mps => 4.4482216 / 0.44704 = 9.9503884
+                    case "lbf/mph": return 9.9503884f;  // 1 lbf = 4.4482216, 1 mph = 0.44704 mps => 4.4482216 / 0.44704 = 9.9503884
                 }
             if ((validUnits & UNITS.PressureDefaultPSI) > 0)
                 switch (suffix)
@@ -1432,10 +1432,10 @@ namespace Orts.Parsers.Msts
                 {
                     case "": return 1.0f;
                     case "psi/s": return 1;  // <CJComment> Factors to be revised when non-metric internal units removed. </CJComment>
-                    case "psi/min": return 1.0 / 60.0;
+                    case "psi/min": return 1.0f / 60.0f;
                     case "inhg/s": return 0.4911542f;
                     case "bar/s": return 14.5037738f;
-                    case "bar/min": return 14.5037738 / 60.0;
+                    case "bar/min": return 14.5037738f / 60.0f;
                     case "kpa/s": return 0.145f;
                 }
             if ((validUnits & UNITS.PressureRateDefaultInHgpS) > 0)
@@ -1443,10 +1443,10 @@ namespace Orts.Parsers.Msts
                 {
                     case "": return 0.4911542f;
                     case "psi/s": return 1;  // <CJComment> Factors to be revised when non-metric internal units removed. </CJComment>
-                    case "psi/min": return 1.0 / 60.0;
+                    case "psi/min": return 1.0f / 60.0f;
                     case "inhg/s": return 0.4911542f;
                     case "bar/s": return 14.5037738f;
-                    case "bar/min": return 14.5037738 / 60.0;
+                    case "bar/min": return 14.5037738f / 60.0f;
                     case "kpa/s": return 0.145f;
                 }
             if ((validUnits & UNITS.EnergyDensity) > 0)
@@ -1472,9 +1472,9 @@ namespace Orts.Parsers.Msts
             if ((validUnits & UNITS.ResistanceDavisC) > 0)
                 switch (suffix)
                 {
-                    case "": return 1.0;
+                    case "": return 1.0f;
                     case "Nm/s^2": return 1;
-                    case "lbf/mph^2": return 22.2583849;  // 1 lbf = 4.4482216, 1 mph = 0.44704 mps +> 4.4482216 / (0.44704 * 0.44704) = 22.2583849
+                    case "lbf/mph^2": return 22.2583849f;  // 1 lbf = 4.4482216, 1 mph = 0.44704 mps +> 4.4482216 / (0.44704 * 0.44704) = 22.2583849
                 }
 
             STFException.TraceWarning(tokenForWarnings, "Found a suffix '" + suffix + "' which could not be parsed as a " + validUnits.ToString() + " unit");
