@@ -1,9 +1,85 @@
+@page "/"
+@using OpenRails.Web.Content
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDisposable
+
 <main class="shell">
     <p class="eyebrow">OPEN RAILS · WEB PORT</p>
     <h1>PortedOpenRails</h1>
-    <p class="status">The browser foundation is online.</p>
-    <p class="note">Next: test which original Open Rails C# components can run in WebAssembly.</p>
+    <p class="status">Browser content pipeline · Milestone 2C</p>
+    <p class="note">
+        Import a ZIP package to inspect its files in the browser. The package stays in this
+        page's memory; it is not uploaded to a server.
+    </p>
+
+    <section class="import-panel" aria-labelledby="import-heading">
+        <h2 id="import-heading">Import content package</h2>
+        <InputFile OnChange="HandleFileSelected" accept=".zip,application/zip" disabled="@isLoading" />
+        <p class="hint">ZIP only · Maximum compressed size: 256 MiB</p>
+
+        @if (isLoading)
+        {
+            <p class="status">Reading package…</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <p class="error" role="alert">@errorMessage</p>
+        }
+        @if (contentStore is not null)
+        {
+            <div class="package-summary">
+                <p class="success">Package indexed successfully</p>
+                <p><strong>@packageName</strong></p>
+                <p>@contentStore.Paths.Count files indexed</p>
+            </div>
+            <h3>Indexed paths</h3>
+            <ul class="path-list">
+                @foreach (var path in contentStore.Paths.Take(30))
+                {
+                    <li><code>@path</code></li>
+                }
+            </ul>
+            @if (contentStore.Paths.Count > 30)
+            {
+                <p class="hint">Showing the first 30 paths.</p>
+            }
+        }
+    </section>
 </main>
 
 @code {
+    private ZipContentStore? contentStore;
+    private string? packageName;
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs args)
+    {
+        errorMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var newStore = await BrowserZipPackageLoader.LoadAsync(args.File);
+            contentStore?.Dispose();
+            contentStore = newStore;
+            packageName = args.File.Name;
+        }
+        catch (Exception exception) when (
+            exception is IOException ||
+            exception is InvalidDataException ||
+            exception is ArgumentException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        contentStore?.Dispose();
+    }
 }
