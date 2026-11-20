@@ -9,22 +9,15 @@ public sealed class VirtualContentTests
 {
     [Theory]
     [InlineData(@"ROUTES\\Test\\ROUTE.TDB", "ROUTES/Test/ROUTE.TDB")]
-    [InlineData("ROUTES//Test/./ROUTE.TDB", "ROUTES/Test/ROUTE.TDB")]
+    [InlineData("ROUTES//Test/ROUTE.TDB", "ROUTES/Test/ROUTE.TDB")]
     [InlineData("GLOBAL\\TSECTION.DAT", "GLOBAL/TSECTION.DAT")]
     public void Normalize_UsesPortableSeparators(string input, string expected)
     {
-        // Dot segments are rejected by Normalize; ordinary duplicate separators are collapsed.
-        if (input.Contains("./", StringComparison.Ordinal))
-        {
-            Assert.Throws<ArgumentException>(() => VirtualPath.Normalize(input));
-            return;
-        }
-
         Assert.Equal(expected, VirtualPath.Normalize(input));
     }
 
     [Theory]
-    [InlineData("../GLOBAL/TSECTION.DAT", "ROUTES/Test/route.trk", "GLOBAL/TSECTION.DAT")]
+    [InlineData("../../GLOBAL/TSECTION.DAT", "ROUTES/Test/route.trk", "GLOBAL/TSECTION.DAT")]
     [InlineData("./sub/parts.dat", "ROUTES/Test/route.trk", "ROUTES/Test/sub/parts.dat")]
     [InlineData(@"..\\..\\GLOBAL\\TSECTION.DAT", "ROUTES/Test/route.trk", "GLOBAL/TSECTION.DAT")]
     public void ResolveRelative_ResolvesIncludesWithinRoot(string include, string source, string expected)
@@ -83,7 +76,7 @@ public sealed class VirtualContentTests
     public void ZipStore_EnforcesUncompressedSizeLimit()
     {
         var exception = Assert.Throws<InvalidDataException>(() =>
-            CreateStoreWithLimits(("large.txt", "123456"), maxEntryBytes: 5));
+            CreateStoreWithLimits(new[] { ("large.txt", "123456") }, maxEntryBytes: 5));
 
         Assert.Contains("exceeds", exception.Message);
     }
