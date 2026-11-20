@@ -15,6 +15,9 @@ public sealed class RollingStockMetadataReaderTests
             Engine ( TestEngine
                 Name ( "Test Locomotive" )
                 Type ( Diesel )
+                Mass ( 80000kg )
+                Size ( 3m 4m 18m )
+                MaxBrakeForce ( 100kN )
                 MaxPower ( 2000kW )
                 MaxForce ( 300kN )
                 MaxContinuousForce ( 250kN )
@@ -28,6 +31,9 @@ public sealed class RollingStockMetadataReaderTests
 
         Assert.Equal("Test Locomotive", result.Name);
         Assert.Equal("Diesel", result.EngineType);
+        Assert.Equal(80_000f, result.MassKilograms!.Value, 0);
+        Assert.Equal(18f, result.LengthMeters!.Value, 0);
+        Assert.Equal(100_000f, result.MaximumBrakeForceNewtons!.Value, 0);
         Assert.Equal(2_000_000f, result.MaximumPowerWatts!.Value, 0);
         Assert.Equal(300_000f, result.MaximumTractiveForceNewtons!.Value, 0);
         Assert.Equal(250_000f, result.MaximumContinuousForceNewtons!.Value, 0);
