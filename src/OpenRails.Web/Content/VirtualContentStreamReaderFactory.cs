@@ -17,8 +17,9 @@ public sealed class VirtualContentStreamReaderFactory : IStreamReaderFactory, IS
     }
 
     /// <summary>
-    /// Opens a virtual file, reads its optional first-line SIMIS signature, and
-    /// returns a reader positioned at the first content line.
+    /// Opens a virtual file, reads an optional SIMIS signature, and returns a
+    /// reader positioned at the first data line. Unsigned text files are rewound
+    /// logically so their first line is not lost on non-seekable ZIP streams.
     /// </summary>
     public StreamReader GetStreamReader(string name, out string simisSignature)
     {
@@ -33,8 +34,28 @@ public sealed class VirtualContentStreamReaderFactory : IStreamReaderFactory, IS
                 bufferSize: 1024,
                 leaveOpen: false);
 
-            simisSignature = reader.ReadLine()!;
-            return reader;
+            var firstLine = reader.ReadLine();
+            if (firstLine?.StartsWith("SIMISA", StringComparison.Ordinal) == true)
+            {
+                simisSignature = firstLine;
+                return reader;
+            }
+
+            simisSignature = null!;
+            var encoding = reader.CurrentEncoding;
+            var remaining = reader.ReadToEnd();
+            reader.Dispose();
+
+            var content = firstLine is null
+                ? remaining
+                : firstLine + Environment.NewLine + remaining;
+            var restoredStream = new MemoryStream(encoding.GetBytes(content));
+            return new StreamReader(
+                restoredStream,
+                encoding,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 1024,
+                leaveOpen: false);
         }
         catch
         {
