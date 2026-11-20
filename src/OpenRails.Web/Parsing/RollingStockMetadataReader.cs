@@ -36,7 +36,7 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("name", () => metadata.Name = reader.ReadStringBlock(metadata.Name)),
                         new STFReader.TokenProcessor("type", () => metadata.EngineType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("maxpower", () => metadata.MaximumPowerWatts = reader.ReadFloatBlock(STFReader.UNITS.Power, null)),
-                        new STFReader.TokenProcessor("orts dieseltransmissionefficiency", () => metadata.TransmissionEfficiency = reader.ReadFloatBlock(STFReader.UNITS.None, 1f)),
+                        new STFReader.TokenProcessor("ortsdieseltransmissionefficiency", () => metadata.TransmissionEfficiency = reader.ReadFloatBlock(STFReader.UNITS.None, 1f)),
                         new STFReader.TokenProcessor("maxforce", () => metadata.MaximumTractiveForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
                         new STFReader.TokenProcessor("maxcontinuousforce", () => metadata.MaximumContinuousForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
                         new STFReader.TokenProcessor("dynamicbrakesmaximumforce", () => metadata.MaximumDynamicBrakeForceNewtons = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
@@ -49,10 +49,8 @@ public sealed class RollingStockMetadataReader
 
             if (!found)
                 throw new InvalidDataException($"The engine file '{path}' does not contain an Engine block.");
-            return metadata with
-            {
-                TransmissionEfficiency = Math.Clamp(metadata.TransmissionEfficiency, 0.001f, 1f)
-            };
+            metadata.TransmissionEfficiency = Math.Clamp(metadata.TransmissionEfficiency, 0.001f, 1f);
+            return metadata;
         }
     }
 
@@ -104,25 +102,29 @@ public sealed class RollingStockMetadataReader
     }
 }
 
-public sealed record EngineMetadata(
-    string Name,
-    string? EngineType = null,
-    float? MaximumPowerWatts = null,
-    float TransmissionEfficiency = 1f,
-    float? MaximumTractiveForceNewtons = null,
-    float? MaximumContinuousForceNewtons = null,
-    float? MaximumDynamicBrakeForceNewtons = null,
-    float? MaximumSpeedMetersPerSecond = null,
-    string? Description = null);
+public sealed class EngineMetadata(string name)
+{
+    public string Name { get; set; } = name;
+    public string? EngineType { get; set; }
+    public float? MaximumPowerWatts { get; set; }
+    public float TransmissionEfficiency { get; set; } = 1f;
+    public float? MaximumTractiveForceNewtons { get; set; }
+    public float? MaximumContinuousForceNewtons { get; set; }
+    public float? MaximumDynamicBrakeForceNewtons { get; set; }
+    public float? MaximumSpeedMetersPerSecond { get; set; }
+    public string? Description { get; set; }
+}
 
-public sealed record WagonMetadata(
-    string Name,
-    string? WagonType = null,
-    float? MassKilograms = null,
-    float? WidthMeters = null,
-    float? HeightMeters = null,
-    float? LengthMeters = null,
-    int? NumberOfAxles = null,
-    string? BrakeSystemType = null,
-    string? BrakeEquipmentType = null,
-    float? MaximumBrakeForceNewtons = null);
+public sealed class WagonMetadata(string name)
+{
+    public string Name { get; set; } = name;
+    public string? WagonType { get; set; }
+    public float? MassKilograms { get; set; }
+    public float? WidthMeters { get; set; }
+    public float? HeightMeters { get; set; }
+    public float? LengthMeters { get; set; }
+    public int? NumberOfAxles { get; set; }
+    public string? BrakeSystemType { get; set; }
+    public string? BrakeEquipmentType { get; set; }
+    public float? MaximumBrakeForceNewtons { get; set; }
+}
