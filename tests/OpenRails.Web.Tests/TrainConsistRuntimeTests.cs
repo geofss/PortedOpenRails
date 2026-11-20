@@ -50,7 +50,7 @@ public sealed class TrainConsistRuntimeTests
         var wagons = new[]
         {
             new WagonMetadata("Coach A") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 110_000 },
-            new WagonMetadata("Coach B") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 90_000 }
+            new WagonMetadata("Coach B") { MassKilograms = 30_000, LengthMeters = 20, MaximumBrakeForceNewtons = 110_000 }
         };
         var train = TrainConsistRuntime.Create(engine, wagons, leadPositionMeters: 50, initialSpeedMetersPerSecond: 5);
 
