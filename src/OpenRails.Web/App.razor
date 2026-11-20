@@ -6,64 +6,83 @@
 <main class="shell">
     <p class="eyebrow">OPEN RAILS · WEB PORT</p>
     <h1>PortedOpenRails</h1>
-    <p class="status">Browser content pipeline · Milestone 2C</p>
+    <p class="status">Browser content pipeline · Milestone 2D</p>
     <p class="note">
-        Import a ZIP package to inspect its files in the browser. The package stays in this
-        page's memory; it is not uploaded to a server.
+        Import multiple ZIP packages. Earlier packages have higher priority, so route-specific
+        files can override global package files. Everything stays in this page's memory.
     </p>
 
     <section class="import-panel" aria-labelledby="import-heading">
-        <h2 id="import-heading">Import content package</h2>
-        <InputFile OnChange="HandleFileSelected" accept=".zip,application/zip" disabled="@isLoading" />
-        <p class="hint">ZIP only · Maximum compressed size: 256 MiB</p>
+        <h2 id="import-heading">Add content packages</h2>
+        <InputFile OnChange="HandleFilesSelected" accept=".zip,application/zip"
+                   multiple disabled="@isLoading" />
+        <p class="hint">ZIP only · Maximum 256 MiB per package · First selected package gets highest priority</p>
 
         @if (isLoading)
         {
-            <p class="status">Reading package…</p>
+            <p class="status">Reading packages…</p>
         }
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
             <p class="error" role="alert">@errorMessage</p>
         }
-        @if (contentStore is not null)
+
+        @if (layers.Count > 0)
         {
             <div class="package-summary">
-                <p class="success">Package indexed successfully</p>
-                <p><strong>@packageName</strong></p>
-                <p>@contentStore.Paths.Count files indexed</p>
+                <p class="success">@(layers.Count) package(s) loaded</p>
+                <p>@(composite?.Paths.Count ?? 0) unique virtual files available</p>
             </div>
-            <h3>Indexed paths</h3>
-            <ul class="path-list">
-                @foreach (var path in contentStore.Paths.Take(30))
+
+            <h3>Package priority</h3>
+            <ol class="path-list">
+                @foreach (var layer in layers)
                 {
-                    <li><code>@path</code></li>
+                    <li>
+                        <strong>@layer.Name</strong>
+                        <span class="hint"> — @layer.Store.Paths.Count files · priority @(@layers.IndexOf(layer) + 1)</span>
+                    </li>
+                }
+            </ol>
+
+            <h3>Resolved content namespace</h3>
+            <ul class="path-list">
+                @foreach (var path in (composite?.Paths ?? Array.Empty<string>()).Take(40))
+                {
+                    <li>
+                        <code>@path</code>
+                        <span class="hint"> — @composite!.GetSourcePackage(path)</span>
+                    </li>
                 }
             </ul>
-            @if (contentStore.Paths.Count > 30)
+            @if ((composite?.Paths.Count ?? 0) > 40)
             {
-                <p class="hint">Showing the first 30 paths.</p>
+                <p class="hint">Showing the first 40 resolved paths.</p>
             }
         }
     </section>
 </main>
 
 @code {
-    private ZipContentStore? contentStore;
-    private string? packageName;
+    private readonly List<PackageLayer> layers = [];
+    private CompositeContentStore? composite;
     private string? errorMessage;
     private bool isLoading;
 
-    private async Task HandleFileSelected(InputFileChangeEventArgs args)
+    private async Task HandleFilesSelected(InputFileChangeEventArgs args)
     {
         errorMessage = null;
         isLoading = true;
 
         try
         {
-            var newStore = await BrowserZipPackageLoader.LoadAsync(args.File);
-            contentStore?.Dispose();
-            contentStore = newStore;
-            packageName = args.File.Name;
+            foreach (var file in args.GetMultipleFiles(20))
+            {
+                var store = await BrowserZipPackageLoader.LoadAsync(file);
+                layers.Insert(0, new PackageLayer(file.Name, store));
+            }
+
+            RebuildComposite();
         }
         catch (Exception exception) when (
             exception is IOException ||
@@ -71,6 +90,7 @@
             exception is ArgumentException)
         {
             errorMessage = exception.Message;
+            RebuildComposite();
         }
         finally
         {
@@ -78,8 +98,19 @@
         }
     }
 
+    private void RebuildComposite()
+    {
+        composite?.Dispose();
+        composite = layers.Count == 0 ? null : new CompositeContentStore(layers);
+    }
+
     public void Dispose()
     {
-        contentStore?.Dispose();
+        composite?.Dispose();
+        if (composite is null)
+        {
+            foreach (var layer in layers)
+                layer.Store.Dispose();
+        }
     }
 }
