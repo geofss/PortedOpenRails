@@ -100,4 +100,19 @@ public sealed class TrainConsistRuntimeTests
 
         Assert.Throws<ArgumentException>(() => TrainConsistRuntime.Create(engine, Array.Empty<WagonMetadata>()));
     }
+    private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
+    {
+        var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in files)
+            {
+                var entry = archive.CreateEntry(file.Path);
+                using var writer = new StreamWriter(entry.Open(), Encoding.UTF8);
+                writer.Write(file.Content);
+            }
+        }
+        stream.Position = 0;
+        return new ZipContentStore(stream);
+    }
 }
