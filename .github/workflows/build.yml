@@ -1,10 +1,13 @@
-name: Build WebAssembly app
+name: Build and deploy WebAssembly app
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -21,5 +24,32 @@ jobs:
       - name: Restore
         run: dotnet restore src/OpenRails.Web/OpenRails.Web.csproj
 
-      - name: Build
-        run: dotnet build src/OpenRails.Web/OpenRails.Web.csproj --no-restore
+      - name: Publish
+        run: dotnet publish src/OpenRails.Web/OpenRails.Web.csproj --configuration Release --no-restore --output artifacts/publish
+
+      - name: Set GitHub Pages base path
+        run: sed -i 's|<base href="/" />|<base href="/PortedOpenRails/" />|' artifacts/publish/wwwroot/index.html
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/publish/wwwroot
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
