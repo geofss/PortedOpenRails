@@ -1,3 +1,4 @@
+using Xunit;
 using System.Text;
 using OpenRails.Web.Content;
 using OpenRails.Web.Parsing;
