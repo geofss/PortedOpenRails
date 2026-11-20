@@ -79,7 +79,7 @@
             foreach (var file in args.GetMultipleFiles(20))
             {
                 var store = await BrowserZipPackageLoader.LoadAsync(file);
-                layers.Insert(0, new PackageLayer(file.Name, store));
+                var packageName = GetUniquePackageName(file.Name);\n                layers.Insert(0, new PackageLayer(packageName, store));
             }
 
             RebuildComposite();
