@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Text;
+using OpenRails.Web.Content;
 using OpenRails.Web.Parsing;
 using ORTS.Common;
 using Xunit;
@@ -9,21 +12,44 @@ public sealed class TrainConsistRuntimeTests
     [Fact]
     public void ParsedLocomotiveAndCoachesCanMoveAsOneConsist()
     {
-        var engine = new EngineMetadata("Test Engine")
-        {
-            MassKilograms = 80_000,
-            LengthMeters = 18,
-            MaximumPowerWatts = 2_000_000,
-            MaximumTractiveForceNewtons = 200_000,
-            MaximumSpeedMetersPerSecond = 40,
-            TransmissionEfficiency = 1
-        };
+        using var store = CreateStore(
+            ("TRAINSET/Test/engine.eng", """
+                SIMISA@@@@@@@@@@JINX0E0t
+                Engine ( TestEngine
+                    Name ( "Test Engine" )
+                    Mass ( 80000kg )
+                    Size ( 3m 4m 18m )
+                    MaxPower ( 2000kW )
+                    MaxForce ( 200kN )
+                    MaxVelocity ( 144km/h )
+                )
+                """),
+            ("TRAINSET/Test/coach-a.wag", """
+                SIMISA@@@@@@@@@@JINX0w1t
+                Wagon ( CoachA
+                    Name ( "Coach A" )
+                    Mass ( 40000kg )
+                    Size ( 2.8m 3.9m 20m )
+                    MaxBrakeForce ( 60kN )
+                )
+                """),
+            ("TRAINSET/Test/coach-b.wag", """
+                SIMISA@@@@@@@@@@JINX0w1t
+                Wagon ( CoachB
+                    Name ( "Coach B" )
+                    Mass ( 40000kg )
+                    Size ( 2.8m 3.9m 20m )
+                    MaxBrakeForce ( 60kN )
+                )
+                """));
+
+        var reader = new RollingStockMetadataReader();
+        var engine = reader.ReadEngine(store, "TRAINSET/Test/engine.eng");
         var wagons = new[]
         {
-            new WagonMetadata("Coach A") { MassKilograms = 40_000, LengthMeters = 20, MaximumBrakeForceNewtons = 60_000 },
-            new WagonMetadata("Coach B") { MassKilograms = 40_000, LengthMeters = 20, MaximumBrakeForceNewtons = 60_000 }
+            reader.ReadWagon(store, "TRAINSET/Test/coach-a.wag"),
+            reader.ReadWagon(store, "TRAINSET/Test/coach-b.wag")
         };
-
         var train = TrainConsistRuntime.Create(engine, wagons, leadPositionMeters: 100);
 
         var netForce = train.Step(throttleFraction: 1, brakeFraction: 0, direction: 1, elapsedSeconds: 1);
