@@ -22,13 +22,13 @@ public sealed class VirtualContentStreamReaderFactoryTests
     [Fact]
     public void GetStreamReaderPreservesFirstLineWhenNoSimisSignatureExists()
     {
-        using var store = CreateStore(("route.trk", "route_name ( ExampleRoute )\\nroute_value ( 42 )"));
+        using var store = CreateStore(("route.trk", "route_name ( ExampleRoute )\nroute_value ( 42 )"));
         var factory = new VirtualContentStreamReaderFactory(store);
 
         using var reader = factory.GetStreamReader("route.trk", out var signature);
 
         Assert.Null(signature);
-        Assert.Equal("route_name ( ExampleRoute )\\nroute_value ( 42 )", reader.ReadToEnd());
+        Assert.Equal("route_name ( ExampleRoute )\nroute_value ( 42 )", reader.ReadToEnd());
     }
 
     [Fact]
