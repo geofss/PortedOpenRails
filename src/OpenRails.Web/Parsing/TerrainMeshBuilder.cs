@@ -42,6 +42,19 @@ public sealed class TerrainMeshBuilder
         return new TerrainTileMesh(tile.Reference, patchSet.Distance, patches);
     }
 
+    public TerrainTileMesh Build(
+        TerrainTileContent tile,
+        TerrainPatchSet patchSet,
+        TerrainTileSampleResolver sampleResolver)
+    {
+        ArgumentNullException.ThrowIfNull(sampleResolver);
+        return Build(
+            tile,
+            patchSet,
+            sampleResolver.CreateElevationResolver(tile),
+            sampleResolver.CreateHiddenVertexResolver(tile));
+    }
+
     private static TerrainPatchMesh BuildPatch(
         TerrainTileContent tile,
         int lodDistance,
