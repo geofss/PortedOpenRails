@@ -15,7 +15,7 @@ public sealed class ConsistReaderTests
             SIMISA@@@@@@@@@@JINX0t0t
             Train (
               TrainCfg ( "Regional test consist" Serial ( 4 ) NextWagonUID ( 42 ) MaxVelocity ( 30 50 ) Durability ( 0.8 ) ORTSTrainControlSystemParameters ( "tcs.xml" )
-                Wagon ( UiD ( 10 ) WagonData ( "PassengerCar" "PassengerFolder" ) LoadData ( "Coal" "CoalFolder" "Freight" "Full" ) LoadData ( "Empty" "EmptyFolder" "Passenger" ) )
+                Wagon ( UiD ( 10 ) WagonData ( "PassengerCar" "PassengerFolder" ) LoadData ( "Coal" "CoalFolder" "CenterFront" "Loaded" ) LoadData ( "Empty" "EmptyFolder" "Above" ) )
                 Engine ( UiD ( 20 ) EngineData ( "TestEngine" "EngineFolder" ) Flip ( ) )
                 ORTSEOT ( UiD ( 30 ) EOTData ( "EndDevice" "EndFolder" ) )
               )
@@ -34,8 +34,8 @@ public sealed class ConsistReaderTests
         Assert.Equal(3, consist.Cars.Count);
         Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0] with { Loads = null });
         Assert.Equal(2, consist.Cars[0].Loads!.Count);
-        Assert.Equal(new ConsistLoadData("Coal", "CoalFolder", "Freight", "Full"), consist.Cars[0].Loads![0]);
-        Assert.Equal(new ConsistLoadData("Empty", "EmptyFolder", "Passenger", null), consist.Cars[0].Loads[1]);
+        Assert.Equal(new ConsistLoadData("Coal", "CoalFolder", "CenterFront", "Loaded", ConsistLoadPosition.CenterFront, ConsistLoadState.Loaded), consist.Cars[0].Loads![0]);
+        Assert.Equal(new ConsistLoadData("Empty", "EmptyFolder", "Above", null, ConsistLoadPosition.Above, ConsistLoadState.Random), consist.Cars[0].Loads[1]);
         Assert.Equal(new ConsistCar("TestEngine", "EngineFolder", 20, true, false, true), consist.Cars[1]);
         Assert.Equal(new ConsistCar("EndDevice", "EndFolder", 30, false, true, false), consist.Cars[2]);
     }
