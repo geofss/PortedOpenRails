@@ -128,7 +128,7 @@ public sealed record TrackSectionGeometry(
             return (0, LengthMeters!.Value);
         var angle = AngleDegrees!.Value * Math.PI / 180d;
         var radius = RadiusMeters!.Value;
-        return (Math.Sign(angle) * radius * (1 - Math.Cos(Math.Abs(angle))), radius * Math.Sin(angle));
+        return (Math.Sign(angle) * radius * (1 - Math.Cos(Math.Abs(angle))), radius * Math.Sin(Math.Abs(angle)));
     }
 }
 
