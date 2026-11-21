@@ -53,7 +53,18 @@
                 }
                 indices.AddRange(patch.Indices.Select(index => index + offset));
             }
-                await module.InvokeVoidAsync("drawTerrain", vertices.ToArray(), indices.ToArray());
+                var trackLines = new List<float>();
+                var tessellator = new TrackGeometryTessellator();
+                foreach (var path in Route.TrackNetwork.VectorPaths)
+                {
+                    var points = tessellator.BuildPolyline(path, 10);
+                    for (var i = 0; i + 1 < points.Count; i++)
+                    {
+                        trackLines.Add((float)points[i].X); trackLines.Add((float)points[i].Y); trackLines.Add((float)points[i].Z);
+                        trackLines.Add((float)points[i + 1].X); trackLines.Add((float)points[i + 1].Y); trackLines.Add((float)points[i + 1].Z);
+                    }
+                }
+                await module.InvokeVoidAsync("drawTerrain", vertices.ToArray(), indices.ToArray(), trackLines.ToArray());
             }
             catch (Exception ex) { renderError = $"Terrain rendering failed: {ex.Message}"; }
             StateHasChanged();
