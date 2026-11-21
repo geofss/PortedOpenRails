@@ -28,7 +28,7 @@ public sealed class ConsistCatalogReaderTests
 
         var result = new ConsistCatalogReader().Read(store);
 
-        Assert.Equal(new[] { "Alpha", "Beta" }, result.Consists.Select(consist => consist.Name));
+        Assert.Equal(new[] { "Alpha", "Beta", "Duplicate" }, result.Consists.Select(consist => consist.Name));
         Assert.Equal(2, result.Issues.Count);
         Assert.Equal("TRAINS/CONSISTS/Broken.con", result.Issues[0].Path);
         Assert.Contains("missing", result.Issues[0].Message, StringComparison.OrdinalIgnoreCase);
