@@ -40,7 +40,7 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         var mesh = new TrackShapeMesh(0, 0, new[] { matrix }, new[] { lod });
         var asset = new TrackShapeAssetMesh(10, "building.s", "GLOBAL/SHAPES/building.s", mesh);
         var discovery = new WorldShapeAssetDiscovery(
-            new[] { new WorldShapeAssetReference(tileX, tileZ, 10, "building.s", "Static", asset.Path) },
+            new[] { new WorldShapeAssetReference(tileX, tileZ, 10, "building.s", "Static", "GLOBAL/SHAPES/building.s") },
             Array.Empty<WorldShapeAssetIssue>());
         var data = new AceTextureData(1, 1, AceTexturePixelFormat.Rgba8, false, false, 0,
             new[] { new byte[] { 255, 255, 255, 255 } }, Array.Empty<AceTextureChannel>());
