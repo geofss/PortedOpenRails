@@ -148,28 +148,18 @@
             layers.Insert(0, layer);
             RebuildComposite();
 
-            var routeFiles = store.Paths
-                .Where(path => path.EndsWith(".trk", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            var discovery = new RouteDiscoveryService().Discover(composite!);
+            routeChoices.AddRange(discovery.Routes.Select(route =>
+                new RouteChoice(route.Metadata, packageName, route.MetadataFile)));
 
-            if (routeFiles.Length == 0)
-                throw new InvalidDataException("This ZIP has no .trk route metadata file.");
-
-            foreach (var routeFile in routeFiles)
+            if (discovery.Failures.Count > 0)
             {
-                try
-                {
-                    var metadata = new RouteMetadataReader().Read(composite!, routeFile);
-                    routeChoices.Add(new RouteChoice(metadata, packageName, routeFile));
-                }
-                catch (Exception exception) when (exception is InvalidDataException || exception is IOException || exception is ArgumentException)
-                {
-                    errorMessage = $"Could not parse '{routeFile}': {exception.Message}";
-                }
+                errorMessage = string.Join(
+                    Environment.NewLine,
+                    discovery.Failures.Select(failure => $"Could not parse '{failure.MetadataFile}': {failure.Reason}"));
             }
 
-            if (routeChoices.Count == 0)
+            if (!discovery.HasRoutes)
                 throw new InvalidDataException(errorMessage ?? "No valid Tr_RouteFile metadata was found in this package.");
 
             if (routeChoices.Count == 1)
