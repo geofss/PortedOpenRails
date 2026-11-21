@@ -153,3 +153,8 @@ input[type="file"] {
 }
 
 .route-world-view{margin-top:1.2rem;padding:1rem;border:1px solid #38404a;border-radius:12px;background:#111820}.route-world-canvas{display:block;width:100%;height:440px;background:#111820;border-radius:8px;touch-action:none}
+
+.consist-entry { margin: 10px 0; padding: 10px 12px; border: 1px solid #405666; border-radius: 9px; background: #172630; }
+.consist-entry summary { cursor: pointer; overflow-wrap: anywhere; }
+.consist-entry summary::marker { color: #8ee0ad; }
+.consist-entry ol { margin-bottom: 0; }
