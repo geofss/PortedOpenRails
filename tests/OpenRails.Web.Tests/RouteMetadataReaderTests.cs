@@ -17,6 +17,7 @@ public sealed class RouteMetadataReaderTests
                 RouteID ( "TESTROUTE" )
                 Name ( "Test Route" )
                 Description ( "A representative route fixture" )
+                FileName ( "TESTDB" )
                 Electrified ( 1 )
                 MaxLineVoltage ( 25000 )
                 RouteStart ( 12 34 56.5 78.5 )
@@ -28,6 +29,7 @@ public sealed class RouteMetadataReaderTests
         Assert.Equal("TESTROUTE", metadata.RouteId);
         Assert.Equal("Test Route", metadata.Name);
         Assert.Equal("A representative route fixture", metadata.Description);
+        Assert.Equal("TESTDB", metadata.FileName);
         Assert.True(metadata.Electrified);
         Assert.Equal(25000, metadata.MaxLineVoltage);
         Assert.Equal(new RouteStartCoordinates(12, 34, 56.5, 78.5), metadata.RouteStart);
