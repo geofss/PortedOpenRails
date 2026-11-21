@@ -3,7 +3,8 @@ using Orts.Parsers.Msts;
 
 namespace OpenRails.Web.Parsing;
 
-public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped);
+public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State);
+public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped, IReadOnlyList<ConsistLoadData>? Loads = null);
 public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath);
 
 /// <summary>Reads MSTS/Open Rails .con consists using the upstream STF parser and virtual package streams.</summary>
@@ -60,17 +61,32 @@ public sealed class ConsistReader
         string? folder = null;
         var uid = 0;
         var flipped = false;
+        var loads = new List<ConsistLoadData>();
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("uid", () => uid = reader.ReadIntBlock(null)),
             new STFReader.TokenProcessor("flip", () => { reader.MustMatch("("); reader.MustMatch(")"); flipped = true; }),
             new STFReader.TokenProcessor("enginedata", () => ReadCarData(reader, value => name = value, value => folder = value)),
             new STFReader.TokenProcessor("wagondata", () => ReadCarData(reader, value => name = value, value => folder = value)),
-            new STFReader.TokenProcessor("eotdata", () => ReadCarData(reader, value => name = value, value => folder = value))
+            new STFReader.TokenProcessor("eotdata", () => ReadCarData(reader, value => name = value, value => folder = value)),
+            new STFReader.TokenProcessor("loaddata", () => loads.Add(ReadLoadData(reader)))
         });
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(folder))
             throw new InvalidDataException($"A consist car entry (UID {uid}) is missing its engine/wagon data.");
-        return new ConsistCar(name, folder, uid, engine, eot, flipped);
+        return new ConsistCar(name, folder, uid, engine, eot, flipped, loads.Count == 0 ? null : Array.AsReadOnly(loads.ToArray()));
+    }
+
+    private static ConsistLoadData ReadLoadData(STFReader reader)
+    {
+        reader.MustMatch("(");
+        var name = reader.ReadString();
+        var folder = reader.ReadString();
+        var position = reader.ReadString();
+        var state = reader.ReadString();
+        if (state == ")")
+            return new ConsistLoadData(name, folder, position, null);
+        reader.MustMatch(")");
+        return new ConsistLoadData(name, folder, position, state);
     }
 
     private static void ReadCarData(STFReader reader, Action<string> setName, Action<string> setFolder)
