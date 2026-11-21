@@ -31,7 +31,7 @@ Open Rails is licensed under **GPL-3.0**. Any upstream source copied or modified
 
 ## Status
 
-The current experimental browser slice can import route ZIP content, parse original route metadata and track topology, discover/load terrain and track-shape assets, and display a WebGL preview with terrain patches, route track overlays, and original track-shape geometry, including basic RGBA8 ACE texture batches and alpha-test materials, plus WORLD scenery shape meshes using upstream matrix/quaternion transforms. Advanced material modes and seasonal textures remain incomplete.
+The current experimental browser slice can import route ZIP content, parse original route metadata and track topology, discover/load terrain and track-shape assets, and display a WebGL preview with terrain patches, route track overlays, and original track-shape geometry, including basic RGBA8 ACE texture batches and alpha-test materials, plus WORLD scenery shape meshes using upstream matrix/quaternion transforms. Experimental consist parsing is being added for train-content groundwork. Advanced material modes and seasonal textures remain incomplete.
 
 This is **not a playable simulator**: train/consist rendering, authentic simulator UI, train physics and controls, activities, signalling, and full simulation integration remain unfinished. The preview is a development tool, not a substitute for the original Open Rails UI.
 
