@@ -78,15 +78,16 @@ public sealed class TrackShapeRenderGeometryBuilder
             if (lod is null) continue;
 
             foreach (var subObject in lod.SubObjects)
-            foreach (var primitive in subObject.Primitives)
             {
-                if (primitive.Indices.Count < 3) continue;
-                if (totalVertices + subObject.Vertices.Count > MaximumVertices ||
-                    totalIndices + primitive.Indices.Count > MaximumIndices)
+                foreach (var primitive in subObject.Primitives)
                 {
-                    truncated = true;
-                    break;
-                }
+                    if (primitive.Indices.Count < 3) continue;
+                    if (totalVertices + subObject.Vertices.Count > MaximumVertices ||
+                        totalIndices + primitive.Indices.Count > MaximumIndices)
+                    {
+                        truncated = true;
+                        break;
+                    }
 
                 var textureIndex = primitive.ImageName is not null &&
                     textureIndexes.TryGetValue((placement.Asset.ShapeIndex, primitive.ImageName), out var foundTexture)
@@ -119,8 +120,10 @@ public sealed class TrackShapeRenderGeometryBuilder
                     batch.Indices.Add(baseIndex + index);
                 }
 
-                totalVertices += subObject.Vertices.Count;
-                totalIndices += primitive.Indices.Count;
+                    totalVertices += subObject.Vertices.Count;
+                    totalIndices += primitive.Indices.Count;
+                }
+                if (truncated) break;
             }
             if (truncated) break;
         }
