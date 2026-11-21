@@ -334,6 +334,7 @@
 
     public void Dispose()
     {
+        composite?.Dispose();
         foreach (var layer in layers)
             layer.Store.Dispose();
     }
