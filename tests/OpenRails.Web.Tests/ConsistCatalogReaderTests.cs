@@ -80,6 +80,30 @@ public sealed class ConsistCatalogReaderTests
         Assert.Contains("not the final car", result.Issues[0].Message);
     }
 
+    [Fact]
+    public void ReportsMissingEngineAndWagonAssetsAndResolvesEotAsWagon()
+    {
+        using var store = CreateStore(
+            ("TRAINS/CONSISTS/Assets.con", """
+                Train ( TrainCfg ( "Assets"
+                  Engine ( UiD ( 1 ) EngineData ( "Engine" "EngineFolder" ) )
+                  ORTSEOT ( UiD ( 2 ) EOTData ( "EndDevice" "EotFolder" ) )
+                  Wagon ( UiD ( 3 ) WagonData ( "MissingCar" "MissingFolder" ) )
+                ) )
+                """),
+            ("TRAINS/TRAINSET/EngineFolder/Engine.eng", "engine"),
+            ("TRAINS/TRAINSET/EotFolder/EndDevice.wag", "eot"));
+
+        var result = new ConsistCatalogReader().Read(store);
+
+        Assert.Equal(3, result.CarAssets.Count);
+        Assert.True(result.CarAssets.Single(asset => asset.IsEngine).Found);
+        Assert.True(result.CarAssets.Single(asset => asset.IsEndOfTrain).Found);
+        Assert.EndsWith("EndDevice.wag", result.CarAssets.Single(asset => asset.IsEndOfTrain).AssetPath);
+        Assert.False(result.CarAssets.Single(asset => asset.CarName == "MissingCar").Found);
+        Assert.EndsWith("MissingCar.wag", result.CarAssets.Single(asset => asset.CarName == "MissingCar").AssetPath);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
