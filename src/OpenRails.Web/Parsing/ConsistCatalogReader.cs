@@ -23,6 +23,11 @@ public sealed class ConsistCatalogReader
                 consists.Add(consist);
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
+                for (var carIndex = 0; carIndex < consist.Cars.Count - 1; carIndex++)
+                {
+                    if (consist.Cars[carIndex].IsEndOfTrain)
+                        issues.Add(new ConsistCatalogIssue(path, $"End-of-train device at car position {carIndex + 1} is not the final car in consist '{consist.Name}'."));
+                }
             }
             catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
             {
