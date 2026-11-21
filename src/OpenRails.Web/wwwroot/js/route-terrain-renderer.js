@@ -83,8 +83,8 @@ function redraw(){
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
 let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh;
-export function drawTerrainTextured(patches, textures, trackLines = []) {
-  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines;
+export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null) {
+  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh;
   if (!gl) return;
   if (!terrainProgram) {
     const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
@@ -98,16 +98,20 @@ export function drawTerrainTextured(patches, textures, trackLines = []) {
     gl.attachShader(terrainProgram,vertex); gl.attachShader(terrainProgram,fragment); gl.linkProgram(terrainProgram);
     if(!gl.getProgramParameter(terrainProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(terrainProgram));
   }
-  if (uploadedTerrainPixels !== textures) {\n    for (const oldTexture of terrainTextures) gl.deleteTexture(oldTexture);\n    terrainTextures = textures.map((source, index) => {
-    const texture=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(source.pixels));
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
-    return texture;
-  });
+  if (uploadedTerrainPixels !== textures) {
+    for (const oldTexture of terrainTextures) gl.deleteTexture(oldTexture);
+    terrainTextures = textures.map(source => {
+      const texture=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(source.pixels));
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+      return texture;
+    });
+    uploadedTerrainPixels = textures;
+  }
   const all = patches;
   if(!all.length) return;
   let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
@@ -145,7 +149,7 @@ export function drawTerrainTextured(patches, textures, trackLines = []) {
     gl.deleteBuffer(ib);
   }
   gl.bindVertexArray(null);
-  // Keep the existing track overlay visible above the terrain.
+  if(storedTrackMesh && storedTrackMesh.vertices && storedTrackMesh.indices) drawTrackTriangles(storedTrackMesh,project);
   if(trackLines.length) drawTrackOverlay(trackLines,project);
 }
 function drawTrackOverlay(trackLines,project){
