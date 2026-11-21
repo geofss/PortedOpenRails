@@ -15,7 +15,7 @@ public sealed class ConsistReaderTests
             SIMISA@@@@@@@@@@JINX0t0t
             Train (
               TrainCfg ( "Regional test consist"
-                Wagon ( UiD ( 10 ) WagonData ( "PassengerCar" "PassengerFolder" ) )
+                Wagon ( UiD ( 10 ) WagonData ( "PassengerCar" "PassengerFolder" ) LoadData ( "Coal" "CoalFolder" "Freight" "Full" ) )
                 Engine ( UiD ( 20 ) EngineData ( "TestEngine" "EngineFolder" ) Flip ( ) )
                 ORTSEOT ( UiD ( 30 ) EOTData ( "EndDevice" "EndFolder" ) )
               )
@@ -27,7 +27,7 @@ public sealed class ConsistReaderTests
         Assert.Equal("Regional test consist", consist.Name);
         Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);
         Assert.Equal(3, consist.Cars.Count);
-        Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0]);
+        Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false, new[] { new ConsistLoadData("Coal", "CoalFolder", "Freight", "Full") }), consist.Cars[0]);
         Assert.Equal(new ConsistCar("TestEngine", "EngineFolder", 20, true, false, true), consist.Cars[1]);
         Assert.Equal(new ConsistCar("EndDevice", "EndFolder", 30, false, true, false), consist.Cars[2]);
     }
