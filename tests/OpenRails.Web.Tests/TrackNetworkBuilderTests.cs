@@ -75,6 +75,28 @@ public sealed class TrackNetworkBuilderTests
         Assert.Contains("Track section 99", error.Message);
     }
 
+    [Fact]
+    public void RetainsPartiallyConnectedVectorPathWhenTerminalNodeIsMissing()
+    {
+        var vector = new TrackNode(1, TrackNodeKind.Vector, null, null,
+            new[] { CreateSection(1, 0, 0, 0, 0, 0) },
+            new[] { new TrackPin(2, 0), new TrackPin(99, 1) });
+        var end = new TrackNode(2, TrackNodeKind.End, null, null,
+            Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var database = new TrackDatabase(new TrackNode?[] { null, vector, end },
+            new[] { "TrackNode 1 has a pin to missing node 99." });
+        var catalog = new TrackSectionCatalog(1, new Dictionary<uint, TrackSectionGeometry>
+        {
+            [1] = new(1, null, 10, null, null, false)
+        });
+
+        var network = new TrackNetworkBuilder().Build(database, catalog);
+
+        var path = Assert.Single(network.VectorPaths);
+        Assert.Null(path.EndPosition);
+        Assert.Contains(network.Diagnostics, message => message.Contains("missing node 99"));
+    }
+
     private static TrackVectorSection CreateSection(uint index, int tileX, int tileZ,
         float x, float y, float z) =>
         new(index, 0, tileX, tileZ, 0, 0, 1, "00", tileX, tileZ, x, y, z, 0, 0, 0);
