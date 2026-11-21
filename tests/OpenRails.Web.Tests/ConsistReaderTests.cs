@@ -37,7 +37,7 @@ public sealed class ConsistReaderTests
     {
         using var store = CreateStore(("TRAINS/CONSISTS/Fallback.con", """
             Train (
-              TrainCfg ( 
+              TrainCfg ( "" 
                 Wagon ( UiD ( 1 ) WagonData ( "Car" "Folder" ) )
               )
             )
