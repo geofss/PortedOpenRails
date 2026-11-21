@@ -36,8 +36,8 @@ public sealed class TrackSectionGeometryReaderTests
         using var store = Store(("ROUTES/Test/tsection.dat", """
             SIMISA@@@@@@@@@@JINX0T0t
             TrackSections ( 20
-                TrackSection ( SectionCurve ( 1 12m 0 ) )
-                TrackSection ( SectionCurve ( 2 0.5235987756 250 ) )
+                TrackSection ( SectionCurve ( ) 1 12m 0 )
+                TrackSection ( SectionCurve ( ) 2 0.5235987756 250 )
             )
             """));
         var catalog = new TrackSectionGeometryReader().ReadRouteSections(store, "ROUTES/Test/tsection.dat");
