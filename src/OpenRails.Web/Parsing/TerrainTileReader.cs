@@ -210,6 +210,7 @@ public sealed class TerrainTileReader
 public sealed class TerrainTileData
 {
     public string SourcePath { get; }
+    public int TileSize { get; } = 1;
     public float ErrorThresholdScale { get; }
     public float AlwaysSelectMaxDistance { get; }
     public TerrainWaterHeightOffset? WaterHeightOffset { get; }
