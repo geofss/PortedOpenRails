@@ -52,8 +52,13 @@ public sealed class TrackNetworkBuilder
                     section.TileX * TileSizeMeters + section.X,
                     section.Y,
                     section.TileZ * TileSizeMeters + section.Z);
+                TrackShapeDefinition? shape = null;
+                if (globalSections.Shapes.TryGet(section.ShapeIndex, out var resolvedShape))
+                    shape = resolvedShape;
+                else if (globalSections.Shapes.Count > 0)
+                    diagnostics.Add($"TrackNode {node.Index} references missing track shape {section.ShapeIndex}.");
 
-                placements.Add(new TrackSectionPlacement(section, geometry, position, length));
+                placements.Add(new TrackSectionPlacement(section, geometry, position, length, shape));
                 totalLength += length;
             }
 
@@ -109,7 +114,8 @@ public sealed record TrackSectionPlacement(
     TrackVectorSection Source,
     TrackSectionGeometry Geometry,
     TrackWorldPosition Start,
-    double LengthMeters);
+    double LengthMeters,
+    TrackShapeDefinition? Shape = null);
 
 public sealed class TrackVectorPath
 {
