@@ -69,7 +69,7 @@ public sealed class WorldTileReader
                 case TokenID.Matrix3x3: matrix = ReadMatrix(field); break;
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
-                default: AddDiagnostic(diagnostics, $"Skipped unsupported STATIC field token 0x{(ushort)field.ID:X4}.\"); field.Skip(); break;
+                default: AddDiagnostic(diagnostics, $"Skipped unsupported STATIC field token 0x{(ushort)field.ID:X4}."); field.Skip(); break;
             }
         }
 
@@ -104,7 +104,7 @@ public sealed class WorldTileReader
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
                 case TokenID.JNodePosn: junctionPosition = ReadJunctionPosition(field); break;
-                default: AddDiagnostic(diagnostics, $"Skipped unsupported TrackObj field token 0x{(ushort)field.ID:X4}.\"); field.Skip(); break;
+                default: AddDiagnostic(diagnostics, $"Skipped unsupported TrackObj field token 0x{(ushort)field.ID:X4}."); field.Skip(); break;
             }
         }
 
