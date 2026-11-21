@@ -62,7 +62,8 @@ public sealed class RouteLoaderTests
                 """),
             ("GLOBAL/SHAPES/track.s", "shape placeholder"),
             ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"),
-            ("ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude samples"));
+            ("ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude samples"),
+            ("ROUTES/Test/WORLD/W+000000+000000.w", "world tile placeholder"));
 
         var metadata = new RouteMetadataReader().Read(store, "ROUTES/Test/Test.trk");
         var route = new RouteLoader().Load(store, "ROUTES/Test/Test.trk", metadata);
@@ -75,6 +76,8 @@ public sealed class RouteLoaderTests
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
         Assert.Equal("GLOBAL/SHAPES/track.s", Assert.Single(route.TrackShapeAssets.Found).Path);
         Assert.Empty(route.TrackShapeAssets.Missing);
+        Assert.Equal("ROUTES/Test/WORLD/W+000000+000000.w", Assert.Single(route.WorldTiles.Found).Path);
+        Assert.Empty(route.WorldTiles.Missing);
         Assert.Single(route.TerrainTiles.Found);
         Assert.Empty(route.TerrainTiles.Missing);
     }
