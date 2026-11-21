@@ -68,6 +68,14 @@ public sealed class RouteWorldTileLoaderTests
         return Block(id, stream.ToArray());
     }
 
+    private static byte[] FloatBlock(TokenID id, params float[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return Block(id, stream.ToArray());
+    }
+
     private static byte[] UIntPayload(params uint[] values)
     {
         using var stream = new MemoryStream();
