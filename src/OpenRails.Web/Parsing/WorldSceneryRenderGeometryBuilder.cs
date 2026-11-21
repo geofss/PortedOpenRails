@@ -160,11 +160,17 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 throw new InvalidDataException("WORLD shape matrix hierarchy contains a cycle.");
             if ((uint)node >= (uint)matrices.Count)
                 throw new InvalidDataException($"WORLD shape hierarchy references missing matrix {node}.");
-            transform *= TrackShapeMatrixConversion.ToOpenRailsMatrix(matrices[node]);
+            transform *= ToOpenRailsMatrix(matrices[node]);
             node = hierarchy[node];
         }
         return transform;
     }
+
+    private static Matrix4x4 ToOpenRailsMatrix(TrackShapeMatrix m) => new(
+        m.AX, m.AY, -m.AZ, 0,
+        m.BX, m.BY, -m.BZ, 0,
+        -m.CX, -m.CY, m.CZ, 0,
+        m.DX, m.DY, -m.DZ, 1);
 
     private sealed record WorldBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
     private sealed class WorldBatchBuilder
