@@ -77,3 +77,87 @@ function redraw(){
   }
   gl.bindVertexArray(null);
 }
+
+
+// Textured route path: one draw batch per original terrain patch so each patch
+// keeps its source shader texture and source UV coordinates.
+let terrainProgram, terrainTextures = [];
+export function drawTerrainTextured(patches, textures, trackLines = []) {
+  if (!gl) return;
+  if (!terrainProgram) {
+    const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
+      in vec3 position; in vec2 uv; out vec2 vUv;
+      void main(){ gl_Position=vec4(position,1.0); vUv=uv; }`);
+    const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
+      precision highp float; in vec2 vUv; uniform sampler2D terrainTexture;
+      uniform bool hasTexture; out vec4 outColor;
+      void main(){ outColor=hasTexture ? texture(terrainTexture,vUv) : vec4(0.22,0.42,0.20,1.0); }`);
+    terrainProgram=gl.createProgram();
+    gl.attachShader(terrainProgram,vertex); gl.attachShader(terrainProgram,fragment); gl.linkProgram(terrainProgram);
+    if(!gl.getProgramParameter(terrainProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(terrainProgram));
+  }
+  terrainTextures = textures.map((source, index) => {
+    const texture=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(source.pixels));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+    return texture;
+  });
+  const all = patches;
+  if(!all.length) return;
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(const patch of all) for(let i=0;i<patch.vertices.length;i+=5){
+    const x=patch.vertices[i],z=patch.vertices[i+2]; minX=Math.min(minX,x);maxX=Math.max(maxX,x);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+  }
+  const centerX=(minX+maxX)/2,centerZ=(minZ+maxZ)/2;
+  const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
+  const cos=Math.cos(rotation),sin=Math.sin(rotation);
+  const project=(x,z)=>{const dx=x-centerX,dz=z-centerZ;const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;let px=(rx/span)*1.8*zoom,py=(rz/span)*1.8*zoom;if(aspect>1)py/=aspect;else px*=aspect;return [px,py];};
+  resizeCanvas(); gl.viewport(0,0,canvasRef.width,canvasRef.height);
+  gl.clearColor(0.07,0.09,0.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);gl.useProgram(terrainProgram);
+  const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+  const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);
+  const p=gl.getAttribLocation(terrainProgram,"position"),uv=gl.getAttribLocation(terrainProgram,"uv");
+  gl.enableVertexAttribArray(p);gl.enableVertexAttribArray(uv);
+  const sampler=gl.getUniformLocation(terrainProgram,"terrainTexture");
+  const hasTexture=gl.getUniformLocation(terrainProgram,"hasTexture");
+  for(const patch of all){
+    const packed=new Float32Array((patch.vertices.length/5)*5);
+    for(let i=0,j=0;i<patch.vertices.length;i+=5,j+=5){
+      const q=project(patch.vertices[i],patch.vertices[i+2]);
+      packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=patch.vertices[i+1]*0.0001;
+      packed[j+3]=patch.vertices[i+3];packed[j+4]=patch.vertices[i+4];
+    }
+    gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
+    gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+    const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(patch.indices),gl.STREAM_DRAW);
+    const valid=patch.textureIndex>=0&&terrainTextures[patch.textureIndex];
+    gl.uniform1i(hasTexture,valid?1:0);
+    if(valid){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,terrainTextures[patch.textureIndex]);gl.uniform1i(sampler,0);}
+    gl.drawElements(gl.TRIANGLES,patch.indices.length,gl.UNSIGNED_INT,0);
+    gl.deleteBuffer(ib);
+  }
+  gl.bindVertexArray(null);
+  // Keep the existing track overlay visible above the terrain.
+  if(trackLines.length) drawTrackOverlay(trackLines,project);
+}
+function drawTrackOverlay(trackLines,project){
+  const packed=new Float32Array(trackLines.length/3*6);
+  for(let i=0;i<trackLines.length/3;i++){
+    const q=project(trackLines[i*3],trackLines[i*3+2]);
+    packed[i*6]=q[0];packed[i*6+1]=q[1];packed[i*6+2]=0.02;
+    packed[i*6+3]=0.9;packed[i*6+4]=0.9;packed[i*6+5]=0.92;
+  }
+  // Existing color program accepts the same position/color layout.
+  gl.useProgram(program);const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+  const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
+  const p=gl.getAttribLocation(program,"position"),c=gl.getAttribLocation(program,"color");
+  gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);
+  gl.enableVertexAttribArray(c);gl.vertexAttribPointer(c,3,gl.FLOAT,false,24,12);
+  gl.drawArrays(gl.LINES,0,trackLines.length/3);gl.bindVertexArray(null);
+}
