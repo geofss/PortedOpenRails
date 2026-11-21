@@ -118,6 +118,7 @@ public sealed class WorldTileReader
             diagnostics.Add(message);
     }
 
+    private static WorldTilePosition ReadPosition(SBR block)
     {
         block.VerifyID(TokenID.Position);
         var value = new WorldTilePosition(block.ReadFloat(), block.ReadFloat(), block.ReadFloat());
