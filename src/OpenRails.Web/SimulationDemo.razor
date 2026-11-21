@@ -1,0 +1,74 @@
+@using OpenRails.Web.Parsing
+@using OpenRails.Web.Simulation
+
+<section class="simulation-panel" aria-labelledby="simulation-heading">
+    <h2 id="simulation-heading">Portable Train Movement Demo</h2>
+    <p class="note">Live physics prototype: a locomotive and two coaches advance on a schematic test track. Vehicle shapes and real route track are not loaded in this prototype.</p>
+    <div class="simulation-controls">
+        <label>Throttle <input type="range" min="0" max="1" step="0.1" @bind="throttle" @bind:event="oninput" /> <strong>@throttle.ToString("P0")</strong></label>
+        <label>Brake <input type="range" min="0" max="1" step="0.1" @bind="brake" @bind:event="oninput" /> <strong>@brake.ToString("P0")</strong></label>
+        <label>Direction <select @bind="direction"><option value="1">Forward</option><option value="-1">Reverse</option></select></label>
+        <button @onclick="Step">Advance 0.25 s</button>
+        <button @onclick="Reset">Reset</button>
+    </div>
+    <div class="sim-stats">
+        <span>Speed: @((train.SpeedMetersPerSecond * 3.6).ToString("0.0")) km/h</span>
+        <span>Distance: @((train.VehiclePositionsMeters[0] - startPosition).ToString("0.00")) m</span>
+        <span>Net force: @train.LastNetForceNewtons.ToString("0") N</span>
+    </div>
+    <svg class="test-track" viewBox="0 0 800 170" role="img" aria-label="Schematic test track showing locomotive and two coaches">
+        <path d="M 25 90 C 150 90, 190 45, 310 45 S 510 130, 650 90 S 740 70, 775 90" class="track-bed" />
+        <path d="M 25 90 C 150 90, 190 45, 310 45 S 510 130, 650 90 S 740 70, 775 90" class="track-line" />
+        <g transform="translate(@TrainSvgX(0),0)">
+            <rect x="-42" y="54" width="54" height="25" rx="4" class="sim-engine" />
+            <rect x="-23" y="44" width="25" height="12" rx="2" class="sim-window" />
+            <text x="-15" y="100" class="sim-label">LOCO</text>
+        </g>
+        <g transform="translate(@TrainSvgX(1),0)">
+            <rect x="-40" y="56" width="48" height="22" rx="3" class="sim-coach" />
+            <text x="-16" y="100" class="sim-label">COACH</text>
+        </g>
+        <g transform="translate(@TrainSvgX(2),0)">
+            <rect x="-40" y="56" width="48" height="22" rx="3" class="sim-coach" />
+            <text x="-16" y="100" class="sim-label">COACH</text>
+        </g>
+    </svg>
+    <p class="hint">This is a physics proof-of-motion using parsed rolling-stock data and the portable consist runtime. It is not yet a 3D model or track database simulation.</p>
+</section>
+
+@code {
+    private const double startPosition = 0;
+    private double throttle = 0.6;
+    private double brake;
+    private int direction = 1;
+    private TrainConsistRuntime train = CreateTrain();
+
+    private static TrainConsistRuntime CreateTrain()
+    {
+        var engine = new EngineMetadata("Web Demo Locomotive")
+        {
+            MassKilograms = 80000,
+            LengthMeters = 18,
+            MaximumPowerWatts = 1800000,
+            MaximumTractiveForceNewtons = 200000,
+            MaximumSpeedMetersPerSecond = 35,
+            MaximumBrakeForceNewtons = 180000
+        };
+        var coaches = new[]
+        {
+            new WagonMetadata("Demo Coach 1") { MassKilograms = 40000, LengthMeters = 20, MaximumBrakeForceNewtons = 100000 },
+            new WagonMetadata("Demo Coach 2") { MassKilograms = 40000, LengthMeters = 20, MaximumBrakeForceNewtons = 100000 }
+        };
+        return TrainConsistRuntime.Create(engine, coaches, leadPositionMeters: startPosition);
+    }
+
+    private void Step() => train.Step(throttle, brake, direction, 0.25);
+    private void Reset() { train = CreateTrain(); brake = 0; }
+
+    private string TrainSvgX(int index)
+    {
+        var position = train.VehiclePositionsMeters[index];
+        var offset = index == 0 ? 0 : train.VehiclePositionsMeters[0] - position;
+        return (80 + train.VehiclePositionsMeters[0] * 2.5 - offset * 2.5).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}
