@@ -13,7 +13,8 @@ public sealed class ConsistCatalogReader
         ArgumentNullException.ThrowIfNull(store);
         var reader = new ConsistReader();
         var consists = new List<ConsistMetadata>();
-        var issues = new List<ConsistCatalogIssue>();\n        var carAssets = new List<ConsistCarAssetReference>();
+        var issues = new List<ConsistCatalogIssue>();
+        var carAssets = new List<ConsistCarAssetReference>();
         foreach (var path in store.Paths.Where(path => path.EndsWith(".con", StringComparison.OrdinalIgnoreCase))
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
