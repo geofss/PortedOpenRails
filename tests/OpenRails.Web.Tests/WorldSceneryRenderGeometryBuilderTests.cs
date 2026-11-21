@@ -63,7 +63,7 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         var trackObject = new TrackWorldObject(11, 0, 0, 0, "building.s",
             new WorldTilePosition(10, 5, 20), new WorldQuaternion(0, 0, 0, 1), 0, 0, null);
         var rotatedQuaternionObject = new TrackWorldObject(13, 0, 0, 0, "building.s",
-            new WorldTilePosition(4, 5, 6), new WorldQuaternion(0, 0, -0.70710678f, 0.70710678f), 0, 0, null);
+            new WorldTilePosition(4, 5, 6), new WorldQuaternion(0, 0.70710678f, 0, 0.70710678f), 0, 0, null);
         var tileData = new WorldTileData("ROUTES/Test/WORLD/W-000001+000002.w", -1, 2,
             new[] { staticObject, rotatedObject }, new[] { trackObject, rotatedQuaternionObject }, Array.Empty<string>());
         var placements = new WorldObjectPlacementBuilder().Build(tileData);
