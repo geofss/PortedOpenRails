@@ -43,6 +43,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteWorldTileLocator.cs" Link="Parsing/RouteWorldTileLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/WorldShapeAssetLocator.cs" Link="Parsing/WorldShapeAssetLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteWorldTileLoader.cs" Link="Parsing/RouteWorldTileLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldObjectPlacementBuilder.cs" Link="Parsing/WorldObjectPlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackGeometryTessellator.cs" Link="Simulation/TrackGeometryTessellator.cs" />
   </ItemGroup>
