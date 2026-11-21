@@ -90,7 +90,10 @@
                         <dt>Track shape files missing</dt><dd>@loadedRoute.TrackShapeAssets.Missing.Count</dd>
                         <dt>World tiles found</dt><dd>@loadedRoute.WorldTiles.Found.Count</dd>
                         <dt>World tiles missing</dt><dd>@loadedRoute.WorldTiles.Missing.Count</dd>
+                        <dt>Track shape placements</dt><dd>@loadedRoute.TrackShapePlacements.Count</dd>
+                        <dt>Terrain patch meshes</dt><dd>@loadedRoute.TerrainMeshes.Meshes.Sum(tile => tile.LodMeshes.FirstOrDefault()?.Patches.Count ?? 0)</dd>
                     </dl>
+                    <RouteTerrainViewer Route="loadedRoute" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
