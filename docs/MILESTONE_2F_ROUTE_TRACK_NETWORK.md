@@ -19,6 +19,7 @@ The route loader now joins the original MSTS/Open Rails data layers:
 11. Parse world-tile `Static`, `CollideObject`, and `TrackObj` placements, including their UID, shape filename, position, quaternion, matrix, flags, and junction coordinates.
 12. Load WORLD tiles on demand and resolve their static/track-object shape filenames against route and global `SHAPES` content.
 13. Convert tile-relative static and track-object positions into the global route coordinate system while preserving original orientation matrices and junction positions.
+14. Assemble a WORLD scenery tile on demand, loading its original `.s` meshes, resolving shape textures, decoding ACE textures, and isolating individual asset failures.
 14. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
 15. Resolve elevation and hidden-vertex samples across adjacent terrain tiles using the upstream TileManager coordinate conversion.
 16. Parse original terrain shader definitions, texture slots, and UV calculations from each `.t` tile.
@@ -51,6 +52,7 @@ Regression tests cover:
 - WORLD tile discovery and binary world-object parsing for static scenery and track objects.
 - Lazy per-tile loading and route/global resolution of scenery shape assets.
 - Tile-relative scenery and junction positions converted into global route coordinates; quaternion and matrix data remain intact.
+- On-demand world scenery tile assembly connects placements, original shape meshes, route texture references, and ACE decoding with per-asset failure isolation.
 - Portable track-shape mesh conversion, including a triangle fixture that verifies transformed positions, UVs, indices, shader/image references, and matrix hierarchy.
 - Missing pin diagnostics.
 - Route-specific section overrides and global fallback.
