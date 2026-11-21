@@ -112,7 +112,12 @@ public sealed class WorldTileReader
             position, direction, staticFlags, worldDatabaseId, junctionPosition);
     }
 
-    private static void AddDiagnostic(List<string> diagnostics, string message)\n    {\n        if (!diagnostics.Contains(message, StringComparer.Ordinal))\n            diagnostics.Add(message);\n    }\n\n    private static WorldTilePosition ReadPosition(SBR block)
+    private static void AddDiagnostic(List<string> diagnostics, string message)
+    {
+        if (!diagnostics.Contains(message, StringComparer.Ordinal))
+            diagnostics.Add(message);
+    }
+
     {
         block.VerifyID(TokenID.Position);
         var value = new WorldTilePosition(block.ReadFloat(), block.ReadFloat(), block.ReadFloat());
