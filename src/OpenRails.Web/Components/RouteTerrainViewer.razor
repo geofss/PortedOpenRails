@@ -13,8 +13,8 @@
         <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
-        <dt>Track-shape textures usable in preview</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)</dd>
-        <dt>Track-shape render batches</dt><dd>@trackShapeBatchCount</dd>
+        <dt>Track/world shape textures usable in preview</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)</dd>
+        <dt>Track/world shape render batches</dt><dd>@trackShapeBatchCount</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
         <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
@@ -164,30 +164,56 @@
                         trackLines.Add((float)points[i + 1].X); trackLines.Add((float)points[i + 1].Y); trackLines.Add((float)points[i + 1].Z);
                     }
                 }
-                var shapeTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
+                var trackTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
                     .Where(asset => asset.Reference.SeasonFolder is null &&
                         asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
                         asset.Texture.MipLevels.Count > 0)
                     .ToArray();
-                var shapeTextures = shapeTextureAssets.Select(asset => new
+                var trackShapeGeometry = new TrackShapeRenderGeometryBuilder()
+                    .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
+                var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder()
+                    .Build(Route.WorldScenery.Loaded);
+
+                var combinedTextureAssets = new List<LoadedTrackShapeTexture>();
+                var textureIndexByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                int AddTexture(LoadedTrackShapeTexture asset)
+                {
+                    if (textureIndexByPath.TryGetValue(asset.Reference.Path, out var existing))
+                        return existing;
+                    var index = combinedTextureAssets.Count;
+                    combinedTextureAssets.Add(asset);
+                    textureIndexByPath.Add(asset.Reference.Path, index);
+                    return index;
+                }
+                var trackTextureIndexes = trackTextureAssets.Select(AddTexture).ToArray();
+                var worldTextureIndexes = worldShapeGeometry.Textures.Select(AddTexture).ToArray();
+                int RemapTexture(int index, IReadOnlyList<int> map) => index < 0 ? -1 : map[index];
+
+                var shapeTextures = combinedTextureAssets.Select(asset => new
                 {
                     width = asset.Texture.Width,
                     height = asset.Texture.Height,
                     pixels = asset.Texture.MipLevels[0]
                 }).ToArray();
-                var shapeGeometry = new TrackShapeRenderGeometryBuilder()
-                    .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
-                trackGeometryTruncated = shapeGeometry.WasTruncated;
-                trackShapeBatchCount = shapeGeometry.Batches.Count;
-                var shapeBatches = shapeGeometry.Batches.Select(batch => new
+                trackGeometryTruncated = trackShapeGeometry.WasTruncated || worldShapeGeometry.WasTruncated;
+                trackShapeBatchCount = trackShapeGeometry.Batches.Count + worldShapeGeometry.Batches.Count;
+                var shapeBatches = trackShapeGeometry.Batches.Select(batch => new
                 {
                     vertices = batch.Vertices,
                     indices = batch.Indices,
-                    textureIndex = batch.TextureIndex,
+                    textureIndex = RemapTexture(batch.TextureIndex, trackTextureIndexes),
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
-                }).ToArray();
+                }).Concat(worldShapeGeometry.Batches.Select(batch => new
+                {
+                    vertices = batch.Vertices,
+                    indices = batch.Indices,
+                    textureIndex = RemapTexture(batch.TextureIndex, worldTextureIndexes),
+                    alphaTest = batch.AlphaTest,
+                    textureAddressMode = batch.TextureAddressMode,
+                    zBias = batch.ZBias
+                })).ToArray();
                 await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
                     null, shapeBatches, shapeTextures);
                 hasDrawn = true;
