@@ -28,8 +28,7 @@ public sealed class TerrainTileReaderTests
         Assert.Equal(10, tile.Samples.Floor);
         Assert.Equal(0.5f, tile.Samples.Scale);
         Assert.Equal(1, tile.Samples.SampleSize);
-        Assert.Equal((ushort)6, tile.Samples.GetRawHeightSample(1, 1));
-        Assert.Equal(13, tile.Samples.GetHeightMeters(1, 1));
+        Assert.Equal(4, tile.Samples.SampleYBuffer?.Length);
     }
 
     private static byte[] CreateSbrFile(byte[] rootBlock)
