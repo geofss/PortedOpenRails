@@ -19,7 +19,7 @@ public sealed class RouteWorldTileLoaderTests
         var worldFile = CreateSbrFile(Block(TokenID.Tr_Worldfile, staticObject));
         using var store = CreateStore(
             ("ROUTES/Test/WORLD/W+000000+000000.w", worldFile),
-            ("GLOBAL/SHAPES/building.s", "shape placeholder"));
+            ("GLOBAL/SHAPES/building.s", Encoding.UTF8.GetBytes("shape placeholder")));
 
         var loaded = new RouteWorldTileLoader().Load(
             store,
