@@ -68,7 +68,6 @@
                 await module.InvokeVoidAsync("drawTerrain", vertices.ToArray(), indices.ToArray(), trackLines.ToArray());
             }
             catch (Exception ex) { renderError = $"Terrain rendering failed: {ex.Message}"; }
-            StateHasChanged();
         }
     }
 
