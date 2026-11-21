@@ -40,7 +40,7 @@
                 var vertices = new List<float>();
                 var indices = new List<int>();
                 foreach (var loaded in Route.TerrainMeshes.Meshes.Take(8))
-                foreach (var lod in loaded.LodMeshes.Take(1)
+                foreach (var lod in loaded.LodMeshes.Take(1))
             foreach (var patch in lod.Patches)
             {
                 var offset = indices.Count == 0 ? 0 : vertices.Count / 3;
