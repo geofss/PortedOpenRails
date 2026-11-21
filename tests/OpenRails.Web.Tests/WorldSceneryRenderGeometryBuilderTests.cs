@@ -7,6 +7,41 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldSceneryRenderGeometryBuilderTests
 {
     [Fact]
+    public void StopsWorldGeometryExpansionAtVertexSafetyLimit()
+    {
+        const uint uid = 20;
+        var tileData = new WorldTileData("ROUTES/Test/WORLD/W+000000+000000.w", 0, 0,
+            new[] { new StaticWorldObject(uid, "large.s", new WorldTilePosition(0, 0, 0),
+                null, new WorldMatrix3x3(1, 0, 0, 0, 1, 0, 0, 0, 1), 0, 0) },
+            Array.Empty<TrackWorldObject>(), Array.Empty<string>());
+        var placements = new WorldObjectPlacementBuilder().Build(tileData);
+        var vertices = new TrackShapeMeshVertex[500_001];
+        for (var i = 0; i < vertices.Length; i++)
+            vertices[i] = new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0);
+        var primitive = new TrackShapePrimitiveMesh(0, 0, 0, 0,
+            new[] { 1, -1 }, new[] { 0, 1, 2 }, "Solid", null, 0, 0, 1, false, 0);
+        var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
+        var lod = new TrackShapeLodMesh(1000, new[] { 1, -1 }, new[] { subObject });
+        var matrix = new TrackShapeMatrix("root", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0);
+        var mesh = new TrackShapeMesh(0, 0, new[] { matrix }, new[] { lod });
+        var asset = new TrackShapeAssetMesh(uid, "large.s", "GLOBAL/SHAPES/large.s", mesh);
+        var discovery = new WorldShapeAssetDiscovery(
+            new[] { new WorldShapeAssetReference(0, 0, uid, "large.s", "Static", asset.Path) },
+            Array.Empty<WorldShapeAssetIssue>());
+        var emptyTextureDiscovery = new TrackShapeTextureAssetDiscovery(
+            Array.Empty<TrackShapeTextureAssetReference>(), Array.Empty<TrackShapeTextureAssetIssue>());
+        var emptyTextures = new TrackShapeTextureAssetLoadResult(
+            Array.Empty<LoadedTrackShapeTexture>(), Array.Empty<TrackShapeTextureAssetIssue>(), Array.Empty<TrackShapeTextureLoadIssue>());
+        var loadedTile = new LoadedWorldSceneryTile(tileData, placements, discovery, new[] { asset },
+            Array.Empty<WorldShapeMeshIssue>(), emptyTextureDiscovery, emptyTextures);
+
+        var result = new WorldSceneryRenderGeometryBuilder().Build(new[] { loadedTile });
+
+        Assert.True(result.WasTruncated);
+        Assert.Empty(result.Batches);
+    }
+
+    [Fact]
     public void KeepsTextureReferencesScopedToTheirWorldTileWhenObjectUidsRepeat()
     {
         var tileA = CreateLoadedTile(0, 0, "ROUTES/A/TEXTURES/shared.ace");
