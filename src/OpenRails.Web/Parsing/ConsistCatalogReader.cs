@@ -28,7 +28,9 @@ public sealed class ConsistCatalogReader
                     var assetPath = car.IsEndOfTrain
                         ? VirtualPath.Normalize($"TRAINS/ORTS_EOT/{car.Folder}/{car.Name}.eot")
                         : VirtualPath.Normalize($"TRAINS/TRAINSET/{car.Folder}/{car.Name}{(car.IsEngine ? ".eng" : ".wag")}");
-                    var found = store.Contains(assetPath);\n                    var sourcePackage = store is CompositeContentStore composite && found ? composite.GetSourcePackage(assetPath) : null;\n                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, found, sourcePackage));
+                    var found = store.Contains(assetPath);
+                    var sourcePackage = store is CompositeContentStore composite && found ? composite.GetSourcePackage(assetPath) : null;
+                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, found, sourcePackage));
                 }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
