@@ -26,9 +26,10 @@ public sealed class TrackGeometryTessellator
         {
             var section = path.Sections[sectionIndex];
             var geometry = section.Geometry;
-            var steps = Math.Max(1, (int)Math.Ceiling(section.LengthMeters / maximumSegmentLengthMeters));
-            if ((long)points.Count + steps + 1 > maximumPointCount)
+            var requestedSteps = Math.Ceiling(section.LengthMeters / maximumSegmentLengthMeters);
+            if (!double.IsFinite(requestedSteps) || requestedSteps > maximumPointCount - points.Count - 1)
                 throw new InvalidDataException($"Track path {path.TrackNodeIndex} exceeds the {maximumPointCount}-point geometry limit.");
+            var steps = Math.Max(1, (int)requestedSteps);
 
             TrackWorldPosition? target = sectionIndex + 1 < path.Sections.Count
                 ? path.Sections[sectionIndex + 1].Start
