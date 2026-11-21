@@ -157,6 +157,8 @@
                         <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath</span></summary>
                         <dl>
                             <dt>Durability</dt><dd>@consist.Durability</dd>
+                            <dt>Serial</dt><dd>@consist.Serial</dd>
+                            <dt>Next wagon UID</dt><dd>@consist.NextWagonUid</dd>
                             @if (consist.MaxVelocity is not null)
                             {
                                 <dt>Maximum velocity</dt><dd>@consist.MaxVelocity.A / @consist.MaxVelocity.B</dd>
