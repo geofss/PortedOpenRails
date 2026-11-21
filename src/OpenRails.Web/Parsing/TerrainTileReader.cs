@@ -28,6 +28,7 @@ public sealed class TerrainTileReader
 
         var samples = new TerrainSampleData();
         var patchSets = new List<TerrainPatchSet>();
+        var shaders = new List<TerrainShaderDefinition>();
         float errorThresholdScale = 1;
         float alwaysSelectMaxDistance = 0;
         TerrainWaterHeightOffset? waterOffset = null;
@@ -52,6 +53,9 @@ public sealed class TerrainTileReader
                 case TokenID.terrain_patches:
                     ReadPatchSets(block, patchSets);
                     break;
+                case TokenID.terrain_shaders:
+                    ReadShaders(block, shaders);
+                    break;
                 default:
                     block.Skip();
                     break;
@@ -67,7 +71,8 @@ public sealed class TerrainTileReader
             alwaysSelectMaxDistance,
             waterOffset,
             samples,
-            patchSets);
+            patchSets,
+            shaders);
     }
 
     private static TerrainWaterHeightOffset ReadWaterOffset(SBR block)
@@ -124,6 +129,77 @@ public sealed class TerrainTileReader
         return result;
     }
 
+    private static void ReadShaders(SBR block, List<TerrainShaderDefinition> result)
+    {
+        block.VerifyID(TokenID.terrain_shaders);
+        var count = block.ReadInt();
+        if (count < 0 || count > 4096)
+            throw new InvalidDataException($"Terrain shader count {count} is outside the supported range.");
+
+        for (var i = 0; i < count; i++)
+        {
+            using var shaderBlock = block.ReadSubBlock();
+            result.Add(ReadShader(shaderBlock));
+        }
+        if (!block.EndOfBlock())
+            block.Skip();
+    }
+
+    private static TerrainShaderDefinition ReadShader(SBR block)
+    {
+        block.VerifyID(TokenID.terrain_shader);
+        var name = block.ReadString();
+        var textureSlots = new List<TerrainTextureSlot>();
+        var uvCalculations = new List<TerrainUvCalculation>();
+
+        while (!block.EndOfBlock())
+        {
+            using var field = block.ReadSubBlock();
+            switch (field.ID)
+            {
+                case TokenID.terrain_texslots:
+                    var textureCount = field.ReadUInt();
+                    if (textureCount > 256)
+                        throw new InvalidDataException($"Terrain shader '{name}' has too many texture slots.");
+                    for (var i = 0; i < textureCount; i++)
+                    {
+                        using var textureBlock = field.ReadSubBlock();
+                        textureSlots.Add(ReadTextureSlot(textureBlock));
+                    }
+                    break;
+                case TokenID.terrain_uvcalcs:
+                    var calculationCount = field.ReadUInt();
+                    if (calculationCount > 256)
+                        throw new InvalidDataException($"Terrain shader '{name}' has too many UV calculations.");
+                    for (var i = 0; i < calculationCount; i++)
+                    {
+                        using var calculationBlock = field.ReadSubBlock();
+                        uvCalculations.Add(ReadUvCalculation(calculationBlock));
+                    }
+                    break;
+                default:
+                    field.Skip();
+                    break;
+            }
+        }
+
+        return new TerrainShaderDefinition(name, textureSlots, uvCalculations);
+    }
+
+    private static TerrainTextureSlot ReadTextureSlot(SBR block)
+    {
+        block.VerifyID(TokenID.terrain_texslot);
+        var slot = new TerrainTextureSlot(block.ReadString(), block.ReadInt(), block.ReadInt());
+        if (!block.EndOfBlock())
+            block.Skip();
+        return slot;
+    }
+
+    private static TerrainUvCalculation ReadUvCalculation(SBR block)
+    {
+        block.VerifyID(TokenID.terrain_uvcalc);
+        return new TerrainUvCalculation(block.ReadInt(), block.ReadInt(), block.ReadInt(), (int)block.ReadFloat());
+    }
     private static void ReadPatchSets(SBR block, List<TerrainPatchSet> result)
     {
         block.VerifyID(TokenID.terrain_patches);
@@ -216,9 +292,11 @@ public sealed class TerrainTileData
     public TerrainWaterHeightOffset? WaterHeightOffset { get; }
     public TerrainSampleData Samples { get; }
     public IReadOnlyList<TerrainPatchSet> PatchSets { get; }
+    public IReadOnlyList<TerrainShaderDefinition> Shaders { get; }
 
     public TerrainTileData(string sourcePath, float errorThresholdScale, float alwaysSelectMaxDistance,
-        TerrainWaterHeightOffset? waterHeightOffset, TerrainSampleData samples, IEnumerable<TerrainPatchSet> patchSets)
+        TerrainWaterHeightOffset? waterHeightOffset, TerrainSampleData samples, IEnumerable<TerrainPatchSet> patchSets,
+        IEnumerable<TerrainShaderDefinition>? shaders = null)
     {
         SourcePath = sourcePath;
         ErrorThresholdScale = errorThresholdScale;
@@ -226,6 +304,7 @@ public sealed class TerrainTileData
         WaterHeightOffset = waterHeightOffset;
         Samples = samples;
         PatchSets = Array.AsReadOnly(patchSets.ToArray());
+        Shaders = Array.AsReadOnly((shaders ?? Array.Empty<TerrainShaderDefinition>()).ToArray());
     }
 }
 
@@ -265,3 +344,7 @@ public sealed record TerrainPatch(
     public bool WaterEnabled => (Flags & 0xC0) != 0;
     public bool DrawingEnabled => (Flags & 1) == 0;
 }
+
+public sealed record TerrainTextureSlot(string FileName, int A, int B);
+public sealed record TerrainUvCalculation(int A, int B, int C, int D);
+public sealed record TerrainShaderDefinition(string Name, IReadOnlyList<TerrainTextureSlot> TextureSlots, IReadOnlyList<TerrainUvCalculation> UvCalculations);
