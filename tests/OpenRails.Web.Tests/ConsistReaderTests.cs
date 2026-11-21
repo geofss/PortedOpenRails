@@ -14,7 +14,7 @@ public sealed class ConsistReaderTests
         using var store = CreateStore(("TRAINS/CONSISTS/Test.con", """
             SIMISA@@@@@@@@@@JINX0t0t
             Train (
-              TrainCfg ( "Regional test consist"
+              TrainCfg ( "Regional test consist" MaxVelocity ( 30 50 ) Durability ( 0.8 ) ORTSTrainControlSystemParameters ( "tcs.xml" )
                 Wagon ( UiD ( 10 ) WagonData ( "PassengerCar" "PassengerFolder" ) LoadData ( "Coal" "CoalFolder" "Freight" "Full" ) LoadData ( "Empty" "EmptyFolder" "Passenger" ) )
                 Engine ( UiD ( 20 ) EngineData ( "TestEngine" "EngineFolder" ) Flip ( ) )
                 ORTSEOT ( UiD ( 30 ) EOTData ( "EndDevice" "EndFolder" ) )
@@ -25,7 +25,10 @@ public sealed class ConsistReaderTests
         var consist = new ConsistReader().Read(store, "TRAINS/CONSISTS/Test.con");
 
         Assert.Equal("Regional test consist", consist.Name);
-        Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);\n        Assert.Equal(0.8f, consist.Durability);\n        Assert.Equal(new ConsistSpeedLimit(30, 50), consist.MaxVelocity);\n        Assert.Equal("tcs.xml", consist.TrainControlSystemParametersFile);
+        Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);
+        Assert.Equal(0.8f, consist.Durability);
+        Assert.Equal(new ConsistSpeedLimit(30, 50), consist.MaxVelocity);
+        Assert.Equal("tcs.xml", consist.TrainControlSystemParametersFile);
         Assert.Equal(3, consist.Cars.Count);
         Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0] with { Loads = null });
         Assert.Equal(2, consist.Cars[0].Loads!.Count);
@@ -48,7 +51,10 @@ public sealed class ConsistReaderTests
 
         var consist = new ConsistReader().Read(store, "TRAINS/CONSISTS/Fallback.con");
 
-        Assert.Equal("Fallback", consist.Name);\n        Assert.Equal(1.0f, consist.Durability);\n        Assert.Null(consist.MaxVelocity);\n        Assert.Null(consist.TrainControlSystemParametersFile);
+        Assert.Equal("Fallback", consist.Name);
+        Assert.Equal(1.0f, consist.Durability);
+        Assert.Null(consist.MaxVelocity);
+        Assert.Null(consist.TrainControlSystemParametersFile);
     }
 
     [Fact]
