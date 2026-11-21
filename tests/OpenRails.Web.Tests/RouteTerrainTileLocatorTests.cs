@@ -42,6 +42,8 @@ public sealed class RouteTerrainTileLocatorTests
         var tile = Assert.Single(result.Found);
         Assert.Equal((0, 0), (tile.TileX, tile.TileZ));
         Assert.Equal("ROUTES/Test/TILES/-7FFFFFFC.t", tile.Path);
+        Assert.Equal("ROUTES/Test/TILES/-7FFFFFFC_y.raw", tile.AltitudePath);
+        Assert.Null(tile.FlagsPath);
         Assert.Empty(result.Missing);
     }
 
