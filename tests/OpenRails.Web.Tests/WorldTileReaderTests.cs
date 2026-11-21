@@ -10,6 +10,27 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldTileReaderTests
 {
     [Fact]
+    public void ReportsUnknownWorldBlocksAndStaticAndTrackObjectFields()
+    {
+        var staticObject = Block(TokenID.Static, Concat(
+            Block((TokenID)0x7FFE, Array.Empty<byte>()),
+            Block((TokenID)0x7FFE, Array.Empty<byte>())));
+        var trackObject = Block(TokenID.TrackObj, Concat(
+            Block((TokenID)0x7FFD, Array.Empty<byte>()),
+            Block((TokenID)0x7FFD, Array.Empty<byte>())));
+        var unknownWorldBlock = Block((TokenID)0x7FFF, Array.Empty<byte>());
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, Concat(staticObject, trackObject, unknownWorldBlock, unknownWorldBlock)))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+
+        Assert.Equal(3, tile.Diagnostics.Count);
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("STATIC field token 0x7FFE"));
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("TrackObj field token 0x7FFD"));
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("WORLD block token 0x7FFF"));
+    }
+
+    [Fact]
     public void PlacementBuilderPreservesOrientationAndHandlesMissingPositions()
     {
         var direction = new WorldQuaternion(0.1f, 0.2f, 0.3f, 0.9f);
