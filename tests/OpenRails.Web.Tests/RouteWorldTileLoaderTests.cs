@@ -14,7 +14,8 @@ public sealed class RouteWorldTileLoaderTests
     {
         var staticObject = Block(TokenID.Static, Concat(
             UIntPayload(TokenID.UiD, 42),
-            StringBlock(TokenID.FileName, "building.s")));
+            StringBlock(TokenID.FileName, "building.s"),
+            FloatBlock(TokenID.Position, 10, 0, 20)));
         var worldFile = CreateSbrFile(Block(TokenID.Tr_Worldfile, staticObject));
         using var store = CreateStore(
             ("ROUTES/Test/WORLD/W+000000+000000.w", worldFile),
@@ -26,6 +27,7 @@ public sealed class RouteWorldTileLoaderTests
             new WorldTileReference(0, 0, "ROUTES/Test/WORLD/W+000000+000000.w"));
 
         Assert.Equal((uint)42, Assert.Single(loaded.Tile.StaticObjects).Uid);
+        Assert.Equal(new WorldTilePosition(10, 0, 20), Assert.Single(loaded.Placements).WorldPosition);
         var shape = Assert.Single(loaded.ShapeAssets.Found);
         Assert.Equal("GLOBAL/SHAPES/building.s", shape.Path);
         Assert.Empty(loaded.ShapeAssets.Missing);
