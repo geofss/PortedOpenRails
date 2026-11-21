@@ -69,7 +69,7 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         Assert.True(batch.AlphaTest);
         Assert.Equal(9, batch.Indices.Count);
         Assert.Equal(new[] { -2043f, 7f, 4105f, 0.1f, 0.2f }, batch.Vertices.Take(5));
-        Assert.Equal(new[] { -2037f, 7f, 4119f, 0.1f, 0.2f }, batch.Vertices.Skip(15).Take(5));
-        Assert.Equal(new[] { -2047f, 7f, 4103f, 0.1f, 0.2f }, batch.Vertices.Skip(30).Take(5));
+        Assert.Equal(new[] { -2047f, 7f, 4103f, 0.1f, 0.2f }, batch.Vertices.Skip(15).Take(5));
+        Assert.Equal(new[] { -2037f, 7f, 4119f, 0.1f, 0.2f }, batch.Vertices.Skip(30).Take(5));
     }
 }
