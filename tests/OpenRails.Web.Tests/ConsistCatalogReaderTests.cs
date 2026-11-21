@@ -55,6 +55,24 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);
     }
 
+    [Fact]
+    public void ReportsEndOfTrainDeviceThatIsNotLast()
+    {
+        using var store = CreateStore(("TRAINS/CONSISTS/BadOrder.con", """
+            Train ( TrainCfg ( "Bad order"
+              Wagon ( UiD ( 1 ) WagonData ( "Car" "Folder" ) )
+              ORTSEOT ( UiD ( 2 ) EOTData ( "EOT" "Folder" ) )
+              Wagon ( UiD ( 3 ) WagonData ( "TrailingCar" "Folder" ) )
+            ) )
+            """));
+
+        var result = new ConsistCatalogReader().Read(store);
+
+        Assert.Single(result.Consists);
+        Assert.Single(result.Issues);
+        Assert.Contains("not the final car", result.Issues[0].Message);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
