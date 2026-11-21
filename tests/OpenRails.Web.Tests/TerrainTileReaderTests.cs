@@ -42,8 +42,9 @@ public sealed class TerrainTileReaderTests
             Block(TokenID.terrain_uvcalcs, Concat(
                 UIntPayload(1),
                 Block(TokenID.terrain_uvcalc, Concat(IntPayload(1, 2, 3), FloatPayload(4.5f)))))));
-        var tileBytes = CreateSbrFile(Block(TokenID.terrain,
-            Block(TokenID.terrain_shaders, Concat(IntPayload(1), shader))));
+        var tileBytes = CreateSbrFile(Block(TokenID.terrain, Concat(
+            Block(TokenID.terrain_samples, IntBlock(TokenID.terrain_nsamples, 1)),
+            Block(TokenID.terrain_shaders, Concat(IntPayload(1), shader)))));
         using var store = CreateStore(("ROUTES/Test/TILES/shaders.t", tileBytes));
 
         var tile = new TerrainTileReader().Read(store, "ROUTES/Test/TILES/shaders.t");
