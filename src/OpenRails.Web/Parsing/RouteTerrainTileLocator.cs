@@ -102,7 +102,9 @@ public sealed class RouteTerrainTileLocator
             }
         }
 
-        var availablePaths = store.Paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var availablePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in store.Paths)
+            availablePaths.TryAdd(path, path);
         var found = new List<TerrainTileReference>();
         var missing = new List<(int X, int Z, string ExpectedPath)>();
 
@@ -110,10 +112,7 @@ public sealed class RouteTerrainTileLocator
         {
             var fileName = TerrainTileName.FromTileXZ(tile.X, tile.Z, TerrainTileZoom.Small) + ".t";
             var expectedPath = $"{root}/TILES/{fileName}";
-            var actualPath = availablePaths.FirstOrDefault(path =>
-                path.Equals(expectedPath, StringComparison.OrdinalIgnoreCase));
-
-            if (actualPath is null)
+            if (!availablePaths.TryGetValue(expectedPath, out var actualPath))
                 missing.Add((tile.X, tile.Z, expectedPath));
             else
                 found.Add(new TerrainTileReference(tile.X, tile.Z, actualPath));
