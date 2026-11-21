@@ -66,15 +66,29 @@ public sealed class TrackNetworkBuilder
             if (endpoints.Length != 2)
                 diagnostics.Add($"Vector TrackNode {node.Index} has {endpoints.Length} distinct connected nodes; expected 2.");
 
+            TrackWorldPosition? endPosition = null;
+            if (node.Pins.Count > 1)
+            {
+                var endNode = database.GetRequiredNode(node.Pins[1].Link);
+                if (endNode.Location is { } location)
+                    endPosition = ToWorldPosition(location);
+            }
+
             paths.Add(new TrackVectorPath(
                 node.Index,
                 endpoints,
                 placements,
-                totalLength));
+                totalLength,
+                endPosition));
         }
 
         return new TrackNetwork(database, paths, diagnostics);
     }
+
+    private static TrackWorldPosition ToWorldPosition(TrackNodeLocation location) => new(
+        location.TileX * TileSizeMeters + location.X,
+        location.Y,
+        location.TileZ * TileSizeMeters + location.Z);
 
     private static TrackSectionGeometry ResolveGeometry(
         uint sectionIndex,
@@ -105,14 +119,16 @@ public sealed class TrackVectorPath
     public IReadOnlyList<int> ConnectedNodeIndices { get; }
     public IReadOnlyList<TrackSectionPlacement> Sections { get; }
     public double LengthMeters { get; }
+    public TrackWorldPosition? EndPosition { get; }
 
     public TrackVectorPath(uint trackNodeIndex, IEnumerable<int> connectedNodeIndices,
-        IEnumerable<TrackSectionPlacement> sections, double lengthMeters)
+        IEnumerable<TrackSectionPlacement> sections, double lengthMeters, TrackWorldPosition? endPosition = null)
     {
         TrackNodeIndex = trackNodeIndex;
         ConnectedNodeIndices = Array.AsReadOnly(connectedNodeIndices.ToArray());
         Sections = Array.AsReadOnly(sections.ToArray());
         LengthMeters = lengthMeters;
+        EndPosition = endPosition;
     }
 }
 
