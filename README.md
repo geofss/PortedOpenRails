@@ -31,4 +31,4 @@ Open Rails is licensed under **GPL-3.0**. Any upstream source copied or modified
 
 ## Status
 
-Milestone 0: browser project scaffold created. Build and browser verification are still pending.
+Still we are building as fast as we can.
