@@ -50,6 +50,107 @@ public sealed class TrackShapeRenderGeometryBuilder
         return new TrackShapeRenderGeometry(vertices, indices, false);
     }
 
+    public TrackShapeTexturedRenderGeometry BuildTextured(
+        IEnumerable<TrackShapePlacement> placements,
+        IReadOnlyList<LoadedTrackShapeTexture> loadedTextures)
+    {
+        ArgumentNullException.ThrowIfNull(placements);
+        ArgumentNullException.ThrowIfNull(loadedTextures);
+
+        var textureReferences = loadedTextures
+            .Where(texture => texture.Reference.SeasonFolder is null &&
+                texture.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
+                texture.Texture.MipLevels.Count > 0)
+            .ToArray();
+        var textureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
+        for (var i = 0; i < textureReferences.Length; i++)
+            textureIndexes.TryAdd((textureReferences[i].Reference.ShapeIndex, textureReferences[i].Reference.ImageName), i);
+
+        var batchBuilders = new Dictionary<TrackShapeBatchKey, TrackShapeBatchBuilder>();
+        var totalVertices = 0;
+        var totalIndices = 0;
+        var truncated = false;
+
+        foreach (var placement in placements)
+        {
+            var mesh = placement.Asset.Mesh;
+            var lod = mesh.Lods.FirstOrDefault();
+            if (lod is null) continue;
+
+            foreach (var subObject in lod.SubObjects)
+            foreach (var primitive in subObject.Primitives)
+            {
+                if (primitive.Indices.Count < 3) continue;
+                if (totalVertices + subObject.Vertices.Count > MaximumVertices ||
+                    totalIndices + primitive.Indices.Count > MaximumIndices)
+                {
+                    truncated = true;
+                    break;
+                }
+
+                var textureIndex = primitive.ImageName is not null &&
+                    textureIndexes.TryGetValue((placement.Asset.ShapeIndex, primitive.ImageName), out var foundTexture)
+                    ? foundTexture : -1;
+                var key = new TrackShapeBatchKey(textureIndex, primitive.AlphaTest,
+                    primitive.TextureAddressMode, primitive.ZBias);
+                if (!batchBuilders.TryGetValue(key, out var batch))
+                {
+                    batch = new TrackShapeBatchBuilder(key);
+                    batchBuilders.Add(key, batch);
+                }
+
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
+                var worldTransform = localTransform * placement.WorldTransform;
+                var baseIndex = batch.Vertices.Count / 5;
+                foreach (var vertex in subObject.Vertices)
+                {
+                    var position = Vector3.Transform(vertex.Position, worldTransform);
+                    batch.Vertices.Add(position.X);
+                    batch.Vertices.Add(position.Y);
+                    batch.Vertices.Add(position.Z);
+                    batch.Vertices.Add(vertex.TextureCoordinate.X);
+                    batch.Vertices.Add(vertex.TextureCoordinate.Y);
+                }
+
+                foreach (var index in primitive.Indices)
+                {
+                    if ((uint)index >= (uint)subObject.Vertices.Count)
+                        throw new InvalidDataException("Track-shape primitive index is outside its sub-object vertex range.");
+                    batch.Indices.Add(baseIndex + index);
+                }
+
+                totalVertices += subObject.Vertices.Count;
+                totalIndices += primitive.Indices.Count;
+            }
+            if (truncated) break;
+        }
+
+        var batches = batchBuilders.Values
+            .Where(batch => batch.Indices.Count > 0)
+            .Select(batch => new TrackShapeTexturedRenderBatch(
+                batch.Vertices.ToArray(), batch.Indices.ToArray(), batch.Key.TextureIndex,
+                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias))
+            .ToArray();
+        return new TrackShapeTexturedRenderGeometry(Array.AsReadOnly(batches), truncated);
+    }
+
+    private sealed record TrackShapeBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
+    private sealed class TrackShapeBatchBuilder
+    {
+        public TrackShapeBatchKey Key { get; }
+        public List<float> Vertices { get; } = new();
+        public List<int> Indices { get; } = new();
+        public TrackShapeBatchBuilder(TrackShapeBatchKey key) => Key = key;
+    }
+
+    private sealed class ShapeImageKeyComparer : IEqualityComparer<(uint ShapeIndex, string ImageName)>
+    {
+        public bool Equals((uint ShapeIndex, string ImageName) x, (uint ShapeIndex, string ImageName) y) =>
+            x.ShapeIndex == y.ShapeIndex && StringComparer.OrdinalIgnoreCase.Equals(x.ImageName, y.ImageName);
+        public int GetHashCode((uint ShapeIndex, string ImageName) value) =>
+            HashCode.Combine(value.ShapeIndex, StringComparer.OrdinalIgnoreCase.GetHashCode(value.ImageName));
+    }
+
     private static Matrix4x4 BuildHierarchyTransform(
         IReadOnlyList<TrackShapeMatrix> matrices,
         int matrixIndex,
@@ -82,4 +183,16 @@ public sealed class TrackShapeRenderGeometryBuilder
 public sealed record TrackShapeRenderGeometry(
     IReadOnlyList<Vector3> Vertices,
     IReadOnlyList<int> Indices,
+    bool WasTruncated);
+
+public sealed record TrackShapeTexturedRenderBatch(
+    IReadOnlyList<float> Vertices,
+    IReadOnlyList<int> Indices,
+    int TextureIndex,
+    bool AlphaTest,
+    int TextureAddressMode,
+    float ZBias);
+
+public sealed record TrackShapeTexturedRenderGeometry(
+    IReadOnlyList<TrackShapeTexturedRenderBatch> Batches,
     bool WasTruncated);
