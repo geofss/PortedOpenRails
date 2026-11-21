@@ -53,7 +53,7 @@ public sealed class TrackSectionGeometryReaderTests
         Assert.Equal(2, catalog.Count);
         Assert.True(catalog.GetRequired(1).IsStraight);
         Assert.Equal(12, catalog.GetRequired(1).LengthMeters);
-        Assert.Equal(30, catalog.GetRequired(2).AngleDegrees, 2);
+        Assert.Equal(30f, catalog.GetRequired(2).AngleDegrees!.Value, 2);
         Assert.True(catalog.GetRequired(2).IsRouteSpecific);
     }
 
