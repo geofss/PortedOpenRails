@@ -244,14 +244,14 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
 function drawTrackShapeBatches(batches,pixels,project){
   if(!batches.length) return;
   if(!shapeProgram){
-    const vertex=compile(gl.VERTEX_SHADER,\`#version 300 es
+    const vertex=compile(gl.VERTEX_SHADER,`#version 300 es
       in vec3 position; in vec2 uv; out vec2 vUv;
-      void main(){ gl_Position=vec4(position,1.0); vUv=uv; }\`);
-    const fragment=compile(gl.FRAGMENT_SHADER,\`#version 300 es
+      void main(){ gl_Position=vec4(position,1.0); vUv=uv; }`);
+    const fragment=compile(gl.FRAGMENT_SHADER,`#version 300 es
       precision highp float; in vec2 vUv; uniform sampler2D shapeTexture;
       uniform bool hasTexture; uniform bool alphaTest; out vec4 outColor;
       void main(){ vec4 color=hasTexture ? texture(shapeTexture,vUv) : vec4(0.38,0.40,0.43,1.0);
-        if(alphaTest && color.a<0.5) discard; outColor=color; }\`);
+        if(alphaTest && color.a<0.5) discard; outColor=color; }`);
     shapeProgram=gl.createProgram();gl.attachShader(shapeProgram,vertex);gl.attachShader(shapeProgram,fragment);gl.linkProgram(shapeProgram);
     if(!gl.getProgramParameter(shapeProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(shapeProgram));
     gl.deleteShader(vertex);gl.deleteShader(fragment);
