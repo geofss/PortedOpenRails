@@ -28,7 +28,6 @@ public sealed class WorldObjectPlacementBuilder
                 null,
                 0,
                 0,
-                0,
                 null));
         }
 
@@ -51,7 +50,6 @@ public sealed class WorldObjectPlacementBuilder
                 item.SectionIndex,
                 item.Elevation,
                 item.CollideFlags,
-                0,
                 junction));
         }
 
@@ -74,5 +72,4 @@ public sealed record WorldObjectPlacement(
     uint? TrackSectionIndex,
     float Elevation,
     uint CollideFlags,
-    int Reserved,
     WorldTilePosition? JunctionWorldPosition);
