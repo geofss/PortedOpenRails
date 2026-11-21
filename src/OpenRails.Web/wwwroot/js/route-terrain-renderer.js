@@ -32,7 +32,7 @@ export function drawTerrain(vertices, indices, trackLines = []) {
 }
 function resizeCanvas(){ const dpr=window.devicePixelRatio||1; const w=Math.max(1,Math.floor(canvasRef.clientWidth*dpr)),h=Math.max(1,Math.floor(canvasRef.clientHeight*dpr)); if(canvasRef.width!==w||canvasRef.height!==h){canvasRef.width=w;canvasRef.height=h;}}
 function redraw(){
-  if(storedTerrainPatches){drawTerrainTextured(storedTerrainPatches,storedTerrainPixels,storedTerrainLines);return;}
+  if(storedTerrainPatches){drawTerrainTextured(storedTerrainPatches,storedTerrainPixels,storedTerrainLines,storedTrackMesh);return;}
   resizeCanvas();
   const vertices=storedVertices,indices=storedIndices,trackLines=storedTrackLines||[];
   if(!gl || !vertices || !vertices.length || !indices || !indices.length) return;
