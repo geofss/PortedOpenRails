@@ -48,6 +48,23 @@ public sealed class AceTextureReaderTests
     }
 
     [Fact]
+    public void LoadsDiscoveredTerrainTextureAssetsThroughAceDecoder()
+    {
+        const string path = "ROUTES/Test/TERRTEX/ground.ace";
+        var reference = new TerrainTextureAssetReference("Grass", 0, "ground.ace", null, path, false);
+        var discovery = new TerrainTextureAssetDiscovery(new[] { reference }, Array.Empty<TerrainTextureAssetIssue>());
+        using var store = CreateStore((path, CreateAceFile(CreateStructuredPayload(), compressed: false)));
+
+        var result = new TerrainTextureAssetLoader().Load(store, discovery);
+
+        var loaded = Assert.Single(result.Loaded);
+        Assert.Equal(path, loaded.Reference.Path);
+        Assert.Equal(AceTexturePixelFormat.Rgba8, loaded.Texture.PixelFormat);
+        Assert.Empty(result.Missing);
+        Assert.Empty(result.Failed);
+    }
+
+    [Fact]
     public void PreservesRawDxtMipDataForGpuUpload()
     {
         var raw = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
