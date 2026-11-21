@@ -17,7 +17,8 @@ The route loader now joins the original MSTS/Open Rails data layers:
 9. Resolve original track shape `.s` assets from route `SHAPES` before global `GLOBAL/SHAPES` content.
 10. Discover original `WORLD/W±xxxxxx±xxxxxx.w` tiles touched by the track network.
 11. Parse world-tile `Static`, `CollideObject`, and `TrackObj` placements, including their UID, shape filename, position, quaternion, matrix, flags, and junction coordinates.
-12. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
+12. Load WORLD tiles on demand and resolve their static/track-object shape filenames against route and global `SHAPES` content.
+13. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
 
 The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, and terrain tile discovery results.
 
@@ -41,6 +42,7 @@ Regression tests cover:
 - Route-first/global-fallback shape asset discovery and safe virtual path validation.
 - Original `.s` shape parser reading from a ZIP-backed stream, with point and UV regression coverage.
 - WORLD tile discovery and binary world-object parsing for static scenery and track objects.
+- Lazy per-tile loading and route/global resolution of scenery shape assets.
 - Portable track-shape mesh conversion, including a triangle fixture that verifies transformed positions, UVs, indices, shader/image references, and matrix hierarchy.
 - Missing pin diagnostics.
 - Route-specific section overrides and global fallback.
