@@ -56,7 +56,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
 - [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; shape material texturing remains incomplete)
 - [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
-- [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on viewport resize\n- [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview
+- [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on window and canvas/container resize\n- [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview
 - [x] Report unknown WORLD block/field tokens as deduplicated route-preview diagnostics
 - [ ] Render WORLD scenery placements with original transforms/materials
 - [ ] Render rolling stock
