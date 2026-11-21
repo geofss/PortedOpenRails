@@ -155,7 +155,7 @@
                 {
                     var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
                     <details class="consist-entry">
-                        <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath</span></summary>
+                        <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath @(consist.SourcePackage is null ? "" : $"· {consist.SourcePackage}")</span></summary>
                         <dl>
                             <dt>Durability</dt><dd>@consist.Durability</dd>
                             <dt>Serial</dt><dd>@consist.Serial</dd>
