@@ -24,6 +24,22 @@
         <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
         <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
     </dl>
+    <details class="route-world-asset-diagnostics">
+        <summary>World scenery asset diagnostics</summary>
+        <ul>
+            @foreach (var tile in Route.WorldScenery.Loaded)
+            {
+                @foreach (var issue in tile.ShapeDiscovery.Missing)
+                {
+                    <li>Missing shape: @issue.FileName — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.FailedShapes)
+                {
+                    <li>Failed shape: @issue.Path — @issue.Reason</li>
+                }
+            }
+        </ul>
+    </details>
     @if (renderError is not null)
     {
         <p class="error">@renderError</p>
