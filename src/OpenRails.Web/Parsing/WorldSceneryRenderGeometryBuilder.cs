@@ -21,7 +21,6 @@ public sealed class WorldSceneryRenderGeometryBuilder
         ArgumentNullException.ThrowIfNull(tiles);
         var textureAssets = new List<LoadedTrackShapeTexture>();
         var texturePathIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        var shapeTextureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
         var batchBuilders = new Dictionary<WorldBatchKey, WorldBatchBuilder>();
         var totalVertices = 0;
         var totalIndices = 0;
@@ -29,6 +28,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
         foreach (var tile in tiles)
         {
+            var shapeTextureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
             foreach (var texture in tile.Textures.Loaded)
             {
                 if (texture.Reference.SeasonFolder is not null ||
