@@ -25,7 +25,7 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         var mesh = new TrackShapeMesh(0, 0, new[] { matrix }, new[] { lod });
         var asset = new TrackShapeAssetMesh(uid, "large.s", "GLOBAL/SHAPES/large.s", mesh);
         var discovery = new WorldShapeAssetDiscovery(
-            new[] { new WorldShapeAssetReference(0, 0, uid, "large.s", "Static", asset.Path) },
+            new[] { new WorldShapeAssetReference(0, 0, uid, "large.s", "Static", "GLOBAL/SHAPES/large.s") },
             Array.Empty<WorldShapeAssetIssue>());
         var emptyTextureDiscovery = new TrackShapeTextureAssetDiscovery(
             Array.Empty<TrackShapeTextureAssetReference>(), Array.Empty<TrackShapeTextureAssetIssue>());
