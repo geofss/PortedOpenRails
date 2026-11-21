@@ -20,6 +20,7 @@
     private IJSObjectReference? module;
     private string? renderError;
     private bool initialized;
+    private bool hasDrawn;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -31,9 +32,9 @@
                 await module.InvokeVoidAsync("initialize", canvas);
                 initialized = true;
             }
-            catch (Exception ex) { renderError = $"WebGL renderer initialization failed: {ex.Message}"; }
+            catch (Exception ex) { renderError = $"WebGL renderer initialization failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
         }
-        if (initialized && module is not null)
+        if (initialized && module is not null && !hasDrawn)
         {
             try
             {
@@ -67,8 +68,9 @@
                     }
                 }
                 await module.InvokeVoidAsync("drawTerrain", vertices.ToArray(), indices.ToArray(), trackLines.ToArray());
+                hasDrawn = true;
             }
-            catch (Exception ex) { renderError = $"Terrain rendering failed: {ex.Message}"; }
+            catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
         }
     }
 
