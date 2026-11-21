@@ -31,6 +31,33 @@ public sealed class TerrainTileReaderTests
         Assert.Equal(4, tile.Samples.SampleYBuffer?.Length);
     }
 
+    [Fact]
+    public void LoadsTerrainMetadataAltitudeAndOptionalFlagsAsOneTile()
+    {
+        var samplesPayload = Concat(
+            FloatBlock(TokenID.terrain_sample_floor, 10),
+            FloatBlock(TokenID.terrain_sample_scale, 0.5f),
+            FloatBlock(TokenID.terrain_sample_size, 1),
+            IntBlock(TokenID.terrain_nsamples, 2),
+            StringBlock(TokenID.terrain_sample_ybuffer, new string(new[] { (char)0, (char)2, (char)4, (char)6 })));
+        var tileBytes = CreateSbrFile(Block(TokenID.terrain, Block(TokenID.terrain_samples, samplesPayload)));
+        using var store = CreateStore(
+            ("ROUTES/Test/TILES/tile.t", tileBytes),
+            ("ROUTES/Test/TILES/tile_y.raw", new byte[] { 1, 0, 2, 0, 3, 0, 4, 0 }),
+            ("ROUTES/Test/TILES/tile_f.raw", new byte[] { 0, 4, 0, 4 }));
+
+        var reference = new TerrainTileReference(
+            0, 0,
+            "ROUTES/Test/TILES/tile.t",
+            "ROUTES/Test/TILES/tile_y.raw",
+            "ROUTES/Test/TILES/tile_f.raw");
+
+        var tile = new TerrainTileContentLoader().Load(store, reference);
+
+        Assert.Equal(12, tile.Altitude.GetElevationMeters(1, 1, tile.Terrain.Samples.Floor, tile.Terrain.Samples.Scale));
+        Assert.True(tile.Flags!.IsVertexHidden(1, 0));
+    }
+
     private static byte[] CreateSbrFile(byte[] rootBlock)
     {
         using var stream = new MemoryStream();
