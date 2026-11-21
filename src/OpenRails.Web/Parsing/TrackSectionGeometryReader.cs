@@ -19,7 +19,9 @@ public sealed class TrackSectionGeometryReader
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(store);
             using var reader = new STFReader(normalized, useTree: false);
             var sections = new Dictionary<uint, TrackSectionGeometry>();
+            var shapes = new Dictionary<uint, TrackShapeDefinition>();
             uint maximum = 0;
+            uint maximumShapeIndex = 0;
             reader.ParseFile(new[]
             {
                 new STFReader.TokenProcessor("tracksections", () =>
@@ -34,9 +36,22 @@ public sealed class TrackSectionGeometryReader
                             sections[section.Index] = section;
                         })
                     });
+                }),
+                new STFReader.TokenProcessor("trackshapes", () =>
+                {
+                    reader.MustMatch("(");
+                    maximumShapeIndex = reader.ReadUInt(null);
+                    reader.ParseBlock(new[]
+                    {
+                        new STFReader.TokenProcessor("trackshape", () =>
+                        {
+                            var shape = ReadTrackShape(reader);
+                            shapes[shape.ShapeIndex] = shape;
+                        })
+                    });
                 })
             });
-            return new TrackSectionCatalog(maximum, sections);
+            return new TrackSectionCatalog(maximum, sections, new TrackShapeCatalog(maximumShapeIndex, shapes));
         }
     }
 
