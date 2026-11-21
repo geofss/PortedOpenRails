@@ -8,6 +8,15 @@
     <h3>Route terrain · WebGL preview</h3>
     <p class="hint">Original terrain materials, track-section geometry and loaded track-shape meshes are uploaded to WebGL. Drag to rotate, scroll to zoom.</p>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
+    <dl class="route-render-stats">
+        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
+        <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
+        <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
+        <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
+        <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
+        <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
+        <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
+    </dl>
     @if (renderError is not null)
     {
         <p class="error">@renderError</p>
