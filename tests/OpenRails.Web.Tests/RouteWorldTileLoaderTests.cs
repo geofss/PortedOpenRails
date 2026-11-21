@@ -10,6 +10,30 @@ namespace OpenRails.Web.Tests;
 public sealed class RouteWorldTileLoaderTests
 {
     [Fact]
+    public void RouteSceneryLoaderKeepsValidTilesWhenAnotherTileFails()
+    {
+        var validWorld = CreateSbrFile(Block(TokenID.Tr_Worldfile, Array.Empty<byte>()));
+        using var store = CreateStore(
+            ("ROUTES/Test/WORLD/W+000000+000000.w", validWorld),
+            ("ROUTES/Test/WORLD/W+000001+000000.w", Encoding.ASCII.GetBytes("broken world file")));
+        var discovery = new RouteWorldTileDiscovery(
+            new[]
+            {
+                new WorldTileReference(0, 0, "ROUTES/Test/WORLD/W+000000+000000.w"),
+                new WorldTileReference(1, 0, "ROUTES/Test/WORLD/W+000001+000000.w")
+            },
+            new[] { (2, 0) });
+
+        var result = new RouteWorldSceneryLoader().Load(store, "ROUTES/Test", discovery);
+
+        Assert.Single(result.Loaded);
+        Assert.Single(result.Failed);
+        Assert.Equal("ROUTES/Test/WORLD/W+000001+000000.w", result.Failed[0].Path);
+        Assert.Equal((2, 0), Assert.Single(result.Missing));
+        Assert.Empty(result.Loaded[0].Placements);
+    }
+
+    [Fact]
     public void LoadsWorldObjectsAndResolvesTheirOriginalShapeAssetsTogether()
     {
         var staticObject = Block(TokenID.Static, Concat(
