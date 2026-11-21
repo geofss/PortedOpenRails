@@ -43,8 +43,8 @@ public sealed class TrackSectionGeometryReaderTests
             SIMISA@@@@@@@@@@JINX0T0t
             TrackSections (
                 20
-                TrackSection ( SectionCurve ( 1 12m 0 ) )
-                TrackSection ( SectionCurve ( 2 0.5235987756 250m ) )
+                TrackSection ( SectionCurve ( ) 1 12m 0 )
+                TrackSection ( SectionCurve ( ) 2 0.5235987756 250 )
             )
             """));
 
