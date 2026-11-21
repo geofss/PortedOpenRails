@@ -148,17 +148,26 @@ public sealed class WorldTileReader
         return value;
     }
 
-    private static (int TileX, int TileZ) ParseTileCoordinates(string path)
+    public static bool TryParseTileCoordinates(string path, out int tileX, out int tileZ)
     {
         var fileName = path[(path.LastIndexOf('/') + 1)..];
-        if (fileName.Length < 15 || char.ToUpperInvariant(fileName[0]) != 'W' ||
-            !int.TryParse(fileName.AsSpan(1, 7), NumberStyles.Integer, CultureInfo.InvariantCulture, out var tileX) ||
-            !int.TryParse(fileName.AsSpan(8, 7), NumberStyles.Integer, CultureInfo.InvariantCulture, out var tileZ))
+        tileX = 0;
+        tileZ = 0;
+        return fileName.Length >= 15 && char.ToUpperInvariant(fileName[0]) == 'W' &&
+            int.TryParse(fileName.AsSpan(1, 7), NumberStyles.Integer, CultureInfo.InvariantCulture, out tileX) &&
+            int.TryParse(fileName.AsSpan(8, 7), NumberStyles.Integer, CultureInfo.InvariantCulture, out tileZ);
+    }
+
+    private static (int TileX, int TileZ) ParseTileCoordinates(string path)
+    {
+        if (!TryParseTileCoordinates(path, out var tileX, out var tileZ))
+        {
+            var fileName = path[(path.LastIndexOf('/') + 1)..];
             throw new InvalidDataException($"World tile filename '{fileName}' does not contain the expected signed tile coordinates.");
+        }
 
         return (tileX, tileZ);
-    }
-}
+    }}
 
 public sealed class WorldTileData
 {
