@@ -80,9 +80,11 @@ export function cleanup() {
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
   if (resizeObserver) resizeObserver.disconnect();
   if (gl) {
-    for (const texture of terrainTextures) gl.deleteTexture(texture);\n    for (const texture of shapeTextures) gl.deleteTexture(texture);
+    for (const texture of terrainTextures) gl.deleteTexture(texture);
+    for (const texture of shapeTextures) gl.deleteTexture(texture);
     if (program) gl.deleteProgram(program);
-    if (terrainProgram) gl.deleteProgram(terrainProgram);\n    if (shapeProgram) gl.deleteProgram(shapeProgram);
+    if (terrainProgram) gl.deleteProgram(terrainProgram);
+    if (shapeProgram) gl.deleteProgram(shapeProgram);
   }
   gl = program = terrainProgram = canvasRef = null;
   terrainTextures = []; shapeTextures = [];
@@ -156,7 +158,8 @@ function redraw(){
 
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
-let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh, storedShapeBatches, storedShapePixels;\nlet shapeProgram, shapeTextures = [], uploadedShapePixels;
+let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh, storedShapeBatches, storedShapePixels;
+let shapeProgram, shapeTextures = [], uploadedShapePixels;
 export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null) {
   storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh;
   if (!gl) return;
