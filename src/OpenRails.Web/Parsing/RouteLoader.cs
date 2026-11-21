@@ -30,6 +30,7 @@ public sealed class RouteLoader
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
         var worldTiles = new RouteWorldTileLocator().Locate(store, assets.RouteRoot, network);
+        var terrainMeshes = new RouteTerrainMeshLoader().Load(store, terrainTiles);
 
         return new RouteLoadResult(
             metadata,
