@@ -80,13 +80,13 @@ export function cleanup() {
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
   if (resizeObserver) resizeObserver.disconnect();
   if (gl) {
-    for (const texture of terrainTextures) gl.deleteTexture(texture);
+    for (const texture of terrainTextures) gl.deleteTexture(texture);\n    for (const texture of shapeTextures) gl.deleteTexture(texture);
     if (program) gl.deleteProgram(program);
-    if (terrainProgram) gl.deleteProgram(terrainProgram);
+    if (terrainProgram) gl.deleteProgram(terrainProgram);\n    if (shapeProgram) gl.deleteProgram(shapeProgram);
   }
   gl = program = terrainProgram = canvasRef = null;
-  terrainTextures = [];
-  uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = null;
+  terrainTextures = []; shapeTextures = [];
+  uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = storedShapeBatches = storedShapePixels = uploadedShapePixels = null;
   storedVertices = storedIndices = storedTrackLines = null;
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
@@ -156,7 +156,7 @@ function redraw(){
 
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
-let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh;
+let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh, storedShapeBatches, storedShapePixels;\nlet shapeProgram, shapeTextures = [], uploadedShapePixels;
 export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null) {
   storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh;
   if (!gl) return;
@@ -241,6 +241,63 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   if(storedTrackMesh && storedTrackMesh.vertices && storedTrackMesh.indices) drawTrackTriangles(storedTrackMesh,project);
   if(trackLines.length) drawTrackOverlay(trackLines,project);
 }
+function drawTrackShapeBatches(batches,pixels,project){
+  if(!batches.length) return;
+  if(!shapeProgram){
+    const vertex=compile(gl.VERTEX_SHADER,\`#version 300 es
+      in vec3 position; in vec2 uv; out vec2 vUv;
+      void main(){ gl_Position=vec4(position,1.0); vUv=uv; }\`);
+    const fragment=compile(gl.FRAGMENT_SHADER,\`#version 300 es
+      precision highp float; in vec2 vUv; uniform sampler2D shapeTexture;
+      uniform bool hasTexture; uniform bool alphaTest; out vec4 outColor;
+      void main(){ vec4 color=hasTexture ? texture(shapeTexture,vUv) : vec4(0.38,0.40,0.43,1.0);
+        if(alphaTest && color.a<0.5) discard; outColor=color; }\`);
+    shapeProgram=gl.createProgram();gl.attachShader(shapeProgram,vertex);gl.attachShader(shapeProgram,fragment);gl.linkProgram(shapeProgram);
+    if(!gl.getProgramParameter(shapeProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(shapeProgram));
+    gl.deleteShader(vertex);gl.deleteShader(fragment);
+  }
+  if(uploadedShapePixels!==pixels){
+    for(const oldTexture of shapeTextures) gl.deleteTexture(oldTexture);
+    shapeTextures=pixels.map(source=>{
+      const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(source.pixels));
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+      return texture;
+    });
+    uploadedShapePixels=pixels;
+  }
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  gl.useProgram(shapeProgram);
+  const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+  const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);
+  const p=gl.getAttribLocation(shapeProgram,"position"),uv=gl.getAttribLocation(shapeProgram,"uv");
+  gl.enableVertexAttribArray(p);gl.enableVertexAttribArray(uv);
+  const sampler=gl.getUniformLocation(shapeProgram,"shapeTexture"),hasTexture=gl.getUniformLocation(shapeProgram,"hasTexture"),alphaTest=gl.getUniformLocation(shapeProgram,"alphaTest");
+  for(const batch of batches){
+    if(!batch.vertices.length||!batch.indices.length) continue;
+    const packed=new Float32Array(batch.vertices.length);
+    for(let i=0,j=0;i<batch.vertices.length;i+=5,j+=5){
+      const q=project(batch.vertices[i],batch.vertices[i+2],batch.vertices[i+1]);
+      packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=q[2]-0.0002;
+      packed[j+3]=batch.vertices[i+3];packed[j+4]=batch.vertices[i+4];
+    }
+    gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
+    gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+    const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(batch.indices),gl.STREAM_DRAW);
+    const valid=batch.textureIndex>=0&&shapeTextures[batch.textureIndex];
+    gl.uniform1i(hasTexture,valid?1:0);gl.uniform1i(alphaTest,batch.alphaTest?1:0);
+    if(valid){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shapeTextures[batch.textureIndex]);gl.uniform1i(sampler,0);}
+    gl.drawElements(gl.TRIANGLES,batch.indices.length,gl.UNSIGNED_INT,0);
+    gl.deleteBuffer(ib);
+  }
+  gl.bindVertexArray(null);gl.deleteBuffer(vb);gl.deleteVertexArray(vao);
+  gl.disable(gl.BLEND);
+}
+
 function drawTrackOverlay(trackLines,project){
   const packed=new Float32Array(trackLines.length/3*6);
   for(let i=0;i<trackLines.length/3;i++){
