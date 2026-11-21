@@ -20,6 +20,8 @@ The route loader now joins the original MSTS/Open Rails data layers:
 12. Load WORLD tiles on demand and resolve their static/track-object shape filenames against route and global `SHAPES` content.
 13. Convert tile-relative static and track-object positions into the global route coordinate system while preserving original orientation matrices and junction positions.
 14. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
+15. Resolve elevation and hidden-vertex samples across adjacent terrain tiles using the upstream TileManager coordinate conversion.
+16. Build 17×17 terrain patch mesh data with original UV mapping, normals, alternating triangle winding, and hidden-triangle removal.
 
 The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, and terrain tile discovery results.
 
@@ -51,6 +53,7 @@ Regression tests cover:
 - World-coordinate conversion using the MSTS 2048-metre tile size.
 - Positive and negative curve tessellation.
 - Terrain tile name encoding and route tile discovery, including the required `_y.raw` altitude file and optional `_f.raw` flags file.
+- Upstream-compatible adjacent-tile sample resolution and original terrain patch mesh generation, with regression coverage for tile edges, normals, UVs, and hidden triangles.
 - Little-endian altitude grid ordering and vertex-hidden flag decoding.
 - Reading a binary SIMISA terrain tile from a ZIP-backed virtual stream.
 - An end-to-end fixture loading `.trk`, `.tdb`, `TSECTION.DAT`, track network, and terrain tile references.
