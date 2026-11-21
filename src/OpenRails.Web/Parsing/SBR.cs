@@ -80,7 +80,7 @@ namespace Orts.Parsers.Msts
             {
                 // ie us1rd2l1000r10d.s, we are going to allow this but warn
                 Trace.TraceWarning("Improper header in " + filename);
-                fb.Read(buffer, 0, 4);
+                fb.ReadExactly(buffer, 0, 4);
             }
             else if (!headerString.StartsWith("SIMISA@@"))
             {
@@ -91,7 +91,7 @@ namespace Orts.Parsers.Msts
             string subHeader;
             if (unicode)
             {
-                fb.Read(buffer, 0, 32);
+                fb.ReadExactly(buffer, 0, 32);
                 subHeader = System.Text.Encoding.Unicode.GetString(buffer, 0, 16);
             }
             else
