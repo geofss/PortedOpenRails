@@ -32,6 +32,33 @@ public sealed class TerrainTileReaderTests
     }
 
     [Fact]
+    public void ReadsOriginalTerrainShaderTextureSlotsAndUvCalculations()
+    {
+        var shader = Block(TokenID.terrain_shader, Concat(
+            StringPayload("BlendATexDiff"),
+            Block(TokenID.terrain_texslots, Concat(
+                UIntPayload(1),
+                Block(TokenID.terrain_texslot, Concat(StringPayload("grass.ace"), IntPayload(1), IntPayload(2))))),
+            Block(TokenID.terrain_uvcalcs, Concat(
+                UIntPayload(1),
+                Block(TokenID.terrain_uvcalc, Concat(IntPayload(1, 2, 3), FloatPayload(4.5f))))));
+        var tileBytes = CreateSbrFile(Block(TokenID.terrain,
+            Block(TokenID.terrain_shaders, Concat(IntPayload(1), shader))));
+        using var store = CreateStore(("ROUTES/Test/TILES/shaders.t", tileBytes));
+
+        var tile = new TerrainTileReader().Read(store, "ROUTES/Test/TILES/shaders.t");
+
+        var parsed = Assert.Single(tile.Shaders);
+        Assert.Equal("BlendATexDiff", parsed.Name);
+        var texture = Assert.Single(parsed.TextureSlots);
+        Assert.Equal("grass.ace", texture.FileName);
+        Assert.Equal(1, texture.A);
+        Assert.Equal(2, texture.B);
+        var uv = Assert.Single(parsed.UvCalculations);
+        Assert.Equal(new TerrainUvCalculation(1, 2, 3, 4), uv);
+    }
+
+    [Fact]
     public void LoadsTerrainMetadataAltitudeAndOptionalFlagsAsOneTile()
     {
         var samplesPayload = Concat(
@@ -79,6 +106,39 @@ public sealed class TerrainTileReaderTests
         writer.Write((uint)(payload.Length + 1));
         writer.Write((byte)0);
         writer.Write(payload);
+        return stream.ToArray();
+    }
+
+    private static byte[] StringPayload(string value)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.Unicode, leaveOpen: true);
+        writer.Write((ushort)value.Length);
+        writer.Write(Encoding.Unicode.GetBytes(value));
+        return stream.ToArray();
+    }
+
+    private static byte[] IntPayload(params int[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return stream.ToArray();
+    }
+
+    private static byte[] UIntPayload(params uint[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return stream.ToArray();
+    }
+
+    private static byte[] FloatPayload(params float[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
         return stream.ToArray();
     }
 
