@@ -87,6 +87,16 @@ public sealed class AceTextureReader
 
         ReadExactly(reader, 128);
         var imageCount = 1 + (mipMapped ? (int)Math.Log2(width) : 0);
+        long totalDecodedBytes = 0;
+        for (var i = 0; i < imageCount; i++)
+        {
+            var mipWidth = Math.Max(1, width >> i);
+            var mipHeight = Math.Max(1, height >> i);
+            totalDecodedBytes += (long)mipWidth * mipHeight * 4;
+        }
+        if (!rawData && totalDecodedBytes > MaximumTextureBytes)
+            throw new InvalidDataException("ACE texture decoded pixel data exceeds the supported memory limit.");
+
         var channels = new AceTextureChannel[channelCount];
         var alphaBits = (byte)0;
         for (var i = 0; i < channelCount; i++)
