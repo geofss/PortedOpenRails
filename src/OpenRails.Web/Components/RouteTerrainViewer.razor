@@ -161,15 +161,31 @@
                         trackLines.Add((float)points[i + 1].X); trackLines.Add((float)points[i + 1].Y); trackLines.Add((float)points[i + 1].Z);
                     }
                 }
-                var trackGeometry = new TrackShapeRenderGeometryBuilder().Build(Route.TrackShapePlacements);
-                trackGeometryTruncated = trackGeometry.WasTruncated;
-                var trackMesh = new
+                var shapeTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
+                    .Where(asset => asset.Reference.SeasonFolder is null &&
+                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
+                        asset.Texture.MipLevels.Count > 0)
+                    .ToArray();
+                var shapeTextures = shapeTextureAssets.Select(asset => new
                 {
-                    vertices = trackGeometry.Vertices.SelectMany(vertex => new[] { vertex.X, vertex.Y, vertex.Z }).ToArray(),
-                    indices = trackGeometry.Indices,
-                    wasTruncated = trackGeometry.WasTruncated
-                };
-                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(), trackMesh);
+                    width = asset.Texture.Width,
+                    height = asset.Texture.Height,
+                    pixels = asset.Texture.MipLevels[0]
+                }).ToArray();
+                var shapeGeometry = new TrackShapeRenderGeometryBuilder()
+                    .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
+                trackGeometryTruncated = shapeGeometry.WasTruncated;
+                var shapeBatches = shapeGeometry.Batches.Select(batch => new
+                {
+                    vertices = batch.Vertices,
+                    indices = batch.Indices,
+                    textureIndex = batch.TextureIndex,
+                    alphaTest = batch.AlphaTest,
+                    textureAddressMode = batch.TextureAddressMode,
+                    zBias = batch.ZBias
+                }).ToArray();
+                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
+                    null, shapeBatches, shapeTextures);
                 hasDrawn = true;
             }
             catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
