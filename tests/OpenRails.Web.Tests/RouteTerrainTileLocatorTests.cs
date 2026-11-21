@@ -35,7 +35,9 @@ public sealed class RouteTerrainTileLocatorTests
         var database = new TrackDatabase(new TrackNode?[] { null, vector, nodeA, nodeB }, Array.Empty<string>());
         var network = new TrackNetwork(database, new[] { path }, Array.Empty<string>());
 
-        using var store = CreateStore(("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain fixture"));
+        using var store = CreateStore(
+            ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain fixture"),
+            ("ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude fixture"));
 
         var result = new RouteTerrainTileLocator().Locate(store, "ROUTES/Test", network);
 
