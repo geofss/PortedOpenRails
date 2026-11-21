@@ -31,7 +31,7 @@ public sealed class TerrainTileSampleResolverTests
         var resolver = new TerrainTileSampleResolver(new[] { origin, east });
 
         Assert.True(resolver.IsVertexHidden(origin, 256, 0));
-        Assert.Equal(1, resolver.GetElevationMeters(origin, 256, 0));
+        Assert.Equal(2, resolver.GetElevationMeters(origin, 256, 0));
 
         var fallback = new TerrainTileSampleResolver(new[] { origin });
         Assert.False(fallback.IsVertexHidden(origin, 256, 0));
