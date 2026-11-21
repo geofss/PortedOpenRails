@@ -27,5 +27,6 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackSectionGeometryReader.cs" Link="Parsing/TrackSectionGeometryReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackDatabaseReader.cs" Link="Parsing/TrackDatabaseReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
   </ItemGroup>
 </Project>
