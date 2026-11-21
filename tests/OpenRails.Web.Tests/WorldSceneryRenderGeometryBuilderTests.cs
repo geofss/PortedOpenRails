@@ -15,9 +15,8 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
                 null, new WorldMatrix3x3(1, 0, 0, 0, 1, 0, 0, 0, 1), 0, 0) },
             Array.Empty<TrackWorldObject>(), Array.Empty<string>());
         var placements = new WorldObjectPlacementBuilder().Build(tileData);
-        var vertices = new TrackShapeMeshVertex[500_001];
-        for (var i = 0; i < vertices.Length; i++)
-            vertices[i] = new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0);
+        var repeatedVertex = new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0);
+        var vertices = Enumerable.Repeat(repeatedVertex, 500_001).ToArray();
         var primitive = new TrackShapePrimitiveMesh(0, 0, 0, 0,
             new[] { 1, -1 }, new[] { 0, 1, 2 }, "Solid", null, 0, 0, 1, false, 0);
         var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
