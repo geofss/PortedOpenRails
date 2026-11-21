@@ -25,8 +25,9 @@ public sealed class ConsistCatalogReader
                 consists.Add(consist);
                 foreach (var car in consist.Cars)
                 {
-                    var extension = car.IsEngine ? ".eng" : ".wag";
-                    var assetPath = VirtualPath.Normalize($"TRAINS/TRAINSET/{car.Folder}/{car.Name}{extension}");
+                    var assetPath = car.IsEndOfTrain
+                        ? VirtualPath.Normalize($"TRAINS/ORTS_EOT/{car.Folder}/{car.Name}.eot")
+                        : VirtualPath.Normalize($"TRAINS/TRAINSET/{car.Folder}/{car.Name}{(car.IsEngine ? ".eng" : ".wag")}");
                     carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, store.Contains(assetPath)));
                 }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
