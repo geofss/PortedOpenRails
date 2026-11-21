@@ -3,8 +3,8 @@ using OpenRails.Web.Content;
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
-public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage);
-public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets);
+public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage);\npublic sealed record ConsistTcsAssetReference(string ConsistName, string FileName, string AssetPath, bool Found, string? SourcePackage);
+public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets, IReadOnlyList<ConsistTcsAssetReference> TcsAssets);
 
 /// <summary>Discover and parse consist files in the browser virtual content namespace.</summary>
 public sealed class ConsistCatalogReader
@@ -15,7 +15,7 @@ public sealed class ConsistCatalogReader
         var reader = new ConsistReader();
         var consists = new List<ConsistMetadata>();
         var issues = new List<ConsistCatalogIssue>();
-        var carAssets = new List<ConsistCarAssetReference>();
+        var carAssets = new List<ConsistCarAssetReference>();\n        var tcsAssets = new List<ConsistTcsAssetReference>();
         foreach (var path in store.Paths.Where(path => path.EndsWith(".con", StringComparison.OrdinalIgnoreCase))
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
@@ -23,7 +23,7 @@ public sealed class ConsistCatalogReader
             {
                 var consist = reader.Read(store, path);
                 consists.Add(consist);
-                foreach (var car in consist.Cars)
+                if (!string.IsNullOrWhiteSpace(consist.TrainControlSystemParametersFile))\n                {\n                    var tcsPath = VirtualPath.Normalize($\"TRAINS/CONSISTS/SCRIPT/{consist.TrainControlSystemParametersFile}\");\n                    var tcsFound = store.Contains(tcsPath);\n                    var tcsSourcePackage = store is CompositeContentStore tcsComposite && tcsFound ? tcsComposite.GetSourcePackage(tcsPath) : null;\n                    tcsAssets.Add(new ConsistTcsAssetReference(consist.Name, consist.TrainControlSystemParametersFile, tcsPath, tcsFound, tcsSourcePackage));\n                }\n                foreach (var car in consist.Cars)
                 {
                     var assetPath = car.IsEndOfTrain
                         ? VirtualPath.Normalize($"TRAINS/ORTS_EOT/{car.Folder}/{car.Name}.eot")
@@ -45,6 +45,6 @@ public sealed class ConsistCatalogReader
                 issues.Add(new ConsistCatalogIssue(path, exception.Message));
             }
         }
-        return new ConsistCatalogResult(Array.AsReadOnly(consists.ToArray()), Array.AsReadOnly(issues.ToArray()), Array.AsReadOnly(carAssets.ToArray()));
+        return new ConsistCatalogResult(Array.AsReadOnly(consists.ToArray()), Array.AsReadOnly(issues.ToArray()), Array.AsReadOnly(carAssets.ToArray()), Array.AsReadOnly(tcsAssets.ToArray()));
     }
 }
