@@ -6,7 +6,7 @@ namespace OpenRails.Web.Parsing;
 public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State);
 public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped, IReadOnlyList<ConsistLoadData>? Loads = null);
 public sealed record ConsistSpeedLimit(float A, float B);
-public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null);
+public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null, int Serial = 1, int NextWagonUid = 0);
 
 /// <summary>Reads MSTS/Open Rails .con consists using the upstream STF parser and virtual package streams.</summary>
 public sealed class ConsistReader
@@ -25,7 +25,7 @@ public sealed class ConsistReader
             var cars = new List<ConsistCar>();
             var durability = 1.0f;
             ConsistSpeedLimit? maxVelocity = null;
-            string? trainControlSystemParametersFile = null;
+            string? trainControlSystemParametersFile = null;\n            var serial = 1;\n            var nextWagonUid = 0;
             reader.ParseFile(new[]
             {
                 new STFReader.TokenProcessor("train", () =>
@@ -33,18 +33,18 @@ public sealed class ConsistReader
                     reader.MustMatch("(");
                     reader.ParseBlock(new[]
                     {
-                        new STFReader.TokenProcessor("traincfg", () => ReadTrainConfig(reader, cars, value => consistName = value, value => durability = value, value => maxVelocity = value, value => trainControlSystemParametersFile = value))
+                        new STFReader.TokenProcessor("traincfg", () => ReadTrainConfig(reader, cars, value => consistName = value, value => durability = value, value => maxVelocity = value, value => trainControlSystemParametersFile = value, value => serial = value, value => nextWagonUid = value))
                     });
                 })
             });
             if (cars.Count == 0)
                 throw new InvalidDataException($"The consist '{virtualPath}' contains no wagon or engine entries.");
             var name = string.IsNullOrWhiteSpace(consistName) ? Path.GetFileNameWithoutExtension(virtualPath) : consistName.Trim();
-            return new ConsistMetadata(name, Array.AsReadOnly(cars.ToArray()), virtualPath, durability, maxVelocity, trainControlSystemParametersFile);
+            return new ConsistMetadata(name, Array.AsReadOnly(cars.ToArray()), virtualPath, durability, maxVelocity, trainControlSystemParametersFile, serial, nextWagonUid);
         }
     }
 
-    private static void ReadTrainConfig(STFReader reader, List<ConsistCar> cars, Action<string> setName, Action<float> setDurability, Action<ConsistSpeedLimit> setMaxVelocity, Action<string> setTcsFile)
+    private static void ReadTrainConfig(STFReader reader, List<ConsistCar> cars, Action<string> setName, Action<float> setDurability, Action<ConsistSpeedLimit> setMaxVelocity, Action<string> setTcsFile, Action<int> setSerial, Action<int> setNextWagonUid)
     {
         reader.MustMatch("(");
         var name = reader.ReadString();
