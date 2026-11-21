@@ -8,9 +8,42 @@ export function initialize(canvas) {
   canvasRef = canvas;
   resizeCanvas();
   wheelHandler = e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); redraw(); };
-  pointerDownHandler = e => { dragging=true; lastX=e.clientX; lastY=e.clientY; canvas.setPointerCapture(e.pointerId); };
-  pointerMoveHandler = e => { if(dragging){ rotation += (e.clientX-lastX)*0.008; pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006)); lastX=e.clientX; lastY=e.clientY; redraw(); } };
-  pointerUpHandler = () => { dragging=false; };
+  pointerDownHandler = e => {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    canvas.setPointerCapture(e.pointerId);
+    if (activePointers.size >= 2) {
+      const points = [...activePointers.values()];
+      pinchStartDistance = pointerDistance(points[0], points[1]);
+      pinchStartZoom = zoom;
+      dragging = false;
+    } else {
+      dragging = true;
+      lastX = e.clientX; lastY = e.clientY;
+    }
+  };
+  pointerMoveHandler = e => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size >= 2) {
+      const points = [...activePointers.values()];
+      const distance = pointerDistance(points[0], points[1]);
+      if (pinchStartDistance > 0)
+        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance));
+      redraw();
+    } else if (dragging) {
+      rotation += (e.clientX-lastX)*0.008;
+      pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006));
+      lastX=e.clientX; lastY=e.clientY; redraw();
+    }
+  };
+  pointerUpHandler = e => {
+    activePointers.delete(e.pointerId);
+    pinchStartDistance = 0;
+    if (activePointers.size === 1) {
+      const remaining = [...activePointers.values()][0];
+      lastX = remaining.x; lastY = remaining.y; dragging = true;
+    } else dragging = false;
+  };
   resizeHandler = () => redraw();
   canvas.addEventListener('wheel', wheelHandler, { passive:false });
   canvas.addEventListener('pointerdown', pointerDownHandler);
