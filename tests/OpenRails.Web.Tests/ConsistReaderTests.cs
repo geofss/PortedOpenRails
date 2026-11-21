@@ -25,7 +25,7 @@ public sealed class ConsistReaderTests
         var consist = new ConsistReader().Read(store, "TRAINS/CONSISTS/Test.con");
 
         Assert.Equal("Regional test consist", consist.Name);
-        Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);
+        Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);\n        Assert.Equal(0.8f, consist.Durability);\n        Assert.Equal(new ConsistSpeedLimit(30, 50), consist.MaxVelocity);\n        Assert.Equal("tcs.xml", consist.TrainControlSystemParametersFile);
         Assert.Equal(3, consist.Cars.Count);
         Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0] with { Loads = null });
         Assert.Equal(2, consist.Cars[0].Loads!.Count);
@@ -48,7 +48,7 @@ public sealed class ConsistReaderTests
 
         var consist = new ConsistReader().Read(store, "TRAINS/CONSISTS/Fallback.con");
 
-        Assert.Equal("Fallback", consist.Name);
+        Assert.Equal("Fallback", consist.Name);\n        Assert.Equal(1.0f, consist.Durability);\n        Assert.Null(consist.MaxVelocity);\n        Assert.Null(consist.TrainControlSystemParametersFile);
     }
 
     [Fact]
