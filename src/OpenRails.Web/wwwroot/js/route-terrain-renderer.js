@@ -30,6 +30,7 @@ export function initialize(canvas) {
     void main(){ outColor=vec4(vColor,1.0); }`);
   program=gl.createProgram(); gl.attachShader(program,vertex); gl.attachShader(program,fragment); gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  gl.deleteShader(vertex); gl.deleteShader(fragment);
   gl.enable(gl.DEPTH_TEST);
 }
 export function cleanup() {
@@ -128,6 +129,7 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
     terrainProgram=gl.createProgram();
     gl.attachShader(terrainProgram,vertex); gl.attachShader(terrainProgram,fragment); gl.linkProgram(terrainProgram);
     if(!gl.getProgramParameter(terrainProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(terrainProgram));
+    gl.deleteShader(vertex); gl.deleteShader(fragment);
   }
   if (uploadedTerrainPixels !== textures) {
     for (const oldTexture of terrainTextures) gl.deleteTexture(oldTexture);
