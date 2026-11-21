@@ -25,6 +25,8 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/STFReader.cs" Link="Parsing/STFReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/SBR.cs" Link="Parsing/SBR.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TokenID.cs" Link="Parsing/TokenID.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ShapeFile.cs" Link="Parsing/ShapeFile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeFileReader.cs" Link="Parsing/TrackShapeFileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileReader.cs" Link="Parsing/TerrainTileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainRawFileReaders.cs" Link="Parsing/TerrainRawFileReaders.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainTileLocator.cs" Link="Parsing/RouteTerrainTileLocator.cs" />
