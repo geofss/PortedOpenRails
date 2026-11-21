@@ -94,7 +94,8 @@
     private string? renderError;
     private bool initialized;
     private bool hasDrawn;
-    private bool trackGeometryTruncated;\n    private int trackShapeBatchCount;
+    private bool trackGeometryTruncated;
+    private int trackShapeBatchCount;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -176,7 +177,8 @@
                 }).ToArray();
                 var shapeGeometry = new TrackShapeRenderGeometryBuilder()
                     .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
-                trackGeometryTruncated = shapeGeometry.WasTruncated;\n                trackShapeBatchCount = shapeGeometry.Batches.Count;
+                trackGeometryTruncated = shapeGeometry.WasTruncated;
+                trackShapeBatchCount = shapeGeometry.Batches.Count;
                 var shapeBatches = shapeGeometry.Batches.Select(batch => new
                 {
                     vertices = batch.Vertices,
