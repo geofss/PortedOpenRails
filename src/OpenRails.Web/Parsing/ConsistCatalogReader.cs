@@ -42,7 +42,7 @@ public sealed class ConsistCatalogReader
                     var found = store.Contains(assetPath);
                     var sourcePackage = store is CompositeContentStore composite && found ? composite.GetSourcePackage(assetPath) : null;
                     RollingStockMetadata? metadata = null;
-                    if (found)
+                    if (found && !car.IsEndOfTrain)
                     {
                         try
                         {
