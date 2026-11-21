@@ -1,0 +1,70 @@
+@using OpenRails.Web.Parsing
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<section class="route-world-view">
+    <h3>Route terrain · WebGL preview</h3>
+    <p class="hint">Original terrain patch geometry is uploaded to the browser GPU. This initial renderer shows elevation and terrain topology; textures and scenery rendering are the next stages.</p>
+    <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
+    @if (renderError is not null)
+    {
+        <p class="error">@renderError</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public RouteLoadResult Route { get; set; } = default!;
+    private ElementReference canvas;
+    private IJSObjectReference? module;
+    private string? renderError;
+    private bool initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/route-terrain-renderer.js");
+                await module.InvokeVoidAsync("initialize", canvas);
+                initialized = true;
+            }
+            catch (Exception ex) { renderError = $"WebGL renderer initialization failed: {ex.Message}"; }
+        }
+        if (initialized && module is not null)
+        {
+            try
+            {
+                var vertices = new List<float>();
+                var indices = new List<int>();
+                foreach (var loaded in Route.TerrainMeshes.Meshes)
+                foreach (var lod in loaded.LodMeshes.Take(1))
+            foreach (var patch in lod.Patches)
+            {
+                var offset = indices.Count == 0 ? 0 : vertices.Count / 3;
+                var tileXOffset = loaded.Content.Reference.TileX * 2048f;
+                var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
+                foreach (var vertex in patch.Vertices)
+                {
+                    vertices.Add(vertex.Position.X + patch.PatchOrigin.X + tileXOffset);
+                    vertices.Add(vertex.Position.Y + patch.PatchOrigin.Y);
+                    vertices.Add(vertex.Position.Z + patch.PatchOrigin.Z + tileZOffset);
+                }
+                indices.AddRange(patch.Indices.Select(index => index + offset));
+            }
+                await module.InvokeVoidAsync("drawTerrain", vertices.ToArray(), indices.ToArray());
+            }
+            catch (Exception ex) { renderError = $"Terrain rendering failed: {ex.Message}"; }
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try { await module.DisposeAsync(); } catch { }
+        }
+    }
+}
