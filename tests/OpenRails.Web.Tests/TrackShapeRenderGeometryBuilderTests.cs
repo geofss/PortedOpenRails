@@ -19,7 +19,7 @@ public sealed class TrackShapeRenderGeometryBuilderTests
             new TrackShapeMeshVertex(new Vector3(1, 3, -3), Vector3.UnitY, new Vector2(0.5f, 0.6f), 0, 0, 0)
         };
         var textured = new TrackShapePrimitiveMesh(0, 0, 0, 0,
-            new[] { 1, -1 }, new[] { 0, 1, 2 }, "Tex", "rail.ace", 0, 0, 0, true, 0);
+            new[] { 1, -1 }, new[] { 0, 1, 2 }, "Tex", "rail.ace", 0, 0, 2, true, 0);
         var untextured = new TrackShapePrimitiveMesh(1, 0, 0, 0,
             new[] { 1, -1 }, new[] { 0, 1, 2 }, "Tex", null, 0, 0, 0, false, 0);
         var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { textured, untextured });
@@ -40,7 +40,7 @@ public sealed class TrackShapeRenderGeometryBuilderTests
         Assert.False(result.WasTruncated);
         Assert.Equal(2, result.Batches.Count);
         var texturedBatch = Assert.Single(result.Batches.Where(batch => batch.TextureIndex == 0));
-        Assert.True(texturedBatch.AlphaTest);
+        Assert.True(texturedBatch.AlphaTest);\n        Assert.Equal(2, texturedBatch.TextureAddressMode);
         Assert.Equal(new[] { 111f, 2f, 177f, 0.1f, 0.2f }, texturedBatch.Vertices.Take(5));
         Assert.Equal(new[] { 0, 1, 2 }, texturedBatch.Indices);
         var fallbackBatch = Assert.Single(result.Batches.Where(batch => batch.TextureIndex == -1));
