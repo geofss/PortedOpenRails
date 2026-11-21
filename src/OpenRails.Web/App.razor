@@ -147,6 +147,33 @@
             {
                 <p class="hint">Showing the first 40 resolved paths.</p>
             }
+            @if (consistCatalog is not null)
+            {
+                <h3>Train consists discovered</h3>
+                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s)</p>
+                @foreach (var consist in consistCatalog.Consists)
+                {
+                    <details class="consist-entry">
+                        <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath</span></summary>
+                        <ol class="path-list">
+                            @foreach (var car in consist.Cars)
+                            {
+                                <li>@(car.IsEngine ? "Engine" : car.IsEndOfTrain ? "EOT" : "Wagon"): @car.Name <span class="hint">(@car.Folder, UID @car.Uid@(car.Flipped ? ", flipped" : ""))</span></li>
+                            }
+                        </ol>
+                    </details>
+                }
+                @if (consistCatalog.Issues.Count > 0)
+                {
+                    <h4>Consist file diagnostics</h4>
+                    <ul class="path-list">
+                        @foreach (var issue in consistCatalog.Issues.Take(15))
+                        {
+                            <li><code>@issue.Path</code> — @issue.Message</li>
+                        }
+                    </ul>
+                }
+            }
         }
     </section>
 </main>
@@ -161,7 +188,7 @@
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
-    private RouteLoadResult? loadedRoute;
+    private RouteLoadResult? loadedRoute;\n    private ConsistCatalogResult? consistCatalog;
 
     private void SelectDefaultRoute()
     {
@@ -298,7 +325,7 @@
         return name;
     }
 
-    private void RebuildComposite() => composite = layers.Count == 0 ? null : new CompositeContentStore(layers);
+    private void RebuildComposite()\n    {\n        composite = layers.Count == 0 ? null : new CompositeContentStore(layers);\n        consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);\n    }
 
     public void Dispose()
     {
