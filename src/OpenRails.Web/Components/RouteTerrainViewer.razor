@@ -16,6 +16,7 @@
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
         <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
+        <dt>WORLD parse diagnostics</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count)</dd>
         <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
         <dt>World placements discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count)</dd>
         <dt>World placements with positions</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
@@ -55,6 +56,10 @@
             }
             @foreach (var tile in Route.WorldScenery.Loaded)
             {
+                @foreach (var diagnostic in tile.Tile.Diagnostics)
+                {
+                    <li>WORLD parse note: @tile.Tile.SourcePath — @diagnostic</li>
+                }
                 @foreach (var issue in tile.ShapeDiscovery.Missing)
                 {
                     <li>Missing shape: @issue.FileName — @issue.Reason</li>
