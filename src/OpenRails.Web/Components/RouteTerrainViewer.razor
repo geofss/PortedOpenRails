@@ -13,7 +13,7 @@
         <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
-        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0))</dd>
+        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
         <dt>Track/world shape render batches</dt><dd>@trackShapeBatchCount</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
