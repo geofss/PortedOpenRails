@@ -110,19 +110,31 @@ public sealed class RouteTerrainTileLocator
 
         foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
         {
-            var fileName = TerrainTileName.FromTileXZ(tile.X, tile.Z, TerrainTileZoom.Small) + ".t";
-            var expectedPath = $"{root}/TILES/{fileName}";
+            var tileName = TerrainTileName.FromTileXZ(tile.X, tile.Z, TerrainTileZoom.Small);
+            var expectedPath = $"{root}/TILES/{tileName}.t";
+            var expectedAltitudePath = $"{root}/TILES/{tileName}_y.raw";
             if (!availablePaths.TryGetValue(expectedPath, out var actualPath))
+            {
                 missing.Add((tile.X, tile.Z, expectedPath));
-            else
-                found.Add(new TerrainTileReference(tile.X, tile.Z, actualPath));
+                continue;
+            }
+
+            if (!availablePaths.TryGetValue(expectedAltitudePath, out var actualAltitudePath))
+            {
+                missing.Add((tile.X, tile.Z, expectedAltitudePath));
+                continue;
+            }
+
+            var expectedFlagsPath = $"{root}/TILES/{tileName}_f.raw";
+            availablePaths.TryGetValue(expectedFlagsPath, out var actualFlagsPath);
+            found.Add(new TerrainTileReference(tile.X, tile.Z, actualPath, actualAltitudePath, actualFlagsPath));
         }
 
         return new RouteTerrainTileDiscovery(found, missing);
     }
 }
 
-public sealed record TerrainTileReference(int TileX, int TileZ, string Path);
+public sealed record TerrainTileReference(int TileX, int TileZ, string Path, string AltitudePath, string? FlagsPath);
 
 public sealed class RouteTerrainTileDiscovery
 {
