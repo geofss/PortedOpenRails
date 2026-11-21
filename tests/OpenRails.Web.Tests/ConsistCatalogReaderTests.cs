@@ -92,14 +92,14 @@ public sealed class ConsistCatalogReaderTests
                 ) )
                 """),
             ("TRAINS/TRAINSET/EngineFolder/Engine.eng", "engine"),
-            ("TRAINS/TRAINSET/EotFolder/EndDevice.wag", "eot"));
+            ("TRAINS/ORTS_EOT/EotFolder/EndDevice.eot", "eot"));
 
         var result = new ConsistCatalogReader().Read(store);
 
         Assert.Equal(3, result.CarAssets.Count);
         Assert.True(result.CarAssets.Single(asset => asset.IsEngine).Found);
         Assert.True(result.CarAssets.Single(asset => asset.IsEndOfTrain).Found);
-        Assert.EndsWith("EndDevice.wag", result.CarAssets.Single(asset => asset.IsEndOfTrain).AssetPath);
+        Assert.Equal("TRAINS/ORTS_EOT/EotFolder/EndDevice.eot", result.CarAssets.Single(asset => asset.IsEndOfTrain).AssetPath);
         Assert.False(result.CarAssets.Single(asset => asset.CarName == "MissingCar").Found);
         Assert.EndsWith("MissingCar.wag", result.CarAssets.Single(asset => asset.CarName == "MissingCar").AssetPath);
     }
