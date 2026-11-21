@@ -32,7 +32,7 @@ public sealed class WorldSceneryTileLoader
                     store,
                     new TrackShapeAssetReference(asset.ObjectUid, fileName, asset.Path)));
             }
-            catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException)
+            catch (Exception exception)
             {
                 failedShapes.Add(new WorldShapeMeshIssue(asset.ObjectUid, asset.Path, exception.Message));
             }
