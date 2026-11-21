@@ -5,6 +5,7 @@ namespace OpenRails.Web.Parsing;
 /// <summary>
 /// Builds the original Open Rails 17x17 terrain patch vertex grids and alternating
 /// 16x16 triangle topology from .t metadata, _y.raw elevations, and optional _f.raw flags.
+/// Supply cross-tile elevation/flag resolvers for edge samples; the defaults read only this tile.
 /// </summary>
 public sealed class TerrainMeshBuilder
 {
