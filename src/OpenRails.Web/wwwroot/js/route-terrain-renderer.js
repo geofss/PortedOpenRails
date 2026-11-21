@@ -111,13 +111,15 @@ function redraw(){
   const centerX=(minX+maxX)/2,centerZ=(minZ+maxZ)/2;
   const rotated=(x,z)=>{const dx=x-centerX,dz=z-centerZ;return [dx*Math.cos(rotation)-dz*Math.sin(rotation),dx*Math.sin(rotation)+dz*Math.cos(rotation)];};
   let rminX=Infinity,rmaxX=-Infinity,rminZ=Infinity,rmaxZ=-Infinity;
-  for(let i=0;i<count;i++){const q=rotated(vertices[i*3],vertices[i*3+2]);rminX=Math.min(rminX,q[0]);rmaxX=Math.max(rmaxX,q[0]);rminZ=Math.min(rminZ,q[1]);rmaxZ=Math.max(rmaxZ,q[1]);}
-  for(let i=0;i<trackLines.length;i+=3){const q=rotated(trackLines[i],trackLines[i+2]);rminX=Math.min(rminX,q[0]);rmaxX=Math.max(rmaxX,q[0]);rminZ=Math.min(rminZ,q[1]);rmaxZ=Math.max(rmaxZ,q[1]);}
+  const cosPitch=Math.cos(pitch),sinPitch=Math.sin(pitch);
+  const projectedZ=(x,y,z)=>{const q=rotated(x,z);return q[1]*cosPitch+(y-centerY)*sinPitch;};
+  for(let i=0;i<count;i++){const x=vertices[i*3],y=vertices[i*3+1],z=vertices[i*3+2],q=rotated(x,z),v=projectedZ(x,y,z);rminX=Math.min(rminX,q[0]);rmaxX=Math.max(rmaxX,q[0]);rminZ=Math.min(rminZ,v);rmaxZ=Math.max(rmaxZ,v);}
+  for(let i=0;i<trackLines.length;i+=3){const x=trackLines[i],y=trackLines[i+1],z=trackLines[i+2],q=rotated(x,z),v=projectedZ(x,y,z);rminX=Math.min(rminX,q[0]);rmaxX=Math.max(rmaxX,q[0]);rminZ=Math.min(rminZ,v);rmaxZ=Math.max(rmaxZ,v);}
   const span=Math.max(1,rmaxX-rminX,rmaxZ-rminZ),aspect=canvasRef.width/canvasRef.height;
   const packed=new Float32Array(count*6);
   for(let i=0;i<count;i++){
     const x=vertices[i*3],y=vertices[i*3+1],z=vertices[i*3+2],q=rotated(x,z);
-    let px=((q[0]-rminX)/span)*1.8-0.9, py=((q[1]-rminZ)/span)*1.8-0.9;
+    let px=((q[0]-rminX)/span)*1.8-0.9, py=((projectedZ(x,y,z)-rminZ)/span)*1.8-0.9;
     px*=zoom;py*=zoom;
     if(aspect>1) py/=aspect; else px*=aspect;
     packed[i*6]=px; packed[i*6+1]=py; packed[i*6+2]=0;
@@ -136,7 +138,7 @@ function redraw(){
     const linePacked=new Float32Array(trackLines.length/3*6);
     for(let i=0;i<trackLines.length/3;i++){
       const x=trackLines[i*3],z=trackLines[i*3+2],q=rotated(x,z);
-      let px=((q[0]-rminX)/span)*1.8-0.9,py=((q[1]-rminZ)/span)*1.8-0.9;
+      let px=((q[0]-rminX)/span)*1.8-0.9,py=((projectedZ(x,trackLines[i*3+1],z)-rminZ)/span)*1.8-0.9;
       px*=zoom;py*=zoom;if(aspect>1)py/=aspect;else px*=aspect;
       linePacked[i*6]=px;linePacked[i*6+1]=py;linePacked[i*6+2]=0.01;
       linePacked[i*6+3]=0.88;linePacked[i*6+4]=0.88;linePacked[i*6+5]=0.9;
