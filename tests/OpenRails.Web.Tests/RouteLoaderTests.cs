@@ -56,7 +56,8 @@ public sealed class RouteLoaderTests
                     TrackSection ( 1 SectionSize ( 1m 10m ) )
                 )
                 """),
-            ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"));
+            ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"),
+            ("ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude samples"));
 
         var metadata = new RouteMetadataReader().Read(store, "ROUTES/Test/Test.trk");
         var route = new RouteLoader().Load(store, "ROUTES/Test/Test.trk", metadata);
