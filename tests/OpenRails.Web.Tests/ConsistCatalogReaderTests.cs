@@ -49,12 +49,14 @@ public sealed class ConsistCatalogReaderTests
         {
             new PackageLayer("Route", CreateStore(
                 ("TRAINS/CONSISTS/Shared.con", """Train ( TrainCfg ( "Route override" ORTSTrainControlSystemParameters ( "route.tcs" ) Wagon ( UiD ( 1 ) WagonData ( "RouteCar" "RouteFolder" ) ) ) )"""),
-                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "route car"),\n                ("TRAINS/CONSISTS/SCRIPT/route.tcs", "route TCS"))),
+                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "route car"),
+                ("TRAINS/CONSISTS/SCRIPT/route.tcs", "route TCS"))),
             new PackageLayer("Global", CreateStore(
                 ("TRAINS/CONSISTS/shared.CON", """Train ( TrainCfg ( "Global version" Wagon ( UiD ( 2 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),
                 ("TRAINS/CONSISTS/GlobalOnly.con", """Train ( TrainCfg ( "Global only" Wagon ( UiD ( 3 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),
                 ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "global override"),
-                ("TRAINS/TRAINSET/GlobalFolder/GlobalCar.wag", "global car"),\n                ("TRAINS/CONSISTS/SCRIPT/route.tcs", "global TCS")))
+                ("TRAINS/TRAINSET/GlobalFolder/GlobalCar.wag", "global car"),
+                ("TRAINS/CONSISTS/SCRIPT/route.tcs", "global TCS")))
         });
 
         var result = new ConsistCatalogReader().Read(composite);
@@ -63,7 +65,11 @@ public sealed class ConsistCatalogReaderTests
         Assert.Empty(result.Issues);
         Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);
         Assert.Equal("Route", result.CarAssets.Single(asset => asset.CarName == "RouteCar").SourcePackage);
-        Assert.Equal("Global", result.CarAssets.Single(asset => asset.CarName == "GlobalCar").SourcePackage);\n        Assert.Single(result.TcsAssets);\n        Assert.True(result.TcsAssets[0].Found);\n        Assert.Equal("TRAINS/CONSISTS/SCRIPT/route.tcs", result.TcsAssets[0].AssetPath);\n        Assert.Equal("Route", result.TcsAssets[0].SourcePackage);
+        Assert.Equal("Global", result.CarAssets.Single(asset => asset.CarName == "GlobalCar").SourcePackage);
+        Assert.Single(result.TcsAssets);
+        Assert.True(result.TcsAssets[0].Found);
+        Assert.Equal("TRAINS/CONSISTS/SCRIPT/route.tcs", result.TcsAssets[0].AssetPath);
+        Assert.Equal("Route", result.TcsAssets[0].SourcePackage);
     }
 
     [Fact]
