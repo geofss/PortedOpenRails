@@ -54,6 +54,8 @@ public sealed class ConsistReader
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("name", () => setName(reader.ReadStringBlock(null))),
+            new STFReader.TokenProcessor("serial", () => setSerial(reader.ReadIntBlock(null))),
+            new STFReader.TokenProcessor("nextwagonuid", () => setNextWagonUid(reader.ReadIntBlock(null))),
             new STFReader.TokenProcessor("durability", () => setDurability(reader.ReadFloatBlock(STFReader.UNITS.None, null))),
             new STFReader.TokenProcessor("maxvelocity", () => setMaxVelocity(ReadMaxVelocity(reader))),
             new STFReader.TokenProcessor("ortstraincontrolsystemparameters", () => setTcsFile(reader.ReadStringBlock(null))),
