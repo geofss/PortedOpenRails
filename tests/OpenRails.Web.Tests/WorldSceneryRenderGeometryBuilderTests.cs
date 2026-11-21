@@ -28,7 +28,8 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
             new[] { 1, -1 }, new[] { 0, 1, 2 }, "Tex", "rail.ace", 0, 0, 1, true, 0);
         var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
         var lod = new TrackShapeLodMesh(1000, new[] { 1, -1 }, new[] { subObject });
-        var mesh = new TrackShapeMesh(0, 0, Array.Empty<TrackShapeMatrix>(), new[] { lod });
+        var identityMatrix = new TrackShapeMatrix("root", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0);
+        var mesh = new TrackShapeMesh(0, 0, new[] { identityMatrix }, new[] { lod });
         var assets = new[]
         {
             new TrackShapeAssetMesh(10, "building.s", "GLOBAL/SHAPES/building.s", mesh),
