@@ -29,6 +29,14 @@
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
         <ul>
+            @foreach (var tile in Route.WorldScenery.Missing)
+            {
+                <li>Missing WORLD tile: W@(tile.TileX) @(tile.TileZ)</li>
+            }
+            @foreach (var issue in Route.WorldScenery.Failed)
+            {
+                <li>Failed WORLD tile: @issue.Path — @issue.Reason</li>
+            }
             @foreach (var issue in Route.TrackShapeMeshes.MissingMeshes)
             {
                 <li>Missing track shape: @issue.FileName — @issue.Reason</li>
