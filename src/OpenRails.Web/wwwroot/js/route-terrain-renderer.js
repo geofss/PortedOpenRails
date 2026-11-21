@@ -32,6 +32,7 @@ export function drawTerrain(vertices, indices, trackLines = []) {
 }
 function resizeCanvas(){ const dpr=window.devicePixelRatio||1; const w=Math.max(1,Math.floor(canvasRef.clientWidth*dpr)),h=Math.max(1,Math.floor(canvasRef.clientHeight*dpr)); if(canvasRef.width!==w||canvasRef.height!==h){canvasRef.width=w;canvasRef.height=h;}}
 function redraw(){
+  if(storedTerrainPatches){drawTerrainTextured(storedTerrainPatches,storedTerrainPixels,storedTerrainLines);return;}
   resizeCanvas();
   const vertices=storedVertices,indices=storedIndices,trackLines=storedTrackLines||[];
   if(!gl || !vertices || !vertices.length || !indices || !indices.length) return;
@@ -81,8 +82,9 @@ function redraw(){
 
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
-let terrainProgram, terrainTextures = [];
+let terrainProgram, terrainTextures = [], storedTerrainPatches, storedTerrainPixels, storedTerrainLines;
 export function drawTerrainTextured(patches, textures, trackLines = []) {
+  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines;
   if (!gl) return;
   if (!terrainProgram) {
     const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
