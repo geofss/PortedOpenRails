@@ -167,7 +167,8 @@ public sealed class WorldTileReader
         }
 
         return (tileX, tileZ);
-    }}
+    }
+}
 
 public sealed class WorldTileData
 {
