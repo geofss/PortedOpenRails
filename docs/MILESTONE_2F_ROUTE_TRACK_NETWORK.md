@@ -38,6 +38,7 @@ Regression tests cover:
 - Global TrackShapes parsing and resolution of original shape filenames and path section references.
 - Route-first/global-fallback shape asset discovery and safe virtual path validation.
 - Original `.s` shape parser reading from a ZIP-backed stream, with point and UV regression coverage.
+- Portable track-shape mesh conversion, including a triangle fixture that verifies transformed positions, UVs, indices, shader/image references, and matrix hierarchy.
 - Missing pin diagnostics.
 - Route-specific section overrides and global fallback.
 - World-coordinate conversion using the MSTS 2048-metre tile size.
@@ -54,7 +55,7 @@ The tests use synthetic fixtures. They do not yet establish compatibility with e
 - TDB `TrItemTable` payloads such as signals, platforms, sidings, speed posts, and sound regions are not yet parsed.
 - Road database (`.rdb`) support is not included.
 - Terrain mesh generation, patch LOD selection, and terrain texture/material loading are not yet implemented.
-- Original `.s` shape structures are parsed, but their geometry has not yet been transformed into browser GPU meshes; ACE textures, forests, signals, and buildings are not yet rendered.
+- Original `.s` shape structures are parsed and converted to portable mesh data, but the meshes are not yet submitted to a browser GPU renderer; ACE textures, forests, signals, and buildings are not yet rendered.
 - The route network is data and centerline geometry, not yet a fully rendered 3D route.
 - No route asset is bundled or redistributed as part of this milestone.
 
