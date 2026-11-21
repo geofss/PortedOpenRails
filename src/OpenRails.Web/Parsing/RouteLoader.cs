@@ -29,6 +29,7 @@ public sealed class RouteLoader
         var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
+        var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
         var worldTiles = new RouteWorldTileLocator().Locate(store, assets.RouteRoot, network);
         var terrainMeshes = new RouteTerrainMeshLoader().Load(store, terrainTiles);
         var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
@@ -44,6 +45,7 @@ public sealed class RouteLoader
             network,
             terrainTiles,
             trackShapeAssets,
+            trackShapeMeshes,
             worldTiles,
             terrainMeshes,
             terrainTextureAssets,
@@ -61,6 +63,7 @@ public sealed record RouteLoadResult(
     TrackNetwork TrackNetwork,
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
+    RouteTrackShapeMeshLoadResult TrackShapeMeshes,
     RouteWorldTileDiscovery WorldTiles,
     RouteTerrainMeshLoadResult TerrainMeshes,
     TerrainTextureAssetDiscovery TerrainTextureAssets,
@@ -94,4 +97,37 @@ public sealed class RouteWorldSceneryLoadResult
     public IReadOnlyList<RouteWorldSceneryIssue> Failed { get; }
     public RouteWorldSceneryLoadResult(IEnumerable<LoadedWorldSceneryTile> loaded, IEnumerable<(int TileX, int TileZ)> missing, IEnumerable<RouteWorldSceneryIssue> failed)
     { Loaded = Array.AsReadOnly(loaded.ToArray()); Missing = Array.AsReadOnly(missing.ToArray()); Failed = Array.AsReadOnly(failed.ToArray()); }
+}
+
+
+/// <summary>Loads original track-shape meshes and their referenced route textures.</summary>
+public sealed class RouteTrackShapeMeshLoader
+{
+    public RouteTrackShapeMeshLoadResult Load(IVirtualContentStore store, string routeRoot, TrackShapeAssetDiscovery discovery)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(discovery);
+        var meshes = new List<TrackShapeAssetMesh>();
+        var failed = new List<RouteTrackShapeMeshIssue>();
+        foreach (var reference in discovery.Found)
+        {
+            try { meshes.Add(new TrackShapeAssetLoader().Load(store, reference)); }
+            catch (Exception exception) { failed.Add(new RouteTrackShapeMeshIssue(reference.ShapeIndex, reference.Path, exception.Message)); }
+        }
+        var textureDiscovery = new TrackShapeTextureAssetLocator().Locate(store, routeRoot, meshes);
+        var textures = new TrackShapeTextureAssetLoader().Load(store, textureDiscovery);
+        return new RouteTrackShapeMeshLoadResult(meshes, discovery.Missing, failed, textureDiscovery, textures);
+    }
+}
+
+public sealed record RouteTrackShapeMeshIssue(uint ShapeIndex, string Path, string Reason);
+public sealed class RouteTrackShapeMeshLoadResult
+{
+    public IReadOnlyList<TrackShapeAssetMesh> LoadedMeshes { get; }
+    public IReadOnlyList<TrackShapeAssetIssue> MissingMeshes { get; }
+    public IReadOnlyList<RouteTrackShapeMeshIssue> FailedMeshes { get; }
+    public TrackShapeTextureAssetDiscovery TextureDiscovery { get; }
+    public TrackShapeTextureAssetLoadResult Textures { get; }
+    public RouteTrackShapeMeshLoadResult(IEnumerable<TrackShapeAssetMesh> loadedMeshes, IEnumerable<TrackShapeAssetIssue> missingMeshes, IEnumerable<RouteTrackShapeMeshIssue> failedMeshes, TrackShapeTextureAssetDiscovery textureDiscovery, TrackShapeTextureAssetLoadResult textures)
+    { LoadedMeshes = Array.AsReadOnly(loadedMeshes.ToArray()); MissingMeshes = Array.AsReadOnly(missingMeshes.ToArray()); FailedMeshes = Array.AsReadOnly(failedMeshes.ToArray()); TextureDiscovery = textureDiscovery; Textures = textures; }
 }
