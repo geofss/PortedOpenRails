@@ -24,6 +24,8 @@ public sealed class TerrainMeshBuilderTests
         Assert.Equal(new Vector3(0, 10, 2048), patch.PatchOrigin);
         Assert.Equal(2048, patch.PatchSizeMeters);
         Assert.Equal(10, patch.AverageRelativeElevation);
+        Assert.Equal("Grass", patch.Shader?.Name);
+        Assert.Equal("grass.ace", Assert.Single(patch.Shader!.TextureSlots).FileName);
     }
 
     [Fact]
@@ -61,7 +63,8 @@ public sealed class TerrainMeshBuilderTests
             0,
             null,
             samples,
-            Array.Empty<TerrainPatchSet>());
+            Array.Empty<TerrainPatchSet>(),
+            new[] { new TerrainShaderDefinition("Grass", new[] { new TerrainTextureSlot("grass.ace", 0, 0) }, Array.Empty<TerrainUvCalculation>()) });
         var altitude = new TerrainAltitudeData(33, Enumerable.Repeat((ushort)20, 33 * 33).ToArray());
         var flagData = flags is null ? null : new TerrainFlagsData(33, flags);
         var reference = new TerrainTileReference(
@@ -74,7 +77,7 @@ public sealed class TerrainMeshBuilderTests
             0,
             1024, 0, 1024,
             1, 0, 8,
-            3,
+            0,
             0.1f, 0.2f, 0.01f, 0, 0, 0.02f,
             0);
         var patchSet = new TerrainPatchSet(100, 1, new[] { patch });
