@@ -72,7 +72,7 @@ public sealed class TrackShapeMeshBuilderTests
         var geometryInfo = Block(TokenID.geometry_info, Concat(
             IntPayload(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             EmptyList(TokenID.geometry_nodes),
-            Block(TokenID.geometry_node_map, Concat(IntPayload(1), IntPayload(0))));
+            Block(TokenID.geometry_node_map, Concat(IntPayload(1), IntPayload(0)))));
         var subObjectHeader = Block(TokenID.sub_object_header, Concat(
             UIntPayload(0), IntPayload(-1), IntPayload(-1), UIntPayload(0), UIntPayload(0), geometryInfo));
         var vertices = Block(TokenID.vertices, Concat(IntPayload(3),
@@ -89,7 +89,7 @@ public sealed class TrackShapeMeshBuilderTests
                 Block(TokenID.indexed_trilist, Concat(
                     Block(TokenID.vertex_idxs, Concat(IntPayload(3), IntPayload(0, 1, 2))),
                     Block(TokenID.normal_idxs, Concat(IntPayload(1), IntPayload(0), IntPayload(3))),
-                    EmptyList(TokenID.flags))))));
+                    EmptyList(TokenID.flags)))))));
         var distanceLevelHeader = Block(TokenID.distance_level_header, Concat(
             Block(TokenID.dlevel_selection, FloatPayload(1000)),
             Block(TokenID.hierarchy, Concat(IntPayload(1), IntPayload(-1)))));
