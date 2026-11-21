@@ -50,7 +50,7 @@ export function cleanup() {
   terrainTextures = [];
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = null;
   storedVertices = storedIndices = storedTrackLines = null;
-  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = null;\n  activePointers.clear(); pinchStartDistance = 0;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = null;\n  activePointers.clear(); pinchStartDistance = 0;\n  rotation = 0; pitch = 0.72; zoom = 1; dragging = false;
 }
 function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}\nfunction compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
 
