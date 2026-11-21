@@ -1,7 +1,6 @@
 @page "/"
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
-@using OpenRails.Web.Simulation
 @using Microsoft.AspNetCore.Components.Forms
 @implements IDisposable
 
@@ -77,25 +76,22 @@
                 }
                 @if (!string.IsNullOrWhiteSpace(routeBuildMessage))
                 {
-                    <p class="@(loadedTrackNetwork is null ? "error" : "success")">@routeBuildMessage</p>
+                    <p class="@(loadedRoute is null ? "error" : "success")">@routeBuildMessage</p>
                 }
-                @if (loadedTrackNetwork is not null)
+                @if (loadedRoute is not null)
                 {
                     <dl>
-                        <dt>Track database nodes</dt><dd>@loadedTrackNetwork.Database.NodeCount</dd>
-                        <dt>Connected vector paths</dt><dd>@loadedTrackNetwork.VectorPathCount</dd>
-                        <dt>Parsed track length</dt><dd>@(loadedTrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
-                        @if (terrainTileDiscovery is not null)
-                        {
-                            <dt>Terrain tiles found</dt><dd>@terrainTileDiscovery.Found.Count</dd>
-                            <dt>Terrain tiles missing</dt><dd>@terrainTileDiscovery.Missing.Count</dd>
-                        }
+                        <dt>Track database nodes</dt><dd>@loadedRoute.TrackDatabase.NodeCount</dd>
+                        <dt>Connected vector paths</dt><dd>@loadedRoute.TrackNetwork.VectorPathCount</dd>
+                        <dt>Parsed track length</dt><dd>@(loadedRoute.TrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
+                        <dt>Terrain tiles found</dt><dd>@loadedRoute.TerrainTiles.Found.Count</dd>
+                        <dt>Terrain tiles missing</dt><dd>@loadedRoute.TerrainTiles.Missing.Count</dd>
                     </dl>
-                    @if (loadedTrackNetwork.Diagnostics.Count > 0)
+                    @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0)
                     {
-                        <p class="hint">Track data diagnostics: @loadedTrackNetwork.Diagnostics.Count</p>
+                        <p class="hint">Track data diagnostics: @loadedRoute.TrackNetwork.Diagnostics.Count</p>
                         <ul class="path-list">
-                            @foreach (var diagnostic in loadedTrackNetwork.Diagnostics.Take(10))
+                            @foreach (var diagnostic in loadedRoute.TrackNetwork.Diagnostics.Take(10))
                             {
                                 <li>@diagnostic</li>
                             }
@@ -150,16 +146,14 @@
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
-    private TrackNetwork? loadedTrackNetwork;
-    private RouteTerrainTileDiscovery? terrainTileDiscovery;
+    private RouteLoadResult? loadedRoute;
 
     private void SelectDefaultRoute()
     {
         selectedDefault = true;
         selectedRoute = null;
         errorMessage = null;
-        loadedTrackNetwork = null;
-        terrainTileDiscovery = null;
+        loadedRoute = null;
         routeBuildMessage = null;
     }
 
@@ -173,8 +167,7 @@
 
     private async Task BuildRouteNetworkAsync(RouteChoice route)
     {
-        loadedTrackNetwork = null;
-        terrainTileDiscovery = null;
+        loadedRoute = null;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -184,17 +177,8 @@
             if (composite is null)
                 throw new InvalidDataException("No route content package is loaded.");
 
-            var assets = new RouteAssetLocator().Locate(composite, route.MetadataFile, route.Metadata);
-            var database = new TrackDatabaseReader().Read(composite, assets.TrackDatabasePath);
-            var geometryReader = new TrackSectionGeometryReader();
-            var globalSections = geometryReader.ReadGlobal(composite, assets.GlobalTrackSectionsPath);
-            var routeSections = assets.RouteTrackSectionsPath is null
-                ? null
-                : geometryReader.ReadRouteSections(composite, assets.RouteTrackSectionsPath);
-
-            loadedTrackNetwork = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
-            terrainTileDiscovery = new RouteTerrainTileLocator().Locate(composite, assets.RouteRoot, loadedTrackNetwork);
-            routeBuildMessage = $"Route track network built from {assets.TrackDatabasePath}.";
+            loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
+            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
         }
         catch (Exception exception)
         {
