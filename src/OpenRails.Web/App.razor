@@ -325,7 +325,12 @@
         return name;
     }
 
-    private void RebuildComposite()\n    {\n        composite = layers.Count == 0 ? null : new CompositeContentStore(layers);\n        consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);\n    }
+    private void RebuildComposite()
+    {
+        composite?.Dispose();
+        composite = layers.Count == 0 ? null : new CompositeContentStore(layers);
+        consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);
+    }
 
     public void Dispose()
     {
