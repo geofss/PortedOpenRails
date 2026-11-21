@@ -24,6 +24,8 @@ public sealed class ConsistCatalogReader
             try
             {
                 var consist = reader.Read(store, path);
+                var consistSourcePackage = store is CompositeContentStore consistComposite ? consistComposite.GetSourcePackage(path) : null;
+                consist = consist with { SourcePackage = consistSourcePackage };
                 consists.Add(consist);
                 if (!string.IsNullOrWhiteSpace(consist.TrainControlSystemParametersFile))
                 {
