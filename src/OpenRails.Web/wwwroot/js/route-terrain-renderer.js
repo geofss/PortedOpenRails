@@ -63,6 +63,7 @@ function redraw(){
   const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(indices),gl.STATIC_DRAW);
   gl.viewport(0,0,canvasRef.width,canvasRef.height);gl.clearColor(0.07,0.09,0.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(program);gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_INT,0);
+  gl.deleteBuffer(ib);
   if(trackLines.length){
     const linePacked=new Float32Array(trackLines.length/3*6);
     for(let i=0;i<trackLines.length/3;i++){
@@ -75,8 +76,11 @@ function redraw(){
     const lineBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,linePacked,gl.STREAM_DRAW);
     gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(c,3,gl.FLOAT,false,24,12);
     gl.drawArrays(gl.LINES,0,trackLines.length/3);
+    gl.deleteBuffer(lineBuffer);
   }
   gl.bindVertexArray(null);
+  gl.deleteBuffer(vb);
+  gl.deleteVertexArray(vao);
 }
 
 
@@ -161,6 +165,8 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
     gl.deleteBuffer(ib);
   }
   gl.bindVertexArray(null);
+  gl.deleteBuffer(vb);
+  gl.deleteVertexArray(vao);
   if(storedTrackMesh && storedTrackMesh.vertices && storedTrackMesh.indices) drawTrackTriangles(storedTrackMesh,project);
   if(trackLines.length) drawTrackOverlay(trackLines,project);
 }
@@ -178,6 +184,7 @@ function drawTrackOverlay(trackLines,project){
   gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);
   gl.enableVertexAttribArray(c);gl.vertexAttribPointer(c,3,gl.FLOAT,false,24,12);
   gl.drawArrays(gl.LINES,0,trackLines.length/3);gl.bindVertexArray(null);
+  gl.deleteBuffer(b);gl.deleteVertexArray(vao);
 }
 
 function drawTrackTriangles(mesh,project){
