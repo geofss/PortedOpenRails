@@ -36,6 +36,25 @@ public sealed class ConsistCatalogReaderTests
         Assert.Contains("Duplicate car UID 4", result.Issues[1].Message);
     }
 
+    [Fact]
+    public void DiscoversConsistsFromCompositePackageAndHonorsOverridePriority()
+    {
+        using var composite = new CompositeContentStore(new[]
+        {
+            new PackageLayer("Route", CreateStore(
+                ("TRAINS/CONSISTS/Shared.con", """Train ( TrainCfg ( "Route override" Wagon ( UiD ( 1 ) WagonData ( "RouteCar" "RouteFolder" ) ) ) )"""))),
+            new PackageLayer("Global", CreateStore(
+                ("TRAINS/CONSISTS/shared.CON", """Train ( TrainCfg ( "Global version" Wagon ( UiD ( 2 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),
+                ("TRAINS/CONSISTS/GlobalOnly.con", """Train ( TrainCfg ( "Global only" Wagon ( UiD ( 3 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )""")))
+        });
+
+        var result = new ConsistCatalogReader().Read(composite);
+
+        Assert.Equal(new[] { "Global only", "Route override" }, result.Consists.Select(consist => consist.Name));
+        Assert.Empty(result.Issues);
+        Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
