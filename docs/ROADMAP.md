@@ -37,6 +37,8 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Isolate the initial route-data domain from MonoGame and Windows APIs
 - [x] Parse TDB TrackNodes, vector sections, junction metadata, and TrPins using the upstream STFReader
 - [x] Build connected vector-path topology and resolve section lengths from global/route TSECTION catalogs
+- [x] Parse global TSECTION TrackShapes and resolve original track shape filenames
+- [x] Discover route/global SHAPES assets referenced by the track network
 - [x] Sample straight and curved centerlines using the Open Rails heading convention
 - [x] Discover the terrain tiles touched by the loaded track network
 - [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
