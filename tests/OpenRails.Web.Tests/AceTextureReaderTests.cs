@@ -36,6 +36,18 @@ public sealed class AceTextureReaderTests
     }
 
     [Fact]
+    public void ExpandsOneBitAceMaskChannelIntoPixelAlpha()
+    {
+        using var store = CreateStore(("ROUTES/Test/TERRTEX/masked.ace", CreateAceFile(
+            CreateMaskedStructuredPayload(), compressed: false)));
+
+        var texture = new AceTextureReader().Read(store, "ROUTES/Test/TERRTEX/masked.ace");
+
+        Assert.Equal((byte)1, texture.AlphaBits);
+        Assert.Equal(new byte[] { 255, 0, 0, 255, 0, 128, 255, 0 }, Assert.Single(texture.MipLevels));
+    }
+
+    [Fact]
     public void PreservesRawDxtMipDataForGpuUpload()
     {
         var raw = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -64,6 +76,29 @@ public sealed class AceTextureReaderTests
         WriteChannel(writer, 8, 4);
         WriteChannel(writer, 8, 5);
         writer.Write(0); // one scanline offset
+        writer.Write(new byte[] { 255, 0 });
+        writer.Write(new byte[] { 0, 128 });
+        writer.Write(new byte[] { 0, 255 });
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateMaskedStructuredPayload()
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
+        writer.Write(1u);
+        writer.Write(0);
+        writer.Write(2);
+        writer.Write(1);
+        writer.Write(0);
+        writer.Write(4);
+        writer.Write(new byte[128]);
+        WriteChannel(writer, 1, 2);
+        WriteChannel(writer, 8, 3);
+        WriteChannel(writer, 8, 4);
+        WriteChannel(writer, 8, 5);
+        writer.Write(0);
+        writer.Write((byte)0b10000000);
         writer.Write(new byte[] { 255, 0 });
         writer.Write(new byte[] { 0, 128 });
         writer.Write(new byte[] { 0, 255 });
