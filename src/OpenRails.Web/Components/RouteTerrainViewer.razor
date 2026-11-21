@@ -12,6 +12,7 @@
         <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
         <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
+        <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
         <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
@@ -26,8 +27,24 @@
         <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
-        <summary>World scenery asset diagnostics</summary>
+        <summary>Route and world scenery asset diagnostics</summary>
         <ul>
+            @foreach (var issue in Route.TrackShapeMeshes.MissingMeshes)
+            {
+                <li>Missing track shape: @issue.FileName — @issue.Reason</li>
+            }
+            @foreach (var issue in Route.TrackShapeMeshes.FailedMeshes)
+            {
+                <li>Failed track shape: @issue.Path — @issue.Reason</li>
+            }
+            @foreach (var issue in Route.TrackShapeMeshes.Textures.Missing)
+            {
+                <li>Missing track texture: @issue.ImageName (shape @issue.ShapeIndex) — @issue.Reason</li>
+            }
+            @foreach (var issue in Route.TrackShapeMeshes.Textures.Failed)
+            {
+                <li>Failed track texture: @issue.Path — @issue.Reason</li>
+            }
             @foreach (var tile in Route.WorldScenery.Loaded)
             {
                 @foreach (var issue in tile.ShapeDiscovery.Missing)
