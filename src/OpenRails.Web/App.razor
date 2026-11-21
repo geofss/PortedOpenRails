@@ -153,6 +153,7 @@
                 <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count rolling-stock reference(s) · @consistCatalog.CarAssets.Count(asset => asset.Found) found</p>
                 @foreach (var consist in consistCatalog.Consists)
                 {
+                    var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
                     <details class="consist-entry">
                         <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath</span></summary>
                         <dl>
@@ -165,7 +166,7 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(consist.TrainControlSystemParametersFile))
                             {
-                                <dt>Train-control parameters</dt><dd><code>@consist.TrainControlSystemParametersFile</code></dd>
+                                <dt>Train-control parameters</dt><dd><code>@consist.TrainControlSystemParametersFile</code> — @(tcsAsset is null ? "unresolved" : tcsAsset.Found ? (tcsAsset.SourcePackage is null ? "found" : $"found in {tcsAsset.SourcePackage}") : "missing")</dd>
                             }
                         </dl>
                         <ol class="path-list">
