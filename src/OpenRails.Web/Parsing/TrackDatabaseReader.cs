@@ -288,9 +288,15 @@ public sealed class TrackDatabase
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
     }
 
+    public bool TryGetNode(int index, out TrackNode? node)
+    {
+        node = index > 0 && index < nodes.Length ? nodes[index] : null;
+        return node is not null;
+    }
+
     public TrackNode GetRequiredNode(int index) =>
-        index > 0 && index < nodes.Length && nodes[index] is { } node
-            ? node
+        TryGetNode(index, out var node)
+            ? node!
             : throw new InvalidDataException($"Track node {index} does not exist.");
 
     public IEnumerable<TrackNode> EnumerateNodes()
