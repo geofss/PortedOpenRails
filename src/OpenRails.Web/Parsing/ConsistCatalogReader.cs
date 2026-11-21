@@ -27,7 +27,7 @@ public sealed class ConsistCatalogReader
                 consists.Add(consist);
                 if (!string.IsNullOrWhiteSpace(consist.TrainControlSystemParametersFile))
                 {
-                    var tcsPath = VirtualPath.Normalize($\"TRAINS/CONSISTS/SCRIPT/{consist.TrainControlSystemParametersFile}\");
+                    var tcsPath = VirtualPath.Normalize($"TRAINS/CONSISTS/SCRIPT/{consist.TrainControlSystemParametersFile}");
                     var tcsFound = store.Contains(tcsPath);
                     var tcsSourcePackage = store is CompositeContentStore tcsComposite && tcsFound ? tcsComposite.GetSourcePackage(tcsPath) : null;
                     tcsAssets.Add(new ConsistTcsAssetReference(consist.Name, consist.TrainControlSystemParametersFile, tcsPath, tcsFound, tcsSourcePackage));
