@@ -33,6 +33,7 @@ public sealed class RouteLoader
         var terrainMeshes = new RouteTerrainMeshLoader().Load(store, terrainTiles);
         var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
         var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
+        var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
 
         return new RouteLoadResult(
             metadata,
@@ -46,7 +47,8 @@ public sealed class RouteLoader
             worldTiles,
             terrainMeshes,
             terrainTextureAssets,
-            terrainTextures);
+            terrainTextures,
+            worldScenery);
     }
 }
 
@@ -62,4 +64,34 @@ public sealed record RouteLoadResult(
     RouteWorldTileDiscovery WorldTiles,
     RouteTerrainMeshLoadResult TerrainMeshes,
     TerrainTextureAssetDiscovery TerrainTextureAssets,
-    TerrainTextureAssetLoadResult TerrainTextures);
+    TerrainTextureAssetLoadResult TerrainTextures,
+    RouteWorldSceneryLoadResult WorldScenery);
+
+
+/// <summary>Loads route scenery chunks independently so malformed tiles do not abort the route.</summary>
+public sealed class RouteWorldSceneryLoader
+{
+    public RouteWorldSceneryLoadResult Load(IVirtualContentStore store, string routeRoot, RouteWorldTileDiscovery discovery)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(discovery);
+        var loaded = new List<LoadedWorldSceneryTile>();
+        var failed = new List<RouteWorldSceneryIssue>();
+        foreach (var reference in discovery.Found)
+        {
+            try { loaded.Add(new WorldSceneryTileLoader().Load(store, routeRoot, reference)); }
+            catch (Exception exception) { failed.Add(new RouteWorldSceneryIssue(reference.TileX, reference.TileZ, reference.Path, exception.Message)); }
+        }
+        return new RouteWorldSceneryLoadResult(loaded, discovery.Missing, failed);
+    }
+}
+
+public sealed record RouteWorldSceneryIssue(int TileX, int TileZ, string Path, string Reason);
+public sealed class RouteWorldSceneryLoadResult
+{
+    public IReadOnlyList<LoadedWorldSceneryTile> Loaded { get; }
+    public IReadOnlyList<(int TileX, int TileZ)> Missing { get; }
+    public IReadOnlyList<RouteWorldSceneryIssue> Failed { get; }
+    public RouteWorldSceneryLoadResult(IEnumerable<LoadedWorldSceneryTile> loaded, IEnumerable<(int TileX, int TileZ)> missing, IEnumerable<RouteWorldSceneryIssue> failed)
+    { Loaded = Array.AsReadOnly(loaded.ToArray()); Missing = Array.AsReadOnly(missing.ToArray()); Failed = Array.AsReadOnly(failed.ToArray()); }
+}
