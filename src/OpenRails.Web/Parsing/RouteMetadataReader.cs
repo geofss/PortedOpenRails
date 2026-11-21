@@ -39,6 +39,7 @@ public sealed class RouteMetadataReader
         string? routeId = null;
         string? name = null;
         string? description = null;
+        string? fileName = null;
         bool electrified = true;
         float maxLineVoltage = 0;
         RouteStartCoordinates? routeStart = null;
@@ -49,6 +50,7 @@ public sealed class RouteMetadataReader
             new STFReader.TokenProcessor("routeid", () => routeId = reader.ReadStringBlock(null)),
             new STFReader.TokenProcessor("name", () => name = reader.ReadStringBlock(null)),
             new STFReader.TokenProcessor("description", () => description = reader.ReadStringBlock(null)),
+            new STFReader.TokenProcessor("filename", () => fileName = reader.ReadStringBlock(null)),
             new STFReader.TokenProcessor("electrified", () => electrified = reader.ReadBoolBlock(true)),
             new STFReader.TokenProcessor("maxlinevoltage", () => maxLineVoltage = reader.ReadFloatBlock(STFReader.UNITS.None, 0)),
             new STFReader.TokenProcessor("routestart", () => routeStart = ReadRouteStart(reader))
@@ -63,7 +65,7 @@ public sealed class RouteMetadataReader
         if (routeStart is null)
             throw new InvalidDataException("The route metadata is missing RouteStart.");
 
-        return new RouteMetadata(routeId, name, description, electrified, maxLineVoltage, routeStart);
+        return new RouteMetadata(routeId, name, description, electrified, maxLineVoltage, routeStart, fileName);
     }
 
     private static RouteStartCoordinates ReadRouteStart(STFReader reader)
@@ -84,6 +86,7 @@ public sealed record RouteMetadata(
     string Description,
     bool Electrified,
     float MaxLineVoltage,
-    RouteStartCoordinates RouteStart);
+    RouteStartCoordinates RouteStart,
+    string? FileName = null);
 
 public sealed record RouteStartCoordinates(double TileX, double TileZ, double X, double Z);
