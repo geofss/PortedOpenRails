@@ -56,7 +56,9 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
 - [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; basic shape-texture batches now render, but full material/shader variants and seasonal texture handling remain incomplete)
 - [x] Build texture-aware track-shape primitive batches with original UV/material references
-- [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete)\n- [x] Expose usable track-shape texture and render-batch counts in preview diagnostics
+- [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete; border addressing is approximated)
+- [x] Expose usable track-shape texture and render-batch counts in preview diagnostics
+- [x] Map original texture addressing modes to WebGL wrap/mirror/clamp (border mode is approximated)
 - [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
 - [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on window and canvas/container resize
 - [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview, with touch gestures enabled on the canvas and tilt projection in both renderer paths
