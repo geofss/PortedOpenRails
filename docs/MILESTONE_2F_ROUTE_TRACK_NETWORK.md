@@ -37,7 +37,8 @@ Regression tests cover:
 - Route-specific section overrides and global fallback.
 - World-coordinate conversion using the MSTS 2048-metre tile size.
 - Positive and negative curve tessellation.
-- Terrain tile name encoding and route tile discovery.
+- Terrain tile name encoding and route tile discovery, including the required `_y.raw` altitude file and optional `_f.raw` flags file.
+- Little-endian altitude grid ordering and vertex-hidden flag decoding.
 - Reading a binary SIMISA terrain tile from a ZIP-backed virtual stream.
 - An end-to-end fixture loading `.trk`, `.tdb`, `TSECTION.DAT`, track network, and terrain tile references.
 
