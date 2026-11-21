@@ -1,6 +1,6 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
-let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler;
+let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler;\nconst activePointers = new Map();\nlet pinchStartDistance = 0, pinchStartZoom = 1;
 
 export function initialize(canvas) {
   canvasRef = canvas;
@@ -50,9 +50,9 @@ export function cleanup() {
   terrainTextures = [];
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = null;
   storedVertices = storedIndices = storedTrackLines = null;
-  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = null;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = null;\n  activePointers.clear(); pinchStartDistance = 0;
 }
-function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}\nfunction compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
 
 export function drawTerrain(vertices, indices, trackLines = []) {
   storedVertices=vertices; storedIndices=indices; storedTrackLines=trackLines; redraw();
