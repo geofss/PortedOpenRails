@@ -48,6 +48,9 @@ jobs:
   deploy:
     if: github.event_name == 'push'
     needs: test-and-build
+    concurrency:
+      group: portedopenrails-pages
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       pages: write
