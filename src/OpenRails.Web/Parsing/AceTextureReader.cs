@@ -142,6 +142,17 @@ public sealed class AceTextureReader
             _ => throw new InvalidDataException($"ACE texture has unsupported raw surface format 0x{surfaceFormat:X8}.")
         };
 
+        long totalRawBytes = 0;
+        for (var i = 0; i < imageCount; i++)
+        {
+            var mipWidth = Math.Max(1, width >> i);
+            var mipHeight = Math.Max(1, height >> i);
+            if (mipWidth >= 4 && mipHeight >= 4)
+                totalRawBytes += ExpectedRawLength(format, mipWidth, mipHeight);
+        }
+        if (totalRawBytes > MaximumTextureBytes)
+            throw new InvalidDataException("ACE raw texture mip data exceeds the supported memory limit.");
+
         ReadExactly(reader, checked(imageCount * sizeof(int)));
         var mipLevels = new List<byte[]>(imageCount);
         byte[] buffer = Array.Empty<byte>();
