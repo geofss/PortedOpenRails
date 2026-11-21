@@ -43,7 +43,7 @@ public sealed class TrackSectionGeometryReaderTests
         var offset = curve.GetEndOffset();
 
         Assert.Equal(-40.192, offset.X, 2);
-        Assert.Equal(-150, offset.Z, 2);
+        Assert.Equal(150, offset.Z, 2);
     }
 
     [Fact]
