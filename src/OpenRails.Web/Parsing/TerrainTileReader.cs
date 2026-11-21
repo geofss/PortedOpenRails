@@ -107,13 +107,13 @@ public sealed class TerrainTileReader
                     result.SampleSize = field.ReadFloat();
                     break;
                 case TokenID.terrain_sample_ybuffer:
-                    result.HeightBuffer = field.ReadString();
+                    result.SampleYBuffer = field.ReadString();
                     break;
                 case TokenID.terrain_sample_ebuffer:
-                    result.EastBuffer = field.ReadString();
+                    result.SampleEBuffer = field.ReadString();
                     break;
                 case TokenID.terrain_sample_nbuffer:
-                    result.NorthBuffer = field.ReadString();
+                    result.SampleNBuffer = field.ReadString();
                     break;
                 default:
                     field.Skip();
@@ -235,26 +235,9 @@ public sealed class TerrainSampleData
     public float Floor { get; internal set; }
     public float Scale { get; internal set; }
     public float SampleSize { get; internal set; }
-    public string? HeightBuffer { get; internal set; }
-    public string? EastBuffer { get; internal set; }
-    public string? NorthBuffer { get; internal set; }
-
-    /// <summary>Returns a raw unsigned 16-bit sample when the source buffer is UTF-16 packed.</summary>
-    public ushort GetRawHeightSample(int x, int z)
-    {
-        if (HeightBuffer is null)
-            throw new InvalidDataException("Terrain height buffer is not present.");
-        if ((uint)x >= (uint)SampleCount || (uint)z >= (uint)SampleCount)
-            throw new ArgumentOutOfRangeException(nameof(x));
-
-        var index = checked(z * SampleCount + x);
-        if (index >= HeightBuffer.Length)
-            throw new InvalidDataException("Terrain height buffer is shorter than the declared sample grid.");
-
-        return HeightBuffer[index];
-    }
-
-    public float GetHeightMeters(int x, int z) => Floor + GetRawHeightSample(x, z) * Scale;
+    public string? SampleYBuffer { get; internal set; }
+    public string? SampleEBuffer { get; internal set; }
+    public string? SampleNBuffer { get; internal set; }
 }
 
 public sealed record TerrainWaterHeightOffset(float SouthWest, float SouthEast, float NorthEast, float NorthWest);
