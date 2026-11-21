@@ -32,6 +32,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileReader.cs" Link="Parsing/TerrainTileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainRawFileReaders.cs" Link="Parsing/TerrainRawFileReaders.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainMeshBuilder.cs" Link="Parsing/TerrainMeshBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainPatchMaterialBuilder.cs" Link="Parsing/TerrainPatchMaterialBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileSampleResolver.cs" Link="Parsing/TerrainTileSampleResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainTileLocator.cs" Link="Parsing/RouteTerrainTileLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/StfReaderAccess.cs" Link="Parsing/StfReaderAccess.cs" />
