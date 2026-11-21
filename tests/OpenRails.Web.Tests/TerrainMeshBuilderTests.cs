@@ -11,7 +11,7 @@ public sealed class TerrainMeshBuilderTests
     {
         var (tile, patchSet) = CreateFlatTile(flags: null);
 
-        var mesh = new TerrainMeshBuilder().Build(tile, patchSet);
+        var mesh = BuildWithClampedEdgeSamples(tile, patchSet);
 
         var patch = Assert.Single(mesh.Patches);
         Assert.Equal(289, patch.Vertices.Count);
@@ -33,11 +33,22 @@ public sealed class TerrainMeshBuilderTests
         flags[0] = 0x04;
         var (tile, patchSet) = CreateFlatTile(flags);
 
-        var patch = Assert.Single(new TerrainMeshBuilder().Build(tile, patchSet).Patches);
+        var patch = Assert.Single(BuildWithClampedEdgeSamples(tile, patchSet).Patches);
 
         Assert.True(patch.Indices.Count < 1536);
         Assert.DoesNotContain(new[] { 0, 18, 17 }, patch.Indices.Chunk(3).Select(triangle => triangle.ToArray()),
             new IntArrayComparer());
+    }
+
+    private static TerrainTileMesh BuildWithClampedEdgeSamples(TerrainTileContent tile, TerrainPatchSet patchSet)
+    {
+        var maximum = tile.Altitude.SampleCount - 1;
+        return new TerrainMeshBuilder().Build(tile, patchSet, (x, z) =>
+            tile.Altitude.GetElevationMeters(
+                Math.Clamp(x, 0, maximum),
+                Math.Clamp(z, 0, maximum),
+                tile.Terrain.Samples.Floor,
+                tile.Terrain.Samples.Scale));
     }
 
     private static (TerrainTileContent Tile, TerrainPatchSet PatchSet) CreateFlatTile(byte[]? flags)
