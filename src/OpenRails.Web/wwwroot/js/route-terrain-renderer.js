@@ -114,14 +114,26 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   }
   const all = patches;
   if(!all.length) return;
-  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity,minY=Infinity,maxY=-Infinity;
   for(const patch of all) for(let i=0;i<patch.vertices.length;i+=5){
-    const x=patch.vertices[i],z=patch.vertices[i+2]; minX=Math.min(minX,x);maxX=Math.max(maxX,x);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+    const x=patch.vertices[i],y=patch.vertices[i+1],z=patch.vertices[i+2];
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
-  const centerX=(minX+maxX)/2,centerZ=(minZ+maxZ)/2;
+  const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,centerZ=(minZ+maxZ)/2;
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
-  const cos=Math.cos(rotation),sin=Math.sin(rotation);
-  const project=(x,z,y=0)=>{const dx=x-centerX,dz=z-centerZ;const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;let px=(rx/span)*1.8*zoom,py=(rz/span)*1.8*zoom;if(aspect>1)py/=aspect;else px*=aspect;return [px,py,y*0.0001];};
+  const cos=Math.cos(rotation),sin=Math.sin(rotation),pitch=0.72;
+  const cameraDistance=span*1.35/zoom,near=span*0.015,far=span*20,focal=cameraDistance*0.85;
+  const project=(x,z,y=0)=>{
+    const dx=x-centerX,dz=z-centerZ,dy=y-centerY;
+    const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;
+    const depth=cameraDistance+rz*Math.cos(pitch)-dy*Math.sin(pitch);
+    const safeDepth=Math.max(near,depth);
+    const vertical=dy*Math.cos(pitch)+rz*Math.sin(pitch);
+    let px=rx*focal/safeDepth*2/span,py=vertical*focal/safeDepth*2/span;
+    if(aspect>1)py/=aspect;else px*=aspect;
+    const depthNdc=(far+near)/(far-near)-(2*far*near)/((far-near)*safeDepth);
+    return [px,py,depthNdc];
+  };
   resizeCanvas(); gl.viewport(0,0,canvasRef.width,canvasRef.height);
   gl.clearColor(0.07,0.09,0.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);gl.useProgram(terrainProgram);
@@ -155,8 +167,8 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
 function drawTrackOverlay(trackLines,project){
   const packed=new Float32Array(trackLines.length/3*6);
   for(let i=0;i<trackLines.length/3;i++){
-    const q=project(trackLines[i*3],trackLines[i*3+2]);
-    packed[i*6]=q[0];packed[i*6+1]=q[1];packed[i*6+2]=0.02;
+    const q=project(trackLines[i*3],trackLines[i*3+2],trackLines[i*3+1]);
+    packed[i*6]=q[0];packed[i*6+1]=q[1];packed[i*6+2]=q[2]-0.0002;
     packed[i*6+3]=0.9;packed[i*6+4]=0.9;packed[i*6+5]=0.92;
   }
   // Existing color program accepts the same position/color layout.
@@ -174,7 +186,7 @@ function drawTrackTriangles(mesh,project){
   for(let i=0;i<mesh.vertices.length;i+=3){
     const q=project(mesh.vertices[i],mesh.vertices[i+2],mesh.vertices[i+1]);
     const o=(i/3)*6;
-    packed[o]=q[0];packed[o+1]=q[1];packed[o+2]=q[2]+0.0005;
+    packed[o]=q[0];packed[o+1]=q[1];packed[o+2]=q[2]-0.0002;
     packed[o+3]=0.38;packed[o+4]=0.40;packed[o+5]=0.43;
   }
   gl.useProgram(program);
