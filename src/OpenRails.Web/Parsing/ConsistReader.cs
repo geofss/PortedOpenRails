@@ -25,7 +25,9 @@ public sealed class ConsistReader
             var cars = new List<ConsistCar>();
             var durability = 1.0f;
             ConsistSpeedLimit? maxVelocity = null;
-            string? trainControlSystemParametersFile = null;\n            var serial = 1;\n            var nextWagonUid = 0;
+            string? trainControlSystemParametersFile = null;
+            var serial = 1;
+            var nextWagonUid = 0;
             reader.ParseFile(new[]
             {
                 new STFReader.TokenProcessor("train", () =>
