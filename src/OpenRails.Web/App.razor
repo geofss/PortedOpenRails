@@ -150,7 +150,7 @@
             @if (consistCatalog is not null)
             {
                 <h3>Train consists discovered</h3>
-                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s)</p>
+                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count rolling-stock reference(s) · @consistCatalog.CarAssets.Count(asset => asset.Found) resolved</p>
                 @foreach (var consist in consistCatalog.Consists)
                 {
                     <details class="consist-entry">
