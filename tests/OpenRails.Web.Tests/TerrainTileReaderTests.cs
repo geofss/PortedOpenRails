@@ -41,7 +41,7 @@ public sealed class TerrainTileReaderTests
                 Block(TokenID.terrain_texslot, Concat(StringPayload("grass.ace"), IntPayload(1), IntPayload(2))))),
             Block(TokenID.terrain_uvcalcs, Concat(
                 UIntPayload(1),
-                Block(TokenID.terrain_uvcalc, Concat(IntPayload(1, 2, 3), FloatPayload(4.5f))))));
+                Block(TokenID.terrain_uvcalc, Concat(IntPayload(1, 2, 3), FloatPayload(4.5f)))))));
         var tileBytes = CreateSbrFile(Block(TokenID.terrain,
             Block(TokenID.terrain_shaders, Concat(IntPayload(1), shader))));
         using var store = CreateStore(("ROUTES/Test/TILES/shaders.t", tileBytes));
