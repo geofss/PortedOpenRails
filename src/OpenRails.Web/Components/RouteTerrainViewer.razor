@@ -22,6 +22,7 @@
         <dt>World shape mesh load failures</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.FailedShapes.Count)</dd>
         <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
         <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
+        <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
         <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
@@ -36,6 +37,14 @@
                 @foreach (var issue in tile.FailedShapes)
                 {
                     <li>Failed shape: @issue.Path — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.Textures.Missing)
+                {
+                    <li>Missing world texture: @issue.ImageName (shape @issue.ShapeIndex) — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.Textures.Failed)
+                {
+                    <li>Failed world texture: @issue.Path — @issue.Reason</li>
                 }
             }
         </ul>
