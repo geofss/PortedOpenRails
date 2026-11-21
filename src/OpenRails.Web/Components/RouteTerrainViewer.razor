@@ -13,6 +13,7 @@
         <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
+        <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
         <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
         <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
         <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
@@ -30,6 +31,7 @@
     private string? renderError;
     private bool initialized;
     private bool hasDrawn;
+    private bool trackGeometryTruncated;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -99,6 +101,7 @@
                     }
                 }
                 var trackGeometry = new TrackShapeRenderGeometryBuilder().Build(Route.TrackShapePlacements);
+                trackGeometryTruncated = trackGeometry.WasTruncated;
                 var trackMesh = new
                 {
                     vertices = trackGeometry.Vertices.SelectMany(vertex => new[] { vertex.X, vertex.Y, vertex.Z }).ToArray(),
