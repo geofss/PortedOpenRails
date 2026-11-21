@@ -6,7 +6,7 @@ namespace OpenRails.Web.Parsing;
 public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State, ConsistLoadPosition ParsedPosition = ConsistLoadPosition.Rear, ConsistLoadState ParsedState = ConsistLoadState.Random);
 public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped, IReadOnlyList<ConsistLoadData>? Loads = null);
 public sealed record ConsistSpeedLimit(float A, float B);
-public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null, int Serial = 1, int NextWagonUid = 0);
+public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null, int Serial = 1, int NextWagonUid = 0, string? SourcePackage = null);
 
 /// <summary>Reads MSTS/Open Rails .con consists using the upstream STF parser and virtual package streams.</summary>
 public sealed class ConsistReader
