@@ -31,6 +31,8 @@ public sealed class RouteLoader
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
         var worldTiles = new RouteWorldTileLocator().Locate(store, assets.RouteRoot, network);
         var terrainMeshes = new RouteTerrainMeshLoader().Load(store, terrainTiles);
+        var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
+        var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
 
         return new RouteLoadResult(
             metadata,
@@ -42,7 +44,9 @@ public sealed class RouteLoader
             terrainTiles,
             trackShapeAssets,
             worldTiles,
-            terrainMeshes);
+            terrainMeshes,
+            terrainTextureAssets,
+            terrainTextures);
     }
 }
 
@@ -56,4 +60,6 @@ public sealed record RouteLoadResult(
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
     RouteWorldTileDiscovery WorldTiles,
-    RouteTerrainMeshLoadResult TerrainMeshes);
+    RouteTerrainMeshLoadResult TerrainMeshes,
+    TerrainTextureAssetDiscovery TerrainTextureAssets,
+    TerrainTextureAssetLoadResult TerrainTextures);
