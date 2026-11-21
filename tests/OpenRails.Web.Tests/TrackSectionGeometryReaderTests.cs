@@ -65,8 +65,9 @@ public sealed class TrackSectionGeometryReaderTests
         Assert.True(shape.IsTunnel);
         Assert.False(shape.IsRoad);
         var path = Assert.Single(shape.Paths);
-        Assert.Equal(1, path.TrackSectionIndices.Count);
+        Assert.Equal(2, path.TrackSectionIndices.Count);
         Assert.Equal((uint)4, path.TrackSectionIndices[0]);
+        Assert.Equal((uint)5, path.TrackSectionIndices[1]);
         Assert.Equal(1, path.OffsetX);
         Assert.Equal(2, path.OffsetY);
         Assert.Equal(3, path.OffsetZ);
