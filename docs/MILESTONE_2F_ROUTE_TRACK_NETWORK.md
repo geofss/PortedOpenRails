@@ -24,6 +24,8 @@ The route loader now joins the original MSTS/Open Rails data layers:
 16. Parse original terrain shader definitions, texture slots, and UV calculations from each `.t` tile.
 17. Build 17×17 terrain patch mesh data with original UV mapping, normals, alternating triangle winding, and hidden-triangle removal.
 18. Preserve original terrain material selection and locate route `TerrTex` textures, seasonal variants, and implicit `microtex.ace` overlays.
+19. Decode ACE textures into RGBA mip data or preserve raw DXT/BGR GPU payloads, including compressed SIMISA streams and one-bit alpha masks.
+20. Resolve original shape primitive image references against route `Textures` and seasonal folders.
 
 The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, and terrain tile discovery results.
 
@@ -57,6 +59,8 @@ Regression tests cover:
 - Terrain tile name encoding and route tile discovery, including the required `_y.raw` altitude file and optional `_f.raw` flags file.
 - Upstream-compatible adjacent-tile sample resolution and original terrain patch mesh generation, with regression coverage for tile edges, normals, UVs, and hidden triangles.
 - Terrain shader, texture-slot, and UV calculation parsing; original patch material/overlay selection; default and seasonal TerrTex asset discovery.
+- ACE texture decoding for structured RGBA channels, one-bit masks, compressed SIMISA streams, and raw DXT formats.
+- Original shape primitive texture discovery in route Textures and seasonal folders.
 - Little-endian altitude grid ordering and vertex-hidden flag decoding.
 - Reading a binary SIMISA terrain tile from a ZIP-backed virtual stream.
 - An end-to-end fixture loading `.trk`, `.tdb`, `TSECTION.DAT`, track network, and terrain tile references.
