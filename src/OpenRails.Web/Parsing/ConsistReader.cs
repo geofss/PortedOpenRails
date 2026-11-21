@@ -24,10 +24,13 @@ public sealed class ConsistReader
             reader.ParseFile(new[]
             {
                 new STFReader.TokenProcessor("train", () =>
+                {
+                    reader.MustMatch("(");
                     reader.ParseBlock(new[]
                     {
                         new STFReader.TokenProcessor("traincfg", () => ReadTrainConfig(reader, cars, value => consistName = value))
-                    }))
+                    });
+                })
             });
             if (cars.Count == 0)
                 throw new InvalidDataException($"The consist '{virtualPath}' contains no wagon or engine entries.");
