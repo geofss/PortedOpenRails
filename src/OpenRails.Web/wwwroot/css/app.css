@@ -151,3 +151,5 @@ input[type="file"] {
     .route-details dl { grid-template-columns: 1fr; }
     .route-details dd { margin-bottom: 8px; }
 }
+
+.route-world-view{margin-top:1.2rem;padding:1rem;border:1px solid #38404a;border-radius:12px;background:#111820}.route-world-canvas{display:block;width:100%;height:440px;background:#111820;border-radius:8px}
