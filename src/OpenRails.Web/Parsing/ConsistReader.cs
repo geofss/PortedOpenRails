@@ -3,7 +3,7 @@ using Orts.Parsers.Msts;
 
 namespace OpenRails.Web.Parsing;
 
-public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State);
+public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State, ConsistLoadPosition ParsedPosition = ConsistLoadPosition.Rear, ConsistLoadState ParsedState = ConsistLoadState.Random);
 public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped, IReadOnlyList<ConsistLoadData>? Loads = null);
 public sealed record ConsistSpeedLimit(float A, float B);
 public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null, int Serial = 1, int NextWagonUid = 0);
@@ -102,11 +102,13 @@ public sealed class ConsistReader
         var name = reader.ReadString();
         var folder = reader.ReadString();
         var position = reader.ReadString();
+        var parsedPosition = Enum.TryParse<ConsistLoadPosition>(position, true, out var parsedPositionValue) ? parsedPositionValue : ConsistLoadPosition.Rear;
         var state = reader.ReadString();
         if (state == ")")
-            return new ConsistLoadData(name, folder, position, null);
+            return new ConsistLoadData(name, folder, position, null, parsedPosition, ConsistLoadState.Random);
         reader.MustMatch(")");
-        return new ConsistLoadData(name, folder, position, state);
+        var parsedState = Enum.TryParse<ConsistLoadState>(state, true, out var parsedStateValue) ? parsedStateValue : ConsistLoadState.Random;
+        return new ConsistLoadData(name, folder, position, state, parsedPosition, parsedState);
     }
 
     private static void ReadCarData(STFReader reader, Action<string> setName, Action<string> setFolder)
