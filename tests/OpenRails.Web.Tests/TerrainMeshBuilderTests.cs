@@ -26,6 +26,10 @@ public sealed class TerrainMeshBuilderTests
         Assert.Equal(10, patch.AverageRelativeElevation);
         Assert.Equal("Grass", patch.Shader?.Name);
         Assert.Equal("grass.ace", Assert.Single(patch.Shader!.TextureSlots).FileName);
+        Assert.Equal("TerrainShared", patch.Material?.MaterialName);
+        Assert.Equal("grass.ace", patch.Material?.PrimaryTextureFileName);
+        Assert.Equal("microtex.ace", patch.Material?.OverlayTextureFileName);
+        Assert.Equal(32, patch.Material?.OverlayScale);
     }
 
     [Fact]
@@ -38,6 +42,7 @@ public sealed class TerrainMeshBuilderTests
         var patch = Assert.Single(BuildWithClampedEdgeSamples(tile, patchSet).Patches);
 
         Assert.True(patch.Indices.Count < 1536);
+        Assert.Equal("Terrain", patch.Material?.MaterialName);
         Assert.DoesNotContain(new[] { 0, 18, 17 }, patch.Indices.Chunk(3).Select(triangle => triangle.ToArray()),
             new IntArrayComparer());
     }
