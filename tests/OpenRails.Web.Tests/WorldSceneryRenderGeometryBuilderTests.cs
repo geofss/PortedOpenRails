@@ -7,6 +7,52 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldSceneryRenderGeometryBuilderTests
 {
     [Fact]
+    public void KeepsTextureReferencesScopedToTheirWorldTileWhenObjectUidsRepeat()
+    {
+        var tileA = CreateLoadedTile(0, 0, "ROUTES/A/TEXTURES/shared.ace");
+        var tileB = CreateLoadedTile(1, 0, "ROUTES/B/TEXTURES/shared.ace");
+
+        var result = new WorldSceneryRenderGeometryBuilder().Build(new[] { tileA, tileB });
+
+        Assert.Equal(2, result.Textures.Count);
+        Assert.Equal(2, result.Batches.Count);
+        Assert.Equal(new[] { 0, 1 }, result.Batches.Select(batch => batch.TextureIndex).OrderBy(index => index));
+    }
+
+    private static LoadedWorldSceneryTile CreateLoadedTile(int tileX, int tileZ, string texturePath)
+    {
+        var worldObject = new StaticWorldObject(10, "building.s", new WorldTilePosition(0, 0, 0),
+            null, new WorldMatrix3x3(1, 0, 0, 0, 1, 0, 0, 0, 1), 0, 0);
+        var tile = new WorldTileData($"ROUTES/Test/WORLD/W+{tileX:D6}+{tileZ:D6}.w", tileX, tileZ,
+            new[] { worldObject }, Array.Empty<TrackWorldObject>(), Array.Empty<string>());
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        var vertices = new[]
+        {
+            new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitX, Vector3.UnitY, Vector2.UnitX, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitY, Vector3.UnitY, Vector2.UnitY, 0, 0, 0)
+        };
+        var primitive = new TrackShapePrimitiveMesh(0, 0, 0, 0,
+            new[] { 1, -1 }, new[] { 0, 1, 2 }, "Tex", "shared.ace", 0, 0, 1, false, 0);
+        var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
+        var lod = new TrackShapeLodMesh(1000, new[] { 1, -1 }, new[] { subObject });
+        var matrix = new TrackShapeMatrix("root", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0);
+        var mesh = new TrackShapeMesh(0, 0, new[] { matrix }, new[] { lod });
+        var asset = new TrackShapeAssetMesh(10, "building.s", "GLOBAL/SHAPES/building.s", mesh);
+        var discovery = new WorldShapeAssetDiscovery(
+            new[] { new WorldShapeAssetReference(tileX, tileZ, 10, "building.s", "Static", asset.Path) },
+            Array.Empty<WorldShapeAssetIssue>());
+        var data = new AceTextureData(1, 1, AceTexturePixelFormat.Rgba8, false, false, 0,
+            new[] { new byte[] { 255, 255, 255, 255 } }, Array.Empty<AceTextureChannel>());
+        var texture = new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(10, "shared.ace", null, texturePath), data);
+        var textureDiscovery = new TrackShapeTextureAssetDiscovery(new[] { texture.Reference }, Array.Empty<TrackShapeTextureAssetIssue>());
+        var textureResult = new TrackShapeTextureAssetLoadResult(new[] { texture },
+            Array.Empty<TrackShapeTextureAssetIssue>(), Array.Empty<TrackShapeTextureLoadIssue>());
+        return new LoadedWorldSceneryTile(tile, placements, discovery, new[] { asset },
+            Array.Empty<WorldShapeMeshIssue>(), textureDiscovery, textureResult);
+    }
+
+    [Fact]
     public void AppliesOriginalWorldMatrixAndQuaternionTransformsAndUsesDecodedTextures()
     {
         var matrixIdentity = new WorldMatrix3x3(1, 0, 0, 0, 1, 0, 0, 0, 1);
