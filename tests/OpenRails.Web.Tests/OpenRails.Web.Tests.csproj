@@ -30,6 +30,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/AceTextureReader.cs" Link="Parsing/AceTextureReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeMeshBuilder.cs" Link="Parsing/TrackShapeMeshBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAssetLoader.cs" Link="Parsing/TrackShapeAssetLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapePlacementBuilder.cs" Link="Parsing/TrackShapePlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeTextureAssetLocator.cs" Link="Parsing/TrackShapeTextureAssetLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeTextureAssetLoader.cs" Link="Parsing/TrackShapeTextureAssetLoader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileReader.cs" Link="Parsing/TerrainTileReader.cs" />
