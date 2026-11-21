@@ -9,7 +9,7 @@
     <p class="eyebrow">OPEN RAILS · WEB PORT</p>
     <h1>PortedOpenRails</h1>
     <p class="status">Milestone 3 · Route track network</p>
-    <p class="note">Choose the built-in preview or import your own route ZIP. Custom route metadata is read using the upstream STFReader adapted to browser virtual content.</p>
+    <p class="note">Choose the built-in preview or import your own route ZIP. Imported route metadata, track databases, and track-section geometry are read through the browser virtual content pipeline.</p>
 
     <section class="route-choice" aria-labelledby="route-heading">
         <h2 id="route-heading">Choose a route</h2>
@@ -267,6 +267,8 @@
                 layers.Insert(0, new PackageLayer(GetUniquePackageName(file.Name), store));
             }
             RebuildComposite();
+            if (selectedRoute is not null)
+                await BuildRouteNetworkAsync(selectedRoute);
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException)
         {
