@@ -8,7 +8,7 @@
 <main class="shell">
     <p class="eyebrow">OPEN RAILS · WEB PORT</p>
     <h1>PortedOpenRails</h1>
-    <p class="status">Milestone 3 · Route metadata discovery</p>
+    <p class="status">Milestone 3 · Route track network</p>
     <p class="note">Choose the built-in preview or import your own route ZIP. Custom route metadata is read using the upstream STFReader adapted to browser virtual content.</p>
 
     <section class="route-choice" aria-labelledby="route-heading">
@@ -204,6 +204,8 @@
         routeChoices.Clear();
         selectedRoute = null;
         selectedDefault = false;
+        loadedTrackNetwork = null;
+        routeBuildMessage = null;
 
         try
         {
