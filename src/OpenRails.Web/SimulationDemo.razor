@@ -1,5 +1,6 @@
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
+@using ORTS.Common
 
 <section class="simulation-panel" aria-labelledby="simulation-heading">
     <h2 id="simulation-heading">Portable Train Movement Demo</h2>
@@ -69,6 +70,6 @@
     {
         var position = train.VehiclePositionsMeters[index];
         var offset = index == 0 ? 0 : train.VehiclePositionsMeters[0] - position;
-        return (80 + train.VehiclePositionsMeters[0] * 2.5 - offset * 2.5).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        return (350 + train.VehiclePositionsMeters[0] * 2.5 - offset * 2.5).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
     }
 }
