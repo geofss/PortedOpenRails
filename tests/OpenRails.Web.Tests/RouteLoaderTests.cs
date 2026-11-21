@@ -55,6 +55,10 @@ public sealed class RouteLoaderTests
                     10
                     TrackSection ( 1 SectionSize ( 1m 10m ) )
                 )
+                TrackShapes (
+                    1
+                    TrackShape ( 0 FileName ( "track.s" ) NumPaths ( 0 ) )
+                )
                 """),
             ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"),
             ("ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude samples"));
@@ -67,6 +71,7 @@ public sealed class RouteLoaderTests
         Assert.Equal(3, route.TrackDatabase.NodeCount);
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
+        Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
         Assert.Single(route.TerrainTiles.Found);
         Assert.Empty(route.TerrainTiles.Missing);
     }
