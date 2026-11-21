@@ -85,6 +85,11 @@
                         <dt>Track database nodes</dt><dd>@loadedTrackNetwork.Database.NodeCount</dd>
                         <dt>Connected vector paths</dt><dd>@loadedTrackNetwork.VectorPathCount</dd>
                         <dt>Parsed track length</dt><dd>@(loadedTrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
+                        @if (terrainTileDiscovery is not null)
+                        {
+                            <dt>Terrain tiles found</dt><dd>@terrainTileDiscovery.Found.Count</dd>
+                            <dt>Terrain tiles missing</dt><dd>@terrainTileDiscovery.Missing.Count</dd>
+                        }
                     </dl>
                     @if (loadedTrackNetwork.Diagnostics.Count > 0)
                     {
@@ -146,6 +151,7 @@
     private bool isBuildingRoute;
     private string? routeBuildMessage;
     private TrackNetwork? loadedTrackNetwork;
+    private RouteTerrainTileDiscovery? terrainTileDiscovery;
 
     private void SelectDefaultRoute()
     {
@@ -153,6 +159,7 @@
         selectedRoute = null;
         errorMessage = null;
         loadedTrackNetwork = null;
+        terrainTileDiscovery = null;
         routeBuildMessage = null;
     }
 
@@ -167,6 +174,7 @@
     private async Task BuildRouteNetworkAsync(RouteChoice route)
     {
         loadedTrackNetwork = null;
+        terrainTileDiscovery = null;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -185,6 +193,7 @@
                 : geometryReader.ReadRouteSections(composite, assets.RouteTrackSectionsPath);
 
             loadedTrackNetwork = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
+            terrainTileDiscovery = new RouteTerrainTileLocator().Locate(composite, assets.RouteRoot, loadedTrackNetwork);
             routeBuildMessage = $"Route track network built from {assets.TrackDatabasePath}.";
         }
         catch (Exception exception)
