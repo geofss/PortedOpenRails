@@ -150,6 +150,24 @@ public sealed class ConsistCatalogReaderTests
         Assert.Empty(result.TcsAssets);
     }
 
+    [Fact]
+    public void ReportsMissingTcsScriptWithoutRejectingConsist()
+    {
+        using var store = CreateStore(("TRAINS/CONSISTS/MissingTcs.con", """
+            Train ( TrainCfg ( "Missing TCS" ORTSTrainControlSystemParameters ( "missing.tcs" )
+              Wagon ( UiD ( 1 ) WagonData ( "Car" "Folder" ) )
+            ) )
+            """));
+
+        var result = new ConsistCatalogReader().Read(store);
+
+        Assert.Single(result.Consists);
+        Assert.Single(result.TcsAssets);
+        Assert.False(result.TcsAssets[0].Found);
+        Assert.Equal("TRAINS/CONSISTS/SCRIPT/missing.tcs", result.TcsAssets[0].AssetPath);
+        Assert.Empty(result.Issues);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
