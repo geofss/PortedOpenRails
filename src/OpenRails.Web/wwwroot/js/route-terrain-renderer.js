@@ -134,7 +134,7 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   for(const patch of all){
     const packed=new Float32Array((patch.vertices.length/5)*5);
     for(let i=0,j=0;i<patch.vertices.length;i+=5,j+=5){
-      const q=project(patch.vertices[i],patch.vertices[i+2]);
+      const q=project(patch.vertices[i],patch.vertices[i+2],patch.vertices[i+1]);
       packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=q[2];
       packed[j+3]=patch.vertices[i+3];packed[j+4]=patch.vertices[i+4];
     }
