@@ -55,8 +55,11 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 ## Milestone 4 — Browser rendering
 - [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
 - [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; basic shape-texture batches now render, but full material/shader variants and seasonal texture handling remain incomplete)
-- [x] Build texture-aware track-shape primitive batches with original UV/material references\n- [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete)\n- [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
-- [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on window and canvas/container resize\n- [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview, with touch gestures enabled on the canvas and tilt projection in both renderer paths
+- [x] Build texture-aware track-shape primitive batches with original UV/material references
+- [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete)
+- [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
+- [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on window and canvas/container resize
+- [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview, with touch gestures enabled on the canvas and tilt projection in both renderer paths
 - [x] Report unknown WORLD block/field tokens as deduplicated route-preview diagnostics
 - [x] Keep valid scenery tiles loaded when another WORLD tile is malformed, with regression coverage
 - [x] Validate the WebGL renderer JavaScript syntax in CI with Node.js
@@ -79,7 +82,11 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [ ] Validate desktop and mobile browser performance
 - [ ] Publish documented supported-content and browser compatibility
 
-## Current browser-port status (verified 2026-11-21)\n\nThe browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches and supported ACE textures, vector-track overlays, and original track-shape mesh geometry. WORLD tile loading discovers object placements, shape assets, and referenced textures, with expanded diagnostics. It currently limits terrain preview to eight tiles and first LOD, uses incomplete track-shape materials, and does not render loaded WORLD scenery placements or trains. Route parsing and loading diagnostics are shown in the preview. CI runs 346–352 and 354, 356–363 are confirmed green for test/build/deploy. Runs 353 and 355 have green build/tests with deployment still in progress. Parser-diagnostics work had failed intermediate commits 339–345 during syntax repair; repaired diagnostics and regression tests are green. WORLD scenery loading now reports shape and texture discovery/load/missing/failure counts, but placements and scenery meshes are still not drawn. This is **not yet a release-ready browser simulator**.\n\n## Full-port acceptance criteria
+## Current browser-port status (verified 2026-11-21)
+
+The browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches and supported ACE textures, vector-track overlays, and original track-shape mesh geometry. WORLD tile loading discovers object placements, shape assets, and referenced textures, with expanded diagnostics. It currently limits terrain preview to eight tiles and first LOD, uses incomplete track-shape materials, and does not render loaded WORLD scenery placements or trains. Route parsing and loading diagnostics are shown in the preview. CI runs 346–352 and 354, 356–363 are confirmed green for test/build/deploy. Runs 353 and 355 have green build/tests with deployment still in progress. Parser-diagnostics work had failed intermediate commits 339–345 during syntax repair; repaired diagnostics and regression tests are green. WORLD scenery loading now reports shape and texture discovery/load/missing/failure counts, but placements and scenery meshes are still not drawn. This is **not yet a release-ready browser simulator**.
+
+## Full-port acceptance criteria
 
 A full port means real route and train content can be loaded, a real activity/timetable can run using Open Rails simulation behavior, and the browser renders and controls that simulation. A successful build, a static menu, or a scripted train animation alone does not satisfy this goal.
 
