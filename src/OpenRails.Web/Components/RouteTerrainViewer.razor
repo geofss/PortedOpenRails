@@ -6,7 +6,7 @@
 
 <section class="route-world-view">
     <h3>Route terrain · WebGL preview</h3>
-    <p class="hint">Original route terrain geometry and available ACE terrain textures are uploaded to WebGL. Drag to rotate, scroll to zoom.</p>
+    <p class="hint">Original terrain materials, track-section geometry and loaded track-shape meshes are uploaded to WebGL. Drag to rotate, scroll to zoom.</p>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     @if (renderError is not null)
     {
@@ -89,7 +89,14 @@
                         trackLines.Add((float)points[i + 1].X); trackLines.Add((float)points[i + 1].Y); trackLines.Add((float)points[i + 1].Z);
                     }
                 }
-                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray());
+                var trackGeometry = new TrackShapeRenderGeometryBuilder().Build(Route.TrackShapePlacements);
+                var trackMesh = new
+                {
+                    vertices = trackGeometry.Vertices.SelectMany(vertex => new[] { vertex.X, vertex.Y, vertex.Z }).ToArray(),
+                    indices = trackGeometry.Indices,
+                    wasTruncated = trackGeometry.WasTruncated
+                };
+                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(), trackMesh);
                 hasDrawn = true;
             }
             catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
