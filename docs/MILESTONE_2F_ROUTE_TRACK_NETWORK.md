@@ -10,10 +10,12 @@ The route loader now joins the original MSTS/Open Rails data layers:
 2. Locate the matching route `.tdb`, global `GLOBAL/TSECTION.DAT`, and optional route-specific `TSECTION.DAT` in the layered virtual content namespace.
 3. Parse the TDB's `TrackNodes`, `TrVectorNode` sections, `TrJunctionNode` metadata, `UiD` positions, and `TrPins` connections.
 4. Resolve each vector section against route-specific geometry first and global geometry second.
-5. Build connected vector paths, preserve their endpoint node references, and calculate their track lengths.
-6. Sample straight and curved centerlines in world coordinates using the Open Rails heading convention: `AY` is radians measured right of North.
-7. Discover the MSTS terrain tile files touched by the track network using the upstream `TileName.FromTileXZ` encoding.
-8. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
+5. Parse the global TSECTION `TrackShapes` catalog, including original `.s` filenames, path section indices, offsets, and shape flags.
+6. Build connected vector paths, preserve their endpoint node references, resolve each vector section to its original track shape, and calculate track lengths.
+7. Sample straight and curved centerlines in world coordinates using the Open Rails heading convention: `AY` is radians measured right of North.
+8. Discover the MSTS terrain tile files touched by the track network using the upstream `TileName.FromTileXZ` encoding.
+9. Resolve original track shape `.s` assets from route `SHAPES` before global `GLOBAL/SHAPES` content.
+10. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
 
 The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, and terrain tile discovery results.
 
@@ -33,6 +35,8 @@ The browser SBR adaptation adds a stream overload so files can be read directly 
 Regression tests cover:
 
 - TDB node and vector-section parsing, including junction metadata and pin references.
+- Global TrackShapes parsing and resolution of original shape filenames and path section references.
+- Route-first/global-fallback shape asset discovery and safe virtual path validation.
 - Missing pin diagnostics.
 - Route-specific section overrides and global fallback.
 - World-coordinate conversion using the MSTS 2048-metre tile size.
