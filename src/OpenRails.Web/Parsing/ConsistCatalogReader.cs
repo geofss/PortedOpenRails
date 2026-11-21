@@ -1,3 +1,5 @@
+using OpenRails.Web.Content;
+
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
