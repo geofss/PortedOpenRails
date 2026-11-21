@@ -37,6 +37,43 @@ public sealed class TrackSectionGeometryReaderTests
     }
 
     [Fact]
+    public void ReadsGlobalTrackShapeFileNameAndPathDefinitions()
+    {
+        using var store = CreateStore(("GLOBAL/tsection.dat", """
+            SIMISA@@@@@@@@@@JINX0T0t
+            TrackSections ( 1 TrackSection ( 1 SectionSize ( 1m 10m ) ) )
+            TrackShapes (
+                5
+                TrackShape ( 2
+                    FileName ( "track/trackshape.s" )
+                    NumPaths ( 1 )
+                    MainRoute ( 0 )
+                    ClearanceDist ( 2m )
+                    SectionIdx ( 2 1 2 3 0.25 4 5 )
+                    TunnelShape ( 1 )
+                    RoadShape ( 0 )
+                    ORTSRackShape ( 0 )
+                )
+            )
+            """));
+
+        var catalog = new TrackSectionGeometryReader().ReadGlobal(store, "GLOBAL/tsection.dat");
+
+        var shape = catalog.Shapes.GetRequired(2);
+        Assert.Equal("track/trackshape.s", shape.FileName);
+        Assert.Equal((uint)1, shape.NumberOfPaths);
+        Assert.True(shape.IsTunnel);
+        Assert.False(shape.IsRoad);
+        var path = Assert.Single(shape.Paths);
+        Assert.Equal(1, path.TrackSectionIndices.Count);
+        Assert.Equal((uint)4, path.TrackSectionIndices[0]);
+        Assert.Equal(1, path.OffsetX);
+        Assert.Equal(2, path.OffsetY);
+        Assert.Equal(3, path.OffsetZ);
+        Assert.Equal(0.25, path.AngleRadians);
+    }
+
+    [Fact]
     public void MirrorsNegativeCurveEndOffset()
     {
         var curve = new TrackSectionGeometry(3, null, null, 300, -30, false);
