@@ -305,7 +305,13 @@ function drawTrackShapeBatches(batches,pixels,project){
     const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(batch.indices),gl.STREAM_DRAW);
     const valid=batch.textureIndex>=0&&shapeTextures[batch.textureIndex];
     gl.uniform1i(hasTexture,valid?1:0);gl.uniform1i(alphaTest,batch.alphaTest?1:0);
-    if(valid){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shapeTextures[batch.textureIndex]);gl.uniform1i(sampler,0);}
+    if(valid){
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shapeTextures[batch.textureIndex]);gl.uniform1i(sampler,0);
+      const addressMode=batch.textureAddressMode;
+      const wrap=addressMode===2?gl.MIRRORED_REPEAT:addressMode===3||addressMode===4?gl.CLAMP_TO_EDGE:gl.REPEAT;
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wrap);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wrap);
+    }
     gl.drawElements(gl.TRIANGLES,batch.indices.length,gl.UNSIGNED_INT,0);
     gl.deleteBuffer(ib);
   }
