@@ -62,5 +62,18 @@ function redraw(){
   const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(indices),gl.STATIC_DRAW);
   gl.viewport(0,0,canvasRef.width,canvasRef.height);gl.clearColor(0.07,0.09,0.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(program);gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_INT,0);
+  if(trackLines.length){
+    const linePacked=new Float32Array(trackLines.length/3*6);
+    for(let i=0;i<trackLines.length/3;i++){
+      const x=trackLines[i*3],z=trackLines[i*3+2],q=rotated(x,z);
+      let px=((q[0]-rminX)/span)*1.8-0.9,py=((q[1]-rminZ)/span)*1.8-0.9;
+      px*=zoom;py*=zoom;if(aspect>1)py/=aspect;else px*=aspect;
+      linePacked[i*6]=px;linePacked[i*6+1]=py;linePacked[i*6+2]=0.01;
+      linePacked[i*6+3]=0.88;linePacked[i*6+4]=0.88;linePacked[i*6+5]=0.9;
+    }
+    const lineBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,linePacked,gl.STREAM_DRAW);
+    gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(c,3,gl.FLOAT,false,24,12);
+    gl.drawArrays(gl.LINES,0,trackLines.length/3);
+  }
   gl.bindVertexArray(null);
 }
