@@ -131,6 +131,23 @@ public sealed class ConsistCatalogReaderTests
         Assert.Empty(result.CarAssets);
     }
 
+    [Fact]
+    public void RejectsTcsParameterPathsThatEscapeVirtualRoot()
+    {
+        using var store = CreateStore(("TRAINS/CONSISTS/TcsTraversal.con", """
+            Train ( TrainCfg ( "TCS traversal" ORTSTrainControlSystemParameters ( "../escape.tcs" )
+              Wagon ( UiD ( 1 ) WagonData ( "Car" "Folder" ) )
+            ) )
+            """));
+
+        var result = new ConsistCatalogReader().Read(store);
+
+        Assert.Single(result.Consists);
+        Assert.Single(result.Issues);
+        Assert.Contains("traversal", result.Issues[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.TcsAssets);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
