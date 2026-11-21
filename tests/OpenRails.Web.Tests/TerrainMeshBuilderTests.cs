@@ -42,13 +42,8 @@ public sealed class TerrainMeshBuilderTests
 
     private static TerrainTileMesh BuildWithClampedEdgeSamples(TerrainTileContent tile, TerrainPatchSet patchSet)
     {
-        var maximum = tile.Altitude.SampleCount - 1;
-        return new TerrainMeshBuilder().Build(tile, patchSet, (x, z) =>
-            tile.Altitude.GetElevationMeters(
-                Math.Clamp(x, 0, maximum),
-                Math.Clamp(z, 0, maximum),
-                tile.Terrain.Samples.Floor,
-                tile.Terrain.Samples.Scale));
+        var resolver = new TerrainTileSampleResolver(new[] { tile });
+        return new TerrainMeshBuilder().Build(tile, patchSet, resolver);
     }
 
     private static (TerrainTileContent Tile, TerrainPatchSet PatchSet) CreateFlatTile(byte[]? flags)
