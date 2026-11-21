@@ -16,6 +16,10 @@
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
         <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
         <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
+        <dt>World placements discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count)</dd>
+        <dt>World placements with positions</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
+        <dt>World placements with shape assets</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.FileName is not null && tile.ShapeMeshes.Any(mesh => string.Equals(mesh.Reference.FileName, placement.FileName, StringComparison.OrdinalIgnoreCase))))</dd>
+        <dt>World shape mesh load failures</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.FailedShapes.Count)</dd>
         <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
     </dl>
     @if (renderError is not null)
