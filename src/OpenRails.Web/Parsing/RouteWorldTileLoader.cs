@@ -16,10 +16,12 @@ public sealed class RouteWorldTileLoader
         ArgumentNullException.ThrowIfNull(store);
         var tile = new WorldTileContentLoader().Load(store, reference);
         var shapes = new WorldShapeAssetLocator().Locate(store, routeRoot, new[] { tile });
-        return new LoadedRouteWorldTile(tile, shapes);
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        return new LoadedRouteWorldTile(tile, shapes, placements);
     }
 }
 
 public sealed record LoadedRouteWorldTile(
     WorldTileData Tile,
-    WorldShapeAssetDiscovery ShapeAssets);
+    WorldShapeAssetDiscovery ShapeAssets,
+    IReadOnlyList<WorldObjectPlacement> Placements);
