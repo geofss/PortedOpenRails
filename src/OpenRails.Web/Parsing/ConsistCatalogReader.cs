@@ -3,7 +3,7 @@ using OpenRails.Web.Content;
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
-public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage);
+public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage, RollingStockMetadata? Metadata);
 public sealed record ConsistTcsAssetReference(string ConsistName, string FileName, string AssetPath, bool Found, string? SourcePackage);
 public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets, IReadOnlyList<ConsistTcsAssetReference> TcsAssets);
 
@@ -41,7 +41,19 @@ public sealed class ConsistCatalogReader
                         : VirtualPath.Normalize($"TRAINS/TRAINSET/{car.Folder}/{car.Name}{(car.IsEngine ? ".eng" : ".wag")}");
                     var found = store.Contains(assetPath);
                     var sourcePackage = store is CompositeContentStore composite && found ? composite.GetSourcePackage(assetPath) : null;
-                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, found, sourcePackage));
+                    RollingStockMetadata? metadata = null;
+                    if (found)
+                    {
+                        try
+                        {
+                            metadata = new RollingStockMetadataReader().Read(store, assetPath);
+                        }
+                        catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+                        {
+                            issues.Add(new ConsistCatalogIssue(assetPath, $"Rolling-stock metadata could not be read: {exception.Message}"));
+                        }
+                    }
+                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, found, sourcePackage, metadata));
                 }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
