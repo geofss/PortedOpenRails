@@ -150,7 +150,7 @@
             @if (consistCatalog is not null)
             {
                 <h3>Train consists discovered</h3>
-                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count rolling-stock reference(s) · @consistCatalog.CarAssets.Count(asset => asset.Found) found</p>
+                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count(asset => asset.Found)/@consistCatalog.CarAssets.Count rolling-stock assets resolved · @consistCatalog.TcsAssets.Count(asset => asset.Found)/@consistCatalog.TcsAssets.Count TCS scripts resolved</p>
                 @foreach (var consist in consistCatalog.Consists)
                 {
                     var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
