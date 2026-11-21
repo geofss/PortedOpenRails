@@ -155,6 +155,17 @@
                 {
                     <details class="consist-entry">
                         <summary><strong>@consist.Name</strong> <span class="hint">— @consist.Cars.Count cars · @consist.SourcePath</span></summary>
+                        <dl>
+                            <dt>Durability</dt><dd>@consist.Durability</dd>
+                            @if (consist.MaxVelocity is not null)
+                            {
+                                <dt>Maximum velocity</dt><dd>@consist.MaxVelocity.A / @consist.MaxVelocity.B</dd>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(consist.TrainControlSystemParametersFile))
+                            {
+                                <dt>Train-control parameters</dt><dd><code>@consist.TrainControlSystemParametersFile</code></dd>
+                            }
+                        </dl>
                         <ol class="path-list">
                             @foreach (var car in consist.Cars)
                             {
