@@ -54,7 +54,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 
 ## Milestone 4 — Browser rendering
 - [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
-- [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; basic shape-texture batches now render, but full material/shader variants and seasonal texture handling remain incomplete)
+- [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; basic shape-texture batches and WORLD scenery meshes now render, but full material/shader variants and seasonal texture handling remain incomplete)
 - [x] Build texture-aware track-shape primitive batches with original UV/material references
 - [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete; border addressing is approximated)
 - [x] Expose usable track-shape texture and render-batch counts in preview diagnostics
@@ -65,7 +65,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Report unknown WORLD block/field tokens as deduplicated route-preview diagnostics
 - [x] Keep valid scenery tiles loaded when another WORLD tile is malformed, with regression coverage
 - [x] Validate the WebGL renderer JavaScript syntax in CI with Node.js
-- [ ] Render WORLD scenery placements with original transforms/materials
+- [x] Render WORLD scenery placements with verified upstream matrix/quaternion transforms and basic RGBA8 texture batches (full material features remain incomplete)
 - [ ] Render rolling stock
 - [ ] Add cameras and cab views
 - [ ] Add responsive graphics quality and performance controls
@@ -86,7 +86,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 
 ## Current browser-port status (verified 2026-11-21)
 
-The browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches and supported ACE textures, vector-track overlays, and original track-shape mesh geometry. WORLD tile loading discovers object placements, shape assets, and referenced textures, with expanded diagnostics. It currently limits terrain preview to eight tiles and first LOD, uses incomplete track-shape materials, and does not render loaded WORLD scenery placements or trains. Route parsing and loading diagnostics are shown in the preview. CI runs 346–352 and 354, 356–363 are confirmed green for test/build/deploy. Runs 353 and 355 have green build/tests with deployment still in progress. Parser-diagnostics work had failed intermediate commits 339–345 during syntax repair; repaired diagnostics and regression tests are green. WORLD scenery loading now reports shape and texture discovery/load/missing/failure counts, but placements and scenery meshes are still not drawn. This is **not yet a release-ready browser simulator**.
+The browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches, supported ACE textures, vector-track overlays, original track-shape geometry, and WORLD scenery shape meshes using upstream matrix/quaternion conversions and basic texture batches. It currently limits terrain preview to eight tiles and first LOD; advanced material/shader modes, seasonal textures, rolling stock, and simulation remain incomplete. Route parsing and loading diagnostics are shown in the preview. Latest confirmed deployed run #396 passed build, regression tests, and deployment. Run #399 has passed syntax validation, regression tests, and build/publish preparation; its deployment is pending. Several intermediate runs failed during test-project wiring, assertion correction, and Razor syntax repair; those failures were superseded by repaired commits. This is **not yet a release-ready browser simulator**.
 
 ## Full-port acceptance criteria
 
