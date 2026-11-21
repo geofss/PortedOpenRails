@@ -108,6 +108,23 @@ public sealed class ConsistCatalogReaderTests
         Assert.EndsWith("MissingCar.wag", result.CarAssets.Single(asset => asset.CarName == "MissingCar").AssetPath);
     }
 
+    [Fact]
+    public void RejectsRollingStockAssetPathsThatEscapeVirtualRoot()
+    {
+        using var store = CreateStore(("TRAINS/CONSISTS/Traversal.con", """
+            Train ( TrainCfg ( "Traversal"
+              Wagon ( UiD ( 1 ) WagonData ( "Car" "../outside" ) )
+            ) )
+            """));
+
+        var result = new ConsistCatalogReader().Read(store);
+
+        Assert.Single(result.Consists);
+        Assert.Single(result.Issues);
+        Assert.Contains("traversal", result.Issues[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.CarAssets);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
