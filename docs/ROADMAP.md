@@ -29,12 +29,19 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [ ] Adapt SBR binary readers to browser-provided streams
 - [x] Parse real route metadata from user-imported ZIP content using upstream STFReader
 - [x] Add route selection UI: built-in preview or import a route ZIP and select parsed .trk metadata
-- [ ] Parse track metadata from a supported content sample
+- [x] Parse TDB track-node topology and resolve global/route-specific TSECTION geometry (fixture-validated; real-route validation remains pending)
 
 See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md), [Milestone 2B Virtual Content Prototype](MILESTONE_2B_VIRTUAL_CONTENT_PROTOTYPE.md), [Milestone 2C Browser ZIP Import](MILESTONE_2C_BROWSER_ZIP_IMPORT.md), and [Milestone 2D Multi-Package Content Manager](MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md).
 
 ## Milestone 3 — Portable simulation core
-- [ ] Isolate portable simulation/domain code from MonoGame and Windows APIs
+- [x] Isolate the initial route-data domain from MonoGame and Windows APIs
+- [x] Parse TDB TrackNodes, vector sections, junction metadata, and TrPins using the upstream STFReader
+- [x] Build connected vector-path topology and resolve section lengths from global/route TSECTION catalogs
+- [x] Sample straight and curved centerlines using the Open Rails heading convention
+- [x] Discover the terrain tiles touched by the loaded track network
+- [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
+- [ ] Validate the route pipeline against a real, licensed user-imported route package
+- [ ] Generate terrain meshes from the original terrain patch/sample data
 - [ ] Port train and train-car models
 - [ ] Port braking, traction, power supply, and control systems
 - [ ] Port signalling, track circuits, switches, activities, and timetable/AI logic
