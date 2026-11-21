@@ -37,6 +37,16 @@ public sealed class TrackSectionGeometryReaderTests
     }
 
     [Fact]
+    public void MirrorsNegativeCurveEndOffset()
+    {
+        var curve = new TrackSectionGeometry(3, null, null, 300, -30, false);
+        var offset = curve.GetEndOffset();
+
+        Assert.Equal(-40.192, offset.X, 2);
+        Assert.Equal(-150, offset.Z, 2);
+    }
+
+    [Fact]
     public void ReadsRouteSpecificStraightAndCurveDefinitions()
     {
         using var store = CreateStore(("ROUTES/Test/tsection.dat", """
