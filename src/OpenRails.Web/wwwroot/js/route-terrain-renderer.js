@@ -191,10 +191,22 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
     uploadedTerrainPixels = textures;
   }
   const all = patches;
-  if(!all.length) return;
+  if(!all.length && (!shapeBatches.length) && (!trackLines.length) && (!trackMesh || !trackMesh.vertices.length)) return;
   let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity,minY=Infinity,maxY=-Infinity;
   for(const patch of all) for(let i=0;i<patch.vertices.length;i+=5){
     const x=patch.vertices[i],y=patch.vertices[i+1],z=patch.vertices[i+2];
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+  }
+  for(const batch of shapeBatches||[]) for(let i=0;i<batch.vertices.length;i+=5){
+    const x=batch.vertices[i],y=batch.vertices[i+1],z=batch.vertices[i+2];
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+  }
+  if(trackMesh && trackMesh.vertices) for(let i=0;i<trackMesh.vertices.length;i+=3){
+    const x=trackMesh.vertices[i],y=trackMesh.vertices[i+1],z=trackMesh.vertices[i+2];
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+  }
+  for(let i=0;i<trackLines.length;i+=3){
+    const x=trackLines[i],y=trackLines[i+1],z=trackLines[i+2];
     minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
   const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,centerZ=(minZ+maxZ)/2;
