@@ -64,6 +64,8 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal(new[] { "Global only", "Route override" }, result.Consists.Select(consist => consist.Name));
         Assert.Empty(result.Issues);
         Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);
+        Assert.Equal("Route", result.Consists.Single(consist => consist.Name == "Route override").SourcePackage);
+        Assert.Equal("Global", result.Consists.Single(consist => consist.Name == "Global only").SourcePackage);
         Assert.Equal("Route", result.CarAssets.Single(asset => asset.CarName == "RouteCar").SourcePackage);
         Assert.Equal("Global", result.CarAssets.Single(asset => asset.CarName == "GlobalCar").SourcePackage);
         Assert.Single(result.TcsAssets);
