@@ -1,13 +1,13 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
-let rotation = 0, zoom = 1, dragging = false, lastX = 0;
+let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
 let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler;
 
 export function initialize(canvas) {
   canvasRef = canvas;
   resizeCanvas();
   wheelHandler = e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); redraw(); };
-  pointerDownHandler = e => { dragging=true; lastX=e.clientX; canvas.setPointerCapture(e.pointerId); };
-  pointerMoveHandler = e => { if(dragging){ rotation += (e.clientX-lastX)*0.008; lastX=e.clientX; redraw(); } };
+  pointerDownHandler = e => { dragging=true; lastX=e.clientX; lastY=e.clientY; canvas.setPointerCapture(e.pointerId); };
+  pointerMoveHandler = e => { if(dragging){ rotation += (e.clientX-lastX)*0.008; pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006)); lastX=e.clientX; lastY=e.clientY; redraw(); } };
   pointerUpHandler = () => { dragging=false; };
   resizeHandler = () => redraw();
   canvas.addEventListener('wheel', wheelHandler, { passive:false });
@@ -152,7 +152,7 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   }
   const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,centerZ=(minZ+maxZ)/2;
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
-  const cos=Math.cos(rotation),sin=Math.sin(rotation),pitch=0.72;
+  const cos=Math.cos(rotation),sin=Math.sin(rotation);
   const cameraDistance=span*1.35/zoom,near=span*0.015,far=span*20,focal=cameraDistance*0.85;
   const project=(x,z,y=0)=>{
     const dx=x-centerX,dz=z-centerZ,dy=y-centerY;
