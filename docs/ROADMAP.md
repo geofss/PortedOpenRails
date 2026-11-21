@@ -40,6 +40,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Parse global TSECTION TrackShapes and resolve original track shape filenames
 - [x] Discover route/global SHAPES assets referenced by the track network
 - [x] Port the original `.s` shape parser to virtual SBR streams
+- [x] Convert original shape geometry to portable vertex/index/material/LOD mesh data
 - [x] Sample straight and curved centerlines using the Open Rails heading convention
 - [x] Discover the terrain tiles touched by the loaded track network
 - [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
