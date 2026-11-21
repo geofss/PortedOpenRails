@@ -102,7 +102,7 @@ public sealed class TrackSectionGeometryReader
         reader.SkipBlock();
         var index = reader.ReadUInt(null);
         var first = reader.ReadFloat(STFReader.UNITS.Distance, null);
-        var second = reader.ReadFloat(STFReader.UNITS.Distance, null);
+        var second = reader.ReadFloat(STFReader.UNITS.None, null);
         reader.SkipRestOfBlock();
         return second == 0
             ? new TrackSectionGeometry(index, null, first, null, null, true)
