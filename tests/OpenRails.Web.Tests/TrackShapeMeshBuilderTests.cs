@@ -13,11 +13,13 @@ public sealed class TrackShapeMeshBuilderTests
     [Fact]
     public void BuildsPortableTriangleMeshFromOriginalShapeGeometryAndMaterialReferences()
     {
-        var shape = new TrackShapeFileReader().Read(
-            CreateStore(("GLOBAL/SHAPES/triangle.s", CreateSbrFile(CreateTriangleShape()))),
-            new TrackShapeAssetReference(0, "triangle.s", "GLOBAL/SHAPES/triangle.s"));
+        using var store = CreateStore(("GLOBAL/SHAPES/triangle.s", CreateSbrFile(CreateTriangleShape())));
+        var asset = new TrackShapeAssetReference(0, "triangle.s", "GLOBAL/SHAPES/triangle.s");
+        var loaded = new TrackShapeAssetLoader().Load(store, asset);
+        var mesh = loaded.Mesh;
 
-        var mesh = new TrackShapeMeshBuilder().Build(shape);
+        Assert.Equal((uint)0, loaded.ShapeIndex);
+        Assert.Equal("GLOBAL/SHAPES/triangle.s", loaded.SourcePath);
 
         var lod = Assert.Single(mesh.Lods);
         var subObject = Assert.Single(lod.SubObjects);
