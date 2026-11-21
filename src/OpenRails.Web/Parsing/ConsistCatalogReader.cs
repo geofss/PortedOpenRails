@@ -19,7 +19,10 @@ public sealed class ConsistCatalogReader
         {
             try
             {
-                consists.Add(reader.Read(store, path));
+                var consist = reader.Read(store, path);
+                consists.Add(consist);
+                foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
+                    issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
             }
             catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
             {
