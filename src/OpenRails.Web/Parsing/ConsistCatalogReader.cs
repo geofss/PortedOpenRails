@@ -3,7 +3,8 @@ using OpenRails.Web.Content;
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
-public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues);
+public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found);
+public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets);
 
 /// <summary>Discover and parse consist files in the browser virtual content namespace.</summary>
 public sealed class ConsistCatalogReader
@@ -22,6 +23,12 @@ public sealed class ConsistCatalogReader
             {
                 var consist = reader.Read(store, path);
                 consists.Add(consist);
+                foreach (var car in consist.Cars)
+                {
+                    var extension = car.IsEngine ? ".eng" : ".wag";
+                    var assetPath = VirtualPath.Normalize($"TRAINS/TRAINSET/{car.Folder}/{car.Name}{extension}");
+                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, store.Contains(assetPath)));
+                }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
                 for (var carIndex = 0; carIndex < consist.Cars.Count - 1; carIndex++)
