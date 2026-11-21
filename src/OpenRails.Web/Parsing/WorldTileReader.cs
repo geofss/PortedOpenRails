@@ -32,10 +32,10 @@ public sealed class WorldTileReader
             {
                 case TokenID.Static:
                 case TokenID.CollideObject:
-                    staticObjects.Add(ReadStaticObject(objectBlock));
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics));
                     break;
                 case TokenID.TrackObj:
-                    trackObjects.Add(ReadTrackObject(objectBlock));
+                    trackObjects.Add(ReadTrackObject(objectBlock, diagnostics));
                     break;
                 default:
                     objectBlock.Skip();
@@ -46,7 +46,7 @@ public sealed class WorldTileReader
         return new WorldTileData(normalized, tileX, tileZ, staticObjects, trackObjects, diagnostics);
     }
 
-    private static StaticWorldObject ReadStaticObject(SBR block)
+    private static StaticWorldObject ReadStaticObject(SBR block, List<string> diagnostics)
     {
         var uid = 0u;
         string? fileName = null;
@@ -68,14 +68,14 @@ public sealed class WorldTileReader
                 case TokenID.Matrix3x3: matrix = ReadMatrix(field); break;
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
-                default: field.Skip(); break;
+                default: AddDiagnostic(diagnostics, $\"Skipped unsupported STATIC field token 0x{(ushort)field.ID:X4}.\"); field.Skip(); break;
             }
         }
 
         return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags, worldDatabaseId);
     }
 
-    private static TrackWorldObject ReadTrackObject(SBR block)
+    private static TrackWorldObject ReadTrackObject(SBR block, List<string> diagnostics)
     {
         var uid = 0u;
         uint sectionIndex = 0;
@@ -103,7 +103,7 @@ public sealed class WorldTileReader
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
                 case TokenID.JNodePosn: junctionPosition = ReadJunctionPosition(field); break;
-                default: field.Skip(); break;
+                default: AddDiagnostic(diagnostics, $\"Skipped unsupported TrackObj field token 0x{(ushort)field.ID:X4}.\"); field.Skip(); break;
             }
         }
 
@@ -111,7 +111,7 @@ public sealed class WorldTileReader
             position, direction, staticFlags, worldDatabaseId, junctionPosition);
     }
 
-    private static WorldTilePosition ReadPosition(SBR block)
+    private static void AddDiagnostic(List<string> diagnostics, string message)\n    {\n        if (!diagnostics.Contains(message, StringComparer.Ordinal))\n            diagnostics.Add(message);\n    }\n\n    private static WorldTilePosition ReadPosition(SBR block)
     {
         block.VerifyID(TokenID.Position);
         var value = new WorldTilePosition(block.ReadFloat(), block.ReadFloat(), block.ReadFloat());
