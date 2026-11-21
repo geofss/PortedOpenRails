@@ -50,6 +50,10 @@ public sealed class WorldTileReaderTests
         Assert.Equal((uint)2, track.CollideFlags);
         Assert.Equal("trackside.s", track.FileName);
         Assert.Equal(new WorldJunctionPosition(4, -5, 6, 7, 8), track.JunctionPosition);
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        Assert.Equal(new WorldTilePosition(2049, 2, -4093), placements[0].WorldPosition);
+        Assert.Equal(new WorldTilePosition(8198, 7, -10232), placements[1].JunctionWorldPosition);
     }
 
     private static byte[] CreateSbrFile(byte[] rootBlock)
