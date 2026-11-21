@@ -54,8 +54,8 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 
 ## Milestone 4 — Browser rendering
 - [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
-- [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; shape material texturing remains incomplete)
-- [x] Build texture-aware track-shape primitive batches with original UV/material references (renderer integration remains pending)\n- [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
+- [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; basic shape-texture batches now render, but full material/shader variants and seasonal texture handling remain incomplete)
+- [x] Build texture-aware track-shape primitive batches with original UV/material references\n- [x] Render basic RGBA8 track-shape ACE texture batches with UVs and alpha-test support (full shader/material variants and seasonal textures remain incomplete)\n- [x] Release transient WebGL buffers and vertex arrays after redraws to avoid GPU resource accumulation during camera interaction
 - [x] Dispose renderer programs, textures, and event listeners when the preview component is removed; redraw on window and canvas/container resize\n- [x] Add orbit/tilt drag controls and wheel/pinch zoom to the route preview, with touch gestures enabled on the canvas and tilt projection in both renderer paths
 - [x] Report unknown WORLD block/field tokens as deduplicated route-preview diagnostics
 - [x] Keep valid scenery tiles loaded when another WORLD tile is malformed, with regression coverage
