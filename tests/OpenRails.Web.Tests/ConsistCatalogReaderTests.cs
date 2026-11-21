@@ -26,8 +26,7 @@ public sealed class ConsistCatalogReaderTests
                 """),
             ("TRAINS/TRAINSET/FolderA/EngineA.eng", "engine"),
             ("TRAINS/TRAINSET/FolderB/CarB.wag", "wagon"),
-            ("TRAINS/TRAINSET/FolderA/CarA.wag", "wagon A"),
-            );
+            ("TRAINS/TRAINSET/FolderA/CarA.wag", "wagon A"));
 
         var result = new ConsistCatalogReader().Read(store);
 
