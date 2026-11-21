@@ -158,7 +158,17 @@
                         <ol class="path-list">
                             @foreach (var car in consist.Cars)
                             {
-                                <li>@(car.IsEngine ? "Engine" : car.IsEndOfTrain ? "EOT" : "Wagon"): @car.Name <span class="hint">(@car.Folder, UID @car.Uid@(car.Flipped ? ", flipped" : ""))</span></li>
+                                <li>@(car.IsEngine ? "Engine" : car.IsEndOfTrain ? "EOT" : "Wagon"): @car.Name <span class="hint">(@car.Folder, UID @car.Uid@(car.Flipped ? ", flipped" : ""))</span>
+                                    @if (car.Loads is not null)
+                                    {
+                                        <ul>
+                                            @foreach (var load in car.Loads)
+                                            {
+                                                <li>Load: @load.Name <span class="hint">(@load.Folder · @load.Position@(load.State is null ? "" : $" · {load.State}"))</span></li>
+                                            }
+                                        </ul>
+                                    }
+                                </li>
                             }
                         </ol>
                     </details>
