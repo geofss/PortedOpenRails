@@ -67,12 +67,10 @@ public sealed class TrackNetworkBuilder
                 diagnostics.Add($"Vector TrackNode {node.Index} has {endpoints.Length} distinct connected nodes; expected 2.");
 
             TrackWorldPosition? endPosition = null;
-            if (node.Pins.Count > 1)
-            {
-                var endNode = database.GetRequiredNode(node.Pins[1].Link);
-                if (endNode.Location is { } location)
-                    endPosition = ToWorldPosition(location);
-            }
+            if (node.Pins.Count > 1 &&
+                database.TryGetNode(node.Pins[1].Link, out var endNode) &&
+                endNode?.Location is { } location)
+                endPosition = ToWorldPosition(location);
 
             paths.Add(new TrackVectorPath(
                 node.Index,
