@@ -5,7 +5,8 @@ namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistLoadData(string Name, string Folder, string Position, string? State);
 public sealed record ConsistCar(string Name, string Folder, int Uid, bool IsEngine, bool IsEndOfTrain, bool Flipped, IReadOnlyList<ConsistLoadData>? Loads = null);
-public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath);
+public sealed record ConsistSpeedLimit(float A, float B);
+public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars, string SourcePath, float Durability = 1.0f, ConsistSpeedLimit? MaxVelocity = null, string? TrainControlSystemParametersFile = null);
 
 /// <summary>Reads MSTS/Open Rails .con consists using the upstream STF parser and virtual package streams.</summary>
 public sealed class ConsistReader
@@ -22,6 +23,9 @@ public sealed class ConsistReader
             using var reader = new STFReader(virtualPath, useTree: false);
             string? consistName = null;
             var cars = new List<ConsistCar>();
+            var durability = 1.0f;
+            ConsistSpeedLimit? maxVelocity = null;
+            string? trainControlSystemParametersFile = null;
             reader.ParseFile(new[]
             {
                 new STFReader.TokenProcessor("train", () =>
@@ -29,18 +33,18 @@ public sealed class ConsistReader
                     reader.MustMatch("(");
                     reader.ParseBlock(new[]
                     {
-                        new STFReader.TokenProcessor("traincfg", () => ReadTrainConfig(reader, cars, value => consistName = value))
+                        new STFReader.TokenProcessor("traincfg", () => ReadTrainConfig(reader, cars, value => consistName = value, value => durability = value, value => maxVelocity = value, value => trainControlSystemParametersFile = value))
                     });
                 })
             });
             if (cars.Count == 0)
                 throw new InvalidDataException($"The consist '{virtualPath}' contains no wagon or engine entries.");
             var name = string.IsNullOrWhiteSpace(consistName) ? Path.GetFileNameWithoutExtension(virtualPath) : consistName.Trim();
-            return new ConsistMetadata(name, Array.AsReadOnly(cars.ToArray()), virtualPath);
+            return new ConsistMetadata(name, Array.AsReadOnly(cars.ToArray()), virtualPath, durability, maxVelocity, trainControlSystemParametersFile);
         }
     }
 
-    private static void ReadTrainConfig(STFReader reader, List<ConsistCar> cars, Action<string> setName)
+    private static void ReadTrainConfig(STFReader reader, List<ConsistCar> cars, Action<string> setName, Action<float> setDurability, Action<ConsistSpeedLimit> setMaxVelocity, Action<string> setTcsFile)
     {
         reader.MustMatch("(");
         var name = reader.ReadString();
@@ -48,10 +52,22 @@ public sealed class ConsistReader
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("name", () => setName(reader.ReadStringBlock(null))),
+            new STFReader.TokenProcessor("durability", () => setDurability(reader.ReadFloatBlock(STFReader.UNITS.None, null))),
+            new STFReader.TokenProcessor("maxvelocity", () => setMaxVelocity(ReadMaxVelocity(reader))),
+            new STFReader.TokenProcessor("ortstraincontrolsystemparameters", () => setTcsFile(reader.ReadStringBlock(null))),
             new STFReader.TokenProcessor("wagon", () => cars.Add(ReadCar(reader, false, false))),
             new STFReader.TokenProcessor("engine", () => cars.Add(ReadCar(reader, true, false))),
             new STFReader.TokenProcessor("ortseot", () => cars.Add(ReadCar(reader, false, true)))
         });
+    }
+
+    private static ConsistSpeedLimit ReadMaxVelocity(STFReader reader)
+    {
+        reader.MustMatch("(");
+        var a = reader.ReadFloat(STFReader.UNITS.Speed, null);
+        var b = reader.ReadFloat(STFReader.UNITS.Speed, null);
+        reader.MustMatch(")");
+        return new ConsistSpeedLimit(a, b);
     }
 
     private static ConsistCar ReadCar(STFReader reader, bool engine, bool eot)
