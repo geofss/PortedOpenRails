@@ -85,6 +85,53 @@ public sealed class TrackSectionGeometryReader
         }
     }
 
+    private static TrackShapeDefinition ReadTrackShape(STFReader reader)
+    {
+        reader.MustMatch("(");
+        var index = reader.ReadUInt(null);
+        string? fileName = null;
+        uint numberOfPaths = 0;
+        uint mainRoute = 0;
+        double clearanceDistance = 0;
+        bool tunnel = false, road = false, rack = false;
+        var paths = new List<TrackShapePath>();
+
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("filename", () => fileName = reader.ReadStringBlock(null)),
+            new STFReader.TokenProcessor("numpaths", () => numberOfPaths = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("mainroute", () => mainRoute = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("clearancedist", () => clearanceDistance = reader.ReadFloatBlock(STFReader.UNITS.Distance, null)),
+            new STFReader.TokenProcessor("sectionidx", () => paths.Add(ReadTrackShapePath(reader))),
+            new STFReader.TokenProcessor("tunnelshape", () => tunnel = reader.ReadBoolBlock(true)),
+            new STFReader.TokenProcessor("roadshape", () => road = reader.ReadBoolBlock(true)),
+            new STFReader.TokenProcessor("ortsrackshape", () => rack = reader.ReadBoolBlock(true))
+        });
+
+        if (numberOfPaths > 4096)
+            throw new InvalidDataException($"Track shape {index} has too many paths: {numberOfPaths}.");
+
+        return new TrackShapeDefinition(index, fileName, numberOfPaths, mainRoute,
+            clearanceDistance, paths, tunnel, road, rack);
+    }
+
+    private static TrackShapePath ReadTrackShapePath(STFReader reader)
+    {
+        reader.MustMatch("(");
+        var count = reader.ReadUInt(null);
+        if (count > 4096)
+            throw new InvalidDataException($"Track shape path section count {count} is outside the supported range.");
+
+        var x = reader.ReadDouble(null);
+        var y = reader.ReadDouble(null);
+        var z = reader.ReadDouble(null);
+        var angle = reader.ReadDouble(null);
+        var sections = new uint[count];
+        for (var i = 0; i < sections.Length; i++)
+            sections[i] = reader.ReadUInt(null);
+        reader.SkipRestOfBlock();
+        return new TrackShapePath(x, y, z, angle, sections);
+    }
     private static TrackSectionGeometry ReadSection(STFReader reader)
     {
         reader.MustMatch("(");
@@ -153,14 +200,54 @@ public sealed class TrackSectionCatalog
     public uint MaximumSectionIndex { get; }
     public int Count => sections.Count;
 
-    public TrackSectionCatalog(uint maximumSectionIndex, IReadOnlyDictionary<uint, TrackSectionGeometry> sections)
+    public TrackShapeCatalog Shapes { get; }
+
+    public TrackSectionCatalog(uint maximumSectionIndex, IReadOnlyDictionary<uint, TrackSectionGeometry> sections,
+        TrackShapeCatalog? shapes = null)
     {
         MaximumSectionIndex = maximumSectionIndex;
         this.sections = new Dictionary<uint, TrackSectionGeometry>(sections);
+        Shapes = shapes ?? new TrackShapeCatalog(0, new Dictionary<uint, TrackShapeDefinition>());
     }
 
     public bool TryGet(uint index, out TrackSectionGeometry section) => sections.TryGetValue(index, out section!);
     public TrackSectionGeometry GetRequired(uint index) => sections.TryGetValue(index, out var section)
         ? section
         : throw new InvalidDataException($"Track section {index} was not found in the catalog.");
+}
+
+public sealed record TrackShapePath(
+    double OffsetX,
+    double OffsetY,
+    double OffsetZ,
+    double AngleRadians,
+    IReadOnlyList<uint> TrackSectionIndices);
+
+public sealed record TrackShapeDefinition(
+    uint ShapeIndex,
+    string? FileName,
+    uint NumberOfPaths,
+    uint MainRoute,
+    double ClearanceDistanceMeters,
+    IReadOnlyList<TrackShapePath> Paths,
+    bool IsTunnel,
+    bool IsRoad,
+    bool IsRack);
+
+public sealed class TrackShapeCatalog
+{
+    private readonly IReadOnlyDictionary<uint, TrackShapeDefinition> shapes;
+    public uint MaximumShapeIndex { get; }
+    public int Count => shapes.Count;
+
+    public TrackShapeCatalog(uint maximumShapeIndex, IReadOnlyDictionary<uint, TrackShapeDefinition> shapes)
+    {
+        MaximumShapeIndex = maximumShapeIndex;
+        this.shapes = new Dictionary<uint, TrackShapeDefinition>(shapes);
+    }
+
+    public bool TryGet(uint index, out TrackShapeDefinition shape) => shapes.TryGetValue(index, out shape!);
+    public TrackShapeDefinition GetRequired(uint index) => shapes.TryGetValue(index, out var shape)
+        ? shape
+        : throw new InvalidDataException($"Track shape {index} was not found in the catalog.");
 }
