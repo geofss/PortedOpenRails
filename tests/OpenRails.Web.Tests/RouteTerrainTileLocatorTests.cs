@@ -41,6 +41,7 @@ public sealed class RouteTerrainTileLocatorTests
 
         var result = new RouteTerrainTileLocator().Locate(store, "ROUTES/Test", network);
 
+        Assert.True(result.Found.Count == 1, string.Join(" | ", result.Missing.Select(item => item.ExpectedPath)));
         var tile = Assert.Single(result.Found);
         Assert.Equal((0, 0), (tile.TileX, tile.TileZ));
         Assert.Equal("ROUTES/Test/TILES/-7FFFFFFC.t", tile.Path);
