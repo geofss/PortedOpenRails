@@ -62,8 +62,10 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
             null, new WorldMatrix3x3(0, 0, 1, 0, 1, 0, -1, 0, 0), 0, 0);
         var trackObject = new TrackWorldObject(11, 0, 0, 0, "building.s",
             new WorldTilePosition(10, 5, 20), new WorldQuaternion(0, 0, 0, 1), 0, 0, null);
+        var rotatedQuaternionObject = new TrackWorldObject(13, 0, 0, 0, "building.s",
+            new WorldTilePosition(4, 5, 6), new WorldQuaternion(0, 0, -0.70710678f, 0.70710678f), 0, 0, null);
         var tileData = new WorldTileData("ROUTES/Test/WORLD/W-000001+000002.w", -1, 2,
-            new[] { staticObject, rotatedObject }, new[] { trackObject }, Array.Empty<string>());
+            new[] { staticObject, rotatedObject }, new[] { trackObject, rotatedQuaternionObject }, Array.Empty<string>());
         var placements = new WorldObjectPlacementBuilder().Build(tileData);
 
         var vertices = new[]
@@ -82,14 +84,16 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         {
             new TrackShapeAssetMesh(10, "building.s", "GLOBAL/SHAPES/building.s", mesh),
             new TrackShapeAssetMesh(11, "building.s", "GLOBAL/SHAPES/building.s", mesh),
-            new TrackShapeAssetMesh(12, "building.s", "GLOBAL/SHAPES/building.s", mesh)
+            new TrackShapeAssetMesh(12, "building.s", "GLOBAL/SHAPES/building.s", mesh),
+            new TrackShapeAssetMesh(13, "building.s", "GLOBAL/SHAPES/building.s", mesh)
         };
         var shapeDiscovery = new WorldShapeAssetDiscovery(
             new[]
             {
                 new WorldShapeAssetReference(-1, 2, 10, "building.s", "Static", "GLOBAL/SHAPES/building.s"),
                 new WorldShapeAssetReference(-1, 2, 11, "building.s", "TrackObj", "GLOBAL/SHAPES/building.s"),
-                new WorldShapeAssetReference(-1, 2, 12, "building.s", "Static", "GLOBAL/SHAPES/building.s")
+                new WorldShapeAssetReference(-1, 2, 12, "building.s", "Static", "GLOBAL/SHAPES/building.s"),
+                new WorldShapeAssetReference(-1, 2, 13, "building.s", "TrackObj", "GLOBAL/SHAPES/building.s")
             }, Array.Empty<WorldShapeAssetIssue>());
         var textureData = new AceTextureData(1, 1, AceTexturePixelFormat.Rgba8, false,
             false, 0, new[] { new byte[] { 255, 255, 255, 255 } }, Array.Empty<AceTextureChannel>());
@@ -97,7 +101,8 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         {
             new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(10, "rail.ace", null, "ROUTES/Test/TEXTURES/rail.ace"), textureData),
             new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(11, "rail.ace", null, "ROUTES/Test/TEXTURES/rail.ace"), textureData),
-            new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(12, "rail.ace", null, "ROUTES/Test/TEXTURES/rail.ace"), textureData)
+            new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(12, "rail.ace", null, "ROUTES/Test/TEXTURES/rail.ace"), textureData),
+            new LoadedTrackShapeTexture(new TrackShapeTextureAssetReference(13, "rail.ace", null, "ROUTES/Test/TEXTURES/rail.ace"), textureData)
         };
         var textureDiscovery = new TrackShapeTextureAssetDiscovery(
             loadedTextures.Select(texture => texture.Reference), Array.Empty<TrackShapeTextureAssetIssue>());
@@ -113,9 +118,10 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         var batch = Assert.Single(result.Batches);
         Assert.Equal(0, batch.TextureIndex);
         Assert.True(batch.AlphaTest);
-        Assert.Equal(9, batch.Indices.Count);
+        Assert.Equal(12, batch.Indices.Count);
         Assert.Equal(new[] { -2043f, 7f, 4105f, 0.1f, 0.2f }, batch.Vertices.Take(5));
         Assert.Equal(new[] { -2047f, 7f, 4103f, 0.1f, 0.2f }, batch.Vertices.Skip(15).Take(5));
         Assert.Equal(new[] { -2037f, 7f, 4119f, 0.1f, 0.2f }, batch.Vertices.Skip(30).Take(5));
+        Assert.Equal(new[] { -2047f, 7f, 4103f, 0.1f, 0.2f }, batch.Vertices.Skip(45).Take(5));
     }
 }
