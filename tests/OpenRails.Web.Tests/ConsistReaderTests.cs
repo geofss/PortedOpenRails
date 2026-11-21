@@ -28,7 +28,9 @@ public sealed class ConsistReaderTests
         Assert.Equal("TRAINS/CONSISTS/Test.con", consist.SourcePath);
         Assert.Equal(0.8f, consist.Durability);
         Assert.Equal(new ConsistSpeedLimit(30, 50), consist.MaxVelocity);
-        Assert.Equal("tcs.xml", consist.TrainControlSystemParametersFile);\n        Assert.Equal(4, consist.Serial);\n        Assert.Equal(42, consist.NextWagonUid);
+        Assert.Equal("tcs.xml", consist.TrainControlSystemParametersFile);
+        Assert.Equal(4, consist.Serial);
+        Assert.Equal(42, consist.NextWagonUid);
         Assert.Equal(3, consist.Cars.Count);
         Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0] with { Loads = null });
         Assert.Equal(2, consist.Cars[0].Loads!.Count);
@@ -54,7 +56,9 @@ public sealed class ConsistReaderTests
         Assert.Equal("Fallback", consist.Name);
         Assert.Equal(1.0f, consist.Durability);
         Assert.Null(consist.MaxVelocity);
-        Assert.Null(consist.TrainControlSystemParametersFile);\n        Assert.Equal(1, consist.Serial);\n        Assert.Equal(0, consist.NextWagonUid);
+        Assert.Null(consist.TrainControlSystemParametersFile);
+        Assert.Equal(1, consist.Serial);
+        Assert.Equal(0, consist.NextWagonUid);
     }
 
     [Fact]
