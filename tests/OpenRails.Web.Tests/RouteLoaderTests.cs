@@ -1,0 +1,88 @@
+using System.IO.Compression;
+using System.Text;
+using OpenRails.Web.Content;
+using OpenRails.Web.Parsing;
+using Xunit;
+
+namespace OpenRails.Web.Tests;
+
+public sealed class RouteLoaderTests
+{
+    [Fact]
+    public void LoadsRouteMetadataTrackDatabaseGeometryAndTerrainTileReferencesTogether()
+    {
+        using var store = CreateStore(
+            ("ROUTES/Test/Test.trk", """
+                SIMISA@@@@@@@@@@JINX0T0t
+                Tr_RouteFile (
+                    RouteID ( "TEST" )
+                    Name ( "Test Route" )
+                    Description ( "End-to-end route fixture" )
+                    FileName ( "TESTDB" )
+                    RouteStart ( 0 0 0 0 )
+                )
+                """),
+            ("ROUTES/Test/TDB/TESTDB.tdb", """
+                SIMISA@@@@@@@@@@JINX0t1t
+                TrackDB (
+                    TrackNodes ( 3
+                        TrackNode ( 1
+                            UiD ( 0 0 1 0 0 0 0 0 0 0 0 0 )
+                            TrEndNode ( )
+                            TrPins ( 1 0 TrPin ( 2 0 ) )
+                        )
+                        TrackNode ( 2
+                            TrVectorNode (
+                                TrVectorSections ( 1
+                                    1 0 0 0 0 0 1 "00" 0 0 0 0 0 0 0 0
+                                )
+                                TrItemRefs ( 0 )
+                            )
+                            TrPins ( 1 1 TrPin ( 1 1 ) TrPin ( 3 0 ) )
+                        )
+                        TrackNode ( 3
+                            UiD ( 0 0 2 0 0 0 0 0 10 0 0 0 )
+                            TrEndNode ( )
+                            TrPins ( 1 0 TrPin ( 2 1 ) )
+                        )
+                    )
+                    TrItemTable ( 0 )
+                )
+                """),
+            ("GLOBAL/TSECTION.DAT", """
+                SIMISA@@@@@@@@@@JINX0T0t
+                TrackSections (
+                    10
+                    TrackSection ( 1 SectionSize ( 1m 10m ) )
+                )
+                """),
+            ("ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"));
+
+        var metadata = new RouteMetadataReader().Read(store, "ROUTES/Test/Test.trk");
+        var route = new RouteLoader().Load(store, "ROUTES/Test/Test.trk", metadata);
+
+        Assert.Equal("Test Route", route.Metadata.Name);
+        Assert.Equal("ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
+        Assert.Equal(3, route.TrackDatabase.NodeCount);
+        Assert.Equal(1, route.TrackNetwork.VectorPathCount);
+        Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
+        Assert.Single(route.TerrainTiles.Found);
+        Assert.Empty(route.TerrainTiles.Missing);
+    }
+
+    private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
+    {
+        var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in files)
+            {
+                var entry = archive.CreateEntry(file.Path);
+                using var writer = new StreamWriter(entry.Open(), Encoding.UTF8);
+                writer.Write(file.Content);
+            }
+        }
+        memory.Position = 0;
+        return new ZipContentStore(memory);
+    }
+}
