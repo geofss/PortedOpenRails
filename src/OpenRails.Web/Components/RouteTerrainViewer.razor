@@ -6,7 +6,7 @@
 
 <section class="route-world-view">
     <h3>Route terrain · WebGL preview</h3>
-    <p class="hint">Original terrain patch geometry is uploaded to the browser GPU. This initial renderer shows elevation and terrain topology; textures and scenery rendering are the next stages.</p>
+    <p class="hint">Original terrain geometry is uploaded to the GPU. For memory safety, this preview displays up to 8 terrain tiles at a time; texture and scenery rendering are next. Drag to rotate, scroll to zoom.</p>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     @if (renderError is not null)
     {
@@ -39,8 +39,8 @@
             {
                 var vertices = new List<float>();
                 var indices = new List<int>();
-                foreach (var loaded in Route.TerrainMeshes.Meshes)
-                foreach (var lod in loaded.LodMeshes.Take(1))
+                foreach (var loaded in Route.TerrainMeshes.Meshes.Take(8))
+                foreach (var lod in loaded.LodMeshes.Take(1)
             foreach (var patch in lod.Patches)
             {
                 var offset = indices.Count == 0 ? 0 : vertices.Count / 3;
@@ -58,7 +58,8 @@
                 var tessellator = new TrackGeometryTessellator();
                 foreach (var path in Route.TrackNetwork.VectorPaths)
                 {
-                    var points = tessellator.BuildPolyline(path, 10);
+                    if (trackLines.Count >= 600000) break;
+                    var points = tessellator.BuildPolyline(path, 20, 100000);
                     for (var i = 0; i + 1 < points.Count; i++)
                     {
                         trackLines.Add((float)points[i].X); trackLines.Add((float)points[i].Y); trackLines.Add((float)points[i].Z);
