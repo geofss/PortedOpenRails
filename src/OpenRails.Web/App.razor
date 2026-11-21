@@ -178,7 +178,7 @@
                                         <ul>
                                             @foreach (var load in car.Loads)
                                             {
-                                                <li>Load: @load.Name <span class="hint">(@load.Folder · @load.Position@(load.State is null ? "" : $" · {load.State}"))</span></li>
+                                                <li>Load: @load.Name <span class="hint">(@load.Folder · @load.Position@(load.State is null ? "" : $" · {load.State}") · interpreted @load.ParsedPosition/@load.ParsedState)</span></li>
                                             }
                                         </ul>
                                     }
