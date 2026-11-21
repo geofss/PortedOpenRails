@@ -151,3 +151,16 @@ input[type="file"] {
     .route-details dl { grid-template-columns: 1fr; }
     .route-details dd { margin-bottom: 8px; }
 }
+
+.simulation-panel{margin:1.5rem 0;padding:1rem;border:1px solid #278c5b;border-radius:1rem;background:rgba(20,80,50,.06)}
+.simulation-controls{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin:1rem 0}
+.simulation-controls label{display:flex;gap:.5rem;align-items:center}
+.simulation-controls button{padding:.6rem 1rem;border-radius:.6rem}
+.sim-stats{display:flex;gap:1rem;flex-wrap:wrap;font-variant-numeric:tabular-nums;margin:.8rem 0}
+.test-track{width:100%;max-height:230px;background:rgba(0,0,0,.04);border-radius:.8rem}
+.track-bed{fill:none;stroke:#777;stroke-width:22;stroke-linecap:round}
+.track-line{fill:none;stroke:#dedede;stroke-width:7;stroke-dasharray:5 8}
+.sim-engine{fill:#25884e;stroke:#14562f;stroke-width:2}
+.sim-coach{fill:#c8d5d0;stroke:#586b63;stroke-width:2}
+.sim-window{fill:#7fb6d5}
+.sim-label{font-size:10px;fill:currentColor;text-anchor:middle}
