@@ -82,7 +82,7 @@ function redraw(){
 
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
-let terrainProgram, terrainTextures = [], storedTerrainPatches, storedTerrainPixels, storedTerrainLines;
+let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh;
 export function drawTerrainTextured(patches, textures, trackLines = []) {
   storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines;
   if (!gl) return;
@@ -98,7 +98,7 @@ export function drawTerrainTextured(patches, textures, trackLines = []) {
     gl.attachShader(terrainProgram,vertex); gl.attachShader(terrainProgram,fragment); gl.linkProgram(terrainProgram);
     if(!gl.getProgramParameter(terrainProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(terrainProgram));
   }
-  terrainTextures = textures.map((source, index) => {
+  if (uploadedTerrainPixels !== textures) {\n    for (const oldTexture of terrainTextures) gl.deleteTexture(oldTexture);\n    terrainTextures = textures.map((source, index) => {
     const texture=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,source.width,source.height,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(source.pixels));
@@ -117,7 +117,7 @@ export function drawTerrainTextured(patches, textures, trackLines = []) {
   const centerX=(minX+maxX)/2,centerZ=(minZ+maxZ)/2;
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
   const cos=Math.cos(rotation),sin=Math.sin(rotation);
-  const project=(x,z)=>{const dx=x-centerX,dz=z-centerZ;const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;let px=(rx/span)*1.8*zoom,py=(rz/span)*1.8*zoom;if(aspect>1)py/=aspect;else px*=aspect;return [px,py];};
+  const project=(x,z,y=0)=>{const dx=x-centerX,dz=z-centerZ;const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;let px=(rx/span)*1.8*zoom,py=(rz/span)*1.8*zoom;if(aspect>1)py/=aspect;else px*=aspect;return [px,py,y*0.0001];};
   resizeCanvas(); gl.viewport(0,0,canvasRef.width,canvasRef.height);
   gl.clearColor(0.07,0.09,0.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);gl.useProgram(terrainProgram);
@@ -131,7 +131,7 @@ export function drawTerrainTextured(patches, textures, trackLines = []) {
     const packed=new Float32Array((patch.vertices.length/5)*5);
     for(let i=0,j=0;i<patch.vertices.length;i+=5,j+=5){
       const q=project(patch.vertices[i],patch.vertices[i+2]);
-      packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=patch.vertices[i+1]*0.0001;
+      packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=q[2];
       packed[j+3]=patch.vertices[i+3];packed[j+4]=patch.vertices[i+4];
     }
     gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
@@ -162,4 +162,25 @@ function drawTrackOverlay(trackLines,project){
   gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);
   gl.enableVertexAttribArray(c);gl.vertexAttribPointer(c,3,gl.FLOAT,false,24,12);
   gl.drawArrays(gl.LINES,0,trackLines.length/3);gl.bindVertexArray(null);
+}
+
+function drawTrackTriangles(mesh,project){
+  if(!mesh.vertices.length || !mesh.indices.length) return;
+  const packed=new Float32Array(mesh.vertices.length/3*6);
+  for(let i=0;i<mesh.vertices.length;i+=3){
+    const q=project(mesh.vertices[i],mesh.vertices[i+2],mesh.vertices[i+1]);
+    const o=(i/3)*6;
+    packed[o]=q[0];packed[o+1]=q[1];packed[o+2]=q[2]+0.0005;
+    packed[o+3]=0.38;packed[o+4]=0.40;packed[o+5]=0.43;
+  }
+  gl.useProgram(program);
+  const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+  const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
+  const p=gl.getAttribLocation(program,"position"),color=gl.getAttribLocation(program,"color");
+  gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,24,0);
+  gl.enableVertexAttribArray(color);gl.vertexAttribPointer(color,3,gl.FLOAT,false,24,12);
+  const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(mesh.indices),gl.STREAM_DRAW);
+  gl.drawElements(gl.TRIANGLES,mesh.indices.length,gl.UNSIGNED_INT,0);
+  gl.deleteBuffer(vb);gl.deleteBuffer(ib);gl.deleteVertexArray(vao);gl.bindVertexArray(null);
 }
