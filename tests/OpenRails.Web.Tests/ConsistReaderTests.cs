@@ -35,7 +35,8 @@ public sealed class ConsistReaderTests
         Assert.Equal(new ConsistCar("PassengerCar", "PassengerFolder", 10, false, false, false), consist.Cars[0] with { Loads = null });
         Assert.Equal(3, consist.Cars[0].Loads!.Count);
         Assert.Equal(new ConsistLoadData("Coal", "CoalFolder", "CenterFront", "Loaded", ConsistLoadPosition.CenterFront, ConsistLoadState.Loaded), consist.Cars[0].Loads![0]);
-        Assert.Equal(new ConsistLoadData("Empty", "EmptyFolder", "Above", null, ConsistLoadPosition.Above, ConsistLoadState.Random), consist.Cars[0].Loads[1]);\n        Assert.Equal(new ConsistLoadData("Unknown", "UnknownFolder", "Sideways", "SuperLoaded", ConsistLoadPosition.Rear, ConsistLoadState.Random), consist.Cars[0].Loads[2]);
+        Assert.Equal(new ConsistLoadData("Empty", "EmptyFolder", "Above", null, ConsistLoadPosition.Above, ConsistLoadState.Random), consist.Cars[0].Loads[1]);
+        Assert.Equal(new ConsistLoadData("Unknown", "UnknownFolder", "Sideways", "SuperLoaded", ConsistLoadPosition.Rear, ConsistLoadState.Random), consist.Cars[0].Loads[2]);
         Assert.Equal(new ConsistCar("TestEngine", "EngineFolder", 20, true, false, true), consist.Cars[1]);
         Assert.Equal(new ConsistCar("EndDevice", "EndFolder", 30, false, true, false), consist.Cars[2]);
     }
