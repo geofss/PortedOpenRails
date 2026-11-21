@@ -24,7 +24,10 @@ public sealed class ConsistCatalogReaderTests
             ("TRAINS/CONSISTS/Duplicate.con", """
                 Train ( TrainCfg ( "Duplicate" Wagon ( UiD ( 4 ) WagonData ( "CarA" "FolderA" ) ) Wagon ( UiD ( 4 ) WagonData ( "CarB" "FolderB" ) ) ) )
                 """),
-            ("TRAINS/TRAINSET/FolderA/EngineA.eng", "engine"),\n            ("TRAINS/TRAINSET/FolderB/CarB.wag", "wagon"),\n            ("TRAINS/TRAINSET/FolderA/CarA.wag", "wagon A"),\n            ("TRAINS/TRAINSET/FolderB/CarB.wag", "wagon B"));
+            ("TRAINS/TRAINSET/FolderA/EngineA.eng", "engine"),
+            ("TRAINS/TRAINSET/FolderB/CarB.wag", "wagon"),
+            ("TRAINS/TRAINSET/FolderA/CarA.wag", "wagon A"),
+            ("TRAINS/TRAINSET/FolderB/CarB.wag", "wagon B"));
 
         var result = new ConsistCatalogReader().Read(store);
 
@@ -33,7 +36,11 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal("TRAINS/CONSISTS/Broken.con", result.Issues[0].Path);
         Assert.Contains("missing", result.Issues[0].Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("TRAINS/CONSISTS/Duplicate.con", result.Issues[1].Path);
-        Assert.Contains("Duplicate car UID 4", result.Issues[1].Message);\n        Assert.Equal(4, result.CarAssets.Count);\n        Assert.All(result.CarAssets, asset => Assert.True(asset.Found));\n        Assert.Contains(result.CarAssets, asset => asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderA/EngineA.eng");\n        Assert.Contains(result.CarAssets, asset => !asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderB/CarB.wag");
+        Assert.Contains("Duplicate car UID 4", result.Issues[1].Message);
+        Assert.Equal(4, result.CarAssets.Count);
+        Assert.All(result.CarAssets, asset => Assert.True(asset.Found));
+        Assert.Contains(result.CarAssets, asset => asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderA/EngineA.eng");
+        Assert.Contains(result.CarAssets, asset => !asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderB/CarB.wag");
     }
 
     [Fact]
