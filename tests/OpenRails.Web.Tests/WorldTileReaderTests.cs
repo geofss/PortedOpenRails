@@ -10,6 +10,34 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldTileReaderTests
 {
     [Fact]
+    public void PlacementBuilderPreservesOrientationAndHandlesMissingPositions()
+    {
+        var direction = new WorldQuaternion(0.1f, 0.2f, 0.3f, 0.9f);
+        var matrix = new WorldMatrix3x3(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        var tile = new WorldTileData(
+            "ROUTES/Test/WORLD/W-000001+000002.w",
+            -1,
+            2,
+            new[]
+            {
+                new StaticWorldObject(10, "tree.s", new WorldTilePosition(4, 5, 6),
+                    direction, matrix, 3, 4),
+                new StaticWorldObject(11, "unknown.s", null, null, null, 0, 0)
+            },
+            Array.Empty<TrackWorldObject>(),
+            Array.Empty<string>());
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+
+        Assert.Equal(2, placements.Count);
+        Assert.Equal(new WorldTilePosition(-2044, 5, 4102), placements[0].WorldPosition);
+        Assert.Equal(direction, placements[0].Direction);
+        Assert.Equal(matrix, placements[0].Matrix);
+        Assert.Null(placements[1].WorldPosition);
+        Assert.Null(placements[1].Direction);
+    }
+
+    [Fact]
     public void ReadsStaticAndTrackObjectPlacementsFromOriginalWorldTile()
     {
         var staticObject = Block(TokenID.Static, Concat(
