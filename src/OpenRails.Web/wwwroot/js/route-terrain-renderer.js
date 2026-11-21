@@ -1,14 +1,21 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, zoom = 1, dragging = false, lastX = 0;
+let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler;
 
 export function initialize(canvas) {
   canvasRef = canvas;
   resizeCanvas();
-  canvas.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); redraw(); }, { passive:false });
-  canvas.addEventListener('pointerdown', e => { dragging=true; lastX=e.clientX; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', e => { if(dragging){ rotation += (e.clientX-lastX)*0.008; lastX=e.clientX; redraw(); } });
-  canvas.addEventListener('pointerup', () => dragging=false);
-  canvas.addEventListener('pointercancel', () => dragging=false);
+  wheelHandler = e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); redraw(); };
+  pointerDownHandler = e => { dragging=true; lastX=e.clientX; canvas.setPointerCapture(e.pointerId); };
+  pointerMoveHandler = e => { if(dragging){ rotation += (e.clientX-lastX)*0.008; lastX=e.clientX; redraw(); } };
+  pointerUpHandler = () => { dragging=false; };
+  resizeHandler = () => redraw();
+  canvas.addEventListener('wheel', wheelHandler, { passive:false });
+  canvas.addEventListener('pointerdown', pointerDownHandler);
+  canvas.addEventListener('pointermove', pointerMoveHandler);
+  canvas.addEventListener('pointerup', pointerUpHandler);
+  canvas.addEventListener('pointercancel', pointerUpHandler);
+  window.addEventListener('resize', resizeHandler);
   gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
   if (!gl) throw new Error("WebGL2 is not supported by this browser.");
   const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
@@ -24,6 +31,26 @@ export function initialize(canvas) {
   program=gl.createProgram(); gl.attachShader(program,vertex); gl.attachShader(program,fragment); gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
   gl.enable(gl.DEPTH_TEST);
+}
+export function cleanup() {
+  if (canvasRef) {
+    canvasRef.removeEventListener('wheel', wheelHandler);
+    canvasRef.removeEventListener('pointerdown', pointerDownHandler);
+    canvasRef.removeEventListener('pointermove', pointerMoveHandler);
+    canvasRef.removeEventListener('pointerup', pointerUpHandler);
+    canvasRef.removeEventListener('pointercancel', pointerUpHandler);
+  }
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  if (gl) {
+    for (const texture of terrainTextures) gl.deleteTexture(texture);
+    if (program) gl.deleteProgram(program);
+    if (terrainProgram) gl.deleteProgram(terrainProgram);
+  }
+  gl = program = terrainProgram = canvasRef = null;
+  terrainTextures = [];
+  uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = null;
+  storedVertices = storedIndices = storedTrackLines = null;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = null;
 }
 function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
 
