@@ -40,7 +40,8 @@ public sealed class TrackShapeRenderGeometryBuilderTests
         Assert.False(result.WasTruncated);
         Assert.Equal(2, result.Batches.Count);
         var texturedBatch = Assert.Single(result.Batches.Where(batch => batch.TextureIndex == 0));
-        Assert.True(texturedBatch.AlphaTest);\n        Assert.Equal(2, texturedBatch.TextureAddressMode);
+        Assert.True(texturedBatch.AlphaTest);
+        Assert.Equal(2, texturedBatch.TextureAddressMode);
         Assert.Equal(new[] { 111f, 2f, 177f, 0.1f, 0.2f }, texturedBatch.Vertices.Take(5));
         Assert.Equal(new[] { 0, 1, 2 }, texturedBatch.Indices);
         var fallbackBatch = Assert.Single(result.Batches.Where(batch => batch.TextureIndex == -1));
