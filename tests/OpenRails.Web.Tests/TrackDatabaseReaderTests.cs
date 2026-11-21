@@ -58,7 +58,7 @@ public sealed class TrackDatabaseReaderTests
         Assert.Equal("switchshape", junction.ShapeName);
         Assert.Equal((uint)4, junction.ShapeIndex);
 
-        Assert.Equal(5, database.EnumerateConnections().Count());
+        Assert.Equal(6, database.EnumerateConnections().Count());
         Assert.Empty(database.Diagnostics);
     }
 
