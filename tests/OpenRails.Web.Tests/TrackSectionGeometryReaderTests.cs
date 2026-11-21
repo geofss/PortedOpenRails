@@ -42,8 +42,8 @@ public sealed class TrackSectionGeometryReaderTests
             """));
         var catalog = new TrackSectionGeometryReader().ReadRouteSections(store, "ROUTES/Test/tsection.dat");
         Assert.True(catalog.GetRequired(1).IsStraight);
-        Assert.Equal(12, catalog.GetRequired(1).LengthMeters);
-        Assert.Equal(30, catalog.GetRequired(2).AngleDegrees, 2);
+        Assert.Equal(12f, catalog.GetRequired(1).LengthMeters!.Value);
+        Assert.Equal(30f, catalog.GetRequired(2).AngleDegrees!.Value, 2);
         Assert.True(catalog.GetRequired(2).IsRouteSpecific);
     }
 
