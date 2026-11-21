@@ -1,6 +1,8 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
-let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;\nconst activePointers = new Map();\nlet pinchStartDistance = 0, pinchStartZoom = 1;
+let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
+const activePointers = new Map();
+let pinchStartDistance = 0, pinchStartZoom = 1;
 
 export function initialize(canvas) {
   canvasRef = canvas;
@@ -15,7 +17,8 @@ export function initialize(canvas) {
   canvas.addEventListener('pointermove', pointerMoveHandler);
   canvas.addEventListener('pointerup', pointerUpHandler);
   canvas.addEventListener('pointercancel', pointerUpHandler);
-  window.addEventListener('resize', resizeHandler);\n  if (typeof ResizeObserver !== 'undefined') { resizeObserver = new ResizeObserver(resizeHandler); resizeObserver.observe(canvas); }
+  window.addEventListener('resize', resizeHandler);
+  if (typeof ResizeObserver !== 'undefined') { resizeObserver = new ResizeObserver(resizeHandler); resizeObserver.observe(canvas); }
   gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
   if (!gl) throw new Error("WebGL2 is not supported by this browser.");
   const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
@@ -41,7 +44,8 @@ export function cleanup() {
     canvasRef.removeEventListener('pointerup', pointerUpHandler);
     canvasRef.removeEventListener('pointercancel', pointerUpHandler);
   }
-  if (resizeHandler) window.removeEventListener('resize', resizeHandler);\n  if (resizeObserver) resizeObserver.disconnect();
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  if (resizeObserver) resizeObserver.disconnect();
   if (gl) {
     for (const texture of terrainTextures) gl.deleteTexture(texture);
     if (program) gl.deleteProgram(program);
@@ -51,9 +55,12 @@ export function cleanup() {
   terrainTextures = [];
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = null;
   storedVertices = storedIndices = storedTrackLines = null;
-  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;\n  activePointers.clear(); pinchStartDistance = 0;\n  rotation = 0; pitch = 0.72; zoom = 1; dragging = false;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
+  activePointers.clear(); pinchStartDistance = 0;
+  rotation = 0; pitch = 0.72; zoom = 1; dragging = false;
 }
-function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}\nfunction compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
+function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
 
 export function drawTerrain(vertices, indices, trackLines = []) {
   storedVertices=vertices; storedIndices=indices; storedTrackLines=trackLines; redraw();
