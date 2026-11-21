@@ -1,6 +1,7 @@
 @page "/"
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
+@using OpenRails.Web.Simulation
 @using Microsoft.AspNetCore.Components.Forms
 @implements IDisposable
 
@@ -70,6 +71,32 @@
                     <dt>Metadata file</dt><dd><code>@selectedRoute.MetadataFile</code></dd>
                 </dl>
                 <p class="success">Route metadata loaded successfully 💚</p>
+                @if (isBuildingRoute)
+                {
+                    <p class="status">Building route track network from the imported Open Rails data…</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(routeBuildMessage))
+                {
+                    <p class="@(loadedTrackNetwork is null ? "error" : "success")">@routeBuildMessage</p>
+                }
+                @if (loadedTrackNetwork is not null)
+                {
+                    <dl>
+                        <dt>Track database nodes</dt><dd>@loadedTrackNetwork.Database.NodeCount</dd>
+                        <dt>Connected vector paths</dt><dd>@loadedTrackNetwork.VectorPathCount</dd>
+                        <dt>Parsed track length</dt><dd>@(loadedTrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
+                    </dl>
+                    @if (loadedTrackNetwork.Diagnostics.Count > 0)
+                    {
+                        <p class="hint">Track data diagnostics: @loadedTrackNetwork.Diagnostics.Count</p>
+                        <ul class="path-list">
+                            @foreach (var diagnostic in loadedTrackNetwork.Diagnostics.Take(10))
+                            {
+                                <li>@diagnostic</li>
+                            }
+                        </ul>
+                    }
+                }
             </div>
         }
     </section>
@@ -116,19 +143,58 @@
     private string? errorMessage;
     private bool isLoading;
     private bool selectedDefault;
+    private bool isBuildingRoute;
+    private string? routeBuildMessage;
+    private TrackNetwork? loadedTrackNetwork;
 
     private void SelectDefaultRoute()
     {
         selectedDefault = true;
         selectedRoute = null;
         errorMessage = null;
+        loadedTrackNetwork = null;
+        routeBuildMessage = null;
     }
 
-    private void SelectRoute(RouteChoice route)
+    private async Task SelectRoute(RouteChoice route)
     {
         selectedRoute = route;
         selectedDefault = false;
         errorMessage = null;
+        await BuildRouteNetworkAsync(route);
+    }
+
+    private async Task BuildRouteNetworkAsync(RouteChoice route)
+    {
+        loadedTrackNetwork = null;
+        routeBuildMessage = null;
+        isBuildingRoute = true;
+        await Task.Yield();
+
+        try
+        {
+            if (composite is null)
+                throw new InvalidDataException("No route content package is loaded.");
+
+            var assets = new RouteAssetLocator().Locate(composite, route.MetadataFile, route.Metadata);
+            var database = new TrackDatabaseReader().Read(composite, assets.TrackDatabasePath);
+            var geometryReader = new TrackSectionGeometryReader();
+            var globalSections = geometryReader.ReadGlobal(composite, assets.GlobalTrackSectionsPath);
+            var routeSections = assets.RouteTrackSectionsPath is null
+                ? null
+                : geometryReader.ReadRouteSections(composite, assets.RouteTrackSectionsPath);
+
+            loadedTrackNetwork = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
+            routeBuildMessage = $"Route track network built from {assets.TrackDatabasePath}.";
+        }
+        catch (Exception exception)
+        {
+            routeBuildMessage = $"Route network could not be built: {exception.Message}";
+        }
+        finally
+        {
+            isBuildingRoute = false;
+        }
     }
 
     private async Task HandleRouteZip(InputFileChangeEventArgs args)
@@ -173,7 +239,7 @@
                 throw new InvalidDataException(errorMessage ?? "No valid Tr_RouteFile metadata was found in this package.");
 
             if (routeChoices.Count == 1)
-                SelectRoute(routeChoices[0]);
+                await SelectRoute(routeChoices[0]);
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException)
         {
