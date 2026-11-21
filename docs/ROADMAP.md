@@ -53,9 +53,10 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [ ] Add desktop-reference regression scenarios
 
 ## Milestone 4 — Browser rendering
-- [ ] Evaluate a WebGL2 rendering backend against real Open Rails assets
-- [ ] Load and display route geometry, terrain, and track
-- [ ] Render scenery and rolling stock
+- [x] Evaluate and integrate a WebGL2 rendering backend against original route terrain assets (preview renderer; not full simulator renderer)
+- [x] Load and display terrain patches, ACE textures, route track overlays, and original track-shape meshes in the preview (limited tile/geometry caps; shape material texturing remains incomplete)
+- [ ] Render WORLD scenery placements with original transforms/materials
+- [ ] Render rolling stock
 - [ ] Add cameras and cab views
 - [ ] Add responsive graphics quality and performance controls
 
@@ -73,7 +74,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [ ] Validate desktop and mobile browser performance
 - [ ] Publish documented supported-content and browser compatibility
 
-## Full-port acceptance criteria
+## Current browser-port status (verified 2026-11-21)\n\nThe browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches and supported ACE textures, vector-track overlays, and original track-shape mesh geometry. It currently limits terrain preview to eight tiles and first LOD, uses incomplete track-shape materials, and does not render loaded WORLD scenery placements or trains. Route parsing and loading diagnostics are shown in the preview. Recent renderer CI runs 311–313 passed; renderer fixes in 309–310 initially failed and were superseded. This is **not yet a release-ready browser simulator**.\n\n## Full-port acceptance criteria
 
 A full port means real route and train content can be loaded, a real activity/timetable can run using Open Rails simulation behavior, and the browser renders and controls that simulation. A successful build, a static menu, or a scripted train animation alone does not satisfy this goal.
 
