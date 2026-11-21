@@ -34,7 +34,7 @@ public sealed class TerrainMeshBuilder
         for (var patchX = 0; patchX < side; patchX++)
         {
             var patch = patchSet.Patches[patchZ * side + patchX];
-            patches.Add(BuildPatch(tile, patchSet.Distance, patch, patchX, patchZ,
+            patches.Add(BuildPatch(tile, patchSet.Distance, side, patch, patchX, patchZ,
                 elevationResolver, hiddenVertexResolver));
         }
 
@@ -44,6 +44,7 @@ public sealed class TerrainMeshBuilder
     private static TerrainPatchMesh BuildPatch(
         TerrainTileContent tile,
         int lodDistance,
+        int patchesPerSide,
         TerrainPatch patch,
         int patchX,
         int patchZ,
@@ -83,14 +84,14 @@ public sealed class TerrainMeshBuilder
         var patchOrigin = new Vector3(
             patch.CenterX - 1024,
             tile.Terrain.Samples.Floor,
-            patch.CenterZ - 1024 + 2048 * tile.TileSize);
+            patch.CenterZ - 1024 + 2048 * tile.Terrain.TileSize);
 
         return new TerrainPatchMesh(
             patchX,
             patchZ,
             patch.ShaderIndex,
             patchOrigin,
-            tile.TileSize * 2048f / Math.Max(1, tile.Terrain.PatchSets.FirstOrDefault()?.PatchesPerSide ?? 16),
+            tile.Terrain.TileSize * 2048f / patchesPerSide,
             totalElevation / vertices.Length,
             vertices,
             indices,
@@ -161,7 +162,7 @@ public sealed class TerrainMeshBuilder
     {
         var globalX = patchX * CellsPerSide + x;
         var globalZ = patchZ * CellsPerSide + z;
-        var d = tile.TileSize * 8f;
+        var d = tile.Terrain.TileSize * 8f;
         var center = new Vector3(x, elevation(globalX, globalZ), z);
 
         var toNorth = Vector3.Normalize(new Vector3(x, elevation(globalX, globalZ - 1), z - d) - center);
