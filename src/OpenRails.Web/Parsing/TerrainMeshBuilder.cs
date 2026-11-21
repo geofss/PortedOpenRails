@@ -95,6 +95,9 @@ public sealed class TerrainMeshBuilder
         }
 
         var indices = BuildIndices(patchX, patchZ, isHidden);
+        var shader = patch.ShaderIndex >= 0 && patch.ShaderIndex < tile.Terrain.Shaders.Count
+            ? tile.Terrain.Shaders[patch.ShaderIndex]
+            : null;
         var patchOrigin = new Vector3(
             patch.CenterX - 1024,
             tile.Terrain.Samples.Floor,
@@ -104,6 +107,7 @@ public sealed class TerrainMeshBuilder
             patchX,
             patchZ,
             patch.ShaderIndex,
+            shader,
             patchOrigin,
             tile.Terrain.TileSize * 2048f / patchesPerSide,
             totalElevation / vertices.Length,
@@ -216,6 +220,7 @@ public sealed record TerrainPatchMesh(
     int PatchX,
     int PatchZ,
     int ShaderIndex,
+    TerrainShaderDefinition? Shader,
     Vector3 PatchOrigin,
     float PatchSizeMeters,
     float AverageRelativeElevation,
