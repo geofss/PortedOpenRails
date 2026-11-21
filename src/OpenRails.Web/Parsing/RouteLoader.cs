@@ -41,7 +41,8 @@ public sealed class RouteLoader
             network,
             terrainTiles,
             trackShapeAssets,
-            worldTiles);
+            worldTiles,
+            terrainMeshes);
     }
 }
 
@@ -54,4 +55,5 @@ public sealed record RouteLoadResult(
     TrackNetwork TrackNetwork,
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
-    RouteWorldTileDiscovery WorldTiles);
+    RouteWorldTileDiscovery WorldTiles,
+    RouteTerrainMeshLoadResult TerrainMeshes);
