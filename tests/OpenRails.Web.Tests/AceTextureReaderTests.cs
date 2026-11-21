@@ -65,6 +65,25 @@ public sealed class AceTextureReaderTests
     }
 
     [Fact]
+    public void LoadsShapeReferencedAceTexturesAndReportsUnsupportedDds()
+    {
+        const string acePath = "ROUTES/Test/TEXTURES/rail.ace";
+        var aceReference = new TrackShapeTextureAssetReference(5, "rail.ace", null, acePath);
+        var ddsReference = new TrackShapeTextureAssetReference(5, "rail.dds", null, "ROUTES/Test/TEXTURES/rail.dds");
+        var discovery = new TrackShapeTextureAssetDiscovery(
+            new[] { aceReference, ddsReference },
+            Array.Empty<TrackShapeTextureAssetIssue>());
+        using var store = CreateStore((acePath, CreateAceFile(CreateStructuredPayload(), compressed: false)));
+
+        var result = new TrackShapeTextureAssetLoader().Load(store, discovery);
+
+        Assert.Equal(1, result.Loaded.Count);
+        Assert.Equal(AceTexturePixelFormat.Rgba8, result.Loaded[0].Texture.PixelFormat);
+        Assert.Contains(result.Failed, issue => issue.Path == ddsReference.Path && issue.Reason.Contains("not yet supported"));
+        Assert.Empty(result.Missing);
+    }
+
+    [Fact]
     public void PreservesRawDxtMipDataForGpuUpload()
     {
         var raw = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
