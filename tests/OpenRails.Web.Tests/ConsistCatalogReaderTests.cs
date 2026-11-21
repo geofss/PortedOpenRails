@@ -48,17 +48,22 @@ public sealed class ConsistCatalogReaderTests
         using var composite = new CompositeContentStore(new[]
         {
             new PackageLayer("Route", CreateStore(
-                ("TRAINS/CONSISTS/Shared.con", """Train ( TrainCfg ( "Route override" Wagon ( UiD ( 1 ) WagonData ( "RouteCar" "RouteFolder" ) ) ) )"""),\n                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "route car"))),
+                ("TRAINS/CONSISTS/Shared.con", """Train ( TrainCfg ( "Route override" Wagon ( UiD ( 1 ) WagonData ( "RouteCar" "RouteFolder" ) ) ) )"""),
+                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "route car"))),
             new PackageLayer("Global", CreateStore(
                 ("TRAINS/CONSISTS/shared.CON", """Train ( TrainCfg ( "Global version" Wagon ( UiD ( 2 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),
-                ("TRAINS/CONSISTS/GlobalOnly.con", """Train ( TrainCfg ( "Global only" Wagon ( UiD ( 3 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),\n                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "global override"),\n                ("TRAINS/TRAINSET/GlobalFolder/GlobalCar.wag", "global car")))
+                ("TRAINS/CONSISTS/GlobalOnly.con", """Train ( TrainCfg ( "Global only" Wagon ( UiD ( 3 ) WagonData ( "GlobalCar" "GlobalFolder" ) ) ) )"""),
+                ("TRAINS/TRAINSET/RouteFolder/RouteCar.wag", "global override"),
+                ("TRAINS/TRAINSET/GlobalFolder/GlobalCar.wag", "global car")))
         });
 
         var result = new ConsistCatalogReader().Read(composite);
 
         Assert.Equal(new[] { "Global only", "Route override" }, result.Consists.Select(consist => consist.Name));
         Assert.Empty(result.Issues);
-        Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);\n        Assert.Equal("Route", result.CarAssets.Single(asset => asset.CarName == "RouteCar").SourcePackage);\n        Assert.Equal("Global", result.CarAssets.Single(asset => asset.CarName == "GlobalCar").SourcePackage);
+        Assert.Equal("RouteCar", result.Consists.Single(consist => consist.Name == "Route override").Cars[0].Name);
+        Assert.Equal("Route", result.CarAssets.Single(asset => asset.CarName == "RouteCar").SourcePackage);
+        Assert.Equal("Global", result.CarAssets.Single(asset => asset.CarName == "GlobalCar").SourcePackage);
     }
 
     [Fact]
