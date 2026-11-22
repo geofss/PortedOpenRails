@@ -111,6 +111,34 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void PneumaticBrakesAdvanceOnlyForFixedStepsActuallySimulated()
+    {
+        var consist = new ConsistMetadata("DroppedBrakeTime", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "dropped-brake-time.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetBrake(100);
+
+        var executedSteps = controller.Advance(0.25);
+        var simulatedSeconds = 8d / 60d;
+        var expectedPipe = new TrainBrakePipeModel().Advance(
+            new TrainBrakePipeModel().CreateInitialState(1), 100, simulatedSeconds);
+        var expectedCylinderModel = new TrainBrakeCylinderModel();
+        var expectedCylinder = expectedCylinderModel.Advance(
+            expectedCylinderModel.CreateInitialState(1),
+            new TrainBrakePipeModel().GetBrakePercentByCar(expectedPipe),
+            simulatedSeconds);
+
+        Assert.Equal(8, executedSteps);
+        Assert.Equal(simulatedSeconds, controller.SimulationTimeSeconds, 10);
+        Assert.Equal(expectedPipe.PressuresKPa[0], controller.BrakePipeState.PressuresKPa[0], 10);
+        Assert.Equal(expectedCylinder.PressuresKPa[0], controller.BrakeCylinderState.PressuresKPa[0], 10);
+    }
+
+    [Fact]
     public void RouteGradeTelemetryIsEmptyWhenNoRouteIsAttached()
     {
         var consist = new ConsistMetadata("NoRouteGrade", new[]
