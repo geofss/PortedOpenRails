@@ -24,7 +24,7 @@ public sealed class ConsistCatalogReaderTests
             ("TRAINS/CONSISTS/Duplicate.con", """
                 Train ( TrainCfg ( "Duplicate" Wagon ( UiD ( 4 ) WagonData ( "CarA" "FolderA" ) ) Wagon ( UiD ( 4 ) WagonData ( "CarB" "FolderB" ) ) ) )
                 """),
-            ("TRAINS/TRAINSET/FolderA/EngineA.eng", WagonFixture),
+            ("TRAINS/TRAINSET/FolderA/EngineA.eng", EngineFixture),
             ("TRAINS/TRAINSET/FolderB/CarB.wag", WagonFixture),
             ("TRAINS/TRAINSET/FolderA/CarA.wag", WagonFixture),
             ("TRAINS/TRAINSET/FolderA/fixture.s", "shape bytes"),
@@ -54,7 +54,7 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal("Vacuum", metadata.BrakeSystemType);
         Assert.Equal("TripleValve", metadata.BrakeEquipmentType);
         Assert.Equal(100, metadata.MaxBrakeForceN);
-        Assert.Contains(result.CarAssets, asset => asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderA/EngineA.eng");
+        Assert.Contains(result.CarAssets, asset => asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderA/EngineA.eng" && asset.TractionMetadata is not null);
         Assert.Contains(result.CarAssets, asset => !asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderB/CarB.wag");
     }
 
@@ -119,7 +119,7 @@ public sealed class ConsistCatalogReaderTests
                   Wagon ( UiD ( 3 ) WagonData ( "MissingCar" "MissingFolder" ) )
                 ) )
                 """),
-            ("TRAINS/TRAINSET/EngineFolder/Engine.eng", WagonFixture),
+            ("TRAINS/TRAINSET/EngineFolder/Engine.eng", EngineFixture),
             ("TRAINS/ORTS_EOT/EotFolder/EndDevice.eot", "eot"));
 
         var result = new ConsistCatalogReader().Read(store);
@@ -202,6 +202,15 @@ public sealed class ConsistCatalogReaderTests
         Assert.Null(locator.Locate(store, "Freight", "missing.s"));
         Assert.Throws<InvalidDataException>((Action)(() => locator.Locate(store, "Freight", "../outside.s")));
     }
+
+    private const string EngineFixture = WagonFixture + """
+        Engine (
+            MaxForce ( 200000 )
+            MaxContinuousForce ( 150000 )
+            MaxPower ( 2000000 )
+            MaxVelocity ( 120 )
+        )
+        """;
 
     private const string WagonFixture = """
         Wagon (
