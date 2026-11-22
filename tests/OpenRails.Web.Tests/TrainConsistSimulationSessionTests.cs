@@ -94,6 +94,28 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void CommonAccelerationSessionHonorsCouplerRatings()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { locomotive, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        Assert.Throws<InvalidOperationException>(() => session.AdvanceWithCommonAcceleration(
+            0.1, new[] { 100f, 0f },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            targetAccelerationMetersPerSecondSquared: 0.5,
+            couplerForceLimits: new[] { new TrainCouplerForceLimit(100, 500) }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void CommonAccelerationSessionRejectsInconsistentInputSizesAndNonFiniteTarget()
     {
         var initial = new TrainConsistMotionState(new[]
