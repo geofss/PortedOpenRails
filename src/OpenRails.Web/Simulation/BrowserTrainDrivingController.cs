@@ -118,7 +118,10 @@ public sealed class BrowserTrainDrivingController
             setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
             couplerStiffness, couplerDamping,
             couplerMaximumCompressionForces, couplerMaximumTensionForces);
-        CouplerForceTelemetryNewtons = dynamicCouplerForces;
+        CouplerForceTelemetryNewtons = couplerDynamics.CalculatePerBoundaryForcesOnRearCars(
+            setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
+            couplerStiffness, couplerDamping,
+            couplerMaximumCompressionForces, couplerMaximumTensionForces);
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
             throttle,
