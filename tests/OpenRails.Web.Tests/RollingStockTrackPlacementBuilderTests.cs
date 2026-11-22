@@ -223,6 +223,11 @@ public sealed class RollingStockTrackPlacementBuilderTests
         Assert.Equal(150, placement.Anchor.Z, 1);
         Assert.Equal((uint)43, placement.TrackSectionIndex);
         Assert.Empty(result.Issues);
+
+        var initial = new RollingStockTrackPlacementBuilder().Build(
+            consist, assets, meshes, route);
+        var initialPlacement = Assert.Single(initial.Placements);
+        Assert.Equal(5, initialPlacement.Anchor.Z, 1);
     }
 
     private static ConsistCarAssetReference CreateReference(string consist, int uid, string name, float length) =>
