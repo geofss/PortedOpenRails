@@ -27,7 +27,7 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Equal(0.05, session.State.Cars[0].SpeedMetersPerSecond, 8);
         Assert.Equal(0.0025, session.State.Cars[0].DistanceMeters, 8);
         Assert.Equal(0.025, session.State.Cars[1].SpeedMetersPerSecond, 8);
-        Assert.Equal(0.0025, session.State.Cars[1].DistanceMeters, 8);
+        Assert.Equal(0.00125, session.State.Cars[1].DistanceMeters, 8);
     }
 
     [Fact]
