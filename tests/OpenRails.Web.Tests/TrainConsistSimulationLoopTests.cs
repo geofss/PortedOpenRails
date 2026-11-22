@@ -29,6 +29,23 @@ public sealed class TrainConsistSimulationLoopTests
     }
 
     [Fact]
+    public void RejectsEmptyOrInvalidInitialConsistStates()
+    {
+        Assert.Throws<ArgumentException>(() => new TrainConsistSimulationLoop(
+            new TrainConsistMotionState(Array.Empty<TrainCarMotionState>())));
+        Assert.Throws<ArgumentException>(() => new TrainConsistSimulationLoop(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(0, 0, 0) })));
+        Assert.Throws<ArgumentException>(() => new TrainConsistSimulationLoop(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, double.NaN, 0) })));
+
+        var loop = new TrainConsistSimulationLoop(new TrainConsistMotionState(
+            new[] { new TrainCarMotionState(1_000, 0, 0) }));
+        Assert.Throws<ArgumentException>(() => loop.Reset(
+            new TrainConsistMotionState(Array.Empty<TrainCarMotionState>())));
+        Assert.Equal(1, loop.State.Cars.Count);
+    }
+
+    [Fact]
     public void PausesAndResetsTheWholeConsistTogether()
     {
         var initial = new TrainConsistMotionState(new[]
