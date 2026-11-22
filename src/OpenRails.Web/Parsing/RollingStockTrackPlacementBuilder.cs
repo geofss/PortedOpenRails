@@ -128,15 +128,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 new[] { $"TrackNode {path.TrackNodeIndex} has insufficient centerline geometry for rolling stock." },
                 0);
 
-        var cumulative = new double[centerline.Count];
-        for (var i = 1; i < centerline.Count; i++)
-        {
-            var dx = centerline[i].X - centerline[i - 1].X;
-            var dy = centerline[i].Y - centerline[i - 1].Y;
-            var dz = centerline[i].Z - centerline[i - 1].Z;
-            cumulative[i] = cumulative[i - 1] + Math.Sqrt(dx * dx + dy * dy + dz * dz);
-        }
-
+        var cumulative = BuildTrackChainage(path, maximumSegmentLengthMeters, centerline.Count);
         var availableLength = cumulative[^1];
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
