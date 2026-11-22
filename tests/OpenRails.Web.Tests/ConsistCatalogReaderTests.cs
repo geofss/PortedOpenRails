@@ -37,7 +37,18 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal("TRAINS/CONSISTS/Duplicate.con", result.Issues[1].Path);
         Assert.Contains("Duplicate car UID 4", result.Issues[1].Message);
         Assert.Equal(4, result.CarAssets.Count);
-        Assert.All(result.CarAssets, asset => Assert.True(asset.Found));\n        Assert.All(result.CarAssets, asset => Assert.NotNull(asset.Metadata));\n        var metadata = result.CarAssets[0].Metadata!;\n        Assert.Equal("FixtureCar", metadata.Name);\n        Assert.Equal("Freight", metadata.Type);\n        Assert.Equal(30, metadata.MassKg);\n        Assert.Equal(12, metadata.LengthM);\n        Assert.Equal(4, metadata.NumberAxles);\n        Assert.Equal(8, metadata.NumberWheels);\n        Assert.Equal("Vacuum", metadata.BrakeSystemType);\n        Assert.Equal("TripleValve", metadata.BrakeEquipmentType);\n        Assert.Equal(100, metadata.MaxBrakeForceN);
+        Assert.All(result.CarAssets, asset => Assert.True(asset.Found));
+        Assert.All(result.CarAssets, asset => Assert.NotNull(asset.Metadata));
+        var metadata = result.CarAssets[0].Metadata!;
+        Assert.Equal("FixtureCar", metadata.Name);
+        Assert.Equal("Freight", metadata.Type);
+        Assert.Equal(30, metadata.MassKg);
+        Assert.Equal(12, metadata.LengthM);
+        Assert.Equal(4, metadata.NumberAxles);
+        Assert.Equal(8, metadata.NumberWheels);
+        Assert.Equal("Vacuum", metadata.BrakeSystemType);
+        Assert.Equal("TripleValve", metadata.BrakeEquipmentType);
+        Assert.Equal(100, metadata.MaxBrakeForceN);
         Assert.Contains(result.CarAssets, asset => asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderA/EngineA.eng");
         Assert.Contains(result.CarAssets, asset => !asset.IsEngine && asset.AssetPath == "TRAINS/TRAINSET/FolderB/CarB.wag");
     }
@@ -109,8 +120,10 @@ public sealed class ConsistCatalogReaderTests
         var result = new ConsistCatalogReader().Read(store);
 
         Assert.Equal(3, result.CarAssets.Count);
-        Assert.True(result.CarAssets.Single(asset => asset.IsEngine).Found);\n        Assert.NotNull(result.CarAssets.Single(asset => asset.IsEngine).Metadata);
-        Assert.True(result.CarAssets.Single(asset => asset.IsEndOfTrain).Found);\n        Assert.Null(result.CarAssets.Single(asset => asset.IsEndOfTrain).Metadata);
+        Assert.True(result.CarAssets.Single(asset => asset.IsEngine).Found);
+        Assert.NotNull(result.CarAssets.Single(asset => asset.IsEngine).Metadata);
+        Assert.True(result.CarAssets.Single(asset => asset.IsEndOfTrain).Found);
+        Assert.Null(result.CarAssets.Single(asset => asset.IsEndOfTrain).Metadata);
         Assert.Equal("TRAINS/ORTS_EOT/EotFolder/EndDevice.eot", result.CarAssets.Single(asset => asset.IsEndOfTrain).AssetPath);
         Assert.False(result.CarAssets.Single(asset => asset.CarName == "MissingCar").Found);
         Assert.EndsWith("MissingCar.wag", result.CarAssets.Single(asset => asset.CarName == "MissingCar").AssetPath);
