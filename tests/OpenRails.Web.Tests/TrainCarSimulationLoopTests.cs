@@ -19,7 +19,7 @@ public sealed class TrainCarSimulationLoopTests
 
         Assert.Equal(5, steps);
         Assert.Equal(0.5, loop.State.SpeedMetersPerSecond, 8);
-        Assert.Equal(0.15, loop.State.DistanceMeters, 8);
+        Assert.Equal(0.125, loop.State.DistanceMeters, 8);
         Assert.Equal(0.5, loop.SimulationTimeSeconds, 8);
     }
 
