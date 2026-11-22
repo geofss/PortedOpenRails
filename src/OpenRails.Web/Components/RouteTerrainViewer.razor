@@ -112,13 +112,34 @@
     [Parameter] public TrainConsistMotionState? MotionState { get; set; }
     [Parameter] public TrackNetworkRoute? MotionRoute { get; set; }
     private TrainConsistMotionState? lastMotionState;
+    private RouteLoadResult? lastRoute;
+    private IVirtualContentStore? lastStore;
+    private ConsistMetadata? lastConsist;
+    private bool motionUpdatePending;
+    private TrackVectorPath? selectedTrackPath;
+    private readonly Dictionary<int, TrackShapeAssetMesh> rollingStockMeshesByUid = [];
+    private IReadOnlyList<LoadedTrackShapeTexture> rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
+    private int[] rollingStockTextureIndexes = [];
 
     protected override void OnParametersSet()
     {
+        if (!ReferenceEquals(lastRoute, Route) || !ReferenceEquals(lastStore, Store) ||
+            !ReferenceEquals(lastConsist, Consist))
+        {
+            lastRoute = Route;
+            lastStore = Store;
+            lastConsist = Consist;
+            hasDrawn = false;
+            motionUpdatePending = false;
+            rollingStockMeshesByUid.Clear();
+            rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
+            rollingStockTextureIndexes = [];
+        }
         if (!ReferenceEquals(lastMotionState, MotionState))
         {
             lastMotionState = MotionState;
-            hasDrawn = false;
+            if (hasDrawn)
+                motionUpdatePending = true;
         }
     }
     private ElementReference canvas;
