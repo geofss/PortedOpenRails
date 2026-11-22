@@ -34,6 +34,34 @@ public sealed class TrainConsistCouplerDynamicsTests
     }
 
     [Fact]
+    public void AppliesIndependentTensionAndCompressionRatings()
+    {
+        var dynamics = new TrainConsistCouplerDynamics();
+        var tensionState = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1000, 0, 0),
+            new TrainCarMotionState(1000, 0, 2.3)
+        });
+        var compressionState = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1000, 0, 0),
+            new TrainCarMotionState(1000, 0, 1.7)
+        });
+
+        var tension = dynamics.CalculatePerCarForces(
+            tensionState, new[] { 2d }, new[] { 0.1d },
+            new[] { 1000d }, new[] { 0d },
+            new[] { 75d }, new[] { 50d });
+        var compression = dynamics.CalculatePerCarForces(
+            compressionState, new[] { 2d }, new[] { 0.1d },
+            new[] { 1000d }, new[] { 0d },
+            new[] { 75d }, new[] { 50d });
+
+        Assert.Equal(new[] { 50d, -50d }, tension);
+        Assert.Equal(new[] { -75d, 75d }, compression);
+    }
+
+    [Fact]
     public void AccumulatesForcesAcrossMultipleBoundariesWithoutCreatingNetForce()
     {
         var state = new TrainConsistMotionState(new[]
