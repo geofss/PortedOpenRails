@@ -39,7 +39,8 @@ public sealed class BrowserTrainDrivingController
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
-    public bool CanChangeReverser => State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
+    public bool CanChangeReverser => ThrottlePercent <= 0.01f &&
+        State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
     public TrainBrakePipeState BrakePipeState => brakePipeState;
     public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
     public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
