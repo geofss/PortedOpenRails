@@ -81,7 +81,7 @@
                 }
                 @if (loadedRoute is not null)
                 {
-                    @if (consistCatalog?.Consists.Count > 0)
+                    @if (consistCatalog is not null && consistCatalog.Consists.Count > 0)
                     {
                         <div class="route-details">
                             <label for="active-consist">Train consist for simulation</label>
