@@ -135,9 +135,9 @@
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
                         MotionRoute="traversedRoute"
                         MotionState="currentMotionState ?? simulationSetup?.InitialState" />
-                    @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
+                    @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0 || (traversedRoute?.Diagnostics.Count ?? 0) > 0)
                     {
-                        <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
+                        <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count + (traversedRoute?.Diagnostics.Count ?? 0))</p>
                         <ul class="path-list">
                             @foreach (var diagnostic in loadedRoute.TrackNetwork.Diagnostics.Take(10))
                             {
@@ -146,6 +146,10 @@
                             @foreach (var missingShape in loadedRoute.TrackShapeAssets.Missing.Take(10))
                             {
                                 <li>Track shape @missingShape.ShapeIndex: @missingShape.FileName — @missingShape.Reason</li>
+                            }
+                            @foreach (var diagnostic in (traversedRoute?.Diagnostics ?? Array.Empty<string>()).Take(10))
+                            {
+                                <li>Connected route: @diagnostic</li>
                             }
                         </ul>
                     }
