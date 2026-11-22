@@ -50,12 +50,14 @@ public sealed class TrainConsistSimulationSession
         Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
         IReadOnlyList<double> couplerForcesNewtons,
         IReadOnlyList<float>? powerReductionByCar = null,
-        IReadOnlyList<float>? averageForceByCar = null)
+        IReadOnlyList<float>? averageForceByCar = null,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(resistanceProvider);
         ArgumentNullException.ThrowIfNull(couplerForcesNewtons);
         var carCount = State.Cars.Count;
+        ValidateAdhesionCoefficients(adhesionCoefficientByCar, carCount);
         if (throttlePercentByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
             (powerReductionByCar is not null && powerReductionByCar.Count != carCount) ||
             (averageForceByCar is not null && averageForceByCar.Count != carCount))
@@ -79,6 +81,7 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReductionByCar is null ? 0 : powerReductionByCar[i],
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                motiveForce = LimitMotiveForce(motiveForce, state.Cars[i], i, adhesionCoefficientByCar);
                 forces[i] = new TrainCarForceBreakdown(
                     motiveForce,
                     resistance.GravityForceNewtons,
@@ -196,7 +199,8 @@ public sealed class TrainConsistSimulationSession
         IReadOnlyList<float>? averageForceByCar = null,
         IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null,
         IReadOnlyList<double>? brakePercentByCar = null,
-        IReadOnlyList<double>? maximumBrakeForceNewtonsByCar = null)
+        IReadOnlyList<double>? maximumBrakeForceNewtonsByCar = null,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(resistanceProvider);
@@ -219,6 +223,7 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
                 "Throttle, power reduction, average force, and target acceleration must be finite.");
 
+        ValidateAdhesionCoefficients(adhesionCoefficientByCar, carCount);
         var couplerDistributor = new TrainConsistCouplerForceDistributor();
         var brakeModel = new TrainCarBrakeModel();
         return loop.Advance(elapsedFrameSeconds, state =>
@@ -234,6 +239,7 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                motiveForce = LimitMotiveForce(motiveForce, state.Cars[i], i, adhesionCoefficientByCar);
                 var commandedBrake = brakePercentByCar is null ? 0 : Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
                     state.Cars[i].SpeedMetersPerSecond, brakePercentByCar[i], maximumBrakeForceNewtonsByCar![i]));
                 forces[i] = new TrainCarForceBreakdown(
@@ -266,7 +272,8 @@ public sealed class TrainConsistSimulationSession
         Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
         IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null,
         float powerReduction = 0,
-        IReadOnlyList<float>? averageForceByCar = null)
+        IReadOnlyList<float>? averageForceByCar = null,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(brakePercentByCar);
@@ -288,6 +295,7 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
                 "Throttle, brake, power, and average-force inputs must be finite; brake ratings must be non-negative.");
 
+        ValidateAdhesionCoefficients(adhesionCoefficientByCar, carCount);
         var forceModel = new TrainCarForceModel();
         var couplerDistributor = new TrainConsistCouplerForceDistributor();
         var brakeModel = new TrainCarBrakeModel();
@@ -307,6 +315,7 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                motiveForce = LimitMotiveForce(motiveForce, car, i, adhesionCoefficientByCar);
                 var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
                     car.SpeedMetersPerSecond, brakePercentByCar[i], maximumBrakeForceNewtonsByCar[i]));
                 forces[i] = new TrainCarForceBreakdown(
@@ -328,6 +337,25 @@ public sealed class TrainConsistSimulationSession
                 state, forces, acceleration, couplerForceLimits);
             return new TrainConsistForceFrame(forces, couplerForces);
         });
+    }
+
+    private static void ValidateAdhesionCoefficients(IReadOnlyList<double>? coefficients, int carCount)
+    {
+        if (coefficients is not null &&
+            (coefficients.Count != carCount ||
+             coefficients.Any(value => !double.IsFinite(value) || value < 0 || value > 1)))
+            throw new ArgumentOutOfRangeException(nameof(coefficients),
+                "Adhesion coefficients must match the consist and be between zero and one.");
+    }
+
+    private static float LimitMotiveForce(float requestedForce, TrainCarMotionState car,
+        int carIndex, IReadOnlyList<double>? adhesionCoefficientByCar)
+    {
+        var coefficient = adhesionCoefficientByCar is null
+            ? TrainCarAdhesionModel.DefaultAdhesionCoefficient
+            : adhesionCoefficientByCar[carIndex];
+        return (float)new TrainCarAdhesionModel().LimitTractiveForce(
+            requestedForce, car.MassKg, coefficient);
     }
 
     public void Pause() => loop.Pause();
