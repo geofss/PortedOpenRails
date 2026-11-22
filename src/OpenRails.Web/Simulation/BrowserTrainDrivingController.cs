@@ -32,6 +32,9 @@ public sealed class BrowserTrainDrivingController
     public TrainBrakePipeState BrakePipeState => brakePipeState;
     public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
     public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
+    public double? LeadCarRouteGradePercent => routeProfile is null || State.Cars.Count == 0
+        ? null
+        : Math.Tan(routeProfile.Sample(State.Cars[0].DistanceMeters).GradeRadians) * 100;
 
     public BrowserTrainDrivingController(
         TrainConsistSimulationSetup setup,
