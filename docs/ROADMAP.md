@@ -23,7 +23,7 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Index read-only ZIP packages with path-traversal and size-limit checks
 - [x] Connect user-selected browser ZIP files to the virtual content store
 - [x] Combine multiple packages with deterministic overlay precedence
-- [ ] Add package reorder and removal controls
+- [x] Add package reorder and removal controls (up/down priority and removal actions; package-store ownership is preserved while rebuilding the overlay)
 - [ ] Confirm precedence against upstream Open Rails content lookup behavior
 - [x] Integrate upstream STFReader with the virtual content store and nested include resolver (see Milestone 2E)
 - [ ] Adapt SBR binary readers to browser-provided streams
@@ -45,7 +45,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Discover the terrain tiles touched by the loaded track network
 - [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
 - [ ] Validate the route pipeline against a real, licensed user-imported route package — use the [real-route validation checklist](REAL_ROUTE_VALIDATION.md)
-- [ ] Generate terrain meshes from the original terrain patch/sample data
+- [x] Generate terrain meshes from the original terrain patch/sample data, including cross-tile sample resolution and patch LODs (preview rendering remains limited)
 - [ ] Port train and train-car models
 - [ ] Port braking, traction, power supply, and control systems
 - [ ] Port signalling, track circuits, switches, activities, and timetable/AI logic
@@ -84,7 +84,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [ ] Validate desktop and mobile browser performance
 - [ ] Publish documented supported-content and browser compatibility
 
-## Current browser-port status (verified 2026-11-21)
+## Current browser-port status (verified 2026-11-22)
 
 The browser host and route-import pipeline are working as an experimental vertical slice. The preview renders terrain patches, supported ACE textures, vector-track overlays, original track-shape geometry, and WORLD scenery shape meshes using upstream matrix/quaternion conversions and basic texture batches. It currently limits terrain preview to eight tiles and first LOD; advanced material/shader modes, seasonal textures, rolling stock, and simulation remain incomplete. Route parsing and loading diagnostics are shown in the preview. Latest confirmed deployed run #476 passed JavaScript syntax validation, all 105 regression tests, build, and deployment. Consist parsing reads car type/name/folder/UID, flip orientation, optional load records with typed upstream position/state enums, durability, max-velocity values, serial, next-wagon UID, and the train-control-parameter filename. The TCS filename is resolved under the upstream `TRAINS/CONSISTS/SCRIPT` directory with package provenance; TCS traversal safety is now under CI. Catalog diagnostics cover malformed files, duplicate UIDs, and misplaced EOT devices. Rolling-stock references resolve upstream Trainset .eng/.wag paths and ORTS_EOT .eot paths, report missing assets, and identify the package supplying each resolved file. Overlay priority, case-insensitive path resolution, and virtual-path traversal rejection are regression-tested. Run #477 is validating the consist metadata display update. Earlier failures were caused by fixture syntax and are superseded by repaired commits. WORLD transform tests cover original matrix and quaternion rotations, tile-local texture mapping avoids repeated UID collisions across WORLD tiles, and geometry caps are regression-tested. This is **not yet a release-ready browser simulator**.
 
@@ -107,3 +107,7 @@ A full port means real route and train content can be loaded, a real activity/ti
 ## Architecture record
 
 See [Full Simulator Architecture Audit](MILESTONE_2_ARCHITECTURE_AUDIT.md) for the inspected source-tree scope, dependency blockers, subsystem classification, and implementation order.
+
+### Latest implementation update (2026-11-22)
+
+Package priority now has explicit move-up, move-down, and remove controls. Rebuilding the composite namespace no longer disposes package stores that remain in the manager; removing a package disposes only that package and refreshes the selected route when possible. Regression coverage verifies that a non-owning composite view can be disposed without invalidating its underlying package. The GitHub Actions run for commit `ec9a0c2` completed the JavaScript syntax check, .NET restore, controller regression tests, and WebAssembly restore successfully; the WebAssembly publish/deploy steps were still running when this note was prepared. Earlier failures exposed pre-existing malformed test source and rolling-stock metadata parser compile errors; those were corrected before the successful test stage.
