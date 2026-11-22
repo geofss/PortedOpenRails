@@ -65,10 +65,14 @@ public sealed class TrainConsistSimulationLoop
     {
         var cars = state.Cars.Select(car =>
         {
+            if (car.DistanceMeters <= 0 && car.SpeedMetersPerSecond < 0)
+                return car with { DistanceMeters = 0, SpeedMetersPerSecond = 0 };
+            if (car.DistanceMeters >= routeLengthMeters && car.SpeedMetersPerSecond > 0)
+                return car with { DistanceMeters = routeLengthMeters, SpeedMetersPerSecond = 0 };
             if (car.DistanceMeters < 0)
-                return car with { DistanceMeters = 0, SpeedMetersPerSecond = car.SpeedMetersPerSecond < 0 ? 0 : car.SpeedMetersPerSecond };
+                return car with { DistanceMeters = 0 };
             if (car.DistanceMeters > routeLengthMeters)
-                return car with { DistanceMeters = routeLengthMeters, SpeedMetersPerSecond = car.SpeedMetersPerSecond > 0 ? 0 : car.SpeedMetersPerSecond };
+                return car with { DistanceMeters = routeLengthMeters };
             return car;
         }).ToArray();
         return new TrainConsistMotionState(cars);
