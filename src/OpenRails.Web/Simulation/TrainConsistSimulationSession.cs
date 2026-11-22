@@ -91,6 +91,63 @@ public sealed class TrainConsistSimulationSession
         });
     }
 
+    /// <summary>
+    /// Advances the consist while calculating algebraic coupler forces each
+    /// fixed-step tick to maintain a requested common acceleration from the
+    /// supplied external forces. This is a force-balance controller, not a
+    /// coupler slack or transient drawbar model.
+    /// </summary>
+    public int AdvanceWithCommonAcceleration(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        double targetAccelerationMetersPerSecondSquared,
+        float powerReduction = 0,
+        IReadOnlyList<float>? averageForceByCar = null)
+    {
+        ArgumentNullException.ThrowIfNull(throttlePercentByCar);
+        ArgumentNullException.ThrowIfNull(resistanceProvider);
+        var carCount = State.Cars.Count;
+        if (throttlePercentByCar.Count != carCount ||
+            (averageForceByCar is not null && averageForceByCar.Count != carCount))
+            throw new ArgumentException("Per-car throttle and average-force inputs must match the consist size.");
+        if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
+            !float.IsFinite(powerReduction) ||
+            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
+            !double.IsFinite(targetAccelerationMetersPerSecondSquared))
+            throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
+                "Throttle, power reduction, average force, and target acceleration must be finite.");
+
+        var couplerDistributor = new TrainConsistCouplerForceDistributor();
+        return loop.Advance(elapsedFrameSeconds, state =>
+        {
+            var forces = new TrainCarForceBreakdown[carCount];
+            for (var i = 0; i < carCount; i++)
+            {
+                var resistance = resistanceProvider(i, state.Cars[i]) ??
+                    throw new InvalidOperationException($"Resistance provider returned null for car {i}.");
+                var motiveForce = tractionModels[i]?.CalculateTractiveForce(
+                    throttlePercentByCar[i],
+                    (float)state.Cars[i].SpeedMetersPerSecond,
+                    throttleResponses[i],
+                    powerReduction,
+                    averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                forces[i] = new TrainCarForceBreakdown(
+                    motiveForce,
+                    resistance.GravityForceNewtons,
+                    resistance.RollingFrictionForceNewtons,
+                    resistance.BrakeRetardForceNewtons,
+                    resistance.CurveResistanceForceNewtons,
+                    resistance.WindResistanceForceNewtons,
+                    resistance.TunnelResistanceForceNewtons);
+            }
+
+            var couplerForces = couplerDistributor.CalculatePerCarCouplerForces(
+                state, forces, targetAccelerationMetersPerSecondSquared);
+            return new TrainConsistForceFrame(forces, couplerForces);
+        });
+    }
+
     public void Pause() => loop.Pause();
     public void Resume() => loop.Resume();
     public void Reset(TrainConsistMotionState initialState) => loop.Reset(initialState);
