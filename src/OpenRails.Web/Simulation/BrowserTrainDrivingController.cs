@@ -13,12 +13,15 @@ public sealed class BrowserTrainDrivingController
     private readonly TrainCarResistanceModel resistanceModel = new();
     private readonly TrainCarResistanceParameters resistanceParameters;
     private readonly TrackNetworkRouteProfile? routeProfile;
+    private readonly TrainBrakePipeModel brakePipeModel = new();
+    private TrainBrakePipeState brakePipeState;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
     public bool IsPaused => setup.Session.IsPaused;
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
+    public TrainBrakePipeState BrakePipeState => brakePipeState;
 
     public BrowserTrainDrivingController(
         TrainConsistSimulationSetup setup,
@@ -39,6 +42,7 @@ public sealed class BrowserTrainDrivingController
             RollingResistanceCoefficient: rollingResistanceCoefficient,
             AerodynamicDragAreaSquareMeters: aerodynamicDragAreaSquareMeters);
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
+        brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
     }
 
     public void SetThrottle(float percent)
@@ -60,7 +64,8 @@ public sealed class BrowserTrainDrivingController
         var throttle = setup.PoweredCars
             .Select(powered => powered ? ThrottlePercent : 0f)
             .ToArray();
-        var brakes = Enumerable.Repeat(BrakePercent, State.Cars.Count).ToArray();
+        brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
+        var brakes = brakePipeModel.GetBrakePercentByCar(brakePipeState);
 
         return setup.Session.AdvanceWithAutomaticCouplers(
             elapsedFrameSeconds,
@@ -74,5 +79,11 @@ public sealed class BrowserTrainDrivingController
 
     public void Pause() => setup.Session.Pause();
     public void Resume() => setup.Session.Resume();
-    public void Reset() => setup.Session.Reset(setup.InitialState);
+    public void Reset()
+    {
+        setup.Session.Reset(setup.InitialState);
+        brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
+        ThrottlePercent = 0;
+        BrakePercent = 0;
+    }
 }
