@@ -24,6 +24,7 @@ public sealed class BrowserTrainDrivingController
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
     public TrainBrakePipeState BrakePipeState => brakePipeState;
+    public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
 
     public BrowserTrainDrivingController(
         TrainConsistSimulationSetup setup,
