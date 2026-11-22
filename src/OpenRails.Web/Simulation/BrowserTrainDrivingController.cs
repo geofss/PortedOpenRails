@@ -96,6 +96,12 @@ public sealed class BrowserTrainDrivingController
 
     public int Advance(double elapsedFrameSeconds)
     {
+        if (!double.IsFinite(elapsedFrameSeconds) || elapsedFrameSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(elapsedFrameSeconds));
+        // A paused session must freeze every subsystem, not just vehicle motion.
+        if (IsPaused || elapsedFrameSeconds == 0)
+            return 0;
+
         var throttle = setup.PoweredCars
             .Select(powered => powered ? ThrottlePercent : 0f)
             .ToArray();
