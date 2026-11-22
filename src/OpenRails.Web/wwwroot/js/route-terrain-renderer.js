@@ -160,8 +160,8 @@ function redraw(){
 // keeps its source shader texture and source UV coordinates.
 let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh, storedShapeBatches, storedShapePixels;
 let shapeProgram, shapeTextures = [], uploadedShapePixels;
-export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null) {
-  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh;
+export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null, shapeBatches = [], shapePixels = []) {
+  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh; storedShapeBatches=shapeBatches; storedShapePixels=shapePixels;
   if (!gl) return;
   if (!terrainProgram) {
     const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
@@ -255,6 +255,7 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   gl.deleteVertexArray(vao);
   if(storedTrackMesh && storedTrackMesh.vertices && storedTrackMesh.indices) drawTrackTriangles(storedTrackMesh,project);
   if(trackLines.length) drawTrackOverlay(trackLines,project);
+  if(shapeBatches.length) drawTrackShapeBatches(shapeBatches,shapePixels,project);
 }
 function drawTrackShapeBatches(batches,pixels,project){
   if(!batches.length) return;
