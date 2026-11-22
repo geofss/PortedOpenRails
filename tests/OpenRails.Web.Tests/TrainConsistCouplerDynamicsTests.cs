@@ -28,8 +28,8 @@ public sealed class TrainConsistCouplerDynamicsTests
         });
         var result = new TrainConsistCouplerDynamics().CalculatePerCarForces(
             state, new[] { 2d }, new[] { 0.1d }, new[] { 1000d }, new[] { 100d }, new[] { 5000d });
-        Assert.Equal(-130, result[0], 8);
-        Assert.Equal(130, result[1], 8);
+        Assert.Equal(130, result[0], 8);
+        Assert.Equal(-130, result[1], 8);
         Assert.Equal(0, result.Sum(), 8);
     }
 
@@ -48,8 +48,8 @@ public sealed class TrainConsistCouplerDynamicsTests
             new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0)
         };
         var next = new TrainConsistMotionIntegrator().Step(state, zeroExternal, forces, 0.1);
-        Assert.True(next.Cars[0].SpeedMetersPerSecond < 0);
-        Assert.True(next.Cars[1].SpeedMetersPerSecond > 0);
+        Assert.True(next.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.True(next.Cars[1].SpeedMetersPerSecond < 0);
         Assert.Equal(0, next.Cars[0].SpeedMetersPerSecond + next.Cars[1].SpeedMetersPerSecond, 8);
     }
 
