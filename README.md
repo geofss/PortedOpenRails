@@ -39,4 +39,4 @@ Package handling includes import, removal, and reorder controls. Route traversal
 
 **Not yet complete:** authentic Open Rails UI parity, full route/activity/signalling support, complete rolling-stock animation and cab systems, sound, weather, multiplayer, full upstream simulation integration, and production-quality performance. The project remains an experimental browser port and is not yet a complete playable Open Rails simulator.
 
-CI last confirmed passing: run #882 (242 regression tests, WebAssembly publish, and GitHub Pages deployment). See GitHub Actions for the latest verification status.
+CI last confirmed passing: run #885 (243 regression tests, WebAssembly publish, and GitHub Pages deployment). See GitHub Actions for the latest verification status.
