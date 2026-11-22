@@ -8,7 +8,8 @@ This milestone adds browser-independent simulation sessions that connect parsed 
 - `LocomotiveTractionModel` evaluates force curves, basic-force fallback, throttle response, speed/power cap, unloading-speed power decay, power reduction, and continuous-force limiting.
 - `LocomotiveSimulationSession` connects one powered vehicle to the fixed-step clock and accepts caller-provided gravity, rolling friction, brake, curve, wind, and tunnel force inputs.
 - `TrainConsistSimulationSession` applies per-car traction models to a multi-car state and accepts externally supplied signed coupler-force values. It validates input array sizes and rejects non-finite throttle, power, average-force, and coupler inputs before stepping.
-- `TrainConsistCouplerForceDistributor` computes algebraic internal boundary forces required for a target common acceleration given external force breakdowns, then expands them into per-car signed forces with equal/opposite action-reaction pairs. It rejects targets that cannot be achieved from the net external force.
+- `TrainConsistCouplerForceDistributor` computes algebraic internal boundary forces required for a target common acceleration given external force breakdowns, then expands them into per-car signed forces with equal/opposite action-reaction pairs. It rejects targets that cannot be achieved from the net external force and supports optional per-boundary compression/tension ratings.
+- `TrainCouplerForceLimit` validates rated compression/tension magnitudes and rejects force-balance requests that exceed a boundary's supplied rating. This is static rating enforcement, not dynamic coupler behavior.
 - `TrainConsistSimulationSession.AdvanceWithCommonAcceleration` calculates the per-car force frame and coupler force distribution on every fixed simulation tick, then advances all cars with the common target acceleration (when physically feasible from supplied external forces).
 
 ## Current limits
@@ -17,4 +18,4 @@ This is a traction/simulation integration slice, not the Open Rails locomotive s
 
 ## Validation
 
-Regression tests cover traction metadata parsing, force-curve interpolation, throttle response, power caps, continuous-force limit, basic-force fallback, fixed-step session advancement, pause/reset, supplied coupler force on a trailer, automatic common-acceleration session integration, coupler-force distribution, equal/opposite action-reaction, infeasible acceleration rejection, and invalid input rejection. GitHub Actions is the validation authority for WebAssembly publish and Pages deploy.
+Regression tests cover traction metadata parsing, force-curve interpolation, throttle response, power caps, continuous-force limit, basic-force fallback, fixed-step session advancement, pause/reset, supplied coupler force on a trailer, automatic common-acceleration session integration, coupler-force distribution, equal/opposite action-reaction, infeasible acceleration rejection, force-rating enforcement, and invalid input rejection. GitHub Actions is the validation authority for WebAssembly publish and Pages deploy.
