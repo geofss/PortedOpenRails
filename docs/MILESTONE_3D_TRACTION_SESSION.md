@@ -12,6 +12,7 @@ This milestone adds browser-independent simulation sessions that connect parsed 
 - `TrainCouplerForceLimit` validates rated compression/tension magnitudes and rejects force-balance requests that exceed a boundary's supplied rating. This is static rating enforcement, not dynamic coupler behavior.
 - `TrainConsistSimulationSession.AdvanceWithCommonAcceleration` calculates the per-car force frame and coupler force distribution on every fixed simulation tick, then advances all cars with the common target acceleration (when physically feasible from supplied external forces).
 - `TrainCarBrakeModel` converts a finite 0–100% command and rated brake force to signed retarding force; commands are clamped and the force opposes travel direction. It is a basic force evaluator, not a pneumatic or friction-brake subsystem.
+- `LocomotiveSimulationSession.AdvanceWithBrakeCommand` combines commanded braking with existing gravity/resistance inputs and locomotive traction in one fixed-step update.
 
 ## Current limits
 
