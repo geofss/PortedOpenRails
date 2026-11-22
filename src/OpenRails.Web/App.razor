@@ -187,6 +187,10 @@
                                     @if (carAsset is not null && !car.IsEndOfTrain)
                                     {
                                         <small class="hint">Shape: @(carAsset.Metadata?.ShapeFileName ?? "not declared") — @(carAsset.ShapeFound ? $"resolved from {carAsset.ShapeSourcePackage ?? "package"}" : carAsset.Metadata?.ShapeFileName is null ? "no shape reference" : "missing shape asset")</small>
+                                        @if (carAsset.TractionMetadata is { } traction)
+                                        {
+                                            <small class="hint">Traction: max @traction.MaxForceNewtons.ToString("N0") N · continuous @traction.MaxContinuousForceNewtons.ToString("N0") N · max power @traction.MaxPowerWatts.ToString("N0") W · @(traction.TractionForceCurves is null ? "basic force model" : "original throttle/speed curve loaded")</small>
+                                        }
                                     }
                                     @if (car.Loads is not null)
                                     {
