@@ -228,6 +228,84 @@ public sealed class TrainConsistSimulationSession
         });
     }
 
+    /// <summary>
+    /// Advances a train using the net external force over total consist mass to
+    /// derive common acceleration, then balances the internal coupler forces.
+    /// Unlike a caller-selected target acceleration, this remains consistent
+    /// with the traction and brake forces actually available in the current tick.
+    /// </summary>
+    public int AdvanceWithAutomaticCouplers(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        IReadOnlyList<double> brakePercentByCar,
+        IReadOnlyList<double> maximumBrakeForceNewtonsByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null,
+        float powerReduction = 0,
+        IReadOnlyList<float>? averageForceByCar = null)
+    {
+        ArgumentNullException.ThrowIfNull(throttlePercentByCar);
+        ArgumentNullException.ThrowIfNull(brakePercentByCar);
+        ArgumentNullException.ThrowIfNull(maximumBrakeForceNewtonsByCar);
+        ArgumentNullException.ThrowIfNull(resistanceProvider);
+        var carCount = State.Cars.Count;
+        if (throttlePercentByCar.Count != carCount ||
+            brakePercentByCar.Count != carCount ||
+            maximumBrakeForceNewtonsByCar.Count != carCount ||
+            (averageForceByCar is not null && averageForceByCar.Count != carCount))
+            throw new ArgumentException("Throttle, brake, brake-rating, and average-force inputs must match the consist size.");
+        if (couplerForceLimits is not null && couplerForceLimits.Count != Math.Max(0, carCount - 1))
+            throw new ArgumentException("Coupler force limits must match the consist boundary count.", nameof(couplerForceLimits));
+        if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
+            brakePercentByCar.Any(value => !double.IsFinite(value)) ||
+            maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0) ||
+            !float.IsFinite(powerReduction) ||
+            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))))
+            throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
+                "Throttle, brake, power, and average-force inputs must be finite; brake ratings must be non-negative.");
+
+        var forceModel = new TrainCarForceModel();
+        var couplerDistributor = new TrainConsistCouplerForceDistributor();
+        var brakeModel = new TrainCarBrakeModel();
+        return loop.Advance(elapsedFrameSeconds, state =>
+        {
+            var forces = new TrainCarForceBreakdown[carCount];
+            var totalExternalForce = 0d;
+            var totalMass = 0d;
+            for (var i = 0; i < carCount; i++)
+            {
+                var car = state.Cars[i];
+                var resistance = resistanceProvider(i, car) ??
+                    throw new InvalidOperationException($"Resistance provider returned null for car {i}.");
+                var motiveForce = tractionModels[i]?.CalculateTractiveForce(
+                    throttlePercentByCar[i],
+                    (float)car.SpeedMetersPerSecond,
+                    throttleResponses[i],
+                    powerReduction,
+                    averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
+                    car.SpeedMetersPerSecond, brakePercentByCar[i], maximumBrakeForceNewtonsByCar[i]));
+                forces[i] = new TrainCarForceBreakdown(
+                    motiveForce,
+                    resistance.GravityForceNewtons,
+                    resistance.RollingFrictionForceNewtons,
+                    resistance.BrakeRetardForceNewtons + commandedBrake,
+                    resistance.CurveResistanceForceNewtons,
+                    resistance.WindResistanceForceNewtons,
+                    resistance.TunnelResistanceForceNewtons);
+                totalExternalForce += forceModel.CalculateNetLongitudinalForce(car, forces[i]);
+                totalMass += car.MassKg;
+            }
+
+            if (!double.IsFinite(totalExternalForce) || !double.IsFinite(totalMass) || totalMass <= 0)
+                throw new InvalidOperationException("Consist external force and total mass must remain finite and positive.");
+            var acceleration = totalExternalForce / totalMass;
+            var couplerForces = couplerDistributor.CalculatePerCarCouplerForces(
+                state, forces, acceleration, couplerForceLimits);
+            return new TrainConsistForceFrame(forces, couplerForces);
+        });
+    }
+
     public void Pause() => loop.Pause();
     public void Resume() => loop.Resume();
     public void Reset(TrainConsistMotionState initialState) => loop.Reset(initialState);
