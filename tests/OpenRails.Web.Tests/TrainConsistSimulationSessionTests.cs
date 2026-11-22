@@ -181,6 +181,12 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithCommonAcceleration(
             0.1, new[] { 0f },
             (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), double.NaN));
+        Assert.Throws<ArgumentException>(() => session.AdvanceWithCommonAcceleration(
+            0.1, new[] { 0f }, (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), 0,
+            brakePercentByCar: new[] { 0d }));
+        Assert.Throws<ArgumentException>(() => session.AdvanceWithCommonAcceleration(
+            0.1, new[] { 0f }, (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), 0,
+            brakePercentByCar: new[] { 0d, 0d }, maximumBrakeForceNewtonsByCar: new[] { 1_000d }));
         Assert.Equal(0, session.SimulationTimeSeconds);
     }
 
