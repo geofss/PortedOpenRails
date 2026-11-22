@@ -50,6 +50,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistFileReader.cs" Link="Parsing/ConsistFileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistCatalogReader.cs" Link="Parsing/ConsistCatalogReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockMetadataReader.cs" Link="Parsing/RollingStockMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockShapeAssetLoader.cs" Link="Parsing/RollingStockShapeAssetLoader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackDatabaseReader.cs" Link="Parsing/TrackDatabaseReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteAssetLocator.cs" Link="Parsing/RouteAssetLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteLoader.cs" Link="Parsing/RouteLoader.cs" />
