@@ -41,6 +41,42 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void ReverserSelectsForwardNeutralAndReverseTractionDirection()
+    {
+        static BrowserTrainDrivingController CreateController()
+        {
+            var consist = new ConsistMetadata("ReverserTest", new[]
+            {
+                new ConsistCar("Engine", "Diesel", 1, true, false, false)
+            }, "reverser-test.con");
+            var traction = new LocomotiveTractionMetadata(
+                "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+            var setup = new TrainConsistSimulationSetupBuilder().Build(
+                consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+            return new BrowserTrainDrivingController(setup);
+        }
+
+        var forward = CreateController();
+        forward.SetThrottle(100);
+        forward.Advance(0.1);
+        Assert.True(forward.State.Cars[0].SpeedMetersPerSecond > 0);
+
+        var reverse = CreateController();
+        reverse.SetReverser(TrainReverserPosition.Reverse);
+        reverse.SetThrottle(100);
+        reverse.Advance(0.1);
+        Assert.True(reverse.State.Cars[0].SpeedMetersPerSecond < 0);
+        Assert.True(reverse.State.Cars[0].DistanceMeters < 10);
+
+        var neutral = CreateController();
+        neutral.SetReverser(TrainReverserPosition.Neutral);
+        neutral.SetThrottle(100);
+        neutral.Advance(0.1);
+        Assert.Equal(0, neutral.State.Cars[0].SpeedMetersPerSecond);
+        Assert.Equal(10, neutral.State.Cars[0].DistanceMeters);
+    }
+
+    [Fact]
     public void PausedControllerFreezesBrakePipeAndCylinderSubsystems()
     {
         var consist = new ConsistMetadata("PausedBrake", new[]
