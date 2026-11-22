@@ -98,8 +98,9 @@ public sealed class BrowserTrainDrivingControllerTests
             setup, route: CreateSlopeRoute(100, 10));
 
         Assert.Equal(2, controller.RouteGradePercentByCar.Count);
+        // Positive elevation gain is uphill, so the route-grade convention reports -10%.
         Assert.All(controller.RouteGradePercentByCar,
-            grade => Assert.InRange(grade, 9.9, 10.1));
+            grade => Assert.InRange(grade, -10.1, -9.9));
         Assert.Equal(controller.RouteGradePercentByCar[0],
             controller.LeadCarRouteGradePercent);
     }
