@@ -23,6 +23,27 @@
         <button type="button" @onclick="StopAsync" disabled="@(!isRunning)">Pause</button>
         <button type="button" @onclick="ResetAsync">Reset</button>
     </div>
+    @if (Consist is not null)
+    {
+        <h4>Vehicle telemetry</h4>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Vehicle</th><th>Speed</th><th>Route position</th><th>Brake-pipe pressure</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Controller.State.Cars.Count && i < DrivingCars.Count; i++)
+                    {
+                        var car = Controller.State.Cars[i];
+                        <tr>
+                            <td>@DrivingCars[i].Name</td>
+                            <td>@((car.SpeedMetersPerSecond * 3.6).ToString("N1")) km/h</td>
+                            <td>@car.DistanceMeters.ToString("N1") m</td>
+                            <td>@Controller.BrakePipeState.PressuresKPa[i].ToString("N0") kPa</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
     <dl>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
@@ -33,6 +54,8 @@
 
 @code {
     [Parameter, EditorRequired] public BrowserTrainDrivingController Controller { get; set; } = default!;
+    [Parameter] public ConsistMetadata? Consist { get; set; }
+    private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
 
     private CancellationTokenSource? runCancellation;
