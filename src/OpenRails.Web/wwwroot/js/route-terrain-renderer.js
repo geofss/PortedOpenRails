@@ -89,6 +89,7 @@ export function cleanup() {
   gl = program = terrainProgram = canvasRef = null;
   terrainTextures = []; shapeTextures = [];
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = storedShapeBatches = storedShapePixels = uploadedShapePixels = null;
+  storedRollingStockBatches = [];
   storedVertices = storedIndices = storedTrackLines = null;
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
@@ -159,9 +160,9 @@ function redraw(){
 // Textured route path: one draw batch per original terrain patch so each patch
 // keeps its source shader texture and source UV coordinates.
 let terrainProgram, terrainTextures = [], uploadedTerrainPixels, storedTerrainPatches, storedTerrainPixels, storedTerrainLines, storedTrackMesh, storedShapeBatches, storedShapePixels;
-let shapeProgram, shapeTextures = [], uploadedShapePixels;
-export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null, shapeBatches = [], shapePixels = []) {
-  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh; storedShapeBatches=shapeBatches; storedShapePixels=shapePixels;
+let shapeProgram, shapeTextures = [], uploadedShapePixels, storedRollingStockBatches = [];
+export function drawTerrainTextured(patches, textures, trackLines = [], trackMesh = null, shapeBatches = [], shapePixels = [], rollingStockBatches = []) {
+  storedTerrainPatches=patches; storedTerrainPixels=textures; storedTerrainLines=trackLines; storedTrackMesh=trackMesh; storedShapeBatches=shapeBatches; storedShapePixels=shapePixels; storedRollingStockBatches=rollingStockBatches;
   if (!gl) return;
   if (!terrainProgram) {
     const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
@@ -255,7 +256,13 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   gl.deleteVertexArray(vao);
   if(storedTrackMesh && storedTrackMesh.vertices && storedTrackMesh.indices) drawTrackTriangles(storedTrackMesh,project);
   if(trackLines.length) drawTrackOverlay(trackLines,project);
-  if(shapeBatches.length) drawTrackShapeBatches(shapeBatches,shapePixels,project);
+  if(shapeBatches.length || storedRollingStockBatches.length)
+    drawTrackShapeBatches([...shapeBatches, ...storedRollingStockBatches],shapePixels,project);
+}
+
+export function updateRollingStockBatches(batches = []) {
+  storedRollingStockBatches = batches;
+  redraw();
 }
 function drawTrackShapeBatches(batches,pixels,project){
   if(!batches.length) return;
