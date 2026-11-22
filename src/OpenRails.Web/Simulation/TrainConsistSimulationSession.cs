@@ -80,7 +80,7 @@ public sealed class TrainConsistSimulationSession
                     powerReductionByCar is null ? 0 : powerReductionByCar[i],
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
                 forces[i] = new TrainCarForceBreakdown(
-                    motiveForce * tractionDirection,
+                    motiveForce,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
                     resistance.BrakeRetardForceNewtons,
@@ -157,7 +157,7 @@ public sealed class TrainConsistSimulationSession
                     activeBrakePercentByCar[i],
                     maximumBrakeForceNewtonsByCar[i]));
                 forces[i] = new TrainCarForceBreakdown(
-                    motiveForce,
+                    motiveForce * tractionDirection,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
                     resistance.BrakeRetardForceNewtons + commandedBrake,
