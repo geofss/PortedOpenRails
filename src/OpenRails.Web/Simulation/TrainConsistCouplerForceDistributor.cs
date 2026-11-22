@@ -24,7 +24,11 @@ public sealed class TrainConsistCouplerForceDistributor
             throw new ArgumentException("Each coupler boundary requires a matching force limit.", nameof(forceLimits));
         if (forceLimits is not null)
             foreach (var limit in forceLimits)
+            {
+                if (limit is null)
+                    throw new ArgumentException("Coupler force limits cannot contain null entries.", nameof(forceLimits));
                 limit.Validate();
+            }
         if (!double.IsFinite(targetAccelerationMetersPerSecondSquared))
             throw new ArgumentOutOfRangeException(nameof(targetAccelerationMetersPerSecondSquared));
 
@@ -53,6 +57,8 @@ public sealed class TrainConsistCouplerForceDistributor
 
         var totalMass = state.Cars.Sum(car => car.MassKg);
         var totalTargetForce = totalMass * targetAccelerationMetersPerSecondSquared;
+        if (!double.IsFinite(totalMass) || !double.IsFinite(totalTargetForce))
+            throw new ArgumentOutOfRangeException(nameof(state), "Total consist mass and target force must remain finite.");
         var tolerance = Math.Max(1e-6, Math.Abs(totalTargetForce) * 1e-9);
         if (Math.Abs(residualPrefix) > tolerance)
             throw new InvalidOperationException(
