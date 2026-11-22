@@ -14,7 +14,9 @@ public sealed class BrowserTrainDrivingController
     private readonly IReadOnlyList<TrainCarResistanceParameters> resistanceParametersByCar;
     private readonly TrackNetworkRouteProfile? routeProfile;
     private readonly TrainBrakePipeModel brakePipeModel = new();
+    private readonly TrainBrakeCylinderModel brakeCylinderModel = new();
     private TrainBrakePipeState brakePipeState;
+    private TrainBrakeCylinderState brakeCylinderState;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
@@ -51,6 +53,7 @@ public sealed class BrowserTrainDrivingController
             }).ToArray());
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
+        brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
     }
 
     public void SetThrottle(float percent)
@@ -73,7 +76,10 @@ public sealed class BrowserTrainDrivingController
             .Select(powered => powered ? ThrottlePercent : 0f)
             .ToArray();
         brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
-        var brakes = brakePipeModel.GetBrakePercentByCar(brakePipeState);
+        var pipeBrakeCommands = brakePipeModel.GetBrakePercentByCar(brakePipeState);
+        brakeCylinderState = brakeCylinderModel.Advance(
+            brakeCylinderState, pipeBrakeCommands, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
+        var brakes = brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState);
 
         return setup.Session.AdvanceWithAutomaticCouplers(
             elapsedFrameSeconds,
@@ -92,6 +98,7 @@ public sealed class BrowserTrainDrivingController
     {
         setup.Session.Reset(setup.InitialState);
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
+        brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
         ThrottlePercent = 0;
         BrakePercent = 0;
     }
