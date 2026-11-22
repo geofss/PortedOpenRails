@@ -11,7 +11,7 @@ public sealed class BrowserTrainDrivingController
 {
     private readonly TrainConsistSimulationSetup setup;
     private readonly TrainCarResistanceModel resistanceModel = new();
-    private readonly TrainCarResistanceParameters resistanceParameters;
+    private readonly IReadOnlyList<TrainCarResistanceParameters> resistanceParametersByCar;
     private readonly TrackNetworkRouteProfile? routeProfile;
     private readonly TrainBrakePipeModel brakePipeModel = new();
     private TrainBrakePipeState brakePipeState;
@@ -35,12 +35,16 @@ public sealed class BrowserTrainDrivingController
         if (!double.IsFinite(aerodynamicDragAreaSquareMeters) || aerodynamicDragAreaSquareMeters < 0)
             throw new ArgumentOutOfRangeException(nameof(aerodynamicDragAreaSquareMeters));
         if (setup.PoweredCars.Count != setup.InitialState.Cars.Count ||
-            setup.MaximumBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count)
+            setup.MaximumBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count ||
+            setup.ResistanceParametersByCar.Count != setup.InitialState.Cars.Count)
             throw new ArgumentException("Simulation setup control mappings must match the vehicle count.", nameof(setup));
 
-        resistanceParameters = new TrainCarResistanceParameters(
-            RollingResistanceCoefficient: rollingResistanceCoefficient,
-            AerodynamicDragAreaSquareMeters: aerodynamicDragAreaSquareMeters);
+        resistanceParametersByCar = Array.AsReadOnly(setup.ResistanceParametersByCar.Select(parameters =>
+            parameters with
+            {
+                RollingResistanceCoefficient = rollingResistanceCoefficient,
+                AerodynamicDragAreaSquareMeters = aerodynamicDragAreaSquareMeters
+            }).ToArray());
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
     }
@@ -72,9 +76,9 @@ public sealed class BrowserTrainDrivingController
             throttle,
             brakes,
             setup.MaximumBrakeForceNewtonsByCar,
-            (_, car) => resistanceModel.Calculate(car, routeProfile is null
-                ? resistanceParameters
-                : resistanceParameters with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
+            (index, car) => resistanceModel.Calculate(car, routeProfile is null
+                ? resistanceParametersByCar[index]
+                : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
             setup.CouplerForceLimits);
     }
 
