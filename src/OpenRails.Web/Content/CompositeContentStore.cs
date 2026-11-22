@@ -8,6 +8,7 @@ public sealed class CompositeContentStore : IVirtualContentStore, IDisposable
 {
     private readonly IReadOnlyList<PackageLayer> layers;
     private readonly IReadOnlyCollection<string> paths;
+    private readonly bool ownsStores;
     private bool disposed;
 
     public IReadOnlyCollection<string> Paths
@@ -19,9 +20,10 @@ public sealed class CompositeContentStore : IVirtualContentStore, IDisposable
         }
     }
 
-    public CompositeContentStore(IEnumerable<PackageLayer> packages)
+    public CompositeContentStore(IEnumerable<PackageLayer> packages, bool ownsStores = true)
     {
         ArgumentNullException.ThrowIfNull(packages);
+        this.ownsStores = ownsStores;
 
         var materialized = packages.ToArray();
         if (materialized.Length == 0)
@@ -94,8 +96,11 @@ public sealed class CompositeContentStore : IVirtualContentStore, IDisposable
             return;
 
         disposed = true;
-        foreach (var layer in layers)
-            layer.Store.Dispose();
+        if (ownsStores)
+        {
+            foreach (var layer in layers)
+                layer.Store.Dispose();
+        }
     }
 
     private void ThrowIfDisposed()
