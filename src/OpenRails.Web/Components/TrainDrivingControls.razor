@@ -25,6 +25,7 @@
     </div>
     <dl>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
+        <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
         <dt>Simulation time</dt><dd>@Controller.SimulationTimeSeconds.ToString("N1") s</dd>
         <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
     </dl>
