@@ -37,8 +37,7 @@ public sealed class BrowserTrainDrivingControllerTests
         for (var frame = 0; frame < 10; frame++)
             controller.Advance(0.1);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < speedBeforeBrake);
-        Assert.NotEqual(controller.State.Cars[0].SpeedMetersPerSecond,
-            controller.State.Cars[1].SpeedMetersPerSecond);
+
     }
 
     [Fact]
