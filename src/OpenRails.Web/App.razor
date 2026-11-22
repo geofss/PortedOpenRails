@@ -83,6 +83,7 @@
                     <dl>
                         <dt>Track database nodes</dt><dd>@loadedRoute.TrackDatabase.NodeCount</dd>
                         <dt>Connected vector paths</dt><dd>@loadedRoute.TrackNetwork.VectorPathCount</dd>
+                        <dt>Traversed connected route</dt><dd>@(traversedRoute is null ? "Not available" : $"{traversedRoute.Segments.Count} vector nodes · {traversedRoute.LengthMeters:N1} m")</dd>
                         <dt>Parsed track length</dt><dd>@(loadedRoute.TrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
                         <dt>Terrain tiles found</dt><dd>@loadedRoute.TerrainTiles.Found.Count</dd>
                         <dt>Terrain tiles missing</dt><dd>@loadedRoute.TerrainTiles.Missing.Count</dd>
@@ -232,6 +233,7 @@
     private bool isBuildingRoute;
     private string? routeBuildMessage;
     private RouteLoadResult? loadedRoute;
+    private TrackNetworkRoute? traversedRoute;
     private ConsistCatalogResult? consistCatalog;
 
     private void SelectDefaultRoute()
@@ -254,6 +256,7 @@
     private async Task BuildRouteNetworkAsync(RouteChoice route)
     {
         loadedRoute = null;
+        traversedRoute = null;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -264,7 +267,15 @@
                 throw new InvalidDataException("No route content package is loaded.");
 
             loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
-            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
+            var traversalStart = loadedRoute.TrackNetwork.VectorPaths
+                .Where(path => path.ConnectedNodeIndices.Count == 2)
+                .OrderByDescending(path => path.LengthMeters)
+                .FirstOrDefault();
+            if (traversalStart is not null)
+                traversedRoute = new TrackNetworkRouteBuilder().Build(loadedRoute.TrackNetwork, traversalStart.TrackNodeIndex);
+            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
+                (traversedRoute is null ? " No two-ended vector path was available for connected traversal." :
+                    $" Connected traversal followed {traversedRoute.Segments.Count} vector nodes.");
         }
         catch (Exception exception)
         {
@@ -401,6 +412,7 @@
         {
             selectedRoute = null;
             loadedRoute = null;
+            traversedRoute = null;
             routeBuildMessage = null;
         }
 
