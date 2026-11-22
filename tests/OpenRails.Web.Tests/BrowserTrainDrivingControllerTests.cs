@@ -79,6 +79,32 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void ReportsRouteGradeForEveryCarInMultiCarConsist()
+    {
+        var consist = new ConsistMetadata("GradeConsist", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "grade-consist.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction),
+            CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 200);
+        var controller = new BrowserTrainDrivingController(
+            setup, route: CreateSlopeRoute(100, 10));
+
+        Assert.Equal(2, controller.RouteGradePercentByCar.Count);
+        Assert.All(controller.RouteGradePercentByCar,
+            grade => Assert.InRange(grade, 9.9, 10.1));
+        Assert.Equal(controller.RouteGradePercentByCar[0],
+            controller.LeadCarRouteGradePercent);
+    }
+
+    [Fact]
     public void AppliesParsedDavisResistanceToVehicleAcceleration()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
