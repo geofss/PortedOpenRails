@@ -163,6 +163,7 @@ public sealed class BrowserTrainDrivingControllerTests
 
         Assert.Equal(8, executedSteps);
         Assert.Equal(simulatedSeconds, controller.SimulationTimeSeconds, 10);
+        Assert.Equal(0.25 - simulatedSeconds, controller.DroppedTimeSeconds, 10);
         Assert.Equal(expectedPipe.PressuresKPa[0], controller.BrakePipeState.PressuresKPa[0], 10);
         Assert.Equal(expectedCylinder.PressuresKPa[0], controller.BrakeCylinderState.PressuresKPa[0], 10);
     }
