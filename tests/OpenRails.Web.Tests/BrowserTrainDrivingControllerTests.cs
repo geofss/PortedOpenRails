@@ -70,6 +70,29 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void StopsWhenRequestedAccelerationWouldOverloadParsedCoupler()
+    {
+        var consist = new ConsistMetadata("DriveTest", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "drive-test.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction, 100),
+            CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null, 100)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetThrottle(100);
+
+        var error = Assert.Throws<InvalidOperationException>(() => controller.Advance(0.1));
+        Assert.Contains("exceeds its rating", error.Message);
+    }
+
+    [Fact]
     public void ClampsDriverCommandsAndSupportsPauseAndReset()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
@@ -109,10 +132,11 @@ public sealed class BrowserTrainDrivingControllerTests
 
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, bool isEngine, float mass, float length,
-        float brake, LocomotiveTractionMetadata? traction) =>
+        float brake, LocomotiveTractionMetadata? traction, float? couplerStrength = null) =>
         new("DriveTest", uid, name, "Freight", isEngine, false, name + (isEngine ? ".eng" : ".wag"),
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + (isEngine ? ".eng" : ".wag")),
+                null, null, brake, name + (isEngine ? ".eng" : ".wag"),
+                MinCouplerStrengthN: couplerStrength),
             name + ".s", true, null, traction);
 }
