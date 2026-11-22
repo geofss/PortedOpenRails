@@ -58,6 +58,45 @@ public sealed class LocomotiveSimulationSession
         });
     }
 
+    /// <summary>
+    /// Advances with a driver brake command and rated brake force, adding the
+    /// generated retarding force to the provider's other resistance inputs.
+    /// </summary>
+    public int AdvanceWithBrakeCommand(
+        double elapsedFrameSeconds,
+        float throttlePercent,
+        double brakePercent,
+        double maximumBrakeForceNewtons,
+        Func<TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        float powerReduction = 0,
+        float averageForceNewtons = 0)
+    {
+        ArgumentNullException.ThrowIfNull(resistanceProvider);
+        if (!double.IsFinite(brakePercent) || !double.IsFinite(maximumBrakeForceNewtons) ||
+            maximumBrakeForceNewtons < 0)
+            throw new ArgumentOutOfRangeException(nameof(brakePercent),
+                "Brake command and rating must be finite; rating cannot be negative.");
+        var brakeModel = new TrainCarBrakeModel();
+        return loop.Advance(elapsedFrameSeconds, state =>
+        {
+            var resistance = resistanceProvider(state) ??
+                throw new InvalidOperationException("Resistance provider returned null.");
+            var motiveForce = tractionModel.CalculateTractiveForce(
+                throttlePercent, (float)state.SpeedMetersPerSecond,
+                throttleResponse, powerReduction, averageForceNewtons);
+            var commandedBrakeForce = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
+                state.SpeedMetersPerSecond, brakePercent, maximumBrakeForceNewtons));
+            return new TrainCarForceBreakdown(
+                motiveForce,
+                resistance.GravityForceNewtons,
+                resistance.RollingFrictionForceNewtons,
+                resistance.BrakeRetardForceNewtons + commandedBrakeForce,
+                resistance.CurveResistanceForceNewtons,
+                resistance.WindResistanceForceNewtons,
+                resistance.TunnelResistanceForceNewtons);
+        });
+    }
+
     public void Pause() => loop.Pause();
 
     public void Resume() => loop.Resume();
