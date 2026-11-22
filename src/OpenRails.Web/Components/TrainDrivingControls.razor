@@ -15,6 +15,13 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
+    <div class="keyboard-control-pad" tabindex="0" role="group"
+         aria-label="Keyboard driving controls"
+         @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
+        <strong>Keyboard controls</strong>
+        <span>Focus here, then use ↑ / ↓ to adjust throttle, Space to toggle full brake, or Esc to release both.</span>
+        <span class="keyboard-control-state">Throttle @Controller.ThrottlePercent.ToString("N0")% · Brake @Controller.BrakePercent.ToString("N0")%</span>
+    </div>
     @if (!string.IsNullOrWhiteSpace(simulationError))
     {
         <p class="error" role="alert">@simulationError</p>
@@ -106,6 +113,30 @@
         if (double.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var value))
             Controller.SetBrake(value);
+    }
+
+    private void HandleKeyboardControl(KeyboardEventArgs args)
+    {
+        if (args.Repeat)
+            return;
+
+        switch (args.Key)
+        {
+            case "ArrowUp":
+                Controller.SetThrottle(Math.Min(100, Controller.ThrottlePercent + 5));
+                break;
+            case "ArrowDown":
+                Controller.SetThrottle(Math.Max(0, Controller.ThrottlePercent - 5));
+                break;
+            case " ":
+            case "Spacebar":
+                Controller.SetBrake(Controller.BrakePercent >= 100 ? 0 : 100);
+                break;
+            case "Escape":
+                Controller.SetThrottle(0);
+                Controller.SetBrake(0);
+                break;
+        }
     }
 
     private Task StartAsync()
