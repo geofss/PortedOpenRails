@@ -27,6 +27,7 @@ public sealed class BrowserTrainDrivingController
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
+    public double DroppedTimeSeconds => setup.Session.DroppedTimeSeconds;
     public bool IsPaused => setup.Session.IsPaused;
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
