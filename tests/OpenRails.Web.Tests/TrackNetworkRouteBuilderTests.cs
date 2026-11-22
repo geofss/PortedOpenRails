@@ -67,6 +67,25 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void FollowsExplicitlySelectedBranchAtAmbiguousJunction()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var branchA = CreatePath(20, new[] { 2, 3 }, 100, 200);
+        var branchB = CreatePath(30, new[] { 2, 4 }, 100, 250);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, branchA, branchB },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(
+            network, 10, preferredNextTrackNodeIndex: 30);
+
+        Assert.Equal(new uint[] { 10, 30 },
+            route.Segments.Select(segment => segment.Path.TrackNodeIndex));
+        Assert.Empty(route.Diagnostics);
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
