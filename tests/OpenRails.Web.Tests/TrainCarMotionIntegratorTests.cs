@@ -14,7 +14,7 @@ public sealed class TrainCarMotionIntegratorTests
 
         Assert.Equal(2, result.AccelerationMetersPerSecondSquared, 8);
         Assert.Equal(1, result.State.SpeedMetersPerSecond, 8);
-        Assert.Equal(0.5, result.State.DistanceMeters, 8);
+        Assert.Equal(0.25, result.State.DistanceMeters, 8);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public sealed class TrainCarMotionIntegratorTests
         var result = new TrainCarMotionIntegrator().Step(initial, -20_000, 1);
 
         Assert.Equal(0, result.State.SpeedMetersPerSecond);
-        Assert.Equal(12, result.State.DistanceMeters);
+        Assert.Equal(12.5, result.State.DistanceMeters, 8);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class TrainCarMotionIntegratorTests
             new TrainCarMotionState(5_000, -2, 10), -5_000, 1);
 
         Assert.Equal(-3, reverse.State.SpeedMetersPerSecond, 8);
-        Assert.Equal(7, reverse.State.DistanceMeters, 8);
+        Assert.Equal(7.5, reverse.State.DistanceMeters, 8);
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new TrainCarMotionIntegrator().Step(new TrainCarMotionState(0, 0, 0), 1, 1));
     }
