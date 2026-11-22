@@ -41,6 +41,7 @@ public sealed class ConsistCatalogReaderTests
         Assert.All(result.CarAssets, asset => Assert.NotNull(asset.Metadata));
         var metadata = result.CarAssets[0].Metadata!;
         Assert.Equal("FixtureCar", metadata.Name);
+        Assert.Equal("fixture.s", metadata.ShapeFileName);
         Assert.Equal("Freight", metadata.Type);
         Assert.Equal(30, metadata.MassKg);
         Assert.Equal(12, metadata.LengthM);
@@ -181,9 +182,27 @@ public sealed class ConsistCatalogReaderTests
         Assert.Empty(result.Issues);
     }
 
+    [Fact]
+    public void ResolvesRollingStockShapeRelativeToTrainsetFolderAndRejectsTraversal()
+    {
+        using var store = CreateStore(
+            ("TRAINS/TRAINSET/Freight/fixture.s", "shape bytes"),
+            ("TRAINS/TRAINSET/Freight/Car.wag", WagonFixture));
+        var metadata = new RollingStockMetadataReader().Read(store, "TRAINS/TRAINSET/Freight/Car.wag");
+        var locator = new RollingStockShapeAssetLocator();
+
+        var asset = locator.Locate(store, "Freight", metadata.ShapeFileName);
+
+        Assert.NotNull(asset);
+        Assert.Equal("TRAINS/TRAINSET/Freight/fixture.s", asset.Path);
+        Assert.Null(locator.Locate(store, "Freight", "missing.s"));
+        Assert.Throws<InvalidDataException>(() => locator.Locate(store, "Freight", "../outside.s"));
+    }
+
     private const string WagonFixture = """
         Wagon (
             Name ( "FixtureCar" )
+            WagonShape ( "fixture.s" )
             Type ( "Freight" )
             Mass ( 30 )
             Size ( 2.5 4 12 )
