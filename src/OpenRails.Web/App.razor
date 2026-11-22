@@ -177,6 +177,10 @@
                                 <dt>Train-control parameters</dt><dd><code>@consist.TrainControlSystemParametersFile</code> — @(tcsAsset is null ? "unresolved" : tcsAsset.Found ? (tcsAsset.SourcePackage is null ? "found" : $"found in {tcsAsset.SourcePackage}") : "missing")</dd>
                             }
                         </dl>
+                        @if (composite is not null)
+                        {
+                            <RollingStockViewer Store="composite" Consist="consist" CarAssets="consistCatalog.CarAssets" />
+                        }
                         <ol class="path-list">
                             @foreach (var car in consist.Cars)
                             {
