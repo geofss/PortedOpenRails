@@ -111,11 +111,17 @@
                             }
                         </div>
                     }
+                    @if (drivingController is not null)
+                    {
+                        <TrainDrivingControls @key="drivingController"
+                            Controller="drivingController"
+                            MotionChanged="OnTrainMotionChanged" />
+                    }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
                         Consist="consistCatalog?.Consists.FirstOrDefault()"
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
                         MotionRoute="traversedRoute"
-                        MotionState="simulationSetup?.InitialState" />
+                        MotionState="currentMotionState ?? simulationSetup?.InitialState" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
@@ -251,6 +257,8 @@
     private TrackNetworkRoute? traversedRoute;
     private ConsistCatalogResult? consistCatalog;
     private TrainConsistSimulationSetup? simulationSetup;
+    private BrowserTrainDrivingController? drivingController;
+    private TrainConsistMotionState? currentMotionState;
 
     private void SelectDefaultRoute()
     {
@@ -260,6 +268,8 @@
         loadedRoute = null;
         traversedRoute = null;
         simulationSetup = null;
+        drivingController = null;
+        currentMotionState = null;
         routeBuildMessage = null;
     }
 
@@ -276,6 +286,8 @@
         loadedRoute = null;
         traversedRoute = null;
         simulationSetup = null;
+        drivingController = null;
+        currentMotionState = null;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -317,6 +329,8 @@
         loadedRoute = null;
         traversedRoute = null;
         simulationSetup = null;
+        drivingController = null;
+        currentMotionState = null;
         routeBuildMessage = null;
 
         try
@@ -457,6 +471,8 @@
     private void InitializeSimulationSetup()
     {
         simulationSetup = null;
+        drivingController = null;
+        currentMotionState = null;
         var consist = consistCatalog?.Consists.FirstOrDefault();
         if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
             return;
@@ -464,11 +480,19 @@
         {
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters);
+            drivingController = new BrowserTrainDrivingController(simulationSetup);
+            currentMotionState = simulationSetup.InitialState;
         }
         catch (ArgumentException exception)
         {
             routeBuildMessage = $"Simulation setup unavailable: {exception.Message}";
         }
+    }
+
+    private Task OnTrainMotionChanged(TrainConsistMotionState state)
+    {
+        currentMotionState = state;
+        return Task.CompletedTask;
     }
 
     public void Dispose()
