@@ -6,6 +6,7 @@ public sealed record TrainConsistSimulationSetup(
     TrainConsistSimulationSession Session,
     TrainConsistMotionState InitialState,
     IReadOnlyList<double> MaximumBrakeForceNewtonsByCar,
+    IReadOnlyList<TrainCarResistanceParameters> ResistanceParametersByCar,
     IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
     IReadOnlyList<string> Diagnostics);
@@ -17,6 +18,19 @@ public sealed record TrainConsistSimulationSetup(
 /// </summary>
 public sealed class TrainConsistSimulationSetupBuilder
 {
+    private static double ValidResistanceCoefficient(
+        float? value, string carName, string label, List<string> diagnostics)
+    {
+        if (value is null)
+            return 0;
+        if (!float.IsFinite(value.Value) || value.Value < 0)
+        {
+            diagnostics.Add($"{carName}: invalid {label} coefficient ignored.");
+            return 0;
+        }
+        return value.Value;
+    }
+
     public TrainConsistSimulationSetup Build(
         ConsistMetadata consist,
         IReadOnlyList<ConsistCarAssetReference> carAssets,
@@ -39,6 +53,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         var states = new List<TrainCarMotionState>(cars.Length);
         var traction = new List<LocomotiveTractionMetadata?>(cars.Length);
         var brakeRatings = new List<double>(cars.Length);
+        var resistanceParameters = new List<TrainCarResistanceParameters>(cars.Length);
         var poweredCars = new List<bool>(cars.Length);
         var diagnostics = new List<string>();
         var cursor = startDistanceMeters;
@@ -71,6 +86,12 @@ public sealed class TrainConsistSimulationSetupBuilder
                 maximumBrakeForce = mass * 9.80665f * 0.1f;
                 diagnostics.Add($"{car.Name}: rated brake force unavailable; using a 10% weight fallback for the prototype brake command.");
             }
+
+            var davisA = ValidResistanceCoefficient(metadata?.DavisAForceN, car.Name, "Davis A", diagnostics);
+            var davisB = ValidResistanceCoefficient(metadata?.DavisBResistance, car.Name, "Davis B", diagnostics);
+            var davisC = ValidResistanceCoefficient(metadata?.DavisCResistance, car.Name, "Davis C", diagnostics);
+            resistanceParameters.Add(new TrainCarResistanceParameters(
+                DavisA: davisA, DavisB: davisB, DavisC: davisC));
 
             states.Add(new TrainCarMotionState(mass, initialSpeedMetersPerSecond, cursor + length / 2d));
             traction.Add(car.IsEngine ? asset?.TractionMetadata : null);
@@ -113,6 +134,7 @@ public sealed class TrainConsistSimulationSetupBuilder
             session,
             initialState,
             Array.AsReadOnly(brakeRatings.ToArray()),
+            Array.AsReadOnly(resistanceParameters.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(couplerLimits.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
