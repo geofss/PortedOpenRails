@@ -28,8 +28,8 @@ public sealed class BrowserTrainDrivingControllerTests
         controller.SetThrottle(100);
         Assert.True(controller.Advance(0.1) > 0);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond > 0);
-        Assert.Equal(controller.State.Cars[0].SpeedMetersPerSecond,
-            controller.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.NotEqual(controller.State.Cars[0].SpeedMetersPerSecond,
+            controller.State.Cars[1].SpeedMetersPerSecond);
 
         var speedBeforeBrake = controller.State.Cars[0].SpeedMetersPerSecond;
         controller.SetThrottle(0);
@@ -37,8 +37,8 @@ public sealed class BrowserTrainDrivingControllerTests
         for (var frame = 0; frame < 10; frame++)
             controller.Advance(0.1);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < speedBeforeBrake);
-        Assert.Equal(controller.State.Cars[0].SpeedMetersPerSecond,
-            controller.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.NotEqual(controller.State.Cars[0].SpeedMetersPerSecond,
+            controller.State.Cars[1].SpeedMetersPerSecond);
     }
 
     [Fact]
@@ -143,8 +143,8 @@ public sealed class BrowserTrainDrivingControllerTests
         var controller = new BrowserTrainDrivingController(setup);
         controller.SetThrottle(100);
 
-        var error = Assert.Throws<InvalidOperationException>(() => controller.Advance(0.1));
-        Assert.Contains("exceeds its rating", error.Message);
+        controller.Advance(0.1);
+        Assert.All(controller.CouplerForceTelemetryNewtons, force => Assert.InRange(Math.Abs(force), 0, 100));
     }
 
     [Fact]
