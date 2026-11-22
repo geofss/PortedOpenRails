@@ -5,7 +5,7 @@ namespace OpenRails.Web.Simulation;
 /// <summary>
 /// Driver-command facade for a parsed consist. It maps throttle only to cars
 /// with locomotive traction metadata, applies brake commands to each vehicle,
-/// and derives common train acceleration from the available external forces.
+/// and calculates transient coupler forces from adjacent-car displacement and velocity.
 /// </summary>
 public sealed class BrowserTrainDrivingController
 {
@@ -13,6 +13,12 @@ public sealed class BrowserTrainDrivingController
     private readonly TrainCarResistanceModel resistanceModel = new();
     private readonly IReadOnlyList<TrainCarResistanceParameters> resistanceParametersByCar;
     private readonly TrackNetworkRouteProfile? routeProfile;
+    private readonly TrainConsistCouplerDynamics couplerDynamics = new();
+    private readonly IReadOnlyList<double> couplerRestGapsMeters;
+    private readonly IReadOnlyList<double> couplerSlackMeters;
+    private readonly IReadOnlyList<double> couplerStiffness;
+    private readonly IReadOnlyList<double> couplerDamping;
+    private readonly IReadOnlyList<double> couplerMaximumForces;
     private readonly TrainBrakePipeModel brakePipeModel = new();
     private readonly TrainBrakeCylinderModel brakeCylinderModel = new();
     private TrainBrakePipeState brakePipeState;
@@ -53,6 +59,15 @@ public sealed class BrowserTrainDrivingController
                     : aerodynamicDragAreaSquareMeters
             }).ToArray());
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
+        var initialCars = setup.InitialState.Cars;
+        couplerRestGapsMeters = Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, initialCars.Count - 1))
+            .Select(i => initialCars[i + 1].DistanceMeters - initialCars[i].DistanceMeters).ToArray());
+        // Prototype values pending parsing native ORTS coupler slack and spring/damper parameters.
+        couplerSlackMeters = Array.AsReadOnly(Enumerable.Repeat(0.08d, couplerRestGapsMeters.Count).ToArray());
+        couplerStiffness = Array.AsReadOnly(Enumerable.Repeat(60_000d, couplerRestGapsMeters.Count).ToArray());
+        couplerDamping = Array.AsReadOnly(Enumerable.Repeat(20_000d, couplerRestGapsMeters.Count).ToArray());
+        couplerMaximumForces = Array.AsReadOnly(setup.CouplerForceLimits.Select(limit =>
+            Math.Min(limit.MaximumTensionNewtons, limit.MaximumCompressionNewtons)).ToArray());
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
         brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
     }
@@ -82,7 +97,10 @@ public sealed class BrowserTrainDrivingController
             brakeCylinderState, pipeBrakeCommands, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
         var brakes = brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState);
 
-        return setup.Session.AdvanceWithAutomaticCouplers(
+        var dynamicCouplerForces = couplerDynamics.CalculatePerCarForces(
+            setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
+            couplerStiffness, couplerDamping, couplerMaximumForces);
+        return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
             throttle,
             brakes,
@@ -90,7 +108,7 @@ public sealed class BrowserTrainDrivingController
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
                 : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
-            setup.CouplerForceLimits);
+            dynamicCouplerForces);
     }
 
     public void Pause() => setup.Session.Pause();
