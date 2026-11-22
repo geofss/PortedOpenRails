@@ -41,7 +41,7 @@ public sealed class TrainConsistCouplerDynamics
             var rear = state.Cars[i + 1];
             var relativeDisplacement = rear.DistanceMeters - front.DistanceMeters - restGapsMeters[i];
             var relativeVelocity = rear.SpeedMetersPerSecond - front.SpeedMetersPerSecond;
-            var rearForce = slackModel.CalculateForceOnRearCar(
+            var rearForce = -slackModel.CalculateForceOnRearCar(
                 relativeDisplacement, relativeVelocity, slackMetersByBoundary[i],
                 stiffnessNewtonsPerMeter[i], dampingNewtonSecondsPerMeter[i],
                 maximumForceNewtons[i]);
