@@ -69,6 +69,9 @@ public sealed class TrainConsistSimulationSession
         return loop.Advance(elapsedFrameSeconds, state =>
         {
             var forces = new TrainCarForceBreakdown[carCount];
+            var activeBrakePercentByCar = brakePercentProvider?.Invoke() ?? brakePercentByCar;
+            if (activeBrakePercentByCar.Count != carCount || activeBrakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100))
+                throw new InvalidOperationException("Fixed-step brake commands must match the consist and remain between 0 and 100 percent.");
             for (var i = 0; i < carCount; i++)
             {
                 var resistance = resistanceProvider(i, state.Cars[i]) ??
@@ -142,9 +145,6 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
-                var activeBrakePercentByCar = brakePercentProvider?.Invoke() ?? brakePercentByCar;
-                if (activeBrakePercentByCar.Count != carCount || activeBrakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100))
-                    throw new InvalidOperationException("Fixed-step brake commands must match the consist and remain between 0 and 100 percent.");
                 var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
                     state.Cars[i].SpeedMetersPerSecond,
                     activeBrakePercentByCar[i],
