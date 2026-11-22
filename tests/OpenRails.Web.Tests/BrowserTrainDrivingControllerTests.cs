@@ -70,6 +70,34 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void AppliesParsedDavisResistanceToVehicleAcceleration()
+    {
+        var consist = new ConsistMetadata("DavisDrive", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "davis-drive.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var lowResistanceAsset = CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction);
+        var highResistanceAsset = CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction,
+            davisA: 1_000);
+        var lowResistanceSetup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { lowResistanceAsset }, 500);
+        var highResistanceSetup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { highResistanceAsset }, 500);
+        var lowResistance = new BrowserTrainDrivingController(lowResistanceSetup);
+        var highResistance = new BrowserTrainDrivingController(highResistanceSetup);
+
+        lowResistance.SetThrottle(100);
+        highResistance.SetThrottle(100);
+        lowResistance.Advance(0.1);
+        highResistance.Advance(0.1);
+
+        Assert.True(lowResistance.State.Cars[0].SpeedMetersPerSecond >
+            highResistance.State.Cars[0].SpeedMetersPerSecond);
+    }
+
+    [Fact]
     public void StopsWhenRequestedAccelerationWouldOverloadParsedCoupler()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
@@ -132,11 +160,13 @@ public sealed class BrowserTrainDrivingControllerTests
 
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, bool isEngine, float mass, float length,
-        float brake, LocomotiveTractionMetadata? traction, float? couplerStrength = null) =>
+        float brake, LocomotiveTractionMetadata? traction, float? couplerStrength = null,
+        float? davisA = null, float? davisB = null, float? davisC = null) =>
         new("DriveTest", uid, name, "Freight", isEngine, false, name + (isEngine ? ".eng" : ".wag"),
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
                 null, null, brake, name + (isEngine ? ".eng" : ".wag"),
-                MinCouplerStrengthN: couplerStrength),
+                MinCouplerStrengthN: couplerStrength,
+                DavisAForceN: davisA, DavisBResistance: davisB, DavisCResistance: davisC),
             name + ".s", true, null, traction);
 }
