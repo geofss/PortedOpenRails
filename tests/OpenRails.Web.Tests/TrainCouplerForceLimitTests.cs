@@ -18,6 +18,17 @@ public sealed class TrainCouplerForceLimitTests
     }
 
     [Fact]
+    public void AllowsDifferentCompressionAndTensionRatings()
+    {
+        var limit = new TrainCouplerForceLimit(8, 5);
+
+        Assert.True(limit.Allows(8));
+        Assert.True(limit.Allows(-5));
+        Assert.False(limit.Allows(8.01));
+        Assert.False(limit.Allows(-5.01));
+    }
+
+    [Fact]
     public void RejectsNegativeAndNonFiniteRatings()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new TrainCouplerForceLimit(-1, 2).Validate());
