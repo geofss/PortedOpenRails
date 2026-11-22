@@ -259,10 +259,12 @@
                     else
                     {
                         var placementBuilder = new RollingStockTrackPlacementBuilder();
-                        var placementResult = MotionState is null
-                            ? placementBuilder.Build(Consist, CarAssets, meshesByUid, selectedPath)
-                            : MotionRoute is not null
-                                ? placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, MotionRoute, MotionState)
+                        var placementResult = MotionRoute is not null
+                            ? MotionState is null
+                                ? placementBuilder.Build(Consist, CarAssets, meshesByUid, MotionRoute)
+                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, MotionRoute, MotionState)
+                            : MotionState is null
+                                ? placementBuilder.Build(Consist, CarAssets, meshesByUid, selectedPath)
                                 : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, selectedPath, MotionState);
                         rollingStockPlacements.AddRange(placementResult.Placements);
                         rollingStockIssues.AddRange(placementResult.Issues);
