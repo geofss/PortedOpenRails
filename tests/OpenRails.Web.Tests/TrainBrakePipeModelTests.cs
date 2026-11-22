@@ -49,6 +49,17 @@ public sealed class TrainBrakePipeModelTests
     }
 
     [Fact]
+    public void RejectsInvalidPressureStateWhenDerivingBrakeCommands()
+    {
+        var model = new TrainBrakePipeModel();
+
+        Assert.Throws<ArgumentException>(() => model.GetBrakePercentByCar(
+            new TrainBrakePipeState(new[] { double.NaN })));
+        Assert.Throws<ArgumentException>(() => model.GetBrakePercentByCar(
+            new TrainBrakePipeState(Array.Empty<double>())));
+    }
+
+    [Fact]
     public void ConvertsPressureDropToPerCarBrakeCommands()
     {
         var model = new TrainBrakePipeModel();
