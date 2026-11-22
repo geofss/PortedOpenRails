@@ -18,7 +18,8 @@ public sealed class BrowserTrainDrivingController
     private readonly IReadOnlyList<double> couplerSlackMeters;
     private readonly IReadOnlyList<double> couplerStiffness;
     private readonly IReadOnlyList<double> couplerDamping;
-    private readonly IReadOnlyList<double> couplerMaximumForces;
+    private readonly IReadOnlyList<double> couplerMaximumCompressionForces;
+    private readonly IReadOnlyList<double> couplerMaximumTensionForces;
     private readonly TrainBrakePipeModel brakePipeModel = new();
     private readonly TrainBrakeCylinderModel brakeCylinderModel = new();
     private TrainBrakePipeState brakePipeState;
@@ -74,8 +75,10 @@ public sealed class BrowserTrainDrivingController
         couplerSlackMeters = Array.AsReadOnly(Enumerable.Repeat(0.08d, couplerRestGapsMeters.Count).ToArray());
         couplerStiffness = Array.AsReadOnly(Enumerable.Repeat(60_000d, couplerRestGapsMeters.Count).ToArray());
         couplerDamping = Array.AsReadOnly(Enumerable.Repeat(20_000d, couplerRestGapsMeters.Count).ToArray());
-        couplerMaximumForces = Array.AsReadOnly(setup.CouplerForceLimits.Select(limit =>
-            Math.Min(limit.MaximumTensionNewtons, limit.MaximumCompressionNewtons)).ToArray());
+        couplerMaximumCompressionForces = Array.AsReadOnly(setup.CouplerForceLimits
+            .Select(limit => limit.MaximumCompressionNewtons).ToArray());
+        couplerMaximumTensionForces = Array.AsReadOnly(setup.CouplerForceLimits
+            .Select(limit => limit.MaximumTensionNewtons).ToArray());
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
         brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
     }
@@ -113,7 +116,8 @@ public sealed class BrowserTrainDrivingController
 
         var dynamicCouplerForces = couplerDynamics.CalculatePerCarForces(
             setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
-            couplerStiffness, couplerDamping, couplerMaximumForces);
+            couplerStiffness, couplerDamping,
+            couplerMaximumCompressionForces, couplerMaximumTensionForces);
         CouplerForceTelemetryNewtons = dynamicCouplerForces;
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
