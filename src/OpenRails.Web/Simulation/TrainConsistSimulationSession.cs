@@ -4,8 +4,9 @@ namespace OpenRails.Web.Simulation;
 
 /// <summary>
 /// Applies per-locomotive traction to a multi-car fixed-step consist.
-/// Coupler forces are currently supplied by the caller; slack, breakage,
-/// and force distribution remain future systems.
+/// Supports caller-supplied coupler forces or algebraic force distribution
+/// for a target common acceleration with optional coupler force ratings.
+/// Dynamic slack, breakage, and transient drawbar behavior remain future systems.
 /// </summary>
 public sealed class TrainConsistSimulationSession
 {
