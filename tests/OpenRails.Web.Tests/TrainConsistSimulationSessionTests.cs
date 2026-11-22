@@ -64,6 +64,30 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void DynamicCouplerProviderRejectsMismatchedPerCarForces()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        Assert.Throws<InvalidOperationException>(() => session.AdvanceWithBrakeCommands(
+            0.1,
+            new[] { 0f, 0f },
+            new[] { 0d, 0d },
+            new[] { 0d, 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 0d, 0d },
+            couplerForceProvider: _ => new[] { 0d }));
+
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void AppliesPerCarBrakeCommandsToConsistMotion()
     {
         var initial = new TrainConsistMotionState(new[]
