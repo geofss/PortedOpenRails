@@ -58,6 +58,11 @@ public sealed class TrainConsistSimulationSession
             (powerReductionByCar is not null && powerReductionByCar.Count != carCount) ||
             (averageForceByCar is not null && averageForceByCar.Count != carCount))
             throw new ArgumentException("All per-car input arrays must match the consist size.");
+        if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
+            (powerReductionByCar is not null && powerReductionByCar.Any(value => !float.IsFinite(value))) ||
+            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
+            couplerForcesNewtons.Any(value => !double.IsFinite(value)))
+            throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar), "Per-car throttle, power, average-force, and coupler inputs must be finite.");
 
         return loop.Advance(elapsedFrameSeconds, state =>
         {
