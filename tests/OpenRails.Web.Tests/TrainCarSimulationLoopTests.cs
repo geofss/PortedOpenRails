@@ -24,6 +24,24 @@ public sealed class TrainCarSimulationLoopTests
     }
 
     [Fact]
+    public void BrakeModelRetardsMovingCarThroughForceIntegrator()
+    {
+        var loop = new TrainCarSimulationLoop(
+            new TrainCarMotionState(10_000, 10, 0),
+            fixedStepSeconds: 0.1,
+            maximumFrameSeconds: 0.5,
+            maximumStepsPerFrame: 8);
+        var brakeModel = new TrainCarBrakeModel();
+        var brakeForce = brakeModel.CalculateBrakeRetardForceNewtons(10, 100, 5_000);
+        var forces = new TrainCarForceBreakdown(0, 0, 0, brakeForce, 0, 0, 0);
+
+        loop.Advance(0.2, _ => forces);
+
+        Assert.Equal(9.9, loop.State.SpeedMetersPerSecond, 8);
+        Assert.True(loop.State.DistanceMeters < 2);
+    }
+
+    [Fact]
     public void SupportsPauseResumeAndReset()
     {
         var initial = new TrainCarMotionState(10_000, 0, 0);
