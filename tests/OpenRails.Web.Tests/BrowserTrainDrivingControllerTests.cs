@@ -124,13 +124,16 @@ public sealed class BrowserTrainDrivingControllerTests
 
         var executedSteps = controller.Advance(0.25);
         var simulatedSeconds = 8d / 60d;
-        var expectedPipe = new TrainBrakePipeModel().Advance(
-            new TrainBrakePipeModel().CreateInitialState(1), 100, simulatedSeconds);
+        var pipeModel = new TrainBrakePipeModel();
+        var expectedPipe = pipeModel.CreateInitialState(1);
         var expectedCylinderModel = new TrainBrakeCylinderModel();
-        var expectedCylinder = expectedCylinderModel.Advance(
-            expectedCylinderModel.CreateInitialState(1),
-            new TrainBrakePipeModel().GetBrakePercentByCar(expectedPipe),
-            simulatedSeconds);
+        var expectedCylinder = expectedCylinderModel.CreateInitialState(1);
+        for (var step = 0; step < executedSteps; step++)
+        {
+            expectedPipe = pipeModel.Advance(expectedPipe, 100, 1d / 60d);
+            expectedCylinder = expectedCylinderModel.Advance(
+                expectedCylinder, pipeModel.GetBrakePercentByCar(expectedPipe), 1d / 60d);
+        }
 
         Assert.Equal(8, executedSteps);
         Assert.Equal(simulatedSeconds, controller.SimulationTimeSeconds, 10);
