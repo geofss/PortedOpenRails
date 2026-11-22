@@ -32,6 +32,32 @@ public sealed class TrainConsistCouplerDynamics
         IReadOnlyList<double> maximumTensionNewtons)
     {
         ArgumentNullException.ThrowIfNull(state);
+        var boundaryForces = CalculatePerBoundaryForcesOnRearCars(
+            state, restGapsMeters, slackMetersByBoundary, stiffnessNewtonsPerMeter,
+            dampingNewtonSecondsPerMeter, maximumCompressionNewtons, maximumTensionNewtons);
+        var forces = new double[state.Cars.Count];
+        for (var i = 0; i < boundaryForces.Count; i++)
+        {
+            forces[i] -= boundaryForces[i];
+            forces[i + 1] += boundaryForces[i];
+        }
+        return Array.AsReadOnly(forces);
+    }
+
+    /// <summary>
+    /// Returns one signed coupler force per adjacent-car boundary, applied to
+    /// the rear car. Negative values indicate tension; positive values indicate compression.
+    /// </summary>
+    public IReadOnlyList<double> CalculatePerBoundaryForcesOnRearCars(
+        TrainConsistMotionState state,
+        IReadOnlyList<double> restGapsMeters,
+        IReadOnlyList<double> slackMetersByBoundary,
+        IReadOnlyList<double> stiffnessNewtonsPerMeter,
+        IReadOnlyList<double> dampingNewtonSecondsPerMeter,
+        IReadOnlyList<double> maximumCompressionNewtons,
+        IReadOnlyList<double> maximumTensionNewtons)
+    {
+        ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(restGapsMeters);
         ArgumentNullException.ThrowIfNull(slackMetersByBoundary);
         ArgumentNullException.ThrowIfNull(stiffnessNewtonsPerMeter);
@@ -48,19 +74,17 @@ public sealed class TrainConsistCouplerDynamics
             maximumTensionNewtons.Count != boundaryCount)
             throw new ArgumentException("Coupler parameter arrays must have one entry per adjacent-car boundary.");
 
-        var forces = new double[state.Cars.Count];
+        var forces = new double[boundaryCount];
         for (var i = 0; i < boundaryCount; i++)
         {
             var front = state.Cars[i];
             var rear = state.Cars[i + 1];
             var relativeDisplacement = rear.DistanceMeters - front.DistanceMeters - restGapsMeters[i];
             var relativeVelocity = rear.SpeedMetersPerSecond - front.SpeedMetersPerSecond;
-            var rearForce = -slackModel.CalculateForceOnRearCar(
+            forces[i] = -slackModel.CalculateForceOnRearCar(
                 relativeDisplacement, relativeVelocity, slackMetersByBoundary[i],
                 stiffnessNewtonsPerMeter[i], dampingNewtonSecondsPerMeter[i],
                 maximumCompressionNewtons[i], maximumTensionNewtons[i]);
-            forces[i] -= rearForce;
-            forces[i + 1] += rearForce;
         }
         return Array.AsReadOnly(forces);
     }
