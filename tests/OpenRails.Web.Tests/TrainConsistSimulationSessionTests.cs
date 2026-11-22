@@ -68,7 +68,8 @@ public sealed class TrainConsistSimulationSessionTests
             new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
             new LocomotiveTractionMetadata?[] { locomotive },
             fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
-        common.AdvanceWithCommonAcceleration(0.1, new[] { 100f }, resistance, 0,
+        common.AdvanceWithCommonAcceleration(0.1, new[] { 100f }, resistance,
+            0.1 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared,
             adhesionCoefficientByCar: coefficients);
 
         var automatic = new TrainConsistSimulationSession(
