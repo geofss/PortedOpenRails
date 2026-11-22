@@ -36,7 +36,7 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     [Fact]
     public void UsesTheWeakestAdjacentVehicleCouplerRating()
     {
-        var consist = new ConsistMetadata("Coupled", new[]
+        var consist = new ConsistMetadata("Freight", new[]
         {
             new ConsistCar("Engine", "Diesel", 1, true, false, false),
             new ConsistCar("Wagon", "Freight", 2, false, false, false)
