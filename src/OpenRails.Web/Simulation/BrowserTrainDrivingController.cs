@@ -81,6 +81,8 @@ public sealed class BrowserTrainDrivingController
             .Select(limit => limit.MaximumTensionNewtons).ToArray());
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
         brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
+        CouplerForceTelemetryNewtons = Array.AsReadOnly(
+            new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
 
     public void SetThrottle(float percent)
