@@ -41,6 +41,37 @@ public sealed class RollingStockTrackPlacementBuilderTests
     }
 
     [Fact]
+    public void MapsSimulatedDistanceAndHeadingAlongCurvedTrack()
+    {
+        var consist = new ConsistMetadata("CurveMotion", new[]
+        {
+            new ConsistCar("CurveWagon", "Freight", 50, false, false, false)
+        }, "curve-motion.con");
+        var assets = new[] { CreateReference("CurveMotion", 50, "CurveWagon", 10) };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh> { [50] = CreateMesh(50) };
+        var radius = 100d;
+        var pathLength = radius * Math.PI / 2d;
+        var source = new TrackVectorSection(43, 0, 0, 0, 0, 0, 1, "00",
+            0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(43, null, null, (float)radius, 90, false);
+        var section = new TrackSectionPlacement(source, geometry,
+            new TrackWorldPosition(0, 0, 0), pathLength);
+        var path = new TrackVectorPath(2, new[] { 3, 4 }, new[] { section }, pathLength);
+        var motion = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(10_000, 5, 10)
+        });
+
+        var result = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
+            consist, assets, meshes, path, motion);
+
+        var placement = Assert.Single(result.Placements);
+        Assert.Equal(0.5, placement.Anchor.X, 0.02);
+        Assert.Equal(9.98, placement.Anchor.Z, 0.02);
+        Assert.Equal(0.1, placement.HeadingRadians, 0.01);
+    }
+
+    [Fact]
     public void MapsEachSimulatedCarDistanceToItsOwnRoutePlacement()
     {
         var consist = new ConsistMetadata("Moving", new[]
