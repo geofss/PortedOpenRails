@@ -24,6 +24,7 @@ public sealed class TrainConsistCouplerForceDistributorTests
 
         var boundaries = distributor.CalculateBoundaryForces(state, external, 0.5);
         var perCar = distributor.ExpandBoundaryForcesToCarForces(boundaries);
+        Assert.Equal(perCar, distributor.CalculatePerCarCouplerForces(state, external, 0.5));
 
         Assert.Equal(2, boundaries.Count);
         Assert.Equal(-25_000, boundaries[0], 8);
