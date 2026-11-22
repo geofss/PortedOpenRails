@@ -202,6 +202,47 @@ public sealed class RollingStockTrackPlacementBuilder
 
 
     /// <summary>
+    /// Places a consist from the start of a connected multi-node route, preserving
+    /// each vehicle's metadata length when calculating its initial center distance.
+    /// </summary>
+    public RollingStockTrackPlacementResult Build(
+        ConsistMetadata consist,
+        IReadOnlyList<ConsistCarAssetReference> carAssets,
+        IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
+        TrackNetworkRoute route,
+        double maximumSegmentLengthMeters = 2,
+        double startDistanceMeters = 0)
+    {
+        ArgumentNullException.ThrowIfNull(consist);
+        ArgumentNullException.ThrowIfNull(carAssets);
+        ArgumentNullException.ThrowIfNull(meshesByUid);
+        ArgumentNullException.ThrowIfNull(route);
+        if (!double.IsFinite(startDistanceMeters) || startDistanceMeters < 0)
+            throw new ArgumentOutOfRangeException(nameof(startDistanceMeters));
+
+        var cars = consist.Cars.Where(car => !car.IsEndOfTrain).ToArray();
+        var states = new List<TrainCarMotionState>(cars.Length);
+        var cursor = startDistanceMeters;
+        foreach (var car in cars)
+        {
+            var reference = carAssets.FirstOrDefault(asset =>
+                asset.ConsistName == consist.Name && asset.Uid == car.Uid);
+            var length = reference?.Metadata?.LengthM ?? 10f;
+            if (!float.IsFinite(length) || length <= 0)
+                length = 10;
+            var mass = reference?.Metadata?.MassKg ?? 10_000f;
+            if (!float.IsFinite(mass) || mass <= 0)
+                mass = 10_000;
+            states.Add(new TrainCarMotionState(mass, 0, cursor + length / 2d));
+            cursor += length;
+        }
+
+        return BuildAtMotionState(
+            consist, carAssets, meshesByUid, route,
+            new TrainConsistMotionState(states), maximumSegmentLengthMeters);
+    }
+
+    /// <summary>
     /// Places vehicles on an ordered multi-node route assembled from connected
     /// TDB vector nodes. Reversed segments are sampled in reverse centerline order.
     /// </summary>
