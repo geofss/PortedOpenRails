@@ -91,7 +91,12 @@
                                     <option value="@path.TrackNodeIndex">TrackNode @path.TrackNodeIndex · @path.LengthMeters.ToString("N0") m</option>
                                 }
                             </select>
-                            <p class="hint">Choose one of the 100 longest two-ended vector paths as the traversal start</p>
+                            <label for="route-start-direction">Traversal direction</label>
+                            <select id="route-start-direction" value="@(reverseRouteStart ? "reverse" : "forward")" @onchange="SelectRouteDirection">
+                                <option value="forward">Forward</option>
+                                <option value="reverse">Reverse</option>
+                            </select>
+                            <p class="hint">Choose a starting vector and direction from the 100 longest two-ended paths</p>
                         </div>
                     }
                     <dl>
@@ -277,6 +282,7 @@
     private BrowserTrainDrivingController? drivingController;
     private TrainConsistMotionState? currentMotionState;
     private uint selectedTrackNodeIndex;
+    private bool reverseRouteStart;
 
     private IReadOnlyList<TrackVectorPath> RouteStartOptions => loadedRoute?.TrackNetwork.VectorPaths
         .Where(path => path.ConnectedNodeIndices.Count == 2)
@@ -295,6 +301,7 @@
         drivingController = null;
         currentMotionState = null;
         selectedTrackNodeIndex = 0;
+        reverseRouteStart = false;
         routeBuildMessage = null;
     }
 
@@ -325,6 +332,7 @@
             loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
             var traversalStart = RouteStartOptions.FirstOrDefault();
             selectedTrackNodeIndex = traversalStart?.TrackNodeIndex ?? 0;
+            reverseRouteStart = false;
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
             BuildConnectedRoute();
         }
@@ -348,6 +356,13 @@
         }
     }
 
+    private void SelectRouteDirection(ChangeEventArgs args)
+    {
+        reverseRouteStart = string.Equals(
+            args.Value?.ToString(), "reverse", StringComparison.OrdinalIgnoreCase);
+        BuildConnectedRoute();
+    }
+
     private void BuildConnectedRoute()
     {
         if (loadedRoute is null)
@@ -362,7 +377,8 @@
             traversedRoute = selectedTrackNodeIndex == 0
                 ? null
                 : new TrackNetworkRouteBuilder().Build(
-                    loadedRoute.TrackNetwork, selectedTrackNodeIndex);
+                    loadedRoute.TrackNetwork, selectedTrackNodeIndex,
+                    startReversed: reverseRouteStart);
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
                 (traversedRoute is null
                     ? " No two-ended vector path was available for connected traversal."
