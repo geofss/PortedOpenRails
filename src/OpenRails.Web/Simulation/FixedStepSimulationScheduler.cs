@@ -13,7 +13,7 @@ public sealed class FixedStepSimulationScheduler
     private double accumulatorSeconds;
 
     public double SimulationTimeSeconds { get; private set; }
-    public double InterpolationAlpha => accumulatorSeconds / fixedStepSeconds;
+    public double InterpolationAlpha => Math.Clamp(accumulatorSeconds / fixedStepSeconds, 0, 1);
     public double DroppedTimeSeconds { get; private set; }
     public bool IsPaused { get; private set; }
     public int LastStepsExecuted { get; private set; }
@@ -53,7 +53,7 @@ public sealed class FixedStepSimulationScheduler
             LastStepsExecuted < maximumStepsPerFrame)
         {
             simulationStep(fixedStepSeconds);
-            accumulatorSeconds -= fixedStepSeconds;
+            accumulatorSeconds = Math.Max(0, accumulatorSeconds - fixedStepSeconds);
             SimulationTimeSeconds += fixedStepSeconds;
             LastStepsExecuted++;
         }
