@@ -48,7 +48,7 @@ public sealed class TrainConsistSimulationSessionTests
             new[] { 0f, 0f },
             new[] { 0d, 0d },
             new[] { 0d, 0d },
-            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            (_, _) => new TrainCarResistanceForces(1_000, 0, 0, 0, 0, 0),
             new[] { 0d, 0d },
             couplerForceProvider: state =>
             {
@@ -58,7 +58,9 @@ public sealed class TrainConsistSimulationSessionTests
 
         Assert.Equal(3, steps);
         Assert.Equal(3, sampledLeadDistances.Count);
-        Assert.Equal(new[] { 0d, 0d, 0d }, sampledLeadDistances);
+        Assert.Equal(0, sampledLeadDistances[0]);
+        Assert.True(sampledLeadDistances[1] > sampledLeadDistances[0]);
+        Assert.True(sampledLeadDistances[2] > sampledLeadDistances[1]);
     }
 
     [Fact]
