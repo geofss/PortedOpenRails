@@ -49,6 +49,41 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void AllConsistAdvanceModesApplyPerCarAdhesionLimits()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "TestLoco", 100_000, 100_000, 1_000_000, 100, 0, null, "test.eng");
+        var resistance = new Func<int, TrainCarMotionState, TrainCarResistanceForces>(
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0));
+        var expectedSpeed = 0.1 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared * 0.1;
+        var coefficients = new[] { 0.1d };
+
+        var direct = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        direct.Advance(0.1, new[] { 100f }, resistance, new[] { 0d }, adhesionCoefficientByCar: coefficients);
+
+        var common = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        common.AdvanceWithCommonAcceleration(0.1, new[] { 100f }, resistance, 0,
+            adhesionCoefficientByCar: coefficients);
+
+        var automatic = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        automatic.AdvanceWithAutomaticCouplers(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, adhesionCoefficientByCar: coefficients);
+
+        Assert.Equal(expectedSpeed, direct.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(expectedSpeed, common.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(expectedSpeed, automatic.State.Cars[0].SpeedMetersPerSecond, 8);
+    }
+
+    [Fact]
     public void DynamicCouplerProviderRunsForEveryFixedSimulationStep()
     {
         var initial = new TrainConsistMotionState(new[]
