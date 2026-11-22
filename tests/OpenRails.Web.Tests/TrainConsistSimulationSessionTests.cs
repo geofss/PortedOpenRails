@@ -31,6 +31,44 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void RejectsNonFiniteInputsBeforeAdvancingSimulation()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(initial, new LocomotiveTractionMetadata?[] { null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Advance(
+            0.1, new[] { float.NaN },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Advance(
+            0.1, new[] { 0f },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { double.PositiveInfinity }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
+    public void RejectsInputArraySizesThatDoNotMatchTheConsist()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(initial, new LocomotiveTractionMetadata?[] { null, null });
+
+        Assert.Throws<ArgumentException>(() => session.Advance(
+            0.1, new[] { 0f },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 0d, 0d }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void PausingAndResettingMaintainConsistClockState()
     {
         var initial = new TrainConsistMotionState(new[]
