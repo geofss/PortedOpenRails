@@ -1,6 +1,7 @@
 @page "/"
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
+@using OpenRails.Web.Simulation
 @using Microsoft.AspNetCore.Components.Forms
 @implements IDisposable
 
@@ -242,6 +243,7 @@
         selectedRoute = null;
         errorMessage = null;
         loadedRoute = null;
+        traversedRoute = null;
         routeBuildMessage = null;
     }
 
@@ -295,6 +297,7 @@
         selectedRoute = null;
         selectedDefault = false;
         loadedRoute = null;
+        traversedRoute = null;
         routeBuildMessage = null;
 
         try
