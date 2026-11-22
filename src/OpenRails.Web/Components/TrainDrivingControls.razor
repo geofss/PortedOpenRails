@@ -46,6 +46,21 @@
             </table>
         </div>
     }
+    @if (Controller.CouplerForceTelemetryNewtons.Count > 0 && Consist is not null)
+    {
+        <h4>Coupler force telemetry</h4>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Boundary</th><th>Force</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Controller.CouplerForceTelemetryNewtons.Count && i + 1 < DrivingCars.Count; i++)
+                    {
+                        <tr><td>@DrivingCars[i].Name ↔ @DrivingCars[i + 1].Name</td><td>@Controller.CouplerForceTelemetryNewtons[i].ToString("N0") N</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
     <dl>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
