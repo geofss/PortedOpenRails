@@ -31,7 +31,7 @@ public sealed class RollingStockTrackPlacementBuilderTests
 
         Assert.Equal(2, result.Placements.Count);
         Assert.Empty(result.Issues);
-        Assert.Equal(20, result.UsedLengthMeters, 5);
+        Assert.Equal(40, result.UsedLengthMeters, 5);
         Assert.Equal(10, result.Placements[0].Anchor.X, 1);
         Assert.Equal(0, result.Placements[0].Anchor.Z, 1);
         Assert.Equal(30, result.Placements[1].Anchor.X, 1);
