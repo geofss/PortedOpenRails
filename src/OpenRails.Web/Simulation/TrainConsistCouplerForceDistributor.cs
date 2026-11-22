@@ -11,7 +11,8 @@ public sealed class TrainConsistCouplerForceDistributor
     public IReadOnlyList<double> CalculateBoundaryForces(
         TrainConsistMotionState state,
         IReadOnlyList<TrainCarForceBreakdown> externalForces,
-        double targetAccelerationMetersPerSecondSquared)
+        double targetAccelerationMetersPerSecondSquared,
+        IReadOnlyList<TrainCouplerForceLimit>? forceLimits = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(externalForces);
@@ -19,6 +20,11 @@ public sealed class TrainConsistCouplerForceDistributor
             throw new ArgumentException("A consist must contain at least one car.", nameof(state));
         if (state.Cars.Count != externalForces.Count)
             throw new ArgumentException("Each car requires an external-force breakdown.", nameof(externalForces));
+        if (forceLimits is not null && forceLimits.Count != Math.Max(0, state.Cars.Count - 1))
+            throw new ArgumentException("Each coupler boundary requires a matching force limit.", nameof(forceLimits));
+        if (forceLimits is not null)
+            foreach (var limit in forceLimits)
+                limit.Validate();
         if (!double.IsFinite(targetAccelerationMetersPerSecondSquared))
             throw new ArgumentOutOfRangeException(nameof(targetAccelerationMetersPerSecondSquared));
 
@@ -39,6 +45,12 @@ public sealed class TrainConsistCouplerForceDistributor
                 boundaries[i] = residualPrefix;
         }
 
+        if (forceLimits is not null)
+            for (var i = 0; i < boundaries.Length; i++)
+                if (!forceLimits[i].Allows(boundaries[i]))
+                    throw new InvalidOperationException(
+                        $"Coupler boundary {i} force {boundaries[i]:N0} N exceeds its rating.");
+
         var totalMass = state.Cars.Sum(car => car.MassKg);
         var totalTargetForce = totalMass * targetAccelerationMetersPerSecondSquared;
         var tolerance = Math.Max(1e-6, Math.Abs(totalTargetForce) * 1e-9);
@@ -56,10 +68,11 @@ public sealed class TrainConsistCouplerForceDistributor
     public IReadOnlyList<double> CalculatePerCarCouplerForces(
         TrainConsistMotionState state,
         IReadOnlyList<TrainCarForceBreakdown> externalForces,
-        double targetAccelerationMetersPerSecondSquared)
+        double targetAccelerationMetersPerSecondSquared,
+        IReadOnlyList<TrainCouplerForceLimit>? forceLimits = null)
     {
         var boundaries = CalculateBoundaryForces(
-            state, externalForces, targetAccelerationMetersPerSecondSquared);
+            state, externalForces, targetAccelerationMetersPerSecondSquared, forceLimits);
         return ExpandBoundaryForcesToCarForces(boundaries);
     }
 
