@@ -12,6 +12,7 @@ public sealed class BrowserTrainDrivingController
     private readonly TrainConsistSimulationSetup setup;
     private readonly TrainCarResistanceModel resistanceModel = new();
     private readonly TrainCarResistanceParameters resistanceParameters;
+    private readonly TrackNetworkRouteProfile? routeProfile;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
@@ -22,7 +23,8 @@ public sealed class BrowserTrainDrivingController
     public BrowserTrainDrivingController(
         TrainConsistSimulationSetup setup,
         double rollingResistanceCoefficient = 0.0015,
-        double aerodynamicDragAreaSquareMeters = 6)
+        double aerodynamicDragAreaSquareMeters = 6,
+        TrackNetworkRoute? route = null)
     {
         this.setup = setup ?? throw new ArgumentNullException(nameof(setup));
         if (!double.IsFinite(rollingResistanceCoefficient) || rollingResistanceCoefficient < 0)
@@ -36,6 +38,7 @@ public sealed class BrowserTrainDrivingController
         resistanceParameters = new TrainCarResistanceParameters(
             RollingResistanceCoefficient: rollingResistanceCoefficient,
             AerodynamicDragAreaSquareMeters: aerodynamicDragAreaSquareMeters);
+        routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
     }
 
     public void SetThrottle(float percent)
@@ -64,7 +67,9 @@ public sealed class BrowserTrainDrivingController
             throttle,
             brakes,
             setup.MaximumBrakeForceNewtonsByCar,
-            (_, car) => resistanceModel.Calculate(car, resistanceParameters));
+            (_, car) => resistanceModel.Calculate(car, routeProfile is null
+                ? resistanceParameters
+                : resistanceParameters with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }));
     }
 
     public void Pause() => setup.Session.Pause();
