@@ -80,7 +80,7 @@ public sealed class TrainConsistCouplerForceDistributorTests
             state, external, 0.5,
             new[] { new TrainCouplerForceLimit(5_000, 20_000), new TrainCouplerForceLimit(20_000, 20_000) }));
         Assert.Throws<ArgumentException>(() => distributor.CalculateBoundaryForces(
-            state, external, 0.5, new[] new TrainCouplerForceLimit(1, 1) }));
+            state, external, 0.5, new[] { new TrainCouplerForceLimit(1, 1) } }));
     }
 
     [Fact]
