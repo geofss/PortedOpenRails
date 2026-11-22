@@ -28,17 +28,22 @@ public sealed class TrainCarMotionIntegrator
 
         var acceleration = totalForceNewtons / state.MassKg;
         var nextSpeed = state.SpeedMetersPerSecond + acceleration * elapsedSeconds;
+        var motionSeconds = elapsedSeconds;
 
-        // A resisting force can bring a car to rest, but it must not make the car
-        // reverse direction in the same integration step.
+        // A resisting force can bring a car to rest partway through this step.
+        // Stop at the zero-velocity instant instead of incorrectly applying the
+        // remaining frame time as though the car were still moving.
         if (state.SpeedMetersPerSecond > 0 && nextSpeed < 0 ||
             state.SpeedMetersPerSecond < 0 && nextSpeed > 0)
+        {
+            motionSeconds = -state.SpeedMetersPerSecond / acceleration;
             nextSpeed = 0;
+        }
 
-        // Trapezoidal integration keeps distance consistent with the speed change
-        // within the fixed step (rather than using only the end-step velocity).
+        // Trapezoidal integration is exact for constant acceleration over the
+        // portion of the step during which the car is actually moving.
         var nextDistance = state.DistanceMeters +
-            (state.SpeedMetersPerSecond + nextSpeed) * 0.5 * elapsedSeconds;
+            (state.SpeedMetersPerSecond + nextSpeed) * 0.5 * motionSeconds;
         var nextState = state with
         {
             SpeedMetersPerSecond = nextSpeed,
