@@ -20,6 +20,26 @@ public sealed class FixedStepSimulationSchedulerTests
     }
 
     [Fact]
+    public void ProducesSameMotionForDifferentBrowserFrameCadences()
+    {
+        var integrator = new TrainCarMotionIntegrator();
+        var coarseScheduler = new FixedStepSimulationScheduler(0.01, 0.5, 32);
+        var fineScheduler = new FixedStepSimulationScheduler(0.01, 0.5, 32);
+        var coarseState = new TrainCarMotionState(10_000, 0, 0);
+        var fineState = coarseState;
+
+        coarseScheduler.Advance(0.2, step =>
+            coarseState = integrator.Step(coarseState, 15_000, step).State);
+        for (var frame = 0; frame < 20; frame++)
+            fineScheduler.Advance(0.01, step =>
+                fineState = integrator.Step(fineState, 15_000, step).State);
+
+        Assert.Equal(coarseState.SpeedMetersPerSecond, fineState.SpeedMetersPerSecond, 8);
+        Assert.Equal(coarseState.DistanceMeters, fineState.DistanceMeters, 8);
+        Assert.Equal(coarseScheduler.SimulationTimeSeconds, fineScheduler.SimulationTimeSeconds, 8);
+    }
+
+    [Fact]
     public void BoundsCatchUpWorkAndAccountsForDroppedTime()
     {
         var scheduler = new FixedStepSimulationScheduler(0.1, 0.5, 2);
