@@ -6,6 +6,7 @@ public sealed record TrainConsistSimulationSetup(
     TrainConsistSimulationSession Session,
     TrainConsistMotionState InitialState,
     IReadOnlyList<double> MaximumBrakeForceNewtonsByCar,
+    IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<string> Diagnostics);
 
 /// <summary>
@@ -37,6 +38,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         var states = new List<TrainCarMotionState>(cars.Length);
         var traction = new List<LocomotiveTractionMetadata?>(cars.Length);
         var brakeRatings = new List<double>(cars.Length);
+        var poweredCars = new List<bool>(cars.Length);
         var diagnostics = new List<string>();
         var cursor = startDistanceMeters;
 
@@ -71,6 +73,7 @@ public sealed class TrainConsistSimulationSetupBuilder
 
             states.Add(new TrainCarMotionState(mass, initialSpeedMetersPerSecond, cursor + length / 2d));
             traction.Add(car.IsEngine ? asset?.TractionMetadata : null);
+            poweredCars.Add(car.IsEngine && asset?.TractionMetadata is not null);
             brakeRatings.Add(maximumBrakeForce);
             cursor += length;
         }
@@ -88,6 +91,7 @@ public sealed class TrainConsistSimulationSetupBuilder
             session,
             initialState,
             Array.AsReadOnly(brakeRatings.ToArray()),
+            Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
     }
 }
