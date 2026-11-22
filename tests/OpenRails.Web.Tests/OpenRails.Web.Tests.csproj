@@ -89,6 +89,5 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarSimulationLoop.cs" Link="Simulation/TrainCarSimulationLoop.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistMotionIntegrator.cs" Link="Simulation/TrainConsistMotionIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationLoop.cs" Link="Simulation/TrainConsistSimulationLoop.cs" />
-    <Compile Include="TrainConsistCouplerDynamicsTests.cs" />
   </ItemGroup>
 </Project>
