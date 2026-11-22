@@ -11,13 +11,11 @@ public sealed record ConsistMetadata(string Name, IReadOnlyList<ConsistCar> Cars
 /// <summary>Reads MSTS/Open Rails .con consists using the upstream STF parser and virtual package streams.</summary>
 public sealed class ConsistReader
 {
-    private static readonly object FactoryLock = new();
-
     public ConsistMetadata Read(IVirtualContentStore store, string path)
     {
         ArgumentNullException.ThrowIfNull(store);
         var virtualPath = VirtualPath.Normalize(path);
-        lock (FactoryLock)
+        lock (StfReaderAccess.SyncRoot)
         {
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(store);
             using var reader = new STFReader(virtualPath, useTree: false);
