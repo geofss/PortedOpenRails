@@ -7,6 +7,13 @@ namespace OpenRails.Web.Simulation;
 /// with locomotive traction metadata, applies brake commands to each vehicle,
 /// and calculates transient coupler forces from adjacent-car displacement and velocity.
 /// </summary>
+public enum TrainReverserPosition
+{
+    Reverse = -1,
+    Neutral = 0,
+    Forward = 1
+}
+
 public sealed class BrowserTrainDrivingController
 {
     private readonly TrainConsistSimulationSetup setup;
@@ -31,6 +38,7 @@ public sealed class BrowserTrainDrivingController
     public bool IsPaused => setup.Session.IsPaused;
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
+    public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
     public TrainBrakePipeState BrakePipeState => brakePipeState;
     public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
     public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
@@ -93,6 +101,13 @@ public sealed class BrowserTrainDrivingController
         ThrottlePercent = Math.Clamp(percent, 0, 100);
     }
 
+    public void SetReverser(TrainReverserPosition position)
+    {
+        if (!Enum.IsDefined(position))
+            throw new ArgumentOutOfRangeException(nameof(position));
+        ReverserPosition = position;
+    }
+
     public void SetBrake(double percent)
     {
         if (!double.IsFinite(percent))
@@ -140,7 +155,8 @@ public sealed class BrowserTrainDrivingController
                     couplerStiffness, couplerDamping,
                     couplerMaximumCompressionForces, couplerMaximumTensionForces);
                 return forces;
-            });
+            },
+            tractionDirection: (int)ReverserPosition);
     }
 
     public void Pause() => setup.Session.Pause();
@@ -152,6 +168,7 @@ public sealed class BrowserTrainDrivingController
         brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
         ThrottlePercent = 0;
         BrakePercent = 0;
+        ReverserPosition = TrainReverserPosition.Forward;
         CouplerForceTelemetryNewtons = Array.AsReadOnly(new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
 }
