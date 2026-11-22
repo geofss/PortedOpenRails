@@ -14,6 +14,7 @@ This milestone adds browser-independent simulation sessions that connect parsed 
 - `TrainCarBrakeModel` converts a finite 0–100% command and rated brake force to signed retarding force; commands are clamped and the force opposes travel direction. It is a basic force evaluator, not a pneumatic or friction-brake subsystem.
 - `LocomotiveSimulationSession.AdvanceWithBrakeCommand` combines commanded braking with existing gravity/resistance inputs and locomotive traction in one fixed-step update.
 - `TrainConsistSimulationSession.AdvanceWithBrakeCommands` applies individual brake commands and ratings to each car alongside traction and supplied coupler force inputs.
+- `AdvanceWithCommonAcceleration` can also accept optional per-car brake commands and ratings, so braking forces participate in its common-acceleration force balance and coupler rating checks.
 
 ## Current limits
 
