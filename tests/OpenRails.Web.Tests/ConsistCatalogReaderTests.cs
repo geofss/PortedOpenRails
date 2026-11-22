@@ -9,6 +9,24 @@ namespace OpenRails.Web.Tests;
 public sealed class ConsistCatalogReaderTests
 {
     [Fact]
+    public void ParsesMinimumCouplerBreakStrengthAcrossCouplerDefinitions()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Freight/Car.wag", """
+            Wagon (
+                Name ( "CouplerCar" )
+                Mass ( 30000 )
+                Coupling ( Spring ( Break ( 80000 60000 ) ) )
+                Coupling ( Spring ( Break ( 100000 90000 ) ORTSBreak ( 70000 65000 ) ) )
+            )
+            """));
+
+        var metadata = new RollingStockMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Freight/Car.wag");
+
+        Assert.Equal(60_000, metadata.MinCouplerStrengthN);
+    }
+
+    [Fact]
     public void DiscoversConsistsAndReportsBrokenFilesWithoutStoppingCatalog()
     {
         using var store = CreateStore(
