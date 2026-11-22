@@ -87,6 +87,10 @@ public sealed class TrainBrakeCylinderModel
     public IReadOnlyList<double> GetBrakePercentByCar(TrainBrakeCylinderState state)
     {
         ArgumentNullException.ThrowIfNull(state);
+        if (state.PressuresKPa.Count == 0 ||
+            state.PressuresKPa.Any(pressure => !double.IsFinite(pressure) ||
+                pressure < 0 || pressure > MaximumCylinderPressureKPa))
+            throw new ArgumentException("Brake-cylinder pressures must be finite and within the model range.", nameof(state));
         return Array.AsReadOnly(state.PressuresKPa.Select(pressure =>
             Math.Clamp(pressure / MaximumCylinderPressureKPa * 100, 0, 100)).ToArray());
     }
