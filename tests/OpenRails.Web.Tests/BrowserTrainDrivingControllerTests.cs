@@ -41,6 +41,50 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void PausedControllerFreezesBrakePipeAndCylinderSubsystems()
+    {
+        var consist = new ConsistMetadata("PausedBrake", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "paused-brake.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetBrake(100);
+        controller.Pause();
+        var pipeBefore = controller.BrakePipeState;
+        var cylinderBefore = controller.BrakeCylinderState;
+        var timeBefore = controller.SimulationTimeSeconds;
+
+        Assert.Equal(0, controller.Advance(0.5));
+
+        Assert.Equal(pipeBefore, controller.BrakePipeState);
+        Assert.Equal(cylinderBefore, controller.BrakeCylinderState);
+        Assert.Equal(timeBefore, controller.SimulationTimeSeconds);
+    }
+
+    [Fact]
+    public void RejectsInvalidElapsedTimeBeforeAdvancingBrakeSubsystems()
+    {
+        var consist = new ConsistMetadata("InvalidElapsed", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "invalid-elapsed.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetBrake(100);
+        var pipeBefore = controller.BrakePipeState;
+        var cylinderBefore = controller.BrakeCylinderState;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => controller.Advance(double.NaN));
+
+        Assert.Equal(pipeBefore, controller.BrakePipeState);
+        Assert.Equal(cylinderBefore, controller.BrakeCylinderState);
+    }
+
+    [Fact]
     public void RouteGradeTelemetryIsEmptyWhenNoRouteIsAttached()
     {
         var consist = new ConsistMetadata("NoRouteGrade", new[]
