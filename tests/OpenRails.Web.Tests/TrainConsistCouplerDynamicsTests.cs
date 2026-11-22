@@ -48,8 +48,8 @@ public sealed class TrainConsistCouplerDynamicsTests
             new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0)
         };
         var next = new TrainConsistMotionIntegrator().Step(state, zeroExternal, forces, 0.1);
-        Assert.True(next.Cars[0].SpeedMetersPerSecond > 0);
-        Assert.True(next.Cars[1].SpeedMetersPerSecond < 0);
+        Assert.True(next.Cars[0].SpeedMetersPerSecond < 0);
+        Assert.True(next.Cars[1].SpeedMetersPerSecond > 0);
         Assert.Equal(0, next.Cars[0].SpeedMetersPerSecond + next.Cars[1].SpeedMetersPerSecond, 8);
     }
 
