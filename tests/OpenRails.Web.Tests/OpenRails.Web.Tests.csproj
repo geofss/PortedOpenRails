@@ -36,6 +36,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerForceDistributor.cs" Link="Simulation/TrainConsistCouplerForceDistributor.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerForceLimit.cs" Link="Simulation/TrainCouplerForceLimit.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerSlackModel.cs" Link="Simulation/TrainCouplerSlackModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerDynamics.cs" Link="Simulation/TrainConsistCouplerDynamics.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/SBR.cs" Link="Parsing/SBR.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TokenID.cs" Link="Parsing/TokenID.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ShapeFile.cs" Link="Parsing/ShapeFile.cs" />
@@ -88,5 +89,6 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarSimulationLoop.cs" Link="Simulation/TrainCarSimulationLoop.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistMotionIntegrator.cs" Link="Simulation/TrainConsistMotionIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationLoop.cs" Link="Simulation/TrainConsistSimulationLoop.cs" />
+    <Compile Include="TrainConsistCouplerDynamicsTests.cs" />
   </ItemGroup>
 </Project>
