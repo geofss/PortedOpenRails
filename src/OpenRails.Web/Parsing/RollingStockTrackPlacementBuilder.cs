@@ -19,7 +19,8 @@ public sealed class RollingStockTrackPlacementBuilder
         IReadOnlyList<ConsistCarAssetReference> carAssets,
         IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
         TrackVectorPath path,
-        double maximumSegmentLengthMeters = 2)
+        double maximumSegmentLengthMeters = 2,
+        double startDistanceMeters = 0)
     {
         ArgumentNullException.ThrowIfNull(consist);
         ArgumentNullException.ThrowIfNull(carAssets);
@@ -27,6 +28,8 @@ public sealed class RollingStockTrackPlacementBuilder
         ArgumentNullException.ThrowIfNull(path);
         if (!double.IsFinite(maximumSegmentLengthMeters) || maximumSegmentLengthMeters <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumSegmentLengthMeters));
+        if (!double.IsFinite(startDistanceMeters) || startDistanceMeters < 0)
+            throw new ArgumentOutOfRangeException(nameof(startDistanceMeters));
 
         var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
         if (centerline.Count < 2)
@@ -47,7 +50,7 @@ public sealed class RollingStockTrackPlacementBuilder
         var availableLength = cumulative[^1];
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
-        var cursor = 0d;
+        var cursor = startDistanceMeters;
 
         foreach (var car in consist.Cars.Where(car => !car.IsEndOfTrain))
         {
@@ -99,7 +102,7 @@ public sealed class RollingStockTrackPlacementBuilder
         return new RollingStockTrackPlacementResult(
             Array.AsReadOnly(placements.ToArray()),
             Array.AsReadOnly(issues.ToArray()),
-            Math.Min(cursor, availableLength));
+            Math.Min(Math.Max(0, cursor - startDistanceMeters), Math.Max(0, availableLength - startDistanceMeters)));
     }
 
     private static (TrackWorldPosition Position, double TangentX, double TangentZ) Sample(
