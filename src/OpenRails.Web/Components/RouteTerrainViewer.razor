@@ -1,3 +1,4 @@
+@using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
 @using Microsoft.JSInterop
@@ -81,6 +82,22 @@
             }
         </ul>
     </details>
+    @if (!string.IsNullOrWhiteSpace(rollingStockSummary))
+    {
+        <p class="hint">@rollingStockSummary</p>
+    }
+    @if (rollingStockIssues.Count > 0)
+    {
+        <details class="route-world-asset-diagnostics">
+            <summary>Rolling-stock placement diagnostics (@rollingStockIssues.Count)</summary>
+            <ul>
+                @foreach (var issue in rollingStockIssues.Take(20))
+                {
+                    <li>@issue</li>
+                }
+            </ul>
+        </details>
+    }
     @if (renderError is not null)
     {
         <p class="error">@renderError</p>
@@ -89,6 +106,9 @@
 
 @code {
     [Parameter, EditorRequired] public RouteLoadResult Route { get; set; } = default!;
+    [Parameter] public IVirtualContentStore? Store { get; set; }
+    [Parameter] public ConsistMetadata? Consist { get; set; }
+    [Parameter] public IReadOnlyList<ConsistCarAssetReference> CarAssets { get; set; } = Array.Empty<ConsistCarAssetReference>();
     private ElementReference canvas;
     private IJSObjectReference? module;
     private string? renderError;
@@ -96,6 +116,8 @@
     private bool hasDrawn;
     private bool trackGeometryTruncated;
     private int trackShapeBatchCount;
+    private string? rollingStockSummary;
+    private readonly List<string> rollingStockIssues = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -174,6 +196,79 @@
                 var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder()
                     .Build(Route.WorldScenery.Loaded);
 
+                var rollingStockPlacements = new List<TrackShapePlacement>();
+                IReadOnlyList<LoadedTrackShapeTexture> rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
+                var rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
+                    rollingStockPlacements, rollingStockTextureAssets);
+
+                if (Store is not null && Consist is not null)
+                {
+                    var meshesByUid = new Dictionary<int, TrackShapeAssetMesh>();
+                    var textureDiscoveries = new List<TrackShapeTextureAssetDiscovery>();
+                    var shapeLoader = new RollingStockShapeAssetLoader();
+                    uint shapeIndex = 0;
+
+                    foreach (var car in Consist.Cars.Where(car => !car.IsEndOfTrain))
+                    {
+                        var reference = CarAssets.FirstOrDefault(asset =>
+                            asset.ConsistName == Consist.Name && asset.Uid == car.Uid);
+                        if (reference?.ShapeFound != true || reference.ShapeAssetPath is null)
+                        {
+                            rollingStockIssues.Add($"{car.Name}: original WagonShape asset is unavailable.");
+                            continue;
+                        }
+
+                        try
+                        {
+                            var shapeReference = new RollingStockShapeAssetReference(
+                                reference.Metadata?.ShapeFileName ?? Path.GetFileName(reference.ShapeAssetPath),
+                                reference.ShapeAssetPath);
+                            var mesh = shapeLoader.Load(Store, shapeReference);
+                            var asset = new TrackShapeAssetMesh(
+                                shapeIndex++, Path.GetFileName(reference.ShapeAssetPath),
+                                reference.ShapeAssetPath, mesh);
+                            meshesByUid[car.Uid] = asset;
+                            textureDiscoveries.Add(new RollingStockTextureAssetLocator().Locate(
+                                Store, reference.Folder, new[] { asset }));
+                        }
+                        catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+                        {
+                            rollingStockIssues.Add($"{car.Name}: {exception.Message}");
+                        }
+                    }
+
+                    var selectedPath = Route.TrackNetwork.VectorPaths
+                        .OrderByDescending(path => path.LengthMeters)
+                        .FirstOrDefault();
+                    if (selectedPath is null)
+                    {
+                        rollingStockIssues.Add("No route vector path is available for rolling-stock placement.");
+                    }
+                    else
+                    {
+                        var placementResult = new RollingStockTrackPlacementBuilder().Build(
+                            Consist, CarAssets, meshesByUid, selectedPath);
+                        rollingStockPlacements.AddRange(placementResult.Placements);
+                        rollingStockIssues.AddRange(placementResult.Issues);
+                    }
+
+                    var textureDiscovery = new TrackShapeTextureAssetDiscovery(
+                        textureDiscoveries.SelectMany(discovery => discovery.Found),
+                        textureDiscoveries.SelectMany(discovery => discovery.Missing));
+                    var textureLoad = new TrackShapeTextureAssetLoader().Load(Store, textureDiscovery);
+                    rollingStockTextureAssets = textureLoad.Loaded;
+                    rollingStockIssues.AddRange(textureLoad.Missing.Select(issue =>
+                        $"{issue.ImageName}: {issue.Reason}"));
+                    rollingStockIssues.AddRange(textureLoad.Failed.Select(issue =>
+                        $"{issue.Path}: {issue.Reason}"));
+                    rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
+                        rollingStockPlacements, rollingStockTextureAssets);
+
+                    rollingStockSummary = $"{rollingStockPlacements.Count} vehicle(s) placed along route TrackNode " +
+                        $"{selectedPath?.TrackNodeIndex.ToString() ?? "—"} using original track centerline geometry" +
+                        (rollingStockGeometry.WasTruncated ? " · rolling-stock geometry cap reached" : "");
+                }
+
                 var combinedTextureAssets = new List<LoadedTrackShapeTexture>();
                 var textureIndexByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 int AddTexture(LoadedTrackShapeTexture asset)
@@ -187,6 +282,11 @@
                 }
                 var trackTextureIndexes = trackTextureAssets.Select(AddTexture).ToArray();
                 var worldTextureIndexes = worldShapeGeometry.Textures.Select(AddTexture).ToArray();
+                var rollingStockTextureIndexes = rollingStockTextureAssets
+                    .Where(asset => asset.Reference.SeasonFolder is null &&
+                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
+                        asset.Texture.MipLevels.Count > 0)
+                    .Select(AddTexture).ToArray();
                 int RemapTexture(int index, IReadOnlyList<int> map) => index < 0 ? -1 : map[index];
 
                 var shapeTextures = combinedTextureAssets.Select(asset => new
@@ -196,7 +296,8 @@
                     pixels = asset.Texture.MipLevels[0]
                 }).ToArray();
                 trackGeometryTruncated = trackShapeGeometry.WasTruncated || worldShapeGeometry.WasTruncated;
-                trackShapeBatchCount = trackShapeGeometry.Batches.Count + worldShapeGeometry.Batches.Count;
+                trackShapeBatchCount = trackShapeGeometry.Batches.Count + worldShapeGeometry.Batches.Count +
+                    rollingStockGeometry.Batches.Count;
                 var shapeBatches = trackShapeGeometry.Batches.Select(batch => new
                 {
                     vertices = batch.Vertices,
@@ -210,6 +311,14 @@
                     vertices = batch.Vertices,
                     indices = batch.Indices,
                     textureIndex = RemapTexture(batch.TextureIndex, worldTextureIndexes),
+                    alphaTest = batch.AlphaTest,
+                    textureAddressMode = batch.TextureAddressMode,
+                    zBias = batch.ZBias
+                })).Concat(rollingStockGeometry.Batches.Select(batch => new
+                {
+                    vertices = batch.Vertices,
+                    indices = batch.Indices,
+                    textureIndex = RemapTexture(batch.TextureIndex, rollingStockTextureIndexes),
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
