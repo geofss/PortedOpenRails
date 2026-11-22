@@ -55,6 +55,28 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void MapsDavisCoefficientsIntoPerCarResistanceParameters()
+    {
+        var consist = new ConsistMetadata("Freight", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "freight.con");
+        var assets = new[]
+        {
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null,
+                davisA: 100, davisB: 5, davisC: 0.5f)
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var resistance = Assert.Single(setup.ResistanceParametersByCar);
+
+        Assert.Equal(100, resistance.DavisA);
+        Assert.Equal(5, resistance.DavisB);
+        Assert.Equal(0.5, resistance.DavisC);
+        Assert.Equal(0.0015, resistance.RollingResistanceCoefficient);
+    }
+
+    [Fact]
     public void ReportsFallbackMetadataAndRejectsInvalidRouteLength()
     {
         var consist = new ConsistMetadata("Missing", new[]
@@ -74,10 +96,12 @@ public sealed class TrainConsistSimulationSetupBuilderTests
 
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, float mass, float length, float brake,
-        LocomotiveTractionMetadata? traction, float? couplerStrength = null) =>
+        LocomotiveTractionMetadata? traction, float? couplerStrength = null,
+        float? davisA = null, float? davisB = null, float? davisC = null) =>
         new("Freight", uid, name, "Freight", uid == 1, false, name + ".eng",
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + ".eng", MinCouplerStrengthN: couplerStrength),
+                null, null, brake, name + ".eng", MinCouplerStrengthN: couplerStrength,
+                DavisAForceN: davisA, DavisBResistance: davisB, DavisCResistance: davisC),
             name + ".s", true, null, traction);
 }
