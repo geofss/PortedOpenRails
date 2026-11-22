@@ -230,13 +230,13 @@
                     .Build(Route.WorldScenery.Loaded);
 
                 var rollingStockPlacements = new List<TrackShapePlacement>();
-                IReadOnlyList<LoadedTrackShapeTexture> rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
+                rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
                 var rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
                     rollingStockPlacements, rollingStockTextureAssets);
 
                 if (Store is not null && Consist is not null)
                 {
-                    var meshesByUid = new Dictionary<int, TrackShapeAssetMesh>();
+                    rollingStockMeshesByUid.Clear();
                     var textureDiscoveries = new List<TrackShapeTextureAssetDiscovery>();
                     var shapeLoader = new RollingStockShapeAssetLoader();
                     uint shapeIndex = 0;
@@ -260,7 +260,7 @@
                             var asset = new TrackShapeAssetMesh(
                                 shapeIndex++, Path.GetFileName(reference.ShapeAssetPath),
                                 reference.ShapeAssetPath, mesh);
-                            meshesByUid[car.Uid] = asset;
+                            rollingStockMeshesByUid[car.Uid] = asset;
                             textureDiscoveries.Add(new RollingStockTextureAssetLocator().Locate(
                                 Store, reference.Folder, new[] { asset }));
                         }
@@ -270,10 +270,10 @@
                         }
                     }
 
-                    var selectedPath = Route.TrackNetwork.VectorPaths
+                    selectedTrackPath = Route.TrackNetwork.VectorPaths
                         .OrderByDescending(path => path.LengthMeters)
                         .FirstOrDefault();
-                    if (selectedPath is null)
+                    if (selectedTrackPath is null)
                     {
                         rollingStockIssues.Add("No route vector path is available for rolling-stock placement.");
                     }
@@ -282,11 +282,11 @@
                         var placementBuilder = new RollingStockTrackPlacementBuilder();
                         var placementResult = MotionRoute is not null
                             ? MotionState is null
-                                ? placementBuilder.Build(Consist, CarAssets, meshesByUid, MotionRoute)
-                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, MotionRoute, MotionState)
+                                ? placementBuilder.Build(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute)
+                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute, MotionState)
                             : MotionState is null
-                                ? placementBuilder.Build(Consist, CarAssets, meshesByUid, selectedPath)
-                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, selectedPath, MotionState);
+                                ? placementBuilder.Build(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath)
+                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath, MotionState);
                         rollingStockPlacements.AddRange(placementResult.Placements);
                         rollingStockIssues.AddRange(placementResult.Issues);
                     }
@@ -322,7 +322,7 @@
                 }
                 var trackTextureIndexes = trackTextureAssets.Select(AddTexture).ToArray();
                 var worldTextureIndexes = worldShapeGeometry.Textures.Select(AddTexture).ToArray();
-                var rollingStockTextureIndexes = rollingStockTextureAssets
+                rollingStockTextureIndexes = rollingStockTextureAssets
                     .Where(asset => asset.Reference.SeasonFolder is null &&
                         asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
                         asset.Texture.MipLevels.Count > 0)
