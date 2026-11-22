@@ -77,6 +77,29 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void PreventsChangingReverserWhileConsistIsMoving()
+    {
+        var consist = new ConsistMetadata("DriveTest", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "reverser-interlock.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        Assert.True(controller.CanChangeReverser);
+        controller.SetThrottle(100);
+        controller.Advance(0.1);
+
+        Assert.False(controller.CanChangeReverser);
+        Assert.Throws<InvalidOperationException>(() =>
+            controller.SetReverser(TrainReverserPosition.Reverse));
+        Assert.Equal(TrainReverserPosition.Forward, controller.ReverserPosition);
+    }
+
+    [Fact]
     public void PausedControllerFreezesBrakePipeAndCylinderSubsystems()
     {
         var consist = new ConsistMetadata("PausedBrake", new[]
