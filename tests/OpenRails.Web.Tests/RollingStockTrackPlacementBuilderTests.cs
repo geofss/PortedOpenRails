@@ -185,6 +185,46 @@ public sealed class RollingStockTrackPlacementBuilderTests
         Assert.Equal(Math.PI, Math.Abs(result.Placements[0].HeadingRadians), 0.02);
     }
 
+    [Fact]
+    public void PlacesMovingVehicleAcrossReversedConnectedVectorNode()
+    {
+        var consist = new ConsistMetadata("Connected", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 60, false, false, false)
+        }, "connected.con");
+        var assets = new[] { CreateReference("Connected", 60, "Wagon", 10) };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh> { [60] = CreateMesh(60) };
+
+        var first = CreateStraightPath(100, 0);
+        var reversedSource = new TrackVectorSection(43, 0, 0, 0, 0, 0, 1, "00",
+            0, 0, 0, 0, 200, 0, (float)Math.PI, 0);
+        var reversedGeometry = new TrackSectionGeometry(43, null, 100, null, null, false);
+        var reversedSection = new TrackSectionPlacement(reversedSource, reversedGeometry,
+            new TrackWorldPosition(0, 0, 200), 100);
+        var second = new TrackVectorPath(2, new[] { 4, 3 }, new[] { reversedSection },
+            100, new TrackWorldPosition(0, 0, 100));
+        var route = new TrackNetworkRoute(
+            new[]
+            {
+                new TrackNetworkRouteSegment(first, false),
+                new TrackNetworkRouteSegment(second, true)
+            },
+            Array.Empty<string>(),
+            200);
+        var motion = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(10_000, 4, 150)
+        });
+
+        var result = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
+            consist, assets, meshes, route, motion);
+
+        var placement = Assert.Single(result.Placements);
+        Assert.Equal(150, placement.Anchor.Z, 1);
+        Assert.Equal((uint)43, placement.TrackSectionIndex);
+        Assert.Empty(result.Issues);
+    }
+
     private static ConsistCarAssetReference CreateReference(string consist, int uid, string name, float length) =>
         new(consist, uid, name, "Freight", false, false, $"{name}.wag", true, null,
             new RollingStockMetadata(name, "Freight", 10000, 3, 4, length, 4, 8, null, null, null, $"{name}.wag"),
