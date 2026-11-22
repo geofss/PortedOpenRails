@@ -35,11 +35,13 @@ public sealed class TrainConsistSimulationLoop
 
     public int Advance(
         double elapsedFrameSeconds,
-        Func<TrainConsistMotionState, TrainConsistForceFrame> forceProvider)
+        Func<TrainConsistMotionState, TrainConsistForceFrame> forceProvider,
+        Action<double>? beforeStep = null)
     {
         ArgumentNullException.ThrowIfNull(forceProvider);
         return scheduler.Advance(elapsedFrameSeconds, stepSeconds =>
         {
+            beforeStep?.Invoke(stepSeconds);
             var frame = forceProvider(State);
             ArgumentNullException.ThrowIfNull(frame);
             State = integrator.Step(
