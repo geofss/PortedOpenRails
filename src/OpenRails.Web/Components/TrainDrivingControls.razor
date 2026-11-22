@@ -1,0 +1,120 @@
+@using OpenRails.Web.Simulation
+@implements IAsyncDisposable
+
+<section class="route-details driving-controls">
+    <h3>Train driving controls</h3>
+    <p class="hint">Prototype controls · fixed-step traction, braking, and automatic coupler force distribution</p>
+    <div class="driving-control-row">
+        <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
+        <input id="train-throttle" type="range" min="0" max="100" step="1"
+               value="@Controller.ThrottlePercent" @oninput="ChangeThrottle" />
+    </div>
+    <div class="driving-control-row">
+        <label for="train-brake">Brake · @Controller.BrakePercent.ToString("N0")%</label>
+        <input id="train-brake" type="range" min="0" max="100" step="1"
+               value="@Controller.BrakePercent" @oninput="ChangeBrake" />
+    </div>
+    <div class="package-actions">
+        <button type="button" @onclick="StartAsync" disabled="@isRunning">Start</button>
+        <button type="button" @onclick="StopAsync" disabled="@(!isRunning)">Pause</button>
+        <button type="button" @onclick="ResetAsync">Reset</button>
+    </div>
+    <dl>
+        <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
+        <dt>Simulation time</dt><dd>@Controller.SimulationTimeSeconds.ToString("N1") s</dd>
+        <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
+    </dl>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public BrowserTrainDrivingController Controller { get; set; } = default!;
+    [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
+
+    private CancellationTokenSource? runCancellation;
+    private Task? runTask;
+    private bool isRunning;
+    private double speedKmh => Controller.State.Cars.Count == 0
+        ? 0
+        : Controller.State.Cars[0].SpeedMetersPerSecond * 3.6;
+
+    private void ChangeThrottle(ChangeEventArgs args)
+    {
+        if (float.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetThrottle(value);
+    }
+
+    private void ChangeBrake(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetBrake(value);
+    }
+
+    private Task StartAsync()
+    {
+        if (isRunning)
+            return Task.CompletedTask;
+        runCancellation = new CancellationTokenSource();
+        Controller.Resume();
+        isRunning = true;
+        runTask = RunLoopAsync(runCancellation.Token);
+        return Task.CompletedTask;
+    }
+
+    private async Task RunLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(33));
+        var previousTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        var frameCount = 0;
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                var currentTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+                var elapsed = (currentTimestamp - previousTimestamp) /
+                    (double)System.Diagnostics.Stopwatch.Frequency;
+                previousTimestamp = currentTimestamp;
+                Controller.Advance(Math.Clamp(elapsed, 0, 0.25));
+                frameCount++;
+                if (frameCount % 2 == 0)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        await MotionChanged.InvokeAsync(Controller.State);
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task StopAsync()
+    {
+        Controller.Pause();
+        isRunning = false;
+        var cancellation = runCancellation;
+        runCancellation = null;
+        cancellation?.Cancel();
+        if (runTask is not null)
+        {
+            try { await runTask; } catch (OperationCanceledException) { }
+            runTask = null;
+        }
+        cancellation?.Dispose();
+    }
+
+    private async Task ResetAsync()
+    {
+        await StopAsync();
+        Controller.Reset();
+        await MotionChanged.InvokeAsync(Controller.State);
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync();
+    }
+}
