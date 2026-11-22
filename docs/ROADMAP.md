@@ -44,7 +44,7 @@ See [Milestone 2E STFReader Integration](MILESTONE_2E_STF_READER_INTEGRATION.md)
 - [x] Sample straight and curved centerlines using the Open Rails heading convention
 - [x] Discover the terrain tiles touched by the loaded track network
 - [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
-- [ ] Validate the route pipeline against a real, licensed user-imported route package
+- [ ] Validate the route pipeline against a real, licensed user-imported route package — use the [real-route validation checklist](REAL_ROUTE_VALIDATION.md)
 - [ ] Generate terrain meshes from the original terrain patch/sample data
 - [ ] Port train and train-car models
 - [ ] Port braking, traction, power supply, and control systems
