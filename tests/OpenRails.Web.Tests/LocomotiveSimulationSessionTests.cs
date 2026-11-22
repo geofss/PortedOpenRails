@@ -23,6 +23,20 @@ public sealed class LocomotiveSimulationSessionTests
     }
 
     [Fact]
+    public void BrakeCommandSessionRejectsInvalidRatingBeforeStepping()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "TestLoco", 1_000, 1_000, 100_000, 100, 0, null, "test.eng");
+        var session = new LocomotiveSimulationSession(
+            metadata, new TrainCarMotionState(1_000, 0, 0),
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommand(
+            0.1, 0, 50, -1, _ => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0)));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void AppliesDriverBrakeCommandAlongsideOtherResistanceForces()
     {
         var metadata = new LocomotiveTractionMetadata(
