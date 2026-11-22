@@ -26,7 +26,7 @@ public sealed class TrainConsistCouplerForceDistributor
         {
             var car = state.Cars[i];
             var forces = externalForces[i];
-            if (!double.IsFinite(car.MassKilograms) || car.MassKilograms <= 0)
+            if (!double.IsFinite(car.MassKg) || car.MassKilograms <= 0)
                 throw new ArgumentOutOfRangeException(nameof(state), "Car masses must be finite and positive.");
             var externalNet = new TrainCarForceModel().CalculateNetLongitudinalForce(car, forces);
             residualPrefix += car.MassKilograms * targetAccelerationMetersPerSecondSquared - externalNet;
