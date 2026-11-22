@@ -29,7 +29,7 @@
         <h4>Vehicle telemetry</h4>
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Vehicle</th><th>Speed</th><th>Route position</th><th>Brake-pipe pressure</th></tr></thead>
+                <thead><tr><th>Vehicle</th><th>Speed</th><th>Route position</th><th>Brake-pipe pressure</th><th>Brake-cylinder pressure</th></tr></thead>
                 <tbody>
                     @for (var i = 0; i < Controller.State.Cars.Count && i < DrivingCars.Count; i++)
                     {
@@ -39,6 +39,7 @@
                             <td>@((car.SpeedMetersPerSecond * 3.6).ToString("N1")) km/h</td>
                             <td>@car.DistanceMeters.ToString("N1") m</td>
                             <td>@Controller.BrakePipeState.PressuresKPa[i].ToString("N0") kPa</td>
+                            <td>@Controller.BrakeCylinderState.PressuresKPa[i].ToString("N0") kPa</td>
                         </tr>
                     }
                 </tbody>
@@ -48,6 +49,7 @@
     <dl>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
+        <dt>Brake cylinder · front / rear</dt><dd>@Controller.BrakeCylinderState.PressuresKPa[0].ToString("N0") / @Controller.BrakeCylinderState.PressuresKPa[^1].ToString("N0") kPa</dd>
         <dt>Simulation time</dt><dd>@Controller.SimulationTimeSeconds.ToString("N1") s</dd>
         <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
     </dl>
