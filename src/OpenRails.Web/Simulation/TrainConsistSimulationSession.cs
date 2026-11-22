@@ -109,7 +109,8 @@ public sealed class TrainConsistSimulationSession
         Action<double>? beforeSimulationStep = null,
         Func<IReadOnlyList<double>>? brakePercentProvider = null,
         Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null,
-        int tractionDirection = 1)
+        int tractionDirection = 1,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(brakePercentByCar);
@@ -118,6 +119,12 @@ public sealed class TrainConsistSimulationSession
         ArgumentNullException.ThrowIfNull(couplerForcesNewtons);
         if (tractionDirection is < -1 or > 1)
             throw new ArgumentOutOfRangeException(nameof(tractionDirection));
+        if (adhesionCoefficientByCar is not null &&
+            (adhesionCoefficientByCar.Count != State.Cars.Count ||
+             adhesionCoefficientByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 1)))
+            throw new ArgumentOutOfRangeException(nameof(adhesionCoefficientByCar),
+                "Adhesion coefficients must match the consist and be between zero and one.");
+        var adhesionModel = new TrainCarAdhesionModel();
         var carCount = State.Cars.Count;
         if (throttlePercentByCar.Count != carCount || brakePercentByCar.Count != carCount ||
             maximumBrakeForceNewtonsByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
@@ -152,6 +159,11 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var adhesionCoefficient = adhesionCoefficientByCar is null
+                    ? TrainCarAdhesionModel.DefaultAdhesionCoefficient
+                    : adhesionCoefficientByCar[i];
+                motiveForce = (float)adhesionModel.LimitTractiveForce(
+                    motiveForce, state.Cars[i].MassKg, adhesionCoefficient);
                 var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
                     state.Cars[i].SpeedMetersPerSecond,
                     activeBrakePercentByCar[i],
