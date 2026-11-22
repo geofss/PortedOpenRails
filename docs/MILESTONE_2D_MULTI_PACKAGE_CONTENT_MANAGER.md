@@ -1,6 +1,6 @@
 # Milestone 2D — Multi-package content manager
 
-**Status:** Initial composite-store and browser package-stack implementation committed; CI validation pending.
+**Status:** Composite-store and browser package-stack implementation committed; reorder/removal controls and ownership-safe overlay rebuilding are implemented and covered by CI. Upstream precedence equivalence remains unverified..
 
 ## Goal
 
