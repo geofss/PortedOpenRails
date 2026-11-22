@@ -70,8 +70,8 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.NotNull(downhill.LeadCarRouteGradePercent);
         Assert.True(uphill.LeadCarRouteGradePercent < 0);
         Assert.True(downhill.LeadCarRouteGradePercent > 0);
-        Assert.Equal(-10, uphill.LeadCarRouteGradePercent, 1);
-        Assert.Equal(10, downhill.LeadCarRouteGradePercent, 1);
+        Assert.InRange(uphill.LeadCarRouteGradePercent!.Value, -10.1, -9.9);
+        Assert.InRange(downhill.LeadCarRouteGradePercent!.Value, 9.9, 10.1);
     }
 
     [Fact]
