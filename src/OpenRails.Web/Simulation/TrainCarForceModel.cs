@@ -51,13 +51,16 @@ public sealed class TrainCarForceModel
 
         var drivingForce = forces.MotiveForceNewtons + forces.GravityForceNewtons;
         var resistance = forces.TotalResistanceNewtons;
-        var direction = Math.Abs(state.SpeedMetersPerSecond) > 1e-9
-            ? Math.Sign(state.SpeedMetersPerSecond)
-            : Math.Sign(drivingForce);
+        if (!double.IsFinite(resistance))
+            throw new ArgumentOutOfRangeException(nameof(forces), "Combined resistance must be finite.");
 
-        if (direction == 0 || Math.Abs(drivingForce) <= resistance)
+        if (Math.Abs(state.SpeedMetersPerSecond) > 1e-9)
+            return drivingForce - Math.Sign(state.SpeedMetersPerSecond) * resistance;
+
+        var startingDirection = Math.Sign(drivingForce);
+        if (startingDirection == 0 || Math.Abs(drivingForce) <= resistance)
             return 0;
 
-        return drivingForce - direction * resistance;
+        return drivingForce - startingDirection * resistance;
     }
 }
