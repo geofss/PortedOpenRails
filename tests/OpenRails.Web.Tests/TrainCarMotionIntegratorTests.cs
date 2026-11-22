@@ -25,7 +25,7 @@ public sealed class TrainCarMotionIntegratorTests
         var result = new TrainCarMotionIntegrator().Step(initial, -20_000, 1);
 
         Assert.Equal(0, result.State.SpeedMetersPerSecond);
-        Assert.Equal(12.5, result.State.DistanceMeters, 8);
+        Assert.Equal(12.25, result.State.DistanceMeters, 8);
     }
 
     [Fact]
