@@ -40,6 +40,24 @@ public sealed class TrainConsistCouplerForceDistributorTests
     }
 
     [Fact]
+    public void RejectsTargetAccelerationThatExternalForcesCannotAchieve()
+    {
+        var state = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var external = new[]
+        {
+            new TrainCarForceBreakdown(1_000, 0, 0, 0, 0, 0, 0),
+            new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0)
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            new TrainConsistCouplerForceDistributor().CalculateBoundaryForces(state, external, 0.5));
+    }
+
+    [Fact]
     public void EqualExternalForcesNeedNoCouplerForce()
     {
         var state = new TrainConsistMotionState(new[]
