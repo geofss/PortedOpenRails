@@ -26,7 +26,9 @@ public sealed class ConsistCatalogReaderTests
                 """),
             ("TRAINS/TRAINSET/FolderA/EngineA.eng", WagonFixture),
             ("TRAINS/TRAINSET/FolderB/CarB.wag", WagonFixture),
-            ("TRAINS/TRAINSET/FolderA/CarA.wag", WagonFixture));
+            ("TRAINS/TRAINSET/FolderA/CarA.wag", WagonFixture),
+            ("TRAINS/TRAINSET/FolderA/fixture.s", "shape bytes"),
+            ("TRAINS/TRAINSET/FolderB/fixture.s", "shape bytes"));
 
         var result = new ConsistCatalogReader().Read(store);
 
@@ -39,6 +41,8 @@ public sealed class ConsistCatalogReaderTests
         Assert.Equal(4, result.CarAssets.Count);
         Assert.All(result.CarAssets, asset => Assert.True(asset.Found));
         Assert.All(result.CarAssets, asset => Assert.NotNull(asset.Metadata));
+        Assert.All(result.CarAssets, asset => Assert.True(asset.ShapeFound));
+        Assert.All(result.CarAssets, asset => Assert.EndsWith("/fixture.s", asset.ShapeAssetPath));
         var metadata = result.CarAssets[0].Metadata!;
         Assert.Equal("FixtureCar", metadata.Name);
         Assert.Equal("fixture.s", metadata.ShapeFileName);
