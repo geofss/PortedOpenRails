@@ -41,6 +41,40 @@ public sealed class RollingStockTrackPlacementBuilderTests
     }
 
     [Fact]
+    public void MapsEachSimulatedCarDistanceToItsOwnRoutePlacement()
+    {
+        var consist = new ConsistMetadata("Moving", new[]
+        {
+            new ConsistCar("WagonA", "Freight", 40, false, false, false),
+            new ConsistCar("WagonB", "Freight", 41, false, false, true)
+        }, "moving.con");
+        var assets = new[]
+        {
+            CreateReference("Moving", 40, "WagonA", 20),
+            CreateReference("Moving", 41, "WagonB", 20)
+        };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh>
+        {
+            [40] = CreateMesh(40),
+            [41] = CreateMesh(41)
+        };
+        var motion = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(20_000, 5, 15),
+            new TrainCarMotionState(20_000, 5, 45)
+        });
+
+        var result = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
+            consist, assets, meshes, CreateStraightPath(100, 0), motion);
+
+        Assert.Equal(2, result.Placements.Count);
+        Assert.Equal(15, result.Placements[0].Anchor.Z, 1);
+        Assert.Equal(45, result.Placements[1].Anchor.Z, 1);
+        Assert.Equal(Math.PI, Math.Abs(result.Placements[1].HeadingRadians), 0.02);
+        Assert.Empty(result.Issues);
+    }
+
+    [Fact]
     public void SupportsConsistOffsetsAlongTheSelectedRoutePath()
     {
         var consist = new ConsistMetadata("Moving", new[]
