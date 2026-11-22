@@ -52,11 +52,15 @@
         <h4>Coupler force telemetry</h4>
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Boundary</th><th>Force</th></tr></thead>
+                <thead><tr><th>Boundary</th><th>Force</th><th>State</th></tr></thead>
                 <tbody>
                     @for (var i = 0; i < Controller.CouplerForceTelemetryNewtons.Count && i + 1 < DrivingCars.Count; i++)
                     {
-                        <tr><td>@DrivingCars[i].Name ↔ @DrivingCars[i + 1].Name</td><td>@Controller.CouplerForceTelemetryNewtons[i].ToString("N0") N</td></tr>
+                        <tr>
+                            <td>@DrivingCars[i].Name ↔ @DrivingCars[i + 1].Name</td>
+                            <td>@Controller.CouplerForceTelemetryNewtons[i].ToString("N0") N</td>
+                            <td>@(Controller.CouplerForceTelemetryNewtons[i] < 0 ? "Tension" : Controller.CouplerForceTelemetryNewtons[i] > 0 ? "Compression" : "Neutral")</td>
+                        </tr>
                     }
                 </tbody>
             </table>
