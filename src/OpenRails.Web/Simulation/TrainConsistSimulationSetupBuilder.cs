@@ -7,6 +7,7 @@ public sealed record TrainConsistSimulationSetup(
     TrainConsistMotionState InitialState,
     IReadOnlyList<double> MaximumBrakeForceNewtonsByCar,
     IReadOnlyList<bool> PoweredCars,
+    IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
     IReadOnlyList<string> Diagnostics);
 
 /// <summary>
@@ -78,6 +79,27 @@ public sealed class TrainConsistSimulationSetupBuilder
             cursor += length;
         }
 
+        var couplerLimits = new List<TrainCouplerForceLimit>(Math.Max(0, cars.Length - 1));
+        for (var i = 0; i < cars.Length - 1; i++)
+        {
+            var frontAsset = carAssets.FirstOrDefault(candidate =>
+                candidate.ConsistName == consist.Name && candidate.Uid == cars[i].Uid);
+            var rearAsset = carAssets.FirstOrDefault(candidate =>
+                candidate.ConsistName == consist.Name && candidate.Uid == cars[i + 1].Uid);
+            var ratedStrengths = new[]
+                {
+                    frontAsset?.Metadata?.MinCouplerStrengthN,
+                    rearAsset?.Metadata?.MinCouplerStrengthN
+                }
+                .Where(value => value is > 0 && float.IsFinite(value.Value))
+                .Select(value => (double)value!.Value)
+                .ToArray();
+            var strength = ratedStrengths.Length == 0 ? double.MaxValue : ratedStrengths.Min();
+            if (ratedStrengths.Length == 0)
+                diagnostics.Add($"Coupler between {cars[i].Name} and {cars[i + 1].Name}: strength metadata unavailable; no finite force limit applied.");
+            couplerLimits.Add(new TrainCouplerForceLimit(strength, strength));
+        }
+
         if (cursor > routeLengthMeters)
             diagnostics.Add($"Initial consist length extends to {cursor:N1} m, beyond the {routeLengthMeters:N1} m connected route.");
 
@@ -92,6 +114,7 @@ public sealed class TrainConsistSimulationSetupBuilder
             initialState,
             Array.AsReadOnly(brakeRatings.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
+            Array.AsReadOnly(couplerLimits.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
     }
 }
