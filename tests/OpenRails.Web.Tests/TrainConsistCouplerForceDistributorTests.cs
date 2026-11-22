@@ -78,7 +78,7 @@ public sealed class TrainConsistCouplerForceDistributorTests
         Assert.Equal(2, distributor.CalculateBoundaryForces(state, external, 0.5, valid).Count);
         Assert.Throws<InvalidOperationException>(() => distributor.CalculateBoundaryForces(
             state, external, 0.5,
-            new[] new TrainCouplerForceLimit(5_000, 20_000), new TrainCouplerForceLimit(20_000, 20_000) }));
+            new[] { new TrainCouplerForceLimit(5_000, 20_000), new TrainCouplerForceLimit(20_000, 20_000) }));
         Assert.Throws<ArgumentException>(() => distributor.CalculateBoundaryForces(
             state, external, 0.5, new[] new TrainCouplerForceLimit(1, 1) }));
     }
