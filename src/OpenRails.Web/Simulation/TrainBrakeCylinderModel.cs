@@ -4,12 +4,14 @@ namespace OpenRails.Web.Simulation;
 /// Per-vehicle brake-cylinder pressure. Pressure builds after brake-pipe
 /// reduction and exhausts gradually when the pipe is recharged.
 /// </summary>
-public sealed record TrainBrakeCylinderState(IReadOnlyList<double> PressuresKPa)
+public sealed record TrainBrakeCylinderState
 {
+    public IReadOnlyList<double> PressuresKPa { get; }
+
     public TrainBrakeCylinderState(IEnumerable<double> pressuresKPa)
-        : this(Array.AsReadOnly(pressuresKPa?.ToArray() ??
-            throw new ArgumentNullException(nameof(pressuresKPa))))
     {
+        ArgumentNullException.ThrowIfNull(pressuresKPa);
+        PressuresKPa = Array.AsReadOnly(pressuresKPa.ToArray());
     }
 }
 
