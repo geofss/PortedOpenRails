@@ -30,6 +30,26 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void CanStartTraversalFromTheReverseEndOfASelectedVector()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var previous = CreatePath(20, new[] { 0, 1 }, -100, 0);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, previous },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(
+            network, 10, startReversed: true);
+
+        Assert.Equal(new uint[] { 10, 20 }, route.Segments.Select(segment => segment.Path.TrackNodeIndex));
+        Assert.True(route.Segments[0].IsReversed);
+        Assert.True(route.Segments[1].IsReversed);
+        Assert.Equal(200, route.LengthMeters);
+        Assert.Empty(route.Diagnostics);
+    }
+
+    [Fact]
     public void StopsAndReportsAmbiguousJunctionContinuation()
     {
         var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
