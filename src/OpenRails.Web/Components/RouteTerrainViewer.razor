@@ -373,6 +373,61 @@
             }
             catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
         }
+        else if (initialized && module is not null && motionUpdatePending)
+        {
+            try
+            {
+                await UpdateRollingStockAsync();
+            }
+            catch (Exception ex)
+            {
+                renderError = $"Rolling-stock motion update failed: {ex.Message}";
+                motionUpdatePending = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private int rollingStockGeometryBatchCount;
+
+    private async Task UpdateRollingStockAsync()
+    {
+        motionUpdatePending = false;
+        if (module is null || Store is null || Consist is null || MotionState is null ||
+            rollingStockMeshesByUid.Count == 0)
+            return;
+
+        var builder = new RollingStockTrackPlacementBuilder();
+        var placement = MotionRoute is not null
+            ? builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute, MotionState)
+            : selectedTrackPath is not null
+                ? builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath, MotionState)
+                : null;
+        if (placement is null)
+            return;
+
+        var geometry = new TrackShapeRenderGeometryBuilder()
+            .BuildTextured(placement.Placements, rollingStockTextureAssets);
+        var batches = geometry.Batches.Select(batch => new
+        {
+            vertices = batch.Vertices,
+            indices = batch.Indices,
+            textureIndex = batch.TextureIndex < 0 ? -1 : rollingStockTextureIndexes[batch.TextureIndex],
+            alphaTest = batch.AlphaTest,
+            textureAddressMode = batch.TextureAddressMode,
+            zBias = batch.ZBias
+        }).ToArray();
+
+        await module.InvokeVoidAsync("updateRollingStockBatches", batches);
+        foreach (var issue in placement.Issues)
+            if (!rollingStockIssues.Contains(issue))
+                rollingStockIssues.Add(issue);
+        trackShapeBatchCount = trackShapeBatchCount - rollingStockGeometryBatchCount + geometry.Batches.Count;
+        rollingStockGeometryBatchCount = geometry.Batches.Count;
+        trackGeometryTruncated = trackGeometryTruncated || geometry.WasTruncated;
+        rollingStockSummary = $"{placement.Placements.Count} vehicle(s) updated from live consist motion · {(MotionState.Cars[0].SpeedMetersPerSecond * 3.6):N1} km/h";
+        lastMotionState = MotionState;
+        await InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
