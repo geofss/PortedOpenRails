@@ -85,6 +85,32 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void ReportsOneCouplerForceReadingPerAdjacentVehicleBoundary()
+    {
+        var consist = new ConsistMetadata("ThreeCarTelemetry", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon A", "Freight", 2, false, false, false),
+            new ConsistCar("Wagon B", "Freight", 3, false, false, false)
+        }, "three-car-telemetry.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction),
+            CreateAsset(2, "Wagon A", false, 2_000, 20, 8_000, null),
+            CreateAsset(3, "Wagon B", false, 2_000, 20, 8_000, null)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetThrottle(100);
+        controller.Advance(0.1);
+
+        Assert.Equal(2, controller.CouplerForceTelemetryNewtons.Count);
+    }
+
+    [Fact]
     public void RouteGradeTelemetryIsEmptyWhenNoRouteIsAttached()
     {
         var consist = new ConsistMetadata("NoRouteGrade", new[]
