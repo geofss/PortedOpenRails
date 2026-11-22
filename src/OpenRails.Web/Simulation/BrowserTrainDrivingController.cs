@@ -31,6 +31,7 @@ public sealed class BrowserTrainDrivingController
     public double BrakePercent { get; private set; }
     public TrainBrakePipeState BrakePipeState => brakePipeState;
     public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
+    public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
 
     public BrowserTrainDrivingController(
         TrainConsistSimulationSetup setup,
@@ -100,6 +101,7 @@ public sealed class BrowserTrainDrivingController
         var dynamicCouplerForces = couplerDynamics.CalculatePerCarForces(
             setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
             couplerStiffness, couplerDamping, couplerMaximumForces);
+        CouplerForceTelemetryNewtons = dynamicCouplerForces;
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
             throttle,
@@ -120,5 +122,6 @@ public sealed class BrowserTrainDrivingController
         brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
         ThrottlePercent = 0;
         BrakePercent = 0;
+        CouplerForceTelemetryNewtons = Array.AsReadOnly(new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
 }
