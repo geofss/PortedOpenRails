@@ -41,6 +41,35 @@ public sealed class RollingStockTrackPlacementBuilderTests
     }
 
     [Fact]
+    public void SupportsConsistOffsetsAlongTheSelectedRoutePath()
+    {
+        var consist = new ConsistMetadata("Moving", new[]
+        {
+            new ConsistCar("WagonA", "Freight", 30, false, false, false),
+            new ConsistCar("WagonB", "Freight", 31, false, false, false)
+        }, "moving.con");
+        var assets = new[]
+        {
+            CreateReference("Moving", 30, "WagonA", 20),
+            CreateReference("Moving", 31, "WagonB", 20)
+        };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh>
+        {
+            [30] = CreateMesh(30),
+            [31] = CreateMesh(31)
+        };
+
+        var result = new RollingStockTrackPlacementBuilder().Build(
+            consist, assets, meshes, CreateStraightPath(100, 0),
+            startDistanceMeters: 20);
+
+        Assert.Equal(2, result.Placements.Count);
+        Assert.Equal(30, result.Placements[0].Anchor.Z, 1);
+        Assert.Equal(50, result.Placements[1].Anchor.Z, 1);
+        Assert.Equal(40, result.UsedLengthMeters, 5);
+    }
+
+    [Fact]
     public void FollowsCurvedTrackAndUsesLocalTangentForVehicleHeading()
     {
         var consist = new ConsistMetadata("Curve", new[]
