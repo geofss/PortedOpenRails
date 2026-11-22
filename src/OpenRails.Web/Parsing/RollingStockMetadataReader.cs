@@ -21,13 +21,11 @@ public sealed record RollingStockMetadata(
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
 {
-    private static readonly object FactoryLock = new();
-
     public RollingStockMetadata Read(IVirtualContentStore store, string path)
     {
         ArgumentNullException.ThrowIfNull(store);
         var virtualPath = VirtualPath.Normalize(path);
-        lock (FactoryLock)
+        lock (StfReaderAccess.SyncRoot)
         {
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(store);
             using var reader = new STFReader(virtualPath, useTree: false);
