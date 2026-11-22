@@ -41,6 +41,34 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void AppliesRouteGradeToAvailableTraction()
+    {
+        var consist = new ConsistMetadata("GradeTest", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "grade-test.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var asset = CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction);
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { asset }, 200);
+        var uphillRoute = CreateSlopeRoute(100, 10);
+        var downhillRoute = CreateSlopeRoute(100, -10);
+        var uphill = new BrowserTrainDrivingController(setup, route: uphillRoute);
+        var downhillSetup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { asset }, 200);
+        var downhill = new BrowserTrainDrivingController(downhillSetup, route: downhillRoute);
+
+        uphill.SetThrottle(100);
+        downhill.SetThrottle(100);
+        uphill.Advance(0.1);
+        downhill.Advance(0.1);
+
+        Assert.True(downhill.State.Cars[0].SpeedMetersPerSecond >
+            uphill.State.Cars[0].SpeedMetersPerSecond);
+    }
+
+    [Fact]
     public void ClampsDriverCommandsAndSupportsPauseAndReset()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
@@ -62,6 +90,20 @@ public sealed class BrowserTrainDrivingControllerTests
         controller.Reset();
         Assert.Equal(0, controller.SimulationTimeSeconds);
         Assert.Equal(10, controller.State.Cars[0].DistanceMeters);
+    }
+
+    private static TrackNetworkRoute CreateSlopeRoute(double length, double rise)
+    {
+        var start = new TrackWorldPosition(0, 0, 0);
+        var end = new TrackWorldPosition(0, rise, length);
+        var source = new TrackVectorSection(42, 0, 0, 0, 0, 0, 1, "00",
+            0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(42, null, (float)length, null, null, false);
+        var section = new TrackSectionPlacement(source, geometry, start, length);
+        var path = new TrackVectorPath(1, new[] { 2, 3 }, new[] { section }, length, end);
+        return new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, false) },
+            Array.Empty<string>(), length);
     }
 
     private static ConsistCarAssetReference CreateAsset(
