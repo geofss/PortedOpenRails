@@ -46,6 +46,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Add a longitudinal train-car motion integrator using signed total force divided by vehicle mass (upstream traction, braking, resistance, adhesion, and coupler-force systems remain separate and incomplete)
 - [x] Aggregate supplied motive/gravity forces and rolling, brake, curve, wind, and tunnel resistance with direction-aware stopping behavior (force-generation curves remain pending)
 - [x] Connect the fixed-step scheduler, force aggregator, and motion integrator in a testable single-car simulation loop
+- [x] Add a portable brake-force evaluator and integrate per-car brake commands into single-car and multi-car simulation sessions (full train-brake systems remain pending)
 - [x] Connect parsed locomotive traction curves and limits to the fixed-step single-car simulation session
 - [x] Connect parsed locomotive traction to a multi-car consist session with caller-supplied coupler forces
 - [x] Calculate algebraic coupler boundary forces for a target common consist acceleration, expand them to equal/opposite per-car forces, integrate each fixed simulation tick, and enforce optional compression/tension ratings (coupler slack/break dynamics remain pending)
