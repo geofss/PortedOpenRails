@@ -42,9 +42,8 @@ public sealed class RollingStockTrackPlacementBuilder
         for (var i = 1; i < centerline.Count; i++)
         {
             var dx = centerline[i].X - centerline[i - 1].X;
-            var dy = centerline[i].Y - centerline[i - 1].Y;
             var dz = centerline[i].Z - centerline[i - 1].Z;
-            cumulative[i] = cumulative[i - 1] + Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            cumulative[i] = cumulative[i - 1] + Math.Sqrt(dx * dx + dz * dz);
         }
 
         var availableLength = cumulative[^1];
@@ -289,7 +288,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 if (gap > 1e-6)
                 {
                     centerline.Add(next);
-                    distanceCursor += gap;
+                    distanceCursor += TrackDistance(previous, next);
                 }
             }
             else
@@ -300,7 +299,7 @@ public sealed class RollingStockTrackPlacementBuilder
             var segmentStart = distanceCursor;
             for (var i = 1; i < points.Count; i++)
             {
-                distanceCursor += Distance(points[i - 1], points[i]);
+                distanceCursor += TrackDistance(points[i - 1], points[i]);
                 centerline.Add(points[i]);
             }
             segmentRanges.Add((segment, segmentStart, distanceCursor));
@@ -314,7 +313,7 @@ public sealed class RollingStockTrackPlacementBuilder
 
         var cumulative = new double[centerline.Count];
         for (var i = 1; i < centerline.Count; i++)
-            cumulative[i] = cumulative[i - 1] + Distance(centerline[i - 1], centerline[i]);
+            cumulative[i] = cumulative[i - 1] + TrackDistance(centerline[i - 1], centerline[i]);
 
         var availableLength = cumulative[^1];
         var placements = new List<TrackShapePlacement>();
@@ -382,6 +381,13 @@ public sealed class RollingStockTrackPlacementBuilder
             Array.AsReadOnly(placements.ToArray()),
             Array.AsReadOnly(issues.ToArray()),
             usedLength);
+    }
+
+    private static double TrackDistance(TrackWorldPosition a, TrackWorldPosition b)
+    {
+        var x = a.X - b.X;
+        var z = a.Z - b.Z;
+        return Math.Sqrt(x * x + z * z);
     }
 
     private static double Distance(TrackWorldPosition a, TrackWorldPosition b)
