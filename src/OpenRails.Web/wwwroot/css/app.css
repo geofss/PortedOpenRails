@@ -158,3 +158,32 @@ input[type="file"] {
 .consist-entry summary { cursor: pointer; overflow-wrap: anywhere; }
 .consist-entry summary::marker { color: #8ee0ad; }
 .consist-entry ol { margin-bottom: 0; }
+
+.package-priority-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.package-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.package-actions button {
+    padding: 7px 10px;
+    border: 1px solid #526b7b;
+    border-radius: 7px;
+    background: #203541;
+    color: #edf3f7;
+    font: inherit;
+    cursor: pointer;
+}
+.package-actions button:hover:not(:disabled) {
+    border-color: #8ee0ad;
+}
+.package-actions button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
