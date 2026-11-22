@@ -320,6 +320,8 @@
         simulationSetup = null;
         drivingController = null;
         currentMotionState = null;
+        selectedTrackNodeIndex = 0;
+        reverseRouteStart = false;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -406,6 +408,7 @@
         drivingController = null;
         currentMotionState = null;
         selectedTrackNodeIndex = 0;
+        reverseRouteStart = false;
         routeBuildMessage = null;
 
         try
@@ -525,6 +528,7 @@
             loadedRoute = null;
             traversedRoute = null;
             selectedTrackNodeIndex = 0;
+            reverseRouteStart = false;
             routeBuildMessage = null;
         }
 
