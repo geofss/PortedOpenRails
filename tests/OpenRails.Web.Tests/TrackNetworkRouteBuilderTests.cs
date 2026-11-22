@@ -64,7 +64,7 @@ public sealed class TrackNetworkRouteBuilderTests
         var section = new TrackSectionPlacement(
             new TrackVectorSection(1, 0, 0, 0, 0, 0, 0, "00", 0, 0,
                 (float)startX, 0, 0, 0, 0, 0),
-            new TrackSectionGeometry(1, null, Math.Abs(endX - startX), null, null, false),
+            new TrackSectionGeometry(1, null, (float)Math.Abs(endX - startX), null, null, false),
             start,
             Math.Abs(endX - startX));
         return new TrackVectorPath(id, nodes, new[] { section },
