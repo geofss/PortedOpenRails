@@ -49,6 +49,17 @@ public sealed class TrainBrakeCylinderModelTests
     }
 
     [Fact]
+    public void RejectsInvalidPressureStateWhenDerivingBrakeCommands()
+    {
+        var model = new TrainBrakeCylinderModel();
+
+        Assert.Throws<ArgumentException>(() => model.GetBrakePercentByCar(
+            new TrainBrakeCylinderState(new[] { double.NaN })));
+        Assert.Throws<ArgumentException>(() => model.GetBrakePercentByCar(
+            new TrainBrakeCylinderState(Array.Empty<double>())));
+    }
+
+    [Fact]
     public void ValidatesStateCommandsAndElapsedTime()
     {
         var model = new TrainBrakeCylinderModel();
