@@ -16,7 +16,8 @@ public sealed record RollingStockMetadata(
     string? BrakeEquipmentType,
     float? MaxBrakeForceN,
     string SourcePath,
-    string? ShapeFileName = null);
+    string? ShapeFileName = null,
+    float? MinCouplerStrengthN = null);
 
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
@@ -40,6 +41,7 @@ public sealed class RollingStockMetadataReader
             string? brakeSystemType = null;
             string? brakeEquipmentType = null;
             float? maxBrakeForceN = null;
+            float? minCouplerStrengthN = null;
             string? shapeFileName = null;
             var wagonFound = false;
             reader.ParseFile(new[]
@@ -59,14 +61,55 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("numwheels", () => numberWheels = reader.ReadFloatBlock(STFReader.UNITS.None, null)),
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("brakeequipmenttype", () => brakeEquipmentType = reader.ReadStringBlock(null)),
-                        new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null))
+                        new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
+                        new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCouplerStrength(reader, minCouplerStrengthN))
                     });
                 })
             });
             if (!wagonFound)
                 throw new InvalidDataException($"Rolling-stock file '{virtualPath}' contains no Wagon block.");
-            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels, brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName);
+            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels, brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName, minCouplerStrengthN);
         }
+    }
+
+    private static float? ReadCouplerStrength(STFReader reader, float? currentMinimum)
+    {
+        float? legacyBreak = null;
+        float? openRailsBreak = null;
+        reader.MustMatch("(");
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("spring", () =>
+            {
+                reader.MustMatch("(");
+                reader.ParseBlock(new[]
+                {
+                    new STFReader.TokenProcessor("break", () => legacyBreak = ReadBreakPair(reader)),
+                    new STFReader.TokenProcessor("ortsbreak", () => openRailsBreak = ReadBreakPair(reader))
+                });
+            })
+        });
+
+        var strength = openRailsBreak ?? legacyBreak;
+        if (strength is null)
+            return currentMinimum;
+        return currentMinimum is null
+            ? strength
+            : Math.Min(currentMinimum.Value, strength.Value);
+    }
+
+    private static float? ReadBreakPair(STFReader reader)
+    {
+        reader.MustMatch("(");
+        float? minimum = null;
+        for (var i = 0; i < 2; i++)
+        {
+            var value = reader.ReadFloat(STFReader.UNITS.Force, null);
+            if (value > 9.9f)
+                minimum = minimum is null ? value : Math.Min(minimum.Value, value);
+        }
+        reader.SkipRestOfBlock();
+        return minimum;
     }
 
     private static void ReadSize(STFReader reader, Action<float> setWidth, Action<float> setHeight, Action<float> setLength)
