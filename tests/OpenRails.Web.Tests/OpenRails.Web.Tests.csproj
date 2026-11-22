@@ -32,6 +32,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/BrowserTrainDrivingController.cs" Link="Simulation/BrowserTrainDrivingController.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarResistanceModel.cs" Link="Simulation/TrainCarResistanceModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakePipeModel.cs" Link="Simulation/TrainBrakePipeModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakeCylinderModel.cs" Link="Simulation/TrainBrakeCylinderModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerForceDistributor.cs" Link="Simulation/TrainConsistCouplerForceDistributor.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerForceLimit.cs" Link="Simulation/TrainCouplerForceLimit.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/SBR.cs" Link="Parsing/SBR.cs" />
