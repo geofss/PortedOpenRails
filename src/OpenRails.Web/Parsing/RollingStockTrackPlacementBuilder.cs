@@ -38,14 +38,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 new[] { $"TrackNode {path.TrackNodeIndex} has insufficient centerline geometry for rolling stock." },
                 0);
 
-        var cumulative = new double[centerline.Count];
-        for (var i = 1; i < centerline.Count; i++)
-        {
-            var dx = centerline[i].X - centerline[i - 1].X;
-            var dz = centerline[i].Z - centerline[i - 1].Z;
-            cumulative[i] = cumulative[i - 1] + Math.Sqrt(dx * dx + dz * dz);
-        }
-
+        var cumulative = BuildTrackChainage(path, maximumSegmentLengthMeters, centerline.Count);
         var availableLength = cumulative[^1];
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
@@ -381,6 +374,27 @@ public sealed class RollingStockTrackPlacementBuilder
             Array.AsReadOnly(placements.ToArray()),
             Array.AsReadOnly(issues.ToArray()),
             usedLength);
+    }
+
+    private static double[] BuildTrackChainage(
+        TrackVectorPath path,
+        double maximumSegmentLengthMeters,
+        int pointCount)
+    {
+        var cumulative = new double[pointCount];
+        var pointIndex = 0;
+        var routeDistance = 0d;
+        for (var sectionIndex = 0; sectionIndex < path.Sections.Count; sectionIndex++)
+        {
+            var section = path.Sections[sectionIndex];
+            var steps = Math.Max(1, (int)Math.Ceiling(section.LengthMeters / maximumSegmentLengthMeters));
+            for (var step = sectionIndex == 0 ? 0 : 1; step <= steps && pointIndex < pointCount; step++)
+                cumulative[pointIndex++] = routeDistance + section.LengthMeters * step / steps;
+            routeDistance += section.LengthMeters;
+        }
+        if (pointIndex != pointCount)
+            throw new InvalidDataException($"Track path {path.TrackNodeIndex} tessellation produced {pointCount} points, but section chainage described {pointIndex}.");
+        return cumulative;
     }
 
     private static double TrackDistance(TrackWorldPosition a, TrackWorldPosition b)
