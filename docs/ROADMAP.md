@@ -57,7 +57,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Generate terrain meshes from the original terrain patch/sample data, including cross-tile sample resolution and patch LODs (preview rendering remains limited)
 - [x] Load original rolling-stock `.s` assets and supported ACE textures from TRAINSET folders
 - [x] Place consist vehicles along the selected connected TDB route using sampled straight/curved centerline geometry, vehicle lengths, tangent headings, reversed-node handling, and consist flip flags; simulated per-car route distances drive live placement
-- [x] Apply configurable per-car wheel-rail adhesion ceilings to locomotive tractive effort in the browser consist simulation (quasi-static limit; wheel-slip dynamics remain pending)
+- [x] Apply configurable per-car wheel-rail adhesion ceilings to locomotive tractive effort across direct, brake-command, common-acceleration, and automatic-coupler consist simulation modes (quasi-static limit; wheel-slip dynamics remain pending)
 - [ ] Port full braking, power supply, adhesion/wheel-slip, and locomotive-specific control systems (a standalone signed brake-force evaluator is tested; brake pipe propagation, fade, and vehicle-specific systems remain pending; traction-force parsing/evaluation is partial)
 - [ ] Port signalling, track circuits, switches, activities, and timetable/AI logic
 - [ ] Replace desktop threading assumptions with a browser-safe simulation scheduler
