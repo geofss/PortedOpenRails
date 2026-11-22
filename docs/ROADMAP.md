@@ -60,7 +60,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Apply configurable per-car wheel-rail adhesion ceilings to locomotive tractive effort across direct, brake-command, common-acceleration, and automatic-coupler consist simulation modes (quasi-static limit; wheel-slip dynamics remain pending)
 - [ ] Port full braking, power supply, adhesion/wheel-slip, and locomotive-specific control systems (a standalone signed brake-force evaluator is tested; brake pipe propagation, fade, and vehicle-specific systems remain pending; traction-force parsing/evaluation is partial)
 - [ ] Port signalling, track circuits, switches, activities, and timetable/AI logic
-- [ ] Replace desktop threading assumptions with a browser-safe simulation scheduler
+- [x] Replace desktop threading assumptions with a browser-safe fixed-step scheduler driven by browser frame time, with bounded catch-up and dropped-time accounting (native Open Rails threading behavior remains outside the port)
 - [ ] Add desktop-reference regression scenarios
 
 ## Milestone 4 — Browser rendering
