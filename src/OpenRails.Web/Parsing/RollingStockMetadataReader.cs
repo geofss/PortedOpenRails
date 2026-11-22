@@ -17,7 +17,10 @@ public sealed record RollingStockMetadata(
     float? MaxBrakeForceN,
     string SourcePath,
     string? ShapeFileName = null,
-    float? MinCouplerStrengthN = null);
+    float? MinCouplerStrengthN = null,
+    float? DavisAForceN = null,
+    float? DavisBResistance = null,
+    float? DavisCResistance = null);
 
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
@@ -42,6 +45,9 @@ public sealed class RollingStockMetadataReader
             string? brakeEquipmentType = null;
             float? maxBrakeForceN = null;
             float? minCouplerStrengthN = null;
+            float? davisAForceN = null;
+            float? davisBResistance = null;
+            float? davisCResistance = null;
             string? shapeFileName = null;
             var wagonFound = false;
             reader.ParseFile(new[]
@@ -62,13 +68,16 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("brakeequipmenttype", () => brakeEquipmentType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
-                        new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCouplerStrength(reader, minCouplerStrengthN))
+                        new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCouplerStrength(reader, minCouplerStrengthN)),
+                        new STFReader.TokenProcessor("ortsdavis_a", () => davisAForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, 0f)),
+                        new STFReader.TokenProcessor("ortsdavis_b", () => davisBResistance = reader.ReadFloatBlock(STFReader.UNITS.Resistance, 0f)),
+                        new STFReader.TokenProcessor("ortsdavis_c", () => davisCResistance = reader.ReadFloatBlock(STFReader.UNITS.ResistanceDavisC, 0f))
                     });
                 })
             });
             if (!wagonFound)
                 throw new InvalidDataException($"Rolling-stock file '{virtualPath}' contains no Wagon block.");
-            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels, brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName, minCouplerStrengthN);
+            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels, brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName, minCouplerStrengthN, davisAForceN, davisBResistance, davisCResistance);
         }
     }
 
