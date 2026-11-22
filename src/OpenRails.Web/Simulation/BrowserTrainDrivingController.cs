@@ -120,7 +120,7 @@ public sealed class BrowserTrainDrivingController
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
             throttle,
-            brakes,
+            new double[setup.InitialState.Cars.Count],
             setup.MaximumBrakeForceNewtonsByCar,
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
