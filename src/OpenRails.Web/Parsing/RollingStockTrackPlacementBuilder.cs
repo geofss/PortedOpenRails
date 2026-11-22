@@ -105,6 +105,101 @@ public sealed class RollingStockTrackPlacementBuilder
             Math.Min(Math.Max(0, cursor - startDistanceMeters), Math.Max(0, availableLength - startDistanceMeters)));
     }
 
+    /// <summary>
+    /// Builds render placements from per-car route distances maintained by the
+    /// multi-car simulation loop. This is the bridge for animated route movement.
+    /// </summary>
+    public RollingStockTrackPlacementResult BuildAtMotionState(
+        ConsistMetadata consist,
+        IReadOnlyList<ConsistCarAssetReference> carAssets,
+        IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
+        TrackVectorPath path,
+        TrainConsistMotionState motionState,
+        double maximumSegmentLengthMeters = 2)
+    {
+        ArgumentNullException.ThrowIfNull(consist);
+        ArgumentNullException.ThrowIfNull(carAssets);
+        ArgumentNullException.ThrowIfNull(meshesByUid);
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(motionState);
+        if (!double.IsFinite(maximumSegmentLengthMeters) || maximumSegmentLengthMeters <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumSegmentLengthMeters));
+
+        var cars = consist.Cars.Where(car => !car.IsEndOfTrain).ToArray();
+        if (cars.Length != motionState.Cars.Count)
+            throw new ArgumentException("The motion state must contain one entry for every non-EOT consist car.", nameof(motionState));
+
+        var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
+        if (centerline.Count < 2)
+            return new RollingStockTrackPlacementResult(
+                Array.Empty<TrackShapePlacement>(),
+                new[] { $"TrackNode {path.TrackNodeIndex} has insufficient centerline geometry for rolling stock." },
+                0);
+
+        var cumulative = new double[centerline.Count];
+        for (var i = 1; i < centerline.Count; i++)
+        {
+            var dx = centerline[i].X - centerline[i - 1].X;
+            var dy = centerline[i].Y - centerline[i - 1].Y;
+            var dz = centerline[i].Z - centerline[i - 1].Z;
+            cumulative[i] = cumulative[i - 1] + Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        var availableLength = cumulative[^1];
+        var placements = new List<TrackShapePlacement>();
+        var issues = new List<string>();
+        var minimumDistance = double.PositiveInfinity;
+        var maximumDistance = double.NegativeInfinity;
+
+        for (var i = 0; i < cars.Length; i++)
+        {
+            var car = cars[i];
+            var distance = motionState.Cars[i].DistanceMeters;
+            if (!double.IsFinite(distance) || distance < 0 || distance > availableLength)
+            {
+                issues.Add($"{car.Name}: simulated route distance {distance:N1} m is outside the available path (0–{availableLength:N1} m).");
+                continue;
+            }
+
+            var reference = carAssets.FirstOrDefault(asset =>
+                asset.ConsistName == consist.Name && asset.Uid == car.Uid);
+            if (reference?.ShapeFound != true || !meshesByUid.TryGetValue(car.Uid, out var asset))
+            {
+                issues.Add($"{car.Name}: original shape mesh is unavailable at its simulated position.");
+                continue;
+            }
+
+            var sample = Sample(centerline, cumulative, distance);
+            var heading = Math.Atan2(sample.TangentX, sample.TangentZ);
+            if (car.Flipped)
+                heading += Math.PI;
+
+            var position = sample.Position;
+            var translation = Matrix4x4.CreateTranslation(
+                (float)position.X, (float)position.Y, (float)position.Z);
+            var rotation = Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, (float)heading);
+            placements.Add(new TrackShapePlacement(
+                path.TrackNodeIndex,
+                ResolveSectionIndex(path, distance),
+                asset.ShapeIndex,
+                position,
+                heading,
+                asset,
+                rotation * translation));
+
+            minimumDistance = Math.Min(minimumDistance, distance);
+            maximumDistance = Math.Max(maximumDistance, distance);
+        }
+
+        var usedLength = double.IsFinite(minimumDistance) && double.IsFinite(maximumDistance)
+            ? maximumDistance - minimumDistance
+            : 0;
+        return new RollingStockTrackPlacementResult(
+            Array.AsReadOnly(placements.ToArray()),
+            Array.AsReadOnly(issues.ToArray()),
+            usedLength);
+    }
+
     private static (TrackWorldPosition Position, double TangentX, double TangentZ) Sample(
         IReadOnlyList<TrackWorldPosition> points,
         IReadOnlyList<double> cumulative,
