@@ -310,7 +310,9 @@ public sealed class RollingStockTrackPlacementBuilder
             var localDistance = routeSegment.Segment.IsReversed
                 ? routeSegment.End - distance
                 : distance - routeSegment.Start;
-            var sectionIndex = ResolveSectionIndex(routeSegment.Segment.Path, localDistance);
+            var sectionIndex = routeSegment.Segment.IsReversed
+                ? ResolveSectionIndexReversed(routeSegment.Segment.Path, localDistance)
+                : ResolveSectionIndex(routeSegment.Segment.Path, localDistance);
             var heading = Math.Atan2(sample.TangentX, sample.TangentZ);
             if (car.Flipped)
                 heading += Math.PI;
@@ -388,6 +390,19 @@ public sealed class RollingStockTrackPlacementBuilder
                 a.Z + dz * fraction),
             dx / magnitude,
             dz / magnitude);
+    }
+
+    private static uint ResolveSectionIndexReversed(TrackVectorPath path, double distance)
+    {
+        var traversed = 0d;
+        for (var i = path.Sections.Count - 1; i >= 0; i--)
+        {
+            var section = path.Sections[i];
+            traversed += section.LengthMeters;
+            if (distance <= traversed)
+                return section.Source.SectionIndex;
+        }
+        return path.Sections.Count == 0 ? 0 : path.Sections[0].Source.SectionIndex;
     }
 
     private static uint ResolveSectionIndex(TrackVectorPath path, double distance)
