@@ -14,6 +14,10 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
+    @if (!string.IsNullOrWhiteSpace(simulationError))
+    {
+        <p class="error" role="alert">@simulationError</p>
+    }
     <div class="package-actions">
         <button type="button" @onclick="StartAsync" disabled="@isRunning">Start</button>
         <button type="button" @onclick="StopAsync" disabled="@(!isRunning)">Pause</button>
@@ -33,6 +37,7 @@
     private CancellationTokenSource? runCancellation;
     private Task? runTask;
     private bool isRunning;
+    private string? simulationError;
     private double speedKmh => Controller.State.Cars.Count == 0
         ? 0
         : Controller.State.Cars[0].SpeedMetersPerSecond * 3.6;
@@ -55,6 +60,7 @@
     {
         if (isRunning)
             return Task.CompletedTask;
+        simulationError = null;
         runCancellation = new CancellationTokenSource();
         Controller.Resume();
         isRunning = true;
@@ -88,6 +94,13 @@
             }
         }
         catch (OperationCanceledException) { }
+        catch (Exception exception)
+        {
+            Controller.Pause();
+            isRunning = false;
+            simulationError = $"Simulation paused: {exception.Message}";
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task StopAsync()
