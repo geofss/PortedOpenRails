@@ -83,7 +83,7 @@ public sealed class TrainConsistSimulationSession
                     motiveForce,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
-                    resistance.BrakeRetardForceNewtons + commandedBrake,
+                    resistance.BrakeRetardForceNewtons,
                     resistance.CurveResistanceForceNewtons,
                     resistance.WindResistanceForceNewtons,
                     resistance.TunnelResistanceForceNewtons);
