@@ -20,9 +20,14 @@ public sealed class TrainConsistSimulationLoop
         TrainConsistMotionState initialState,
         double fixedStepSeconds = 1d / 60d,
         double maximumFrameSeconds = 0.25d,
-        int maximumStepsPerFrame = 8)
+        int maximumStepsPerFrame = 8,
+        double? routeLengthMeters = null)
     {
         State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
+        if (routeLengthMeters is not null &&
+            (!double.IsFinite(routeLengthMeters.Value) || routeLengthMeters.Value <= 0))
+            throw new ArgumentOutOfRangeException(nameof(routeLengthMeters));
+        this.routeLengthMeters = routeLengthMeters;
         scheduler = new FixedStepSimulationScheduler(
             fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame);
     }
@@ -38,6 +43,8 @@ public sealed class TrainConsistSimulationLoop
             ArgumentNullException.ThrowIfNull(frame);
             State = integrator.Step(
                 State, frame.CarForces, frame.CouplerForcesNewtons, stepSeconds);
+            if (routeLengthMeters is not null)
+                State = ClampCarsToRoute(State, routeLengthMeters.Value);
         });
     }
 
@@ -49,6 +56,21 @@ public sealed class TrainConsistSimulationLoop
     {
         State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
         scheduler.Reset();
+    }
+
+    private static TrainConsistMotionState ClampCarsToRoute(
+        TrainConsistMotionState state,
+        double routeLengthMeters)
+    {
+        var cars = state.Cars.Select(car =>
+        {
+            if (car.DistanceMeters < 0)
+                return car with { DistanceMeters = 0, SpeedMetersPerSecond = car.SpeedMetersPerSecond < 0 ? 0 : car.SpeedMetersPerSecond };
+            if (car.DistanceMeters > routeLengthMeters)
+                return car with { DistanceMeters = routeLengthMeters, SpeedMetersPerSecond = car.SpeedMetersPerSecond > 0 ? 0 : car.SpeedMetersPerSecond };
+            return car;
+        }).ToArray();
+        return new TrainConsistMotionState(cars);
     }
 
     private static TrainConsistMotionState ValidateState(TrainConsistMotionState state)
