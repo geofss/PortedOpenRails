@@ -15,6 +15,8 @@ public sealed class TrainConsistCouplerForceDistributor
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(externalForces);
+        if (state.Cars.Count == 0)
+            throw new ArgumentException("A consist must contain at least one car.", nameof(state));
         if (state.Cars.Count != externalForces.Count)
             throw new ArgumentException("Each car requires an external-force breakdown.", nameof(externalForces));
         if (!double.IsFinite(targetAccelerationMetersPerSecondSquared))
@@ -22,13 +24,14 @@ public sealed class TrainConsistCouplerForceDistributor
 
         var boundaries = new double[Math.Max(0, state.Cars.Count - 1)];
         double residualPrefix = 0;
+        var forceModel = new TrainCarForceModel();
         for (var i = 0; i < state.Cars.Count; i++)
         {
             var car = state.Cars[i];
             var forces = externalForces[i];
             if (!double.IsFinite(car.MassKg) || car.MassKg <= 0)
                 throw new ArgumentOutOfRangeException(nameof(state), "Car masses must be finite and positive.");
-            var externalNet = new TrainCarForceModel().CalculateNetLongitudinalForce(car, forces);
+            var externalNet = forceModel.CalculateNetLongitudinalForce(car, forces);
             residualPrefix += car.MassKg * targetAccelerationMetersPerSecondSquared - externalNet;
             if (!double.IsFinite(residualPrefix))
                 throw new ArgumentOutOfRangeException(nameof(externalForces), "Force distribution produced a non-finite value.");
