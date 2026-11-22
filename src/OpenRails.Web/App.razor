@@ -97,7 +97,9 @@
                         <dt>Scenery tiles assembled</dt><dd>@loadedRoute.WorldScenery.Loaded.Count</dd>
                         <dt>Scenery shape meshes</dt><dd>@loadedRoute.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
                     </dl>
-                    <RouteTerrainViewer Route="loadedRoute" />
+                    <RouteTerrainViewer Route="loadedRoute" Store="composite"
+                        Consist="consistCatalog?.Consists.FirstOrDefault()"
+                        CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
@@ -159,10 +161,6 @@
             {
                 <h3>Train consists discovered</h3>
                 <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count(asset => asset.Found)/@consistCatalog.CarAssets.Count rolling-stock definitions resolved · @consistCatalog.CarAssets.Count(asset => asset.ShapeFound)/@consistCatalog.CarAssets.Count rolling-stock shapes resolved · @consistCatalog.TcsAssets.Count(asset => asset.Found)/@consistCatalog.TcsAssets.Count TCS scripts resolved</p>
-                @if (composite is not null && consistCatalog.Consists.Count > 0)
-                {
-                    <RollingStockViewer Store="composite" Consist="consistCatalog.Consists[0]" CarAssets="consistCatalog.CarAssets" />
-                }
                 @foreach (var consist in consistCatalog.Consists)
                 {
                     var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
