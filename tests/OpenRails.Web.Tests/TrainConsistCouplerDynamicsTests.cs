@@ -83,6 +83,13 @@ public sealed class TrainConsistCouplerDynamicsTests
         Assert.Equal(100, result[1], 8);
         Assert.Equal(-200, result[2], 8);
         Assert.Equal(0, result.Sum(), 8);
+
+        var boundaryForces = new TrainConsistCouplerDynamics().CalculatePerBoundaryForcesOnRearCars(
+            state, new[] { 2d, 2d }, new[] { 0.1d, 0.1d },
+            new[] { 1000d, 1000d }, new[] { 0d, 0d },
+            new[] { 5000d, 5000d }, new[] { 5000d, 5000d });
+        Assert.Equal(-100, boundaryForces[0], 8);
+        Assert.Equal(-200, boundaryForces[1], 8);
     }
 
     [Fact]
