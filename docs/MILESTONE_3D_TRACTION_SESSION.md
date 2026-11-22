@@ -13,6 +13,7 @@ This milestone adds browser-independent simulation sessions that connect parsed 
 - `TrainConsistSimulationSession.AdvanceWithCommonAcceleration` calculates the per-car force frame and coupler force distribution on every fixed simulation tick, then advances all cars with the common target acceleration (when physically feasible from supplied external forces).
 - `TrainCarBrakeModel` converts a finite 0–100% command and rated brake force to signed retarding force; commands are clamped and the force opposes travel direction. It is a basic force evaluator, not a pneumatic or friction-brake subsystem.
 - `LocomotiveSimulationSession.AdvanceWithBrakeCommand` combines commanded braking with existing gravity/resistance inputs and locomotive traction in one fixed-step update.
+- `TrainConsistSimulationSession.AdvanceWithBrakeCommands` applies individual brake commands and ratings to each car alongside traction and supplied coupler force inputs.
 
 ## Current limits
 
@@ -20,4 +21,4 @@ This is a traction/simulation integration slice, not the Open Rails locomotive s
 
 ## Validation
 
-Regression tests cover traction metadata parsing, force-curve interpolation, throttle response, power caps, continuous-force limit, basic-force fallback, brake-command clamping and direction, brake-force integration through the motion loop, fixed-step session advancement, pause/reset, supplied coupler force on a trailer, automatic common-acceleration session integration, coupler-force distribution, equal/opposite action-reaction, infeasible acceleration rejection, force-rating enforcement, and invalid input rejection. GitHub Actions is the validation authority for WebAssembly publish and Pages deploy.
+Regression tests cover traction metadata parsing, force-curve interpolation, throttle response, power caps, continuous-force limit, basic-force fallback, brake-command clamping and direction, brake-force integration through the motion loop and single-/multi-car sessions, fixed-step session advancement, pause/reset, supplied coupler force on a trailer, automatic common-acceleration session integration, coupler-force distribution, equal/opposite action-reaction, infeasible acceleration rejection, force-rating enforcement, and invalid input rejection. GitHub Actions is the validation authority for WebAssembly publish and Pages deploy.
