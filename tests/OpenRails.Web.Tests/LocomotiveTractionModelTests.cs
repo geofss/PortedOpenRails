@@ -61,6 +61,40 @@ public sealed class LocomotiveTractionModelTests
     }
 
     [Fact]
+    public void AppliesQuadraticThrottleResponseAndUnloadingSpeedPowerDecay()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "Diesel", 200_000, 150_000, 2_000_000, 120, 10, null, "diesel.eng");
+        var model = new LocomotiveTractionModel(metadata);
+
+        var linear = model.CalculateTractiveForce(50, 15);
+        var quadratic = model.CalculateTractiveForce(
+            50, 15, LocomotiveThrottleResponse.Quadratic);
+
+        Assert.Equal(33_333.33, linear, 2);
+        Assert.Equal(16_666.67, quadratic, 2);
+    }
+
+    [Fact]
+    public void PreservesNegativeValuesWhenOriginalCurveAllowsThem()
+    {
+        var negative = new Orts.Parsers.Msts.Interpolator(2);
+        negative[0] = -100;
+        negative[10] = 100;
+        var positive = new Orts.Parsers.Msts.Interpolator(2);
+        positive[0] = 0;
+        positive[10] = 200;
+        var curves = new Orts.Parsers.Msts.InterpolatorDiesel2D(2);
+        curves[0] = negative;
+        curves[1] = positive;
+        curves.HasNegativeValue();
+        var metadata = new LocomotiveTractionMetadata(
+            "Legacy", 200, 150, 0, 100, 0, curves, "legacy.eng");
+
+        Assert.Equal(-100, new LocomotiveTractionModel(metadata).CalculateTractiveForce(0, 0));
+    }
+
+    [Fact]
     public void UsesBasicMaximumForceFallbackAndMaximumSpeedCutoff()
     {
         var metadata = new LocomotiveTractionMetadata(
