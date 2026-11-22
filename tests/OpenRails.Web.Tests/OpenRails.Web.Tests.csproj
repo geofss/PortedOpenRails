@@ -24,6 +24,8 @@
     <Compile Include="../../src/OpenRails.Web/Content/VirtualContentStreamReaderFactory.cs" Link="Content/VirtualContentStreamReaderFactory.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/STFReader.cs" Link="Parsing/STFReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/Interpolator.cs" Link="Parsing/Interpolator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/LocomotiveTractionMetadataReader.cs" Link="Parsing/LocomotiveTractionMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionModel.cs" Link="Simulation/LocomotiveTractionModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/SBR.cs" Link="Parsing/SBR.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TokenID.cs" Link="Parsing/TokenID.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ShapeFile.cs" Link="Parsing/ShapeFile.cs" />
