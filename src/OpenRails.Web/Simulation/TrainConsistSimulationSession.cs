@@ -103,7 +103,8 @@ public sealed class TrainConsistSimulationSession
         Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
         double targetAccelerationMetersPerSecondSquared,
         float powerReduction = 0,
-        IReadOnlyList<float>? averageForceByCar = null)
+        IReadOnlyList<float>? averageForceByCar = null,
+        IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(resistanceProvider);
@@ -111,6 +112,8 @@ public sealed class TrainConsistSimulationSession
         if (throttlePercentByCar.Count != carCount ||
             (averageForceByCar is not null && averageForceByCar.Count != carCount))
             throw new ArgumentException("Per-car throttle and average-force inputs must match the consist size.");
+        if (couplerForceLimits is not null && couplerForceLimits.Count != Math.Max(0, carCount - 1))
+            throw new ArgumentException("Coupler force limits must match the consist boundary count.", nameof(couplerForceLimits));
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
             !float.IsFinite(powerReduction) ||
             (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
@@ -143,7 +146,7 @@ public sealed class TrainConsistSimulationSession
             }
 
             var couplerForces = couplerDistributor.CalculatePerCarCouplerForces(
-                state, forces, targetAccelerationMetersPerSecondSquared);
+                state, forces, targetAccelerationMetersPerSecondSquared, couplerForceLimits);
             return new TrainConsistForceFrame(forces, couplerForces);
         });
     }
