@@ -34,7 +34,7 @@ public sealed class TrainConsistCouplerForceDistributorTests
         for (var i = 0; i < state.Cars.Count; i++)
         {
             var net = new TrainCarForceModel().CalculateNetLongitudinalForce(state.Cars[i], external[i]) + perCar[i];
-            Assert.Equal(state.Cars[i].MassKilograms * 0.5, net, 8);
+            Assert.Equal(state.Cars[i].MassKg * 0.5, net, 8);
         }
     }
 
