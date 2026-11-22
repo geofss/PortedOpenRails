@@ -13,6 +13,7 @@ public sealed class TrainConsistSimulationSession
     private readonly TrainConsistSimulationLoop loop;
     private readonly IReadOnlyList<LocomotiveTractionModel?> tractionModels;
     private readonly IReadOnlyList<LocomotiveThrottleResponse> throttleResponses;
+    private static readonly TrainCarAdhesionModel AdhesionModel = new();
 
     public TrainConsistMotionState State => loop.State;
     public double SimulationTimeSeconds => loop.SimulationTimeSeconds;
@@ -354,7 +355,7 @@ public sealed class TrainConsistSimulationSession
         var coefficient = adhesionCoefficientByCar is null
             ? TrainCarAdhesionModel.DefaultAdhesionCoefficient
             : adhesionCoefficientByCar[carIndex];
-        return (float)new TrainCarAdhesionModel().LimitTractiveForce(
+        return (float)AdhesionModel.LimitTractiveForce(
             requestedForce, car.MassKg, coefficient);
     }
 
