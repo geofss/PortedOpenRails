@@ -53,7 +53,7 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("name", () => name = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("type", () => type = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("mass", () => massKg = reader.ReadFloatBlock(STFReader.UNITS.Mass, null)),
-                        new STFReader.TokenProcessor("size", () => ReadSize(reader, value => widthM = value.Width, value => heightM = value.Height, value => lengthM = value.Length)),
+                        new STFReader.TokenProcessor("size", () => ReadSize(reader, value => widthM = value, value => heightM = value, value => lengthM = value)),
                         new STFReader.TokenProcessor("ortsnumberaxles", () => numberAxles = reader.ReadIntBlock(null)),
                         new STFReader.TokenProcessor("numwheels", () => numberWheels = reader.ReadFloatBlock(STFReader.UNITS.None, null)),
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
@@ -68,14 +68,12 @@ public sealed class RollingStockMetadataReader
         }
     }
 
-    private static void ReadSize(STFReader reader, Action<SizeValue> setWidth, Action<SizeValue> setHeight, Action<SizeValue> setLength)
+    private static void ReadSize(STFReader reader, Action<float> setWidth, Action<float> setHeight, Action<float> setLength)
     {
         reader.MustMatch("(");
-        setWidth(new SizeValue(reader.ReadFloat(STFReader.UNITS.Distance, null)));
-        setHeight(new SizeValue(reader.ReadFloat(STFReader.UNITS.Distance, null)));
-        setLength(new SizeValue(reader.ReadFloat(STFReader.UNITS.Distance, null)));
+        setWidth(reader.ReadFloat(STFReader.UNITS.Distance, null));
+        setHeight(reader.ReadFloat(STFReader.UNITS.Distance, null));
+        setLength(reader.ReadFloat(STFReader.UNITS.Distance, null));
         reader.MustMatch(")");
     }
-
-    private sealed record SizeValue(float Width, float Height, float Length);
 }
