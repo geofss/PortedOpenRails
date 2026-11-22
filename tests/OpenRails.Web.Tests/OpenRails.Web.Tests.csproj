@@ -76,6 +76,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/FixedStepSimulationScheduler.cs" Link="Simulation/FixedStepSimulationScheduler.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarMotionIntegrator.cs" Link="Simulation/TrainCarMotionIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarForceModel.cs" Link="Simulation/TrainCarForceModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarBrakeModel.cs" Link="Simulation/TrainCarBrakeModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarSimulationLoop.cs" Link="Simulation/TrainCarSimulationLoop.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistMotionIntegrator.cs" Link="Simulation/TrainConsistMotionIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationLoop.cs" Link="Simulation/TrainConsistSimulationLoop.cs" />
