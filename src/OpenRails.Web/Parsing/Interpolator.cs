@@ -197,7 +197,8 @@ namespace Orts.Parsers.Msts
         }
         public bool HasNegativeValue()
         {
-            for (int i = 1; i < Size; i++)
+            // Include the first sample: negative tractive-force values may occur at the low-speed boundary.
+            for (int i = 0; i < Size; i++)
             {
                 if (Y[i] < 0)
                     return true;
