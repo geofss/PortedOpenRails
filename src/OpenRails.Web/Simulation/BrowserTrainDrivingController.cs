@@ -42,8 +42,12 @@ public sealed class BrowserTrainDrivingController
         resistanceParametersByCar = Array.AsReadOnly(setup.ResistanceParametersByCar.Select(parameters =>
             parameters with
             {
-                RollingResistanceCoefficient = rollingResistanceCoefficient,
-                AerodynamicDragAreaSquareMeters = aerodynamicDragAreaSquareMeters
+                RollingResistanceCoefficient = parameters.DavisA > 0 || parameters.DavisB > 0
+                    ? 0
+                    : rollingResistanceCoefficient,
+                AerodynamicDragAreaSquareMeters = parameters.DavisC > 0
+                    ? 0
+                    : aerodynamicDragAreaSquareMeters
             }).ToArray());
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
         brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
