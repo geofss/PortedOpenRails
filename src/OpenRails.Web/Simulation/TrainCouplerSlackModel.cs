@@ -14,7 +14,19 @@ public sealed class TrainCouplerSlackModel
         double slackMeters,
         double stiffnessNewtonsPerMeter,
         double dampingNewtonSecondsPerMeter,
-        double maximumForceNewtons)
+        double maximumForceNewtons) =>
+        CalculateForceOnRearCar(relativeDisplacementMeters, relativeVelocityMetersPerSecond,
+            slackMeters, stiffnessNewtonsPerMeter, dampingNewtonSecondsPerMeter,
+            maximumForceNewtons, maximumForceNewtons);
+
+    public double CalculateForceOnRearCar(
+        double relativeDisplacementMeters,
+        double relativeVelocityMetersPerSecond,
+        double slackMeters,
+        double stiffnessNewtonsPerMeter,
+        double dampingNewtonSecondsPerMeter,
+        double maximumCompressionNewtons,
+        double maximumTensionNewtons)
     {
         if (!double.IsFinite(relativeDisplacementMeters))
             throw new ArgumentOutOfRangeException(nameof(relativeDisplacementMeters));
@@ -26,8 +38,10 @@ public sealed class TrainCouplerSlackModel
             throw new ArgumentOutOfRangeException(nameof(stiffnessNewtonsPerMeter));
         if (!double.IsFinite(dampingNewtonSecondsPerMeter) || dampingNewtonSecondsPerMeter < 0)
             throw new ArgumentOutOfRangeException(nameof(dampingNewtonSecondsPerMeter));
-        if (!double.IsFinite(maximumForceNewtons) || maximumForceNewtons < 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumForceNewtons));
+        if (!double.IsFinite(maximumCompressionNewtons) || maximumCompressionNewtons < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumCompressionNewtons));
+        if (!double.IsFinite(maximumTensionNewtons) || maximumTensionNewtons < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumTensionNewtons));
 
         var extensionBeyondSlack = Math.Sign(relativeDisplacementMeters) *
             Math.Max(0, Math.Abs(relativeDisplacementMeters) - slackMeters);
@@ -36,6 +50,6 @@ public sealed class TrainCouplerSlackModel
 
         var force = stiffnessNewtonsPerMeter * extensionBeyondSlack +
             dampingNewtonSecondsPerMeter * relativeVelocityMetersPerSecond;
-        return Math.Clamp(force, -maximumForceNewtons, maximumForceNewtons);
+        return Math.Clamp(force, -maximumCompressionNewtons, maximumTensionNewtons);
     }
 }
