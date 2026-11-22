@@ -17,21 +17,35 @@ public sealed class TrainConsistCouplerDynamics
         IReadOnlyList<double> slackMetersByBoundary,
         IReadOnlyList<double> stiffnessNewtonsPerMeter,
         IReadOnlyList<double> dampingNewtonSecondsPerMeter,
-        IReadOnlyList<double> maximumForceNewtons)
+        IReadOnlyList<double> maximumForceNewtons) =>
+        CalculatePerCarForces(state, restGapsMeters, slackMetersByBoundary,
+            stiffnessNewtonsPerMeter, dampingNewtonSecondsPerMeter,
+            maximumForceNewtons, maximumForceNewtons);
+
+    public IReadOnlyList<double> CalculatePerCarForces(
+        TrainConsistMotionState state,
+        IReadOnlyList<double> restGapsMeters,
+        IReadOnlyList<double> slackMetersByBoundary,
+        IReadOnlyList<double> stiffnessNewtonsPerMeter,
+        IReadOnlyList<double> dampingNewtonSecondsPerMeter,
+        IReadOnlyList<double> maximumCompressionNewtons,
+        IReadOnlyList<double> maximumTensionNewtons)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(restGapsMeters);
         ArgumentNullException.ThrowIfNull(slackMetersByBoundary);
         ArgumentNullException.ThrowIfNull(stiffnessNewtonsPerMeter);
         ArgumentNullException.ThrowIfNull(dampingNewtonSecondsPerMeter);
-        ArgumentNullException.ThrowIfNull(maximumForceNewtons);
+        ArgumentNullException.ThrowIfNull(maximumCompressionNewtons);
+        ArgumentNullException.ThrowIfNull(maximumTensionNewtons);
 
         var boundaryCount = Math.Max(0, state.Cars.Count - 1);
         if (restGapsMeters.Count != boundaryCount ||
             slackMetersByBoundary.Count != boundaryCount ||
             stiffnessNewtonsPerMeter.Count != boundaryCount ||
             dampingNewtonSecondsPerMeter.Count != boundaryCount ||
-            maximumForceNewtons.Count != boundaryCount)
+            maximumCompressionNewtons.Count != boundaryCount ||
+            maximumTensionNewtons.Count != boundaryCount)
             throw new ArgumentException("Coupler parameter arrays must have one entry per adjacent-car boundary.");
 
         var forces = new double[state.Cars.Count];
@@ -44,7 +58,7 @@ public sealed class TrainConsistCouplerDynamics
             var rearForce = -slackModel.CalculateForceOnRearCar(
                 relativeDisplacement, relativeVelocity, slackMetersByBoundary[i],
                 stiffnessNewtonsPerMeter[i], dampingNewtonSecondsPerMeter[i],
-                maximumForceNewtons[i]);
+                maximumCompressionNewtons[i], maximumTensionNewtons[i]);
             forces[i] -= rearForce;
             forces[i + 1] += rearForce;
         }
