@@ -85,13 +85,13 @@ public sealed class LocomotiveTractionModelTests
         positive[0] = 0;
         positive[10] = 200;
         var curves = new Orts.Parsers.Msts.InterpolatorDiesel2D(2);
-        curves[0] = negative;
-        curves[1] = positive;
+        curves[0] = positive;
+        curves[1] = negative;
         curves.HasNegativeValue();
         var metadata = new LocomotiveTractionMetadata(
             "Legacy", 200, 150, 0, 100, 0, curves, "legacy.eng");
 
-        Assert.Equal(-100, new LocomotiveTractionModel(metadata).CalculateTractiveForce(0, 0));
+        Assert.Equal(-100, new LocomotiveTractionModel(metadata).CalculateTractiveForce(100, 0));
     }
 
     [Fact]
