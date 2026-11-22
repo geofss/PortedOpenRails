@@ -122,6 +122,34 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void AutomaticCouplersDeriveAccelerationFromAvailableLocomotiveForce()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { locomotive, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        var steps = session.AdvanceWithAutomaticCouplers(
+            0.1,
+            new[] { 100f, 0f },
+            new[] { 0d, 0d },
+            new[] { 0d, 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0));
+
+        Assert.Equal(1, steps);
+        Assert.Equal(0.05, session.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(0.05, session.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.Equal(0.0025, session.State.Cars[0].DistanceMeters, 8);
+        Assert.Equal(0.0025, session.State.Cars[1].DistanceMeters, 8);
+    }
+
+    [Fact]
     public void CommonAccelerationModeIncludesPerCarBrakeCommands()
     {
         var initial = new TrainConsistMotionState(new[]
