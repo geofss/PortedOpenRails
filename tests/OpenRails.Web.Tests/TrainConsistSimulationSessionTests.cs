@@ -122,6 +122,29 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void CommonAccelerationModeIncludesPerCarBrakeCommands()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 2, 0),
+            new TrainCarMotionState(2_000, 2, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        var steps = session.AdvanceWithCommonAcceleration(0.1, new[] { 0f, 0f },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            targetAccelerationMetersPerSecondSquared: -1,
+            brakePercentByCar: new[] { 50d, 50d },
+            maximumBrakeForceNewtonsByCar: new[] { 2_000d, 4_000d });
+
+        Assert.Equal(1, steps);
+        Assert.Equal(1.9, session.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(1.9, session.State.Cars[1].SpeedMetersPerSecond, 8);
+    }
+
+    [Fact]
     public void CommonAccelerationSessionHonorsCouplerRatings()
     {
         var locomotive = new LocomotiveTractionMetadata(
