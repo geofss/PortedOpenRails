@@ -1,0 +1,92 @@
+using OpenRails.Web.Parsing;
+
+namespace OpenRails.Web.Simulation;
+
+/// <summary>
+/// Applies per-locomotive traction to a multi-car fixed-step consist.
+/// Coupler forces are currently supplied by the caller; slack, breakage,
+/// and force distribution remain future systems.
+/// </summary>
+public sealed class TrainConsistSimulationSession
+{
+    private readonly TrainConsistSimulationLoop loop;
+    private readonly IReadOnlyList<LocomotiveTractionModel?> tractionModels;
+    private readonly IReadOnlyList<LocomotiveThrottleResponse> throttleResponses;
+
+    public TrainConsistMotionState State => loop.State;
+    public double SimulationTimeSeconds => loop.SimulationTimeSeconds;
+    public double InterpolationAlpha => loop.InterpolationAlpha;
+    public double DroppedTimeSeconds => loop.DroppedTimeSeconds;
+    public bool IsPaused => loop.IsPaused;
+
+    public TrainConsistSimulationSession(
+        TrainConsistMotionState initialState,
+        IReadOnlyList<LocomotiveTractionMetadata?> locomotiveMetadataByCar,
+        IReadOnlyList<LocomotiveThrottleResponse>? throttleResponses = null,
+        double fixedStepSeconds = 1d / 60d,
+        double maximumFrameSeconds = 0.25d,
+        int maximumStepsPerFrame = 8)
+    {
+        ArgumentNullException.ThrowIfNull(initialState);
+        ArgumentNullException.ThrowIfNull(locomotiveMetadataByCar);
+        if (initialState.Cars.Count != locomotiveMetadataByCar.Count)
+            throw new ArgumentException("Each car must have a matching locomotive metadata slot.", nameof(locomotiveMetadataByCar));
+        this.tractionModels = locomotiveMetadataByCar
+            .Select(metadata => metadata is null ? null : new LocomotiveTractionModel(metadata))
+            .ToArray();
+        this.throttleResponses = throttleResponses?.ToArray() ??
+            Enumerable.Repeat(LocomotiveThrottleResponse.Linear, initialState.Cars.Count).ToArray();
+        if (this.throttleResponses.Count != initialState.Cars.Count)
+            throw new ArgumentException("Each car must have a matching throttle response.", nameof(throttleResponses));
+        loop = new TrainConsistSimulationLoop(
+            initialState, fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame);
+    }
+
+    public int Advance(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        IReadOnlyList<double> couplerForcesNewtons,
+        IReadOnlyList<float>? powerReductionByCar = null,
+        IReadOnlyList<float>? averageForceByCar = null)
+    {
+        ArgumentNullException.ThrowIfNull(throttlePercentByCar);
+        ArgumentNullException.ThrowIfNull(resistanceProvider);
+        ArgumentNullException.ThrowIfNull(couplerForcesNewtons);
+        var carCount = State.Cars.Count;
+        if (throttlePercentByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
+            (powerReductionByCar is not null && powerReductionByCar.Count != carCount) ||
+            (averageForceByCar is not null && averageForceByCar.Count != carCount))
+            throw new ArgumentException("All per-car input arrays must match the consist size.");
+
+        return loop.Advance(elapsedFrameSeconds, state =>
+        {
+            var forces = new TrainCarForceBreakdown[carCount];
+            for (var i = 0; i < carCount; i++)
+            {
+                var resistance = resistanceProvider(i, state.Cars[i]) ??
+                    throw new InvalidOperationException($"Resistance provider returned null for car {i}.");
+                var motiveForce = tractionModels[i]?.CalculateTractiveForce(
+                    throttlePercentByCar[i],
+                    (float)state.Cars[i].SpeedMetersPerSecond,
+                    throttleResponses[i],
+                    powerReductionByCar is null ? 0 : powerReductionByCar[i],
+                    averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                forces[i] = new TrainCarForceBreakdown(
+                    motiveForce,
+                    resistance.GravityForceNewtons,
+                    resistance.RollingFrictionForceNewtons,
+                    resistance.BrakeRetardForceNewtons,
+                    resistance.CurveResistanceForceNewtons,
+                    resistance.WindResistanceForceNewtons,
+                    resistance.TunnelResistanceForceNewtons);
+            }
+
+            return new TrainConsistForceFrame(forces, couplerForcesNewtons);
+        });
+    }
+
+    public void Pause() => loop.Pause();
+    public void Resume() => loop.Resume();
+    public void Reset(TrainConsistMotionState initialState) => loop.Reset(initialState);
+}
