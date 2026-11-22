@@ -122,6 +122,7 @@
                         <div class="route-details">
                             <h3>Train simulation setup</h3>
                             <p class="success">Fixed-step consist session initialized · @simulationSetup.InitialState.Cars.Count vehicle(s) · 60 Hz physics step</p>
+                            <p class="hint">Parsed coupler ratings: @RatedCouplerLimitCount/@simulationSetup.CouplerForceLimits.Count consist boundaries</p>
                             <p class="hint">Initial speed: @((simulationSetup.InitialState.Cars[0].SpeedMetersPerSecond * 3.6).ToString("N1")) km/h · route length: @traversedRoute?.LengthMeters.ToString("N0") m</p>
                             @foreach (var diagnostic in simulationSetup.Diagnostics)
                             {
@@ -283,6 +284,9 @@
     private TrainConsistMotionState? currentMotionState;
     private uint selectedTrackNodeIndex;
     private bool reverseRouteStart;
+
+    private int RatedCouplerLimitCount => simulationSetup?.CouplerForceLimits.Count(limit =>
+        limit.MaximumCompressionNewtons < double.MaxValue || limit.MaximumTensionNewtons < double.MaxValue) ?? 0;
 
     private IReadOnlyList<TrackVectorPath> RouteStartOptions => loadedRoute?.TrackNetwork.VectorPaths
         .Where(path => path.ConnectedNodeIndices.Count == 2)
