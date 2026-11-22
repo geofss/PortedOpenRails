@@ -72,7 +72,7 @@ public sealed class BrowserTrainDrivingControllerTests
     [Fact]
     public void AppliesParsedDavisResistanceToVehicleAcceleration()
     {
-        var consist = new ConsistMetadata("DavisDrive", new[]
+        var consist = new ConsistMetadata("DriveTest", new[]
         {
             new ConsistCar("Engine", "Diesel", 1, true, false, false)
         }, "davis-drive.con");
