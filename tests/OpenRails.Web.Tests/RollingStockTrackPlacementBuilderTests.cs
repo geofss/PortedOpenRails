@@ -156,7 +156,8 @@ public sealed class RollingStockTrackPlacementBuilderTests
 
     private static ConsistCarAssetReference CreateReference(string consist, int uid, string name, float length) =>
         new(consist, uid, name, "Freight", false, false, $"{name}.wag", true, null,
-            new RollingStockMetadata(name, "Freight", 10000, 3, 4, length, 4, 8, null, null, null, $"{name}.wag"));
+            new RollingStockMetadata(name, "Freight", 10000, 3, 4, length, 4, 8, null, null, null, $"{name}.wag"),
+            $"{name}.s", true);
 
     private static TrackShapeAssetMesh CreateMesh(uint index)
     {
