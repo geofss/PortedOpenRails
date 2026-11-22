@@ -196,7 +196,7 @@ public sealed class ConsistCatalogReaderTests
         Assert.NotNull(asset);
         Assert.Equal("TRAINS/TRAINSET/Freight/fixture.s", asset.Path);
         Assert.Null(locator.Locate(store, "Freight", "missing.s"));
-        Assert.Throws<InvalidDataException>(() => locator.Locate(store, "Freight", "../outside.s"));
+        Assert.Throws<InvalidDataException>((Action)(() => locator.Locate(store, "Freight", "../outside.s")));
     }
 
     private const string WagonFixture = """
