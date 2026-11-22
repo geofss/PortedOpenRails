@@ -113,6 +113,7 @@
     [Parameter] public TrackNetworkRoute? MotionRoute { get; set; }
     private TrainConsistMotionState? lastMotionState;
     private RouteLoadResult? lastRoute;
+    private TrackNetworkRoute? lastMotionRoute;
     private IVirtualContentStore? lastStore;
     private ConsistMetadata? lastConsist;
     private bool motionUpdatePending;
@@ -123,10 +124,11 @@
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(lastRoute, Route) || !ReferenceEquals(lastStore, Store) ||
+        if (!ReferenceEquals(lastRoute, Route) || !ReferenceEquals(lastMotionRoute, MotionRoute) || !ReferenceEquals(lastStore, Store) ||
             !ReferenceEquals(lastConsist, Consist))
         {
             lastRoute = Route;
+            lastMotionRoute = MotionRoute;
             lastStore = Store;
             lastConsist = Consist;
             hasDrawn = false;
