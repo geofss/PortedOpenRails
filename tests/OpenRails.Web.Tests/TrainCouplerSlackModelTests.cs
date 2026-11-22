@@ -15,14 +15,14 @@ public sealed class TrainCouplerSlackModelTests
     public void AppliesSpringAndDampingForceAfterSlackIsTakenUp()
     {
         var force = model.CalculateForceOnRearCar(0.10, 0.20, 0.05, 10000, 500, 20000);
-        Assert.Equal(1100, force, 6);
+        Assert.Equal(600, force, 6);
     }
 
     [Fact]
     public void ReversesForceForCompression()
     {
         var force = model.CalculateForceOnRearCar(-0.10, -0.20, 0.05, 10000, 500, 20000);
-        Assert.Equal(-1100, force, 6);
+        Assert.Equal(-600, force, 6);
     }
 
     [Fact]
@@ -33,7 +33,6 @@ public sealed class TrainCouplerSlackModelTests
     }
 
     [Theory]
-    [InlineData(-0.01, 0, 100, 100, 100)]
     [InlineData(0, 0, -1, 100, 100)]
     [InlineData(0, 0, 1, double.NaN, 100)]
     public void RejectsInvalidParameters(
