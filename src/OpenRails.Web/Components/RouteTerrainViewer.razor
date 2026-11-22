@@ -304,7 +304,7 @@
                         rollingStockPlacements, rollingStockTextureAssets);
 
                     rollingStockSummary = $"{rollingStockPlacements.Count} vehicle(s) placed along route TrackNode " +
-                        $"{selectedPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedPath?.LengthMeters.ToString("N0") ?? "0"} m path) " +
+                        $"{selectedTrackPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedTrackPath?.LengthMeters.ToString("N0") ?? "0"} m path) " +
                         $"using original track centerline geometry · {rollingStockTextureAssets.Count} ACE texture(s) decoded" +
                         (rollingStockGeometry.WasTruncated ? " · rolling-stock geometry cap reached" : "");
                 }
@@ -355,7 +355,8 @@
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
-                })).Concat(rollingStockGeometry.Batches.Select(batch => new
+                })).ToArray();
+                var rollingStockBatches = rollingStockGeometry.Batches.Select(batch => new
                 {
                     vertices = batch.Vertices,
                     indices = batch.Indices,
@@ -363,10 +364,12 @@
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
-                })).ToArray();
+                }).ToArray();
+                rollingStockGeometryBatchCount = rollingStockBatches.Length;
                 await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
-                    null, shapeBatches, shapeTextures);
+                    null, shapeBatches, shapeTextures, rollingStockBatches);
                 hasDrawn = true;
+                motionUpdatePending = false;
             }
             catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
         }
