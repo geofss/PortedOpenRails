@@ -45,7 +45,7 @@ public sealed class BrowserTrainDrivingControllerTests
     {
         static BrowserTrainDrivingController CreateController()
         {
-            var consist = new ConsistMetadata("ReverserTest", new[]
+            var consist = new ConsistMetadata("DriveTest", new[]
             {
                 new ConsistCar("Engine", "Diesel", 1, true, false, false)
             }, "reverser-test.con");
@@ -66,14 +66,14 @@ public sealed class BrowserTrainDrivingControllerTests
         reverse.SetThrottle(100);
         reverse.Advance(0.1);
         Assert.True(reverse.State.Cars[0].SpeedMetersPerSecond < 0);
-        Assert.True(reverse.State.Cars[0].DistanceMeters < 10);
+        Assert.True(reverse.State.Cars[0].DistanceMeters < 5);
 
         var neutral = CreateController();
         neutral.SetReverser(TrainReverserPosition.Neutral);
         neutral.SetThrottle(100);
         neutral.Advance(0.1);
         Assert.Equal(0, neutral.State.Cars[0].SpeedMetersPerSecond);
-        Assert.Equal(10, neutral.State.Cars[0].DistanceMeters);
+        Assert.Equal(5, neutral.State.Cars[0].DistanceMeters);
     }
 
     [Fact]
