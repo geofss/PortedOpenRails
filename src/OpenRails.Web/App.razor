@@ -81,6 +81,19 @@
                 }
                 @if (loadedRoute is not null)
                 {
+                    @if (RouteStartOptions.Count > 0)
+                    {
+                        <div class="route-details">
+                            <label for="route-start-node">Connected route starting vector</label>
+                            <select id="route-start-node" value="@selectedTrackNodeIndex" @onchange="SelectTrackStart">
+                                @foreach (var path in RouteStartOptions)
+                                {
+                                    <option value="@path.TrackNodeIndex">TrackNode @path.TrackNodeIndex · @path.LengthMeters.ToString("N0") m</option>
+                                }
+                            </select>
+                            <p class="hint">Choose one of the 100 longest two-ended vector paths as the traversal start</p>
+                        </div>
+                    }
                     <dl>
                         <dt>Track database nodes</dt><dd>@loadedRoute.TrackDatabase.NodeCount</dd>
                         <dt>Connected vector paths</dt><dd>@loadedRoute.TrackNetwork.VectorPathCount</dd>
@@ -259,6 +272,13 @@
     private TrainConsistSimulationSetup? simulationSetup;
     private BrowserTrainDrivingController? drivingController;
     private TrainConsistMotionState? currentMotionState;
+    private uint selectedTrackNodeIndex;
+
+    private IReadOnlyList<TrackVectorPath> RouteStartOptions => loadedRoute?.TrackNetwork.VectorPaths
+        .Where(path => path.ConnectedNodeIndices.Count == 2)
+        .OrderByDescending(path => path.LengthMeters)
+        .Take(100)
+        .ToArray() ?? Array.Empty<TrackVectorPath>();
 
     private void SelectDefaultRoute()
     {
@@ -298,16 +318,10 @@
                 throw new InvalidDataException("No route content package is loaded.");
 
             loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
-            var traversalStart = loadedRoute.TrackNetwork.VectorPaths
-                .Where(path => path.ConnectedNodeIndices.Count == 2)
-                .OrderByDescending(path => path.LengthMeters)
-                .FirstOrDefault();
-            if (traversalStart is not null)
-                traversedRoute = new TrackNetworkRouteBuilder().Build(loadedRoute.TrackNetwork, traversalStart.TrackNodeIndex);
-            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
-                (traversedRoute is null ? " No two-ended vector path was available for connected traversal." :
-                    $" Connected traversal followed {traversedRoute.Segments.Count} vector nodes.");
-            InitializeSimulationSetup();
+            var traversalStart = RouteStartOptions.FirstOrDefault();
+            selectedTrackNodeIndex = traversalStart?.TrackNodeIndex ?? 0;
+            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
+            BuildConnectedRoute();
         }
         catch (Exception exception)
         {
@@ -317,6 +331,45 @@
         {
             isBuildingRoute = false;
         }
+    }
+
+    private void SelectTrackStart(ChangeEventArgs args)
+    {
+        if (uint.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var trackNodeIndex))
+        {
+            selectedTrackNodeIndex = trackNodeIndex;
+            BuildConnectedRoute();
+        }
+    }
+
+    private void BuildConnectedRoute()
+    {
+        if (loadedRoute is null)
+        {
+            traversedRoute = null;
+            InitializeSimulationSetup();
+            return;
+        }
+
+        try
+        {
+            traversedRoute = selectedTrackNodeIndex == 0
+                ? null
+                : new TrackNetworkRouteBuilder().Build(
+                    loadedRoute.TrackNetwork, selectedTrackNodeIndex);
+            routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
+                (traversedRoute is null
+                    ? " No two-ended vector path was available for connected traversal."
+                    : $" Connected traversal followed {traversedRoute.Segments.Count} vector nodes.");
+        }
+        catch (Exception exception) when (exception is ArgumentException || exception is InvalidDataException)
+        {
+            traversedRoute = null;
+            routeBuildMessage = $"Connected route traversal failed: {exception.Message}";
+        }
+
+        InitializeSimulationSetup();
     }
 
     private async Task HandleRouteZip(InputFileChangeEventArgs args)
