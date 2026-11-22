@@ -40,6 +40,20 @@ public sealed class TrainConsistCouplerForceDistributor
     }
 
     /// <summary>
+    /// Computes boundary forces for the requested common acceleration and
+    /// converts them to per-car signed inputs ready for the consist integrator.
+    /// </summary>
+    public IReadOnlyList<double> CalculatePerCarCouplerForces(
+        TrainConsistMotionState state,
+        IReadOnlyList<TrainCarForceBreakdown> externalForces,
+        double targetAccelerationMetersPerSecondSquared)
+    {
+        var boundaries = CalculateBoundaryForces(
+            state, externalForces, targetAccelerationMetersPerSecond);
+        return ExpandBoundaryForcesToCarForces(boundaries);
+    }
+
+    /// <summary>
     /// Expands front-segment boundary forces into signed per-car forces. For a
     /// front-to-rear car order, each boundary applies equal/opposite forces to
     /// adjacent cars, preserving action/reaction.
