@@ -94,6 +94,70 @@ public sealed class TrainConsistSimulationSession
     }
 
     /// <summary>
+    /// Applies per-car brake commands and ratings in addition to locomotive
+    /// traction, environmental forces, and supplied coupler forces.
+    /// </summary>
+    public int AdvanceWithBrakeCommands(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        IReadOnlyList<double> brakePercentByCar,
+        IReadOnlyList<double> maximumBrakeForceNewtonsByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        IReadOnlyList<double> couplerForcesNewtons,
+        float powerReduction = 0,
+        IReadOnlyList<float>? averageForceByCar = null)
+    {
+        ArgumentNullException.ThrowIfNull(throttlePercentByCar);
+        ArgumentNullException.ThrowIfNull(brakePercentByCar);
+        ArgumentNullException.ThrowIfNull(maximumBrakeForceNewtonsByCar);
+        ArgumentNullException.ThrowIfNull(resistanceProvider);
+        ArgumentNullException.ThrowIfNull(couplerForcesNewtons);
+        var carCount = State.Cars.Count;
+        if (throttlePercentByCar.Count != carCount || brakePercentByCar.Count != carCount ||
+            maximumBrakeForceNewtonsByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
+            (averageForceByCar is not null && averageForceByCar.Count != carCount))
+            throw new ArgumentException("All per-car brake, rating, throttle, average-force, and coupler inputs must match the consist size.");
+        if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
+            brakePercentByCar.Any(value => !double.IsFinite(value)) ||
+            maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0) ||
+            couplerForcesNewtons.Any(value => !double.IsFinite(value)) ||
+            !float.IsFinite(powerReduction) ||
+            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))))
+            throw new ArgumentOutOfRangeException(nameof(brakePercentByCar),
+                "Brake, rating, throttle, power, average-force, and coupler inputs must be finite; brake ratings must be non-negative.");
+
+        var brakeModel = new TrainCarBrakeModel();
+        return loop.Advance(elapsedFrameSeconds, state =>
+        {
+            var forces = new TrainCarForceBreakdown[carCount];
+            for (var i = 0; i < carCount; i++)
+            {
+                var resistance = resistanceProvider(i, state.Cars[i]) ??
+                    throw new InvalidOperationException($"Resistance provider returned null for car {i}.");
+                var motiveForce = tractionModels[i]?.CalculateTractiveForce(
+                    throttlePercentByCar[i],
+                    (float)state.Cars[i].SpeedMetersPerSecond,
+                    throttleResponses[i],
+                    powerReduction,
+                    averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
+                    state.Cars[i].SpeedMetersPerSecond,
+                    brakePercentByCar[i],
+                    maximumBrakeForceNewtonsByCar[i]));
+                forces[i] = new TrainCarForceBreakdown(
+                    motiveForce,
+                    resistance.GravityForceNewtons,
+                    resistance.RollingFrictionForceNewtons,
+                    resistance.BrakeRetardForceNewtons + commandedBrake,
+                    resistance.CurveResistanceForceNewtons,
+                    resistance.WindResistanceForceNewtons,
+                    resistance.TunnelResistanceForceNewtons);
+            }
+            return new TrainConsistForceFrame(forces, couplerForcesNewtons);
+        });
+    }
+
+    /// <summary>
     /// Advances the consist while calculating algebraic coupler forces each
     /// fixed-step tick to maintain a requested common acceleration from the
     /// supplied external forces. This is a force-balance controller, not a
