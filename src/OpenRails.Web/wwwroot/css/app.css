@@ -187,3 +187,26 @@ input[type="file"] {
     opacity: .45;
     cursor: not-allowed;
 }
+
+
+.keyboard-control-pad {
+    display: grid;
+    gap: 6px;
+    margin: 14px 0;
+    padding: 12px 14px;
+    border: 1px solid #526b7b;
+    border-radius: 9px;
+    background: #101d26;
+    color: #bdcbd4;
+    cursor: pointer;
+}
+.keyboard-control-pad strong { color: #edf3f7; }
+.keyboard-control-pad:focus-visible {
+    outline: 2px solid #8ee0ad;
+    outline-offset: 3px;
+}
+.keyboard-control-state {
+    color: #8ee0ad;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
