@@ -303,8 +303,10 @@
                     rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
                         rollingStockPlacements, rollingStockTextureAssets);
 
-                    rollingStockSummary = $"{rollingStockPlacements.Count} vehicle(s) placed along route TrackNode " +
-                        $"{selectedTrackPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedTrackPath?.LengthMeters.ToString("N0") ?? "0"} m path) " +
+                    var placementRouteDescription = MotionRoute is null
+                        ? $"TrackNode {selectedTrackPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedTrackPath?.LengthMeters.ToString("N0") ?? "0"} m path)"
+                        : $"connected route ({MotionRoute.Segments.Count} vector nodes · {MotionRoute.LengthMeters:N0} m)";
+                    rollingStockSummary = $"{rollingStockPlacements.Count} vehicle(s) placed along {placementRouteDescription} " +
                         $"using original track centerline geometry · {rollingStockTextureAssets.Count} ACE texture(s) decoded" +
                         (rollingStockGeometry.WasTruncated ? " · rolling-stock geometry cap reached" : "");
                 }
