@@ -66,6 +66,12 @@ public sealed class BrowserTrainDrivingControllerTests
 
         Assert.True(downhill.State.Cars[0].SpeedMetersPerSecond >
             uphill.State.Cars[0].SpeedMetersPerSecond);
+        Assert.NotNull(uphill.LeadCarRouteGradePercent);
+        Assert.NotNull(downhill.LeadCarRouteGradePercent);
+        Assert.True(uphill.LeadCarRouteGradePercent < 0);
+        Assert.True(downhill.LeadCarRouteGradePercent > 0);
+        Assert.Equal(-10, uphill.LeadCarRouteGradePercent, 1);
+        Assert.Equal(10, downhill.LeadCarRouteGradePercent, 1);
     }
 
     [Fact]
