@@ -99,6 +99,10 @@ public sealed class TrainBrakePipeModel
     public IReadOnlyList<double> GetBrakePercentByCar(TrainBrakePipeState state)
     {
         ArgumentNullException.ThrowIfNull(state);
+        if (state.PressuresKPa.Count == 0 ||
+            state.PressuresKPa.Any(pressure => !double.IsFinite(pressure) ||
+                pressure < MinimumServicePressureKPa || pressure > NormalPressureKPa))
+            throw new ArgumentException("Brake-pipe pressures must be between service minimum and normal pressure.", nameof(state));
         return Array.AsReadOnly(state.PressuresKPa.Select(pressure =>
             Math.Clamp(
                 (NormalPressureKPa - pressure) /
