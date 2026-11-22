@@ -184,7 +184,7 @@
                                 <li>@(car.IsEngine ? "Engine" : car.IsEndOfTrain ? "EOT" : "Wagon"): @car.Name <span class="hint">(@car.Folder, UID @car.Uid@(car.Flipped ? ", flipped" : ""))</span>
                                     @if (carAsset is not null && !car.IsEndOfTrain)
                                     {
-                                        <small class="hint">Shape: @(carAsset.Metadata?.ShapeFileName ?? "not declared") — @(carAsset.ShapeFound ? $"loaded from {carAsset.ShapeSourcePackage ?? "package"}" : carAsset.Metadata?.ShapeFileName is null ? "no shape reference" : "missing shape asset")</small>
+                                        <small class="hint">Shape: @(carAsset.Metadata?.ShapeFileName ?? "not declared") — @(carAsset.ShapeFound ? $"resolved from {carAsset.ShapeSourcePackage ?? "package"}" : carAsset.Metadata?.ShapeFileName is null ? "no shape reference" : "missing shape asset")</small>
                                     }
                                     @if (car.Loads is not null)
                                     {
