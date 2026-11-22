@@ -22,7 +22,7 @@ public sealed class TrainConsistSimulationLoop
         double maximumFrameSeconds = 0.25d,
         int maximumStepsPerFrame = 8)
     {
-        State = initialState ?? throw new ArgumentNullException(nameof(initialState));
+        State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
         scheduler = new FixedStepSimulationScheduler(
             fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame);
     }
@@ -47,8 +47,21 @@ public sealed class TrainConsistSimulationLoop
 
     public void Reset(TrainConsistMotionState initialState)
     {
-        State = initialState ?? throw new ArgumentNullException(nameof(initialState));
+        State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
         scheduler.Reset();
+    }
+
+    private static TrainConsistMotionState ValidateState(TrainConsistMotionState state)
+    {
+        if (state.Cars.Count == 0)
+            throw new ArgumentException("A consist simulation requires at least one car.", nameof(state));
+        foreach (var car in state.Cars)
+        {
+            if (!double.IsFinite(car.MassKg) || car.MassKg <= 0 ||
+                !double.IsFinite(car.SpeedMetersPerSecond) || !double.IsFinite(car.DistanceMeters))
+                throw new ArgumentException("Initial car mass must be positive and motion state values finite.", nameof(state));
+        }
+        return state;
     }
 }
 
