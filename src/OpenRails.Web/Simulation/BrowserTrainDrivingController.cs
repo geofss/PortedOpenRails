@@ -74,7 +74,8 @@ public sealed class BrowserTrainDrivingController
             setup.MaximumBrakeForceNewtonsByCar,
             (_, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParameters
-                : resistanceParameters with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }));
+                : resistanceParameters with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
+            setup.CouplerForceLimits);
     }
 
     public void Pause() => setup.Session.Pause();
