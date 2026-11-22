@@ -10,8 +10,8 @@ namespace OpenRails.Web.Simulation;
 public sealed class BrowserTrainDrivingController
 {
     private readonly TrainConsistSimulationSetup setup;
-    private readonly double rollingResistanceCoefficient;
-    private readonly double aerodynamicDragAreaSquareMeters;
+    private readonly TrainCarResistanceModel resistanceModel = new();
+    private readonly TrainCarResistanceParameters resistanceParameters;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
@@ -33,8 +33,9 @@ public sealed class BrowserTrainDrivingController
             setup.MaximumBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count)
             throw new ArgumentException("Simulation setup control mappings must match the vehicle count.", nameof(setup));
 
-        this.rollingResistanceCoefficient = rollingResistanceCoefficient;
-        this.aerodynamicDragAreaSquareMeters = aerodynamicDragAreaSquareMeters;
+        resistanceParameters = new TrainCarResistanceParameters(
+            RollingResistanceCoefficient: rollingResistanceCoefficient,
+            AerodynamicDragAreaSquareMeters: aerodynamicDragAreaSquareMeters);
     }
 
     public void SetThrottle(float percent)
@@ -63,13 +64,7 @@ public sealed class BrowserTrainDrivingController
             throttle,
             brakes,
             setup.MaximumBrakeForceNewtonsByCar,
-            (_, car) =>
-            {
-                var speed = Math.Abs(car.SpeedMetersPerSecond);
-                var rolling = car.MassKg * 9.80665 * rollingResistanceCoefficient;
-                var wind = 0.5 * 1.225 * aerodynamicDragAreaSquareMeters * speed * speed;
-                return new TrainCarResistanceForces(0, rolling, 0, 0, wind, 0);
-            });
+            (_, car) => resistanceModel.Calculate(car, resistanceParameters));
     }
 
     public void Pause() => setup.Session.Pause();
