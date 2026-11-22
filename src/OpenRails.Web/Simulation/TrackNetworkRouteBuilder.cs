@@ -34,7 +34,8 @@ public sealed class TrackNetworkRouteBuilder
     public TrackNetworkRoute Build(
         TrackNetwork network,
         uint startingTrackNodeIndex,
-        int maximumSegments = 100_000)
+        int maximumSegments = 100_000,
+        bool startReversed = false)
     {
         ArgumentNullException.ThrowIfNull(network);
         if (maximumSegments <= 0)
@@ -51,12 +52,12 @@ public sealed class TrackNetworkRouteBuilder
 
         var segments = new List<TrackNetworkRouteSegment>
         {
-            new(first, IsReversed: false)
+            new(first, IsReversed: startReversed)
         };
         var diagnostics = new List<string>();
         var visited = new HashSet<uint> { first.TrackNodeIndex };
         var currentNode = segments[0].ExitNodeIndex;
-        var currentPosition = GetEndPosition(first, reversed: false);
+        var currentPosition = GetEndPosition(first, startReversed);
 
         while (segments.Count < maximumSegments)
         {
