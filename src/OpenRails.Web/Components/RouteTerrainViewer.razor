@@ -109,6 +109,17 @@
     [Parameter] public IVirtualContentStore? Store { get; set; }
     [Parameter] public ConsistMetadata? Consist { get; set; }
     [Parameter] public IReadOnlyList<ConsistCarAssetReference> CarAssets { get; set; } = Array.Empty<ConsistCarAssetReference>();
+    [Parameter] public TrainConsistMotionState? MotionState { get; set; }
+    private TrainConsistMotionState? lastMotionState;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(lastMotionState, MotionState))
+        {
+            lastMotionState = MotionState;
+            hasDrawn = false;
+        }
+    }
     private ElementReference canvas;
     private IJSObjectReference? module;
     private string? renderError;
@@ -246,8 +257,10 @@
                     }
                     else
                     {
-                        var placementResult = new RollingStockTrackPlacementBuilder().Build(
-                            Consist, CarAssets, meshesByUid, selectedPath);
+                        var placementBuilder = new RollingStockTrackPlacementBuilder();
+                        var placementResult = MotionState is null
+                            ? placementBuilder.Build(Consist, CarAssets, meshesByUid, selectedPath)
+                            : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, selectedPath, MotionState);
                         rollingStockPlacements.AddRange(placementResult.Placements);
                         rollingStockIssues.AddRange(placementResult.Issues);
                     }
