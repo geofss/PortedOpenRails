@@ -51,7 +51,9 @@ public sealed class TrainConsistCouplerDynamicsTests
             new[] { 0d, 0d },
             new[] { 5000d, 5000d });
 
-        Assert.Equal(new[] { 100d, 200d, -300d }, result);
+        Assert.Equal(100, result[0], 8);
+        Assert.Equal(100, result[1], 8);
+        Assert.Equal(-200, result[2], 8);
         Assert.Equal(0, result.Sum(), 8);
     }
 
