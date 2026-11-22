@@ -35,7 +35,10 @@ public sealed class TrainCarMotionIntegrator
             state.SpeedMetersPerSecond < 0 && nextSpeed > 0)
             nextSpeed = 0;
 
-        var nextDistance = state.DistanceMeters + nextSpeed * elapsedSeconds;
+        // Trapezoidal integration keeps distance consistent with the speed change
+        // within the fixed step (rather than using only the end-step velocity).
+        var nextDistance = state.DistanceMeters +
+            (state.SpeedMetersPerSecond + nextSpeed) * 0.5 * elapsedSeconds;
         var nextState = state with
         {
             SpeedMetersPerSecond = nextSpeed,
