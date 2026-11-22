@@ -72,6 +72,36 @@ public sealed class RollingStockTrackPlacementBuilderTests
     }
 
     [Fact]
+    public void UsesTrackChainageRatherThanThreeDimensionalDistanceOnGrade()
+    {
+        var consist = new ConsistMetadata("GradeMotion", new[]
+        {
+            new ConsistCar("GradeWagon", "Freight", 52, false, false, false)
+        }, "grade-motion.con");
+        var assets = new[] { CreateReference("GradeMotion", 52, "GradeWagon", 10) };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh> { [52] = CreateMesh(52) };
+        var start = new TrackWorldPosition(0, 0, 0);
+        var end = new TrackWorldPosition(0, 10, 100);
+        var source = new TrackVectorSection(44, 0, 0, 0, 0, 0, 1, "00",
+            0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(44, null, 100, null, null, false);
+        var section = new TrackSectionPlacement(source, geometry, start, 100);
+        var path = new TrackVectorPath(3, new[] { 5, 6 }, new[] { section }, 100, end);
+        var motion = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(10_000, 0, 50)
+        });
+
+        var result = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
+            consist, assets, meshes, path, motion);
+
+        var placement = Assert.Single(result.Placements);
+        Assert.Equal(50, placement.Anchor.Z, 1);
+        Assert.Equal(5, placement.Anchor.Y, 1);
+        Assert.Empty(result.Issues);
+    }
+
+    [Fact]
     public void MapsEachSimulatedCarDistanceToItsOwnRoutePlacement()
     {
         var consist = new ConsistMetadata("Moving", new[]
