@@ -3,7 +3,7 @@ using OpenRails.Web.Content;
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
-public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage, RollingStockMetadata? Metadata);
+public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage, RollingStockMetadata? Metadata, string? ShapeAssetPath = null, bool ShapeFound = false, string? ShapeSourcePackage = null);
 public sealed record ConsistTcsAssetReference(string ConsistName, string FileName, string AssetPath, bool Found, string? SourcePackage);
 public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets, IReadOnlyList<ConsistTcsAssetReference> TcsAssets);
 
@@ -53,7 +53,25 @@ public sealed class ConsistCatalogReader
                             issues.Add(new ConsistCatalogIssue(assetPath, $"Rolling-stock metadata could not be read: {exception.Message}"));
                         }
                     }
-                    carAssets.Add(new ConsistCarAssetReference(consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain, assetPath, found, sourcePackage, metadata));
+                    RollingStockShapeAssetReference? shapeAsset = null;
+                    if (metadata is not null && !string.IsNullOrWhiteSpace(metadata.ShapeFileName))
+                    {
+                        try
+                        {
+                            shapeAsset = new RollingStockShapeAssetLocator().Locate(store, car.Folder, metadata.ShapeFileName);
+                        }
+                        catch (InvalidDataException exception)
+                        {
+                            issues.Add(new ConsistCatalogIssue(assetPath, $"Unsafe WagonShape reference: {exception.Message}"));
+                        }
+                    }
+                    var shapeSourcePackage = store is CompositeContentStore shapeComposite && shapeAsset is not null
+                        ? shapeComposite.GetSourcePackage(shapeAsset.Path)
+                        : null;
+                    carAssets.Add(new ConsistCarAssetReference(
+                        consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain,
+                        assetPath, found, sourcePackage, metadata,
+                        shapeAsset?.Path, shapeAsset is not null, shapeSourcePackage));
                 }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));
