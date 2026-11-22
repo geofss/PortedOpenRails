@@ -55,7 +55,9 @@ public sealed class TrainConsistSimulationSessionTests
             "TestLoco", 100_000, 100_000, 1_000_000, 100, 0, null, "test.eng");
         var resistance = new Func<int, TrainCarMotionState, TrainCarResistanceForces>(
             (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0));
-        var expectedSpeed = 0.1 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared * 0.1;
+        var adhesionLimitedForce = (float)(0.1 * 1_000 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared);
+        var expectedAcceleration = adhesionLimitedForce / 1_000d;
+        var expectedSpeed = expectedAcceleration * 0.1;
         var coefficients = new[] { 0.1d };
 
         var direct = new TrainConsistSimulationSession(
@@ -69,8 +71,7 @@ public sealed class TrainConsistSimulationSessionTests
             new LocomotiveTractionMetadata?[] { locomotive },
             fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
         common.AdvanceWithCommonAcceleration(0.1, new[] { 100f }, resistance,
-            0.1 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared,
-            adhesionCoefficientByCar: coefficients);
+            expectedAcceleration, adhesionCoefficientByCar: coefficients);
 
         var automatic = new TrainConsistSimulationSession(
             new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
