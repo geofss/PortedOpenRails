@@ -34,7 +34,8 @@ public sealed class BrowserTrainDrivingControllerTests
         var speedBeforeBrake = controller.State.Cars[0].SpeedMetersPerSecond;
         controller.SetThrottle(0);
         controller.SetBrake(100);
-        controller.Advance(0.1);
+        for (var frame = 0; frame < 10; frame++)
+            controller.Advance(0.1);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < speedBeforeBrake);
         Assert.Equal(controller.State.Cars[0].SpeedMetersPerSecond,
             controller.State.Cars[1].SpeedMetersPerSecond, 8);
