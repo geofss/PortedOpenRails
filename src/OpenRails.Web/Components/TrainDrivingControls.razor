@@ -4,7 +4,7 @@
 
 <section class="route-details driving-controls">
     <h3>Train driving controls</h3>
-    <p class="hint">Prototype controls · fixed-step traction, braking, and automatic coupler force distribution</p>
+    <p class="hint">Prototype controls · fixed-step traction, pneumatic braking, and dynamic coupler forces</p>
     <div class="driving-control-row">
         <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
         <input id="train-throttle" type="range" min="0" max="100" step="1"
@@ -75,6 +75,7 @@
         <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
         <dt>Brake cylinder · front / rear</dt><dd>@Controller.BrakeCylinderState.PressuresKPa[0].ToString("N0") / @Controller.BrakeCylinderState.PressuresKPa[^1].ToString("N0") kPa</dd>
         <dt>Simulation time</dt><dd>@Controller.SimulationTimeSeconds.ToString("N1") s</dd>
+        <dt>Dropped frame time</dt><dd>@Controller.DroppedTimeSeconds.ToString("N2") s</dd>
         <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
     </dl>
 </section>
