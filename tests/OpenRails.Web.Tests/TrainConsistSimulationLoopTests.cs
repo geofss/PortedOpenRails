@@ -33,7 +33,7 @@ public sealed class TrainConsistSimulationLoopTests
     {
         var initial = new TrainConsistMotionState(new[]
         {
-            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(1_000, 0, 9.95),
             new TrainCarMotionState(1_000, -2, 0.1)
         });
         var loop = new TrainConsistSimulationLoop(initial, 0.1, 0.5, 8, 10);
@@ -47,8 +47,8 @@ public sealed class TrainConsistSimulationLoopTests
 
         loop.Advance(0.1, _ => frame);
 
-        Assert.Equal(0.1, loop.State.Cars[0].DistanceMeters, 8);
-        Assert.Equal(1, loop.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(10, loop.State.Cars[0].DistanceMeters, 8);
+        Assert.Equal(0, loop.State.Cars[0].SpeedMetersPerSecond, 8);
         Assert.Equal(0, loop.State.Cars[1].DistanceMeters, 8);
         Assert.Equal(0, loop.State.Cars[1].SpeedMetersPerSecond, 8);
     }
