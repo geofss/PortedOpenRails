@@ -29,6 +29,17 @@ public sealed class TrainCarMotionIntegratorTests
     }
 
     [Fact]
+    public void StopsReverseMotionAtTheExactZeroSpeedTime()
+    {
+        var initial = new TrainCarMotionState(10_000, -1, 12);
+
+        var result = new TrainCarMotionIntegrator().Step(initial, 20_000, 1);
+
+        Assert.Equal(0, result.State.SpeedMetersPerSecond);
+        Assert.Equal(11.75, result.State.DistanceMeters, 8);
+    }
+
+    [Fact]
     public void SupportsReverseMotionAndRejectsInvalidMass()
     {
         var reverse = new TrainCarMotionIntegrator().Step(
