@@ -41,6 +41,42 @@ public sealed class TrainCarResistanceModelTests
     }
 
     [Fact]
+    public void AppliesDavisBCoefficientsWithSpeedMagnitude()
+    {
+        var model = new TrainCarResistanceModel();
+        var forward = model.Calculate(
+            new TrainCarMotionState(1_000, 4, 0),
+            new TrainCarResistanceParameters(
+                RollingResistanceCoefficient: 0,
+                DavisB: 3,
+                DavisC: 2,
+                AerodynamicDragAreaSquareMeters: 0));
+        var reverse = model.Calculate(
+            new TrainCarMotionState(1_000, -4, 0),
+            new TrainCarResistanceParameters(
+                RollingResistanceCoefficient: 0,
+                DavisB: 3,
+                DavisC: 2,
+                AerodynamicDragAreaSquareMeters: 0));
+
+        Assert.Equal(44, forward.RollingFrictionForceNewtons);
+        Assert.Equal(44, reverse.RollingFrictionForceNewtons);
+    }
+
+    [Fact]
+    public void DavisAResistanceAppliesEvenAtStandstill()
+    {
+        var result = new TrainCarResistanceModel().Calculate(
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarResistanceParameters(
+                RollingResistanceCoefficient: 0,
+                DavisA: 125,
+                AerodynamicDragAreaSquareMeters: 0));
+
+        Assert.Equal(125, result.RollingFrictionForceNewtons);
+    }
+
+    [Fact]
     public void RejectsInvalidResistanceParameters()
     {
         var model = new TrainCarResistanceModel();
