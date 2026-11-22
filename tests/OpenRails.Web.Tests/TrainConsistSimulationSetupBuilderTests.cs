@@ -46,7 +46,7 @@ public sealed class TrainConsistSimulationSetupBuilderTests
 
         Assert.Equal(10_000, setup.InitialState.Cars[0].MassKg);
         Assert.Equal(10_000 * 9.80665 * 0.1, setup.MaximumBrakeForceNewtonsByCar[0], 2);
-        Assert.Equal(2, setup.Diagnostics.Count);
+        Assert.Equal(3, setup.Diagnostics.Count);
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new TrainConsistSimulationSetupBuilder().Build(consist, Array.Empty<ConsistCarAssetReference>(), 0));
     }
