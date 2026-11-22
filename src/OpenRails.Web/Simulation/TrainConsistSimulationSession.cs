@@ -128,7 +128,7 @@ public sealed class TrainConsistSimulationSession
              adhesionCoefficientByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 1)))
             throw new ArgumentOutOfRangeException(nameof(adhesionCoefficientByCar),
                 "Adhesion coefficients must match the consist and be between zero and one.");
-        var adhesionModel = new TrainCarAdhesionModel();
+        var adhesionModel = AdhesionModel;
         var carCount = State.Cars.Count;
         if (throttlePercentByCar.Count != carCount || brakePercentByCar.Count != carCount ||
             maximumBrakeForceNewtonsByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
