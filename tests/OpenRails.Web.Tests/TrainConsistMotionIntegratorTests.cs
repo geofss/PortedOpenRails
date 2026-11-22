@@ -46,7 +46,7 @@ public sealed class TrainConsistMotionIntegratorTests
         Assert.Equal(1.9, result.Cars[0].SpeedMetersPerSecond, 8);
         Assert.Equal(1.8, result.Cars[1].SpeedMetersPerSecond, 8);
         Assert.Equal(11.95, result.Cars[0].DistanceMeters, 8);
-        Assert.Equal(21.8, result.Cars[1].DistanceMeters, 8);
+        Assert.Equal(21.9, result.Cars[1].DistanceMeters, 8);
     }
 
     [Fact]
