@@ -99,10 +99,23 @@
                         <dt>Scenery tiles assembled</dt><dd>@loadedRoute.WorldScenery.Loaded.Count</dd>
                         <dt>Scenery shape meshes</dt><dd>@loadedRoute.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
                     </dl>
+                    @if (simulationSetup is not null)
+                    {
+                        <div class="route-details">
+                            <h3>Train simulation setup</h3>
+                            <p class="success">Fixed-step consist session initialized · @simulationSetup.InitialState.Cars.Count vehicle(s) · 60 Hz physics step</p>
+                            <p class="hint">Initial speed: @((simulationSetup.InitialState.Cars[0].SpeedMetersPerSecond * 3.6):N1) km/h · route length: @traversedRoute?.LengthMeters.ToString("N0") m</p>
+                            @foreach (var diagnostic in simulationSetup.Diagnostics)
+                            {
+                                <p class="hint">@diagnostic</p>
+                            }
+                        </div>
+                    }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
                         Consist="consistCatalog?.Consists.FirstOrDefault()"
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
-                        MotionRoute="traversedRoute" />
+                        MotionRoute="traversedRoute"
+                        MotionState="simulationSetup?.InitialState" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
@@ -237,6 +250,7 @@
     private RouteLoadResult? loadedRoute;
     private TrackNetworkRoute? traversedRoute;
     private ConsistCatalogResult? consistCatalog;
+    private TrainConsistSimulationSetup? simulationSetup;
 
     private void SelectDefaultRoute()
     {
@@ -260,6 +274,7 @@
     {
         loadedRoute = null;
         traversedRoute = null;
+        simulationSetup = null;
         routeBuildMessage = null;
         isBuildingRoute = true;
         await Task.Yield();
@@ -279,6 +294,7 @@
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
                 (traversedRoute is null ? " No two-ended vector path was available for connected traversal." :
                     $" Connected traversal followed {traversedRoute.Segments.Count} vector nodes.");
+            InitializeSimulationSetup();
         }
         catch (Exception exception)
         {
@@ -433,6 +449,24 @@
         composite?.Dispose();
         composite = layers.Count == 0 ? null : new CompositeContentStore(layers, ownsStores: false);
         consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);
+        InitializeSimulationSetup();
+    }
+
+    private void InitializeSimulationSetup()
+    {
+        simulationSetup = null;
+        var consist = consistCatalog?.Consists.FirstOrDefault();
+        if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
+            return;
+        try
+        {
+            simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
+                consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters);
+        }
+        catch (ArgumentException exception)
+        {
+            routeBuildMessage = $"Simulation setup unavailable: {exception.Message}";
+        }
     }
 
     public void Dispose()
