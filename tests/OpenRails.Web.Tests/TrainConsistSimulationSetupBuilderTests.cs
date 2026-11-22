@@ -77,6 +77,30 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void IgnoresInvalidDavisCoefficientsAndReportsThem()
+    {
+        var consist = new ConsistMetadata("Freight", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "freight.con");
+        var assets = new[]
+        {
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null,
+                davisA: -1, davisB: float.NaN, davisC: 0.5f)
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var resistance = Assert.Single(setup.ResistanceParametersByCar);
+
+        Assert.Equal(0, resistance.DavisA);
+        Assert.Equal(0, resistance.DavisB);
+        Assert.Equal(0.5, resistance.DavisC);
+        Assert.Equal(2, setup.Diagnostics.Count);
+        Assert.Contains(setup.Diagnostics, message => message.Contains("Davis A"));
+        Assert.Contains(setup.Diagnostics, message => message.Contains("Davis B"));
+    }
+
+    [Fact]
     public void ReportsFallbackMetadataAndRejectsInvalidRouteLength()
     {
         var consist = new ConsistMetadata("Missing", new[]
