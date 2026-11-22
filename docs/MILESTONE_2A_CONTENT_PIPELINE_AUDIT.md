@@ -26,7 +26,7 @@ Browser blockers:
 ### 2. Binary parsing: `Orts.Parsers.Msts/SBR.cs`
 
 - Uses `System.IO` and `System.IO.Compression`, including a physical `FileStream` constructor for filename-based loading and a `BinaryReader` for stream parsing.
-- The browser route is to supply streams from the content provider and verify the required compression formats are available in the WebAssembly runtime.
+- `SBR.Open(Stream, filename)` is implemented and owns the supplied stream; browser terrain loading opens `.t` files from `IVirtualContentStore` and passes those streams directly to SBR. `TerrainTileReaderTests.ReadsTerrainSamplesFromAnSbrStreamInTheVirtualContentStore` and the shader/tile integration fixtures exercise the SIMISA binary reader through ZIP-backed virtual content. Compressed-format runtime coverage should still be added before claiming every SBR variant is validated.
 - Keep the binary parsing behavior and endianness rules; do not replace it with ad-hoc browser-side parsing.
 
 ### 3. Real route and track formats
