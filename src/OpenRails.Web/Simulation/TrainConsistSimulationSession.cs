@@ -105,7 +105,9 @@ public sealed class TrainConsistSimulationSession
         Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
         IReadOnlyList<double> couplerForcesNewtons,
         float powerReduction = 0,
-        IReadOnlyList<float>? averageForceByCar = null)
+        IReadOnlyList<float>? averageForceByCar = null,
+        Action<double>? beforeSimulationStep = null,
+        Func<IReadOnlyList<double>>? brakePercentProvider = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(brakePercentByCar);
@@ -140,9 +142,12 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var activeBrakePercentByCar = brakePercentProvider?.Invoke() ?? brakePercentByCar;
+                if (activeBrakePercentByCar.Count != carCount || activeBrakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100))
+                    throw new InvalidOperationException("Fixed-step brake commands must match the consist and remain between 0 and 100 percent.");
                 var commandedBrake = Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
                     state.Cars[i].SpeedMetersPerSecond,
-                    brakePercentByCar[i],
+                    activeBrakePercentByCar[i],
                     maximumBrakeForceNewtonsByCar[i]));
                 forces[i] = new TrainCarForceBreakdown(
                     motiveForce,
@@ -154,7 +159,7 @@ public sealed class TrainConsistSimulationSession
                     resistance.TunnelResistanceForceNewtons);
             }
             return new TrainConsistForceFrame(forces, couplerForcesNewtons);
-        });
+        }, beforeSimulationStep);
     }
 
     /// <summary>
