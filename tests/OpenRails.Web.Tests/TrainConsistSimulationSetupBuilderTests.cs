@@ -34,6 +34,27 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void UsesTheWeakestAdjacentVehicleCouplerRating()
+    {
+        var consist = new ConsistMetadata("Coupled", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "coupled.con");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", 20_000, 15, 50_000, null, 80_000),
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null, 55_000)
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var limit = Assert.Single(setup.CouplerForceLimits);
+
+        Assert.Equal(55_000, limit.MaximumCompressionNewtons);
+        Assert.Equal(55_000, limit.MaximumTensionNewtons);
+    }
+
+    [Fact]
     public void ReportsFallbackMetadataAndRejectsInvalidRouteLength()
     {
         var consist = new ConsistMetadata("Missing", new[]
@@ -53,10 +74,10 @@ public sealed class TrainConsistSimulationSetupBuilderTests
 
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, float mass, float length, float brake,
-        LocomotiveTractionMetadata? traction) =>
+        LocomotiveTractionMetadata? traction, float? couplerStrength = null) =>
         new("Freight", uid, name, "Freight", uid == 1, false, name + ".eng",
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + ".eng"),
+                null, null, brake, name + ".eng", MinCouplerStrengthN: couplerStrength),
             name + ".s", true, null, traction);
 }
