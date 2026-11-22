@@ -39,6 +39,13 @@ public sealed class TrainConsistCouplerForceDistributor
                 boundaries[i] = residualPrefix;
         }
 
+        var totalMass = state.Cars.Sum(car => car.MassKg);
+        var totalTargetForce = totalMass * targetAccelerationMetersPerSecondSquared;
+        var tolerance = Math.Max(1e-6, Math.Abs(totalTargetForce) * 1e-9);
+        if (Math.Abs(residualPrefix) > tolerance)
+            throw new InvalidOperationException(
+                $"The requested common acceleration is infeasible from external forces: net force residual {residualPrefix:N3} N.");
+
         return Array.AsReadOnly(boundaries);
     }
 
