@@ -34,6 +34,28 @@ public sealed class TrainConsistCouplerDynamicsTests
     }
 
     [Fact]
+    public void AccumulatesForcesAcrossMultipleBoundariesWithoutCreatingNetForce()
+    {
+        var state = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1000, 0, 0),
+            new TrainCarMotionState(1000, 0, 2.2),
+            new TrainCarMotionState(1000, 0, 4.5)
+        });
+
+        var result = new TrainConsistCouplerDynamics().CalculatePerCarForces(
+            state,
+            new[] { 2d, 2d },
+            new[] { 0.1d, 0.1d },
+            new[] { 1000d, 1000d },
+            new[] { 0d, 0d },
+            new[] { 5000d, 5000d });
+
+        Assert.Equal(new[] { 100d, 200d, -300d }, result);
+        Assert.Equal(0, result.Sum(), 8);
+    }
+
+    [Fact]
     public void DynamicCouplerForcesAffectIntegratedCarMotion()
     {
         var state = new TrainConsistMotionState(new[]
