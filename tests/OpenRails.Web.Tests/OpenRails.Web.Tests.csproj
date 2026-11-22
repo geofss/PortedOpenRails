@@ -66,5 +66,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackGeometryTessellator.cs" Link="Simulation/TrackGeometryTessellator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTrackPlacementBuilder.cs" Link="Parsing/RollingStockTrackPlacementBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/FixedStepSimulationScheduler.cs" Link="Simulation/FixedStepSimulationScheduler.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarMotionIntegrator.cs" Link="Simulation/TrainCarMotionIntegrator.cs" />
   </ItemGroup>
 </Project>
