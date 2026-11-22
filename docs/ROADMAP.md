@@ -26,7 +26,7 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Add package reorder and removal controls (up/down priority and removal actions; package-store ownership is preserved while rebuilding the overlay)
 - [ ] Confirm precedence against upstream Open Rails content lookup behavior
 - [x] Integrate upstream STFReader with the virtual content store and nested include resolver (see Milestone 2E)
-- [x] Adapt SBR binary readers to browser-provided streams through `SBR.Open(Stream, filename)` and virtual-content terrain loading; regression fixtures verify SIMISA binary blocks from ZIP-backed streams
+- [x] Adapt SBR binary readers to browser-provided streams through `SBR.Open(Stream, filename)` and virtual-content terrain loading; regression fixtures verify compressed and uncompressed SIMISA binary blocks from ZIP-backed streams
 - [x] Parse real route metadata from user-imported ZIP content using upstream STFReader
 - [x] Add route selection UI: built-in preview or import a route ZIP and select parsed .trk metadata
 - [x] Parse TDB track-node topology and resolve global/route-specific TSECTION geometry (fixture-validated; real-route validation remains pending)
