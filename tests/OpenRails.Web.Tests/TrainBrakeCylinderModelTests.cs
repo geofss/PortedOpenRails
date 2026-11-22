@@ -6,6 +6,17 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainBrakeCylinderModelTests
 {
     [Fact]
+    public void PressureStateSnapshotsDoNotTrackCallerArrayMutations()
+    {
+        var source = new[] { 100d };
+        var state = new TrainBrakeCylinderState(source);
+
+        source[0] = 0;
+
+        Assert.Equal(100, state.PressuresKPa[0]);
+    }
+
+    [Fact]
     public void CylinderPressureBuildsGraduallyAfterBrakePipeCommand()
     {
         var model = new TrainBrakeCylinderModel();
