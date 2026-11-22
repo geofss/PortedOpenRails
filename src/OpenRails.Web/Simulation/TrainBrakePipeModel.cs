@@ -3,12 +3,14 @@ namespace OpenRails.Web.Simulation;
 /// <summary>
 /// Brake-pipe pressure for each vehicle, ordered front-to-rear in consist order.
 /// </summary>
-public sealed record TrainBrakePipeState(IReadOnlyList<double> PressuresKPa)
+public sealed record TrainBrakePipeState
 {
+    public IReadOnlyList<double> PressuresKPa { get; }
+
     public TrainBrakePipeState(IEnumerable<double> pressuresKPa)
-        : this(Array.AsReadOnly(pressuresKPa?.ToArray() ??
-            throw new ArgumentNullException(nameof(pressuresKPa))))
     {
+        ArgumentNullException.ThrowIfNull(pressuresKPa);
+        PressuresKPa = Array.AsReadOnly(pressuresKPa.ToArray());
     }
 }
 
