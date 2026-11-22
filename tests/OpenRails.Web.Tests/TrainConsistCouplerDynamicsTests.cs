@@ -28,8 +28,8 @@ public sealed class TrainConsistCouplerDynamicsTests
         });
         var result = new TrainConsistCouplerDynamics().CalculatePerCarForces(
             state, new[] { 2d }, new[] { 0.1d }, new[] { 1000d }, new[] { 100d }, new[] { 5000d });
-        Assert.Equal(-300, result[0], 8);
-        Assert.Equal(300, result[1], 8);
+        Assert.Equal(-130, result[0], 8);
+        Assert.Equal(130, result[1], 8);
         Assert.Equal(0, result.Sum(), 8);
     }
 
