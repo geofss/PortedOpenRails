@@ -31,6 +31,37 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void DynamicCouplerProviderRunsForEveryFixedSimulationStep()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(2_000, 0, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        var sampledLeadDistances = new List<double>();
+
+        var steps = session.AdvanceWithBrakeCommands(
+            0.3,
+            new[] { 0f, 0f },
+            new[] { 0d, 0d },
+            new[] { 0d, 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 0d, 0d },
+            couplerForceProvider: state =>
+            {
+                sampledLeadDistances.Add(state.Cars[0].DistanceMeters);
+                return new[] { 0d, 0d };
+            });
+
+        Assert.Equal(3, steps);
+        Assert.Equal(3, sampledLeadDistances.Count);
+        Assert.Equal(new[] { 0d, 0d, 0d }, sampledLeadDistances);
+    }
+
+    [Fact]
     public void AppliesPerCarBrakeCommandsToConsistMotion()
     {
         var initial = new TrainConsistMotionState(new[]
