@@ -98,6 +98,33 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void BuildsBrakeCylinderPressureGraduallyAndClearsItOnReset()
+    {
+        var consist = new ConsistMetadata("DriveTest", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "drive-test.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetBrake(100);
+        controller.Advance(0.1);
+
+        var appliedPressure = controller.BrakeCylinderState.PressuresKPa[0];
+        Assert.True(appliedPressure > 0);
+        Assert.True(appliedPressure < TrainBrakeCylinderModel.MaximumCylinderPressureKPa);
+
+        controller.Reset();
+
+        Assert.Equal(0, controller.BrakeCylinderState.PressuresKPa[0]);
+        Assert.Equal(TrainBrakePipeModel.NormalPressureKPa,
+            controller.BrakePipeState.PressuresKPa[0]);
+    }
+
+    [Fact]
     public void StopsWhenRequestedAccelerationWouldOverloadParsedCoupler()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
