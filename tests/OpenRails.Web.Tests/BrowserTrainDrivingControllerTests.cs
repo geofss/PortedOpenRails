@@ -114,6 +114,29 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void PneumaticBrakesWaitForTheFirstCompletedFixedStep()
+    {
+        var consist = new ConsistMetadata("SubstepBrake", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "substep-brake.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetBrake(100);
+        var initialPipe = controller.BrakePipeState;
+        var initialCylinder = controller.BrakeCylinderState;
+
+        Assert.Equal(0, controller.Advance(1d / 120d));
+        Assert.Equal(initialPipe.PressuresKPa[0], controller.BrakePipeState.PressuresKPa[0]);
+        Assert.Equal(initialCylinder.PressuresKPa[0], controller.BrakeCylinderState.PressuresKPa[0]);
+
+        Assert.Equal(1, controller.Advance(1d / 120d));
+        Assert.True(controller.BrakePipeState.PressuresKPa[0] < initialPipe.PressuresKPa[0]);
+        Assert.True(controller.BrakeCylinderState.PressuresKPa[0] > initialCylinder.PressuresKPa[0]);
+    }
+
+    [Fact]
     public void PneumaticBrakesAdvanceOnlyForFixedStepsActuallySimulated()
     {
         var consist = new ConsistMetadata("DroppedBrakeTime", new[]
