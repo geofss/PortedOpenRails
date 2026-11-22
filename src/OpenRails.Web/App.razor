@@ -104,7 +104,7 @@
                         <div class="route-details">
                             <h3>Train simulation setup</h3>
                             <p class="success">Fixed-step consist session initialized · @simulationSetup.InitialState.Cars.Count vehicle(s) · 60 Hz physics step</p>
-                            <p class="hint">Initial speed: @((simulationSetup.InitialState.Cars[0].SpeedMetersPerSecond * 3.6):N1) km/h · route length: @traversedRoute?.LengthMeters.ToString("N0") m</p>
+                            <p class="hint">Initial speed: @((simulationSetup.InitialState.Cars[0].SpeedMetersPerSecond * 3.6).ToString("N1")) km/h · route length: @traversedRoute?.LengthMeters.ToString("N0") m</p>
                             @foreach (var diagnostic in simulationSetup.Diagnostics)
                             {
                                 <p class="hint">@diagnostic</p>
