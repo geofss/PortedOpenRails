@@ -108,11 +108,23 @@ public sealed class RollingStockTrackPlacementBuilder
         double distance)
     {
         var index = 0;
-        while (index < cumulative.Count - 2 && cumulative[index + 1] < distance)
+        while (index < cumulative.Count - 2 && cumulative[index + 1] <= distance)
+            index++;
+        while (index < cumulative.Count - 2 &&
+            cumulative[index + 1] - cumulative[index] <= 1e-9)
             index++;
 
         var segmentLength = cumulative[index + 1] - cumulative[index];
-        var fraction = segmentLength <= 0 ? 0 : Math.Clamp((distance - cumulative[index]) / segmentLength, 0, 1);
+        if (segmentLength <= 1e-9)
+        {
+            index = cumulative.Count - 2;
+            while (index > 0 && cumulative[index + 1] - cumulative[index] <= 1e-9)
+                index--;
+            segmentLength = cumulative[index + 1] - cumulative[index];
+        }
+        if (segmentLength <= 1e-9)
+            throw new InvalidDataException("Route centerline contains no usable non-zero-length segment.");
+        var fraction = Math.Clamp((distance - cumulative[index]) / segmentLength, 0, 1);
         var a = points[index];
         var b = points[index + 1];
         var dx = b.X - a.X;
