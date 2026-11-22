@@ -11,7 +11,7 @@
                value="@Controller.ThrottlePercent" @oninput="ChangeThrottle" />
     </div>
     <div class="driving-control-row">
-        <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train to change")</label>
+        <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train and set throttle to zero")</label>
         <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
             <option value="1">Forward</option>
             <option value="0">Neutral</option>
@@ -119,7 +119,20 @@
     private void ChangeReverser(ChangeEventArgs args)
     {
         if (int.TryParse(args.Value?.ToString(), out var value) && value is >= -1 and <= 1)
-            Controller.SetReverser((TrainReverserPosition)value);
+            ApplyReverser((TrainReverserPosition)value);
+    }
+
+    private void ApplyReverser(TrainReverserPosition position)
+    {
+        try
+        {
+            Controller.SetReverser(position);
+            simulationError = null;
+        }
+        catch (InvalidOperationException exception)
+        {
+            simulationError = exception.Message;
+        }
     }
 
     private void ChangeBrake(ChangeEventArgs args)
@@ -148,15 +161,15 @@
                 break;
             case "f":
             case "F":
-                Controller.SetReverser(TrainReverserPosition.Forward);
+                ApplyReverser(TrainReverserPosition.Forward);
                 break;
             case "n":
             case "N":
-                Controller.SetReverser(TrainReverserPosition.Neutral);
+                ApplyReverser(TrainReverserPosition.Neutral);
                 break;
             case "r":
             case "R":
-                Controller.SetReverser(TrainReverserPosition.Reverse);
+                ApplyReverser(TrainReverserPosition.Reverse);
                 break;
             case "Escape":
                 Controller.SetThrottle(0);
