@@ -41,6 +41,33 @@ public sealed class RollingStockTrackPlacementBuilderTests
     }
 
     [Fact]
+    public void FollowsCurvedTrackAndUsesLocalTangentForVehicleHeading()
+    {
+        var consist = new ConsistMetadata("Curve", new[]
+        {
+            new ConsistCar("CurveWagon", "Freight", 21, false, false, false)
+        }, "curve.con");
+        var assets = new[] { CreateReference("Curve", 21, "CurveWagon", 10) };
+        var meshes = new Dictionary<int, TrackShapeAssetMesh> { [21] = CreateMesh(21) };
+        var radius = 100d;
+        var angleDegrees = 90f;
+        var length = radius * Math.PI / 2d;
+        var source = new TrackVectorSection(43, 0, 0, 0, 0, 0, 1, "00",
+            0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(43, null, null, (float)radius, angleDegrees, false);
+        var section = new TrackSectionPlacement(source, geometry,
+            new TrackWorldPosition(0, 0, 0), length);
+        var path = new TrackVectorPath(2, new[] { 3, 4 }, new[] { section }, length);
+
+        var result = new RollingStockTrackPlacementBuilder().Build(consist, assets, meshes, path);
+
+        var placement = Assert.Single(result.Placements);
+        Assert.True(placement.Anchor.X > 0);
+        Assert.True(placement.Anchor.Z > 0);
+        Assert.Equal(0.05, placement.HeadingRadians, 0.01);
+    }
+
+    [Fact]
     public void RespectsFlippedCarsAndReportsCarsBeyondAvailableTrack()
     {
         var consist = new ConsistMetadata("Short", new[]
