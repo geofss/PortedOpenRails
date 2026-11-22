@@ -80,7 +80,7 @@ public sealed class TrainConsistSimulationSession
                     powerReductionByCar is null ? 0 : powerReductionByCar[i],
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
                 forces[i] = new TrainCarForceBreakdown(
-                    motiveForce,
+                    motiveForce * tractionDirection,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
                     resistance.BrakeRetardForceNewtons,
@@ -108,13 +108,16 @@ public sealed class TrainConsistSimulationSession
         IReadOnlyList<float>? averageForceByCar = null,
         Action<double>? beforeSimulationStep = null,
         Func<IReadOnlyList<double>>? brakePercentProvider = null,
-        Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null)
+        Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null,
+        int tractionDirection = 1)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(brakePercentByCar);
         ArgumentNullException.ThrowIfNull(maximumBrakeForceNewtonsByCar);
         ArgumentNullException.ThrowIfNull(resistanceProvider);
         ArgumentNullException.ThrowIfNull(couplerForcesNewtons);
+        if (tractionDirection is < -1 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(tractionDirection));
         var carCount = State.Cars.Count;
         if (throttlePercentByCar.Count != carCount || brakePercentByCar.Count != carCount ||
             maximumBrakeForceNewtonsByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
