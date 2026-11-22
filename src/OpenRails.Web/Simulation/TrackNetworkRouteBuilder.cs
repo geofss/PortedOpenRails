@@ -35,7 +35,8 @@ public sealed class TrackNetworkRouteBuilder
         TrackNetwork network,
         uint startingTrackNodeIndex,
         int maximumSegments = 100_000,
-        bool startReversed = false)
+        bool startReversed = false,
+        uint? preferredNextTrackNodeIndex = null)
     {
         ArgumentNullException.ThrowIfNull(network);
         if (maximumSegments <= 0)
@@ -58,6 +59,7 @@ public sealed class TrackNetworkRouteBuilder
         var visited = new HashSet<uint> { first.TrackNodeIndex };
         var currentNode = segments[0].ExitNodeIndex;
         var currentPosition = GetEndPosition(first, startReversed);
+        var preferredContinuationUsed = false;
 
         while (segments.Count < maximumSegments)
         {
@@ -81,7 +83,21 @@ public sealed class TrackNetworkRouteBuilder
             if (candidates.Length == 0)
                 break;
 
-            if (candidates.Length > 1 &&
+            if (!preferredContinuationUsed && preferredNextTrackNodeIndex is { } preferredNode)
+            {
+                var preferredIndex = Array.FindIndex(candidates,
+                    candidate => candidate.Path.TrackNodeIndex == preferredNode);
+                if (preferredIndex >= 0)
+                {
+                    var preferred = candidates[preferredIndex];
+                    candidates = new[] { preferred }
+                        .Concat(candidates.Where((_, index) => index != preferredIndex))
+                        .ToArray();
+                    preferredContinuationUsed = true;
+                }
+            }
+
+            if (!preferredContinuationUsed && candidates.Length > 1 &&
                 double.IsFinite(candidates[0].Gap) &&
                 Math.Abs(candidates[1].Gap - candidates[0].Gap) <= GeometryTieToleranceMeters)
             {
