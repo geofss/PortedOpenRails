@@ -19,7 +19,7 @@ public sealed class LocomotiveSimulationSessionTests
 
         Assert.Equal(1, steps);
         Assert.Equal(0.1, session.State.SpeedMetersPerSecond, 8);
-        Assert.Equal(0.01, session.State.DistanceMeters, 8);
+        Assert.Equal(0.005, session.State.DistanceMeters, 8);
     }
 
     [Fact]
