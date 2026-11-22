@@ -70,7 +70,7 @@ public sealed class TrackNetworkRouteProfile
         var points = samples.ToArray();
         var cumulative = new double[points.Length];
         for (var i = 1; i < points.Length; i++)
-            cumulative[i] = cumulative[i - 1] + Distance(points[i - 1], points[i]);
+            cumulative[i] = cumulative[i - 1] + TrackDistance(points[i - 1], points[i]);
 
         if (!double.IsFinite(cumulative[^1]) || cumulative[^1] <= 0)
             throw new InvalidDataException("Connected route profile has no measurable length.");
@@ -106,6 +106,13 @@ public sealed class TrackNetworkRouteProfile
         var grade = -Math.Atan2(deltaY, horizontalLength);
         var heading = Math.Atan2(deltaX, deltaZ);
         return new TrackRouteProfileSample(position, grade, heading);
+    }
+
+    private static double TrackDistance(TrackWorldPosition a, TrackWorldPosition b)
+    {
+        var x = a.X - b.X;
+        var z = a.Z - b.Z;
+        return Math.Sqrt(x * x + z * z);
     }
 
     private static double Distance(TrackWorldPosition a, TrackWorldPosition b)
