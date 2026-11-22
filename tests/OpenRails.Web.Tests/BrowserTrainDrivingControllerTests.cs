@@ -41,6 +41,21 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void RouteGradeTelemetryIsEmptyWhenNoRouteIsAttached()
+    {
+        var consist = new ConsistMetadata("NoRouteGrade", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "no-route-grade.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        Assert.Empty(controller.RouteGradePercentByCar);
+        Assert.Null(controller.LeadCarRouteGradePercent);
+    }
+
+    [Fact]
     public void AppliesRouteGradeToAvailableTraction()
     {
         var consist = new ConsistMetadata("GradeTest", new[]
