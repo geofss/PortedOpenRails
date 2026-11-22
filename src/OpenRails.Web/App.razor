@@ -480,7 +480,7 @@
         {
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters);
-            drivingController = new BrowserTrainDrivingController(simulationSetup);
+            drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;
         }
         catch (ArgumentException exception)
