@@ -83,7 +83,7 @@ public sealed class TrainConsistSimulationSession
                     motiveForce,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
-                    resistance.BrakeRetardForceNewtons,
+                    resistance.BrakeRetardForceNewtons + commandedBrake,
                     resistance.CurveResistanceForceNewtons,
                     resistance.WindResistanceForceNewtons,
                     resistance.TunnelResistanceForceNewtons);
@@ -170,7 +170,9 @@ public sealed class TrainConsistSimulationSession
         double targetAccelerationMetersPerSecondSquared,
         float powerReduction = 0,
         IReadOnlyList<float>? averageForceByCar = null,
-        IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null)
+        IReadOnlyList<TrainCouplerForceLimit>? couplerForceLimits = null,
+        IReadOnlyList<double>? brakePercentByCar = null,
+        IReadOnlyList<double>? maximumBrakeForceNewtonsByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(resistanceProvider);
@@ -180,14 +182,21 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentException("Per-car throttle and average-force inputs must match the consist size.");
         if (couplerForceLimits is not null && couplerForceLimits.Count != Math.Max(0, carCount - 1))
             throw new ArgumentException("Coupler force limits must match the consist boundary count.", nameof(couplerForceLimits));
+        if ((brakePercentByCar is null) != (maximumBrakeForceNewtonsByCar is null))
+            throw new ArgumentException("Brake commands and brake ratings must be supplied together.");
+        if (brakePercentByCar is not null && (brakePercentByCar.Count != carCount || maximumBrakeForceNewtonsByCar!.Count != carCount))
+            throw new ArgumentException("Brake commands and ratings must match the consist size.");
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
             !float.IsFinite(powerReduction) ||
             (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
+            (brakePercentByCar is not null && brakePercentByCar.Any(value => !double.IsFinite(value))) ||
+            (maximumBrakeForceNewtonsByCar is not null && maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0)) ||
             !double.IsFinite(targetAccelerationMetersPerSecondSquared))
             throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
                 "Throttle, power reduction, average force, and target acceleration must be finite.");
 
         var couplerDistributor = new TrainConsistCouplerForceDistributor();
+        var brakeModel = new TrainCarBrakeModel();
         return loop.Advance(elapsedFrameSeconds, state =>
         {
             var forces = new TrainCarForceBreakdown[carCount];
@@ -201,6 +210,8 @@ public sealed class TrainConsistSimulationSession
                     throttleResponses[i],
                     powerReduction,
                     averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var commandedBrake = brakePercentByCar is null ? 0 : Math.Abs(brakeModel.CalculateBrakeRetardForceNewtons(
+                    state.Cars[i].SpeedMetersPerSecond, brakePercentByCar[i], maximumBrakeForceNewtonsByCar![i]));
                 forces[i] = new TrainCarForceBreakdown(
                     motiveForce,
                     resistance.GravityForceNewtons,
