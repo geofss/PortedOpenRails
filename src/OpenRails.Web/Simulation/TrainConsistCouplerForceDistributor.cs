@@ -11,14 +11,14 @@ public sealed class TrainConsistCouplerForceDistributor
     public IReadOnlyList<double> CalculateBoundaryForces(
         TrainConsistMotionState state,
         IReadOnlyList<TrainCarForceBreakdown> externalForces,
-        double targetAccelerationMetersPerSecondSquaredSquared)
+        double targetAccelerationMetersPerSecondSquared)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(externalForces);
         if (state.Cars.Count != externalForces.Count)
             throw new ArgumentException("Each car requires an external-force breakdown.", nameof(externalForces));
-        if (!double.IsFinite(targetAccelerationMetersPerSecondSquaredSquared))
-            throw new ArgumentOutOfRangeException(nameof(targetAccelerationMetersPerSecondSquaredSquared));
+        if (!double.IsFinite(targetAccelerationMetersPerSecondSquared))
+            throw new ArgumentOutOfRangeException(nameof(targetAccelerationMetersPerSecondSquared));
 
         var boundaries = new double[Math.Max(0, state.Cars.Count - 1)];
         double residualPrefix = 0;
@@ -29,7 +29,7 @@ public sealed class TrainConsistCouplerForceDistributor
             if (!double.IsFinite(car.MassKg) || car.MassKg <= 0)
                 throw new ArgumentOutOfRangeException(nameof(state), "Car masses must be finite and positive.");
             var externalNet = new TrainCarForceModel().CalculateNetLongitudinalForce(car, forces);
-            residualPrefix += car.MassKg * targetAccelerationMetersPerSecondSquaredSquared - externalNet;
+            residualPrefix += car.MassKg * targetAccelerationMetersPerSecondSquared - externalNet;
             if (!double.IsFinite(residualPrefix))
                 throw new ArgumentOutOfRangeException(nameof(externalForces), "Force distribution produced a non-finite value.");
             if (i < boundaries.Length)
@@ -46,7 +46,7 @@ public sealed class TrainConsistCouplerForceDistributor
     public IReadOnlyList<double> CalculatePerCarCouplerForces(
         TrainConsistMotionState state,
         IReadOnlyList<TrainCarForceBreakdown> externalForces,
-        double targetAccelerationMetersPerSecondSquaredSquared)
+        double targetAccelerationMetersPerSecondSquared)
     {
         var boundaries = CalculateBoundaryForces(
             state, externalForces, targetAccelerationMetersPerSecondSquared);
