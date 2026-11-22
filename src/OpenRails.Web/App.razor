@@ -101,7 +101,8 @@
                     </dl>
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
                         Consist="consistCatalog?.Consists.FirstOrDefault()"
-                        CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()" />
+                        CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
+                        MotionRoute="traversedRoute" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count)</p>
