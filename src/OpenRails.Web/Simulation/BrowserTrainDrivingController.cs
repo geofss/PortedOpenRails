@@ -39,6 +39,7 @@ public sealed class BrowserTrainDrivingController
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
+    public bool CanChangeReverser => State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
     public TrainBrakePipeState BrakePipeState => brakePipeState;
     public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
     public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
@@ -105,6 +106,8 @@ public sealed class BrowserTrainDrivingController
     {
         if (!Enum.IsDefined(position))
             throw new ArgumentOutOfRangeException(nameof(position));
+        if (!CanChangeReverser && position != ReverserPosition)
+            throw new InvalidOperationException("The reverser can only be changed when the consist is stopped.");
         ReverserPosition = position;
     }
 
