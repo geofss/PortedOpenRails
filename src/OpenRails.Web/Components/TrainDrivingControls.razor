@@ -11,8 +11,8 @@
                value="@Controller.ThrottlePercent" @oninput="ChangeThrottle" />
     </div>
     <div class="driving-control-row">
-        <label for="train-reverser">Reverser</label>
-        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" @onchange="ChangeReverser">
+        <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train to change")</label>
+        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
             <option value="1">Forward</option>
             <option value="0">Neutral</option>
             <option value="-1">Reverse</option>
