@@ -159,6 +159,10 @@
             {
                 <h3>Train consists discovered</h3>
                 <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count(asset => asset.Found)/@consistCatalog.CarAssets.Count rolling-stock definitions resolved · @consistCatalog.CarAssets.Count(asset => asset.ShapeFound)/@consistCatalog.CarAssets.Count rolling-stock shapes resolved · @consistCatalog.TcsAssets.Count(asset => asset.Found)/@consistCatalog.TcsAssets.Count TCS scripts resolved</p>
+                @if (composite is not null && consistCatalog.Consists.Count > 0)
+                {
+                    <RollingStockViewer Store="composite" Consist="consistCatalog.Consists[0]" CarAssets="consistCatalog.CarAssets" />
+                }
                 @foreach (var consist in consistCatalog.Consists)
                 {
                     var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
@@ -177,10 +181,6 @@
                                 <dt>Train-control parameters</dt><dd><code>@consist.TrainControlSystemParametersFile</code> — @(tcsAsset is null ? "unresolved" : tcsAsset.Found ? (tcsAsset.SourcePackage is null ? "found" : $"found in {tcsAsset.SourcePackage}") : "missing")</dd>
                             }
                         </dl>
-                        @if (composite is not null)
-                        {
-                            <RollingStockViewer Store="composite" Consist="consist" CarAssets="consistCatalog.CarAssets" />
-                        }
                         <ol class="path-list">
                             @foreach (var car in consist.Cars)
                             {
