@@ -66,6 +66,9 @@ public sealed class TrainConsistCouplerForceDistributorTests
         Assert.Throws<ArgumentOutOfRangeException>(() => distributor.CalculateBoundaryForces(
             single, new[] { new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0) }, double.NaN));
         Assert.Throws<ArgumentException>(() => distributor.CalculateBoundaryForces(
+            new TrainConsistMotionState(Array.Empty<TrainCarMotionState>()),
+            Array.Empty<TrainCarForceBreakdown>(), 0));
+        Assert.Throws<ArgumentException>(() => distributor.CalculateBoundaryForces(
             single, Array.Empty<TrainCarForceBreakdown>(), 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => distributor.ExpandBoundaryForcesToCarForces(
             new[] { double.NaN }));
