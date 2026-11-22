@@ -9,6 +9,27 @@ namespace OpenRails.Web.Tests;
 public sealed class ConsistCatalogReaderTests
 {
     [Fact]
+    public void ParsesOriginalDavisResistanceCoefficients()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Freight/DavisCar.wag", """
+            Wagon (
+                Name ( "DavisCar" )
+                Mass ( 30000 )
+                ORTSDavis_A ( 100 )
+                ORTSDavis_B ( 5 )
+                ORTSDavis_C ( 0.5 )
+            )
+            """));
+
+        var metadata = new RollingStockMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Freight/DavisCar.wag");
+
+        Assert.Equal(100, metadata.DavisAForceN);
+        Assert.Equal(5, metadata.DavisBResistance);
+        Assert.Equal(0.5, metadata.DavisCResistance);
+    }
+
+    [Fact]
     public void ParsesMinimumCouplerBreakStrengthAcrossCouplerDefinitions()
     {
         using var store = CreateStore(("TRAINS/TRAINSET/Freight/Car.wag", """
