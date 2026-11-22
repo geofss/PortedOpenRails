@@ -133,7 +133,7 @@ public sealed class TrainConsistSimulationSession
         return loop.Advance(elapsedFrameSeconds, state =>
         {
             var forces = new TrainCarForceBreakdown[carCount];
-            var activeCouplerForces = couplerForceProvider?.Invoke(State: state) ?? couplerForcesNewtons;
+            var activeCouplerForces = couplerForceProvider?.Invoke(state) ?? couplerForcesNewtons;
             if (activeCouplerForces.Count != carCount || activeCouplerForces.Any(value => !double.IsFinite(value)))
                 throw new InvalidOperationException("Fixed-step coupler forces must match the consist and remain finite.");
             var activeBrakePercentByCar = brakePercentProvider?.Invoke() ?? brakePercentByCar;
