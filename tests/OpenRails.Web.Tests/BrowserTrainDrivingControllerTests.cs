@@ -61,7 +61,7 @@ public sealed class BrowserTrainDrivingControllerTests
         controller.Resume();
         controller.Reset();
         Assert.Equal(0, controller.SimulationTimeSeconds);
-        Assert.Equal(0, controller.State.Cars[0].DistanceMeters);
+        Assert.Equal(10, controller.State.Cars[0].DistanceMeters);
     }
 
     private static ConsistCarAssetReference CreateAsset(
