@@ -86,8 +86,15 @@ public sealed class TrainConsistSimulationSessionTests
             0.1, new[] { 0f },
             (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
             new[] { 0d, 0d }));
+        Assert.Throws<ArgumentException>(() => session.AdvanceWithBrakeCommands(
+            0.1, new[] { 0f }, new[] { 0d, 0d }, new[] { 1_000d, 1_000d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommands(
+            0.1, new[] { 0f, 0f }, new[] { 0d, 0d }, new[] { -1d, 1_000d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), new[] { 0d, 0d }));
         Assert.Equal(0, session.SimulationTimeSeconds);
     }
+
 
     [Fact]
     public void AutomaticallyDistributesCouplerForcesForCommonAcceleration()
