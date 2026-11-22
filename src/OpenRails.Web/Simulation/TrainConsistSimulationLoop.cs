@@ -9,6 +9,7 @@ public sealed class TrainConsistSimulationLoop
 {
     private readonly FixedStepSimulationScheduler scheduler;
     private readonly TrainConsistMotionIntegrator integrator = new();
+    private readonly double? routeLengthMeters;
 
     public TrainConsistMotionState State { get; private set; }
     public double SimulationTimeSeconds => scheduler.SimulationTimeSeconds;
