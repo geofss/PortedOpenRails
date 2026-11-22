@@ -181,6 +181,20 @@ public sealed class ConsistCatalogReaderTests
         Assert.Empty(result.Issues);
     }
 
+    private const string WagonFixture = """
+        Wagon (
+            Name ( "FixtureCar" )
+            Type ( "Freight" )
+            Mass ( 30 )
+            Size ( 2.5 4 12 )
+            ORTSNumberAxles ( 4 )
+            NumWheels ( 8 )
+            BrakeSystemType ( "Vacuum" )
+            BrakeEquipmentType ( "TripleValve" )
+            MaxBrakeForce ( 100 )
+        )
+        """;
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var stream = new MemoryStream();
