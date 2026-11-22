@@ -24,9 +24,9 @@ public sealed class ConsistCatalogReaderTests
         var metadata = new RollingStockMetadataReader().Read(
             store, "TRAINS/TRAINSET/Freight/DavisCar.wag");
 
-        Assert.Equal(100, metadata.DavisAForceN);
-        Assert.Equal(5, metadata.DavisBResistance);
-        Assert.Equal(0.5, metadata.DavisCResistance);
+        Assert.Equal(100f, metadata.DavisAForceN!.Value);
+        Assert.Equal(5f, metadata.DavisBResistance!.Value);
+        Assert.Equal(0.5f, metadata.DavisCResistance!.Value);
     }
 
     [Fact]
