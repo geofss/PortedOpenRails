@@ -29,7 +29,7 @@
         <h4>Vehicle telemetry</h4>
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Vehicle</th><th>Speed</th><th>Route position</th><th>Brake-pipe pressure</th><th>Brake-cylinder pressure</th></tr></thead>
+                <thead><tr><th>Vehicle</th><th>Speed</th><th>Route position</th><th>Track grade</th><th>Brake-pipe pressure</th><th>Brake-cylinder pressure</th></tr></thead>
                 <tbody>
                     @for (var i = 0; i < Controller.State.Cars.Count && i < DrivingCars.Count; i++)
                     {
@@ -38,6 +38,7 @@
                             <td>@DrivingCars[i].Name</td>
                             <td>@((car.SpeedMetersPerSecond * 3.6).ToString("N1")) km/h</td>
                             <td>@car.DistanceMeters.ToString("N1") m</td>
+                            <td>@(Controller.RouteGradePercentByCar.Count > i ? Controller.RouteGradePercentByCar[i].ToString("N2") + "%" : "—")</td>
                             <td>@Controller.BrakePipeState.PressuresKPa[i].ToString("N0") kPa</td>
                             <td>@Controller.BrakeCylinderState.PressuresKPa[i].ToString("N0") kPa</td>
                         </tr>
