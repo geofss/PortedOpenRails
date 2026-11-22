@@ -87,6 +87,9 @@ public sealed class RollingStockTrackPlacementBuilderTests
         var geometry = new TrackSectionGeometry(44, null, 100, null, null, false);
         var section = new TrackSectionPlacement(source, geometry, start, 100);
         var path = new TrackVectorPath(3, new[] { 5, 6 }, new[] { section }, 100, end);
+        var sampledTrack = new TrackGeometryTessellator().BuildPolyline(path, 2);
+        Assert.Equal(50, sampledTrack[25].Z, 3);
+        Assert.Equal(5, sampledTrack[25].Y, 3);
         var motion = new TrainConsistMotionState(new[]
         {
             new TrainCarMotionState(10_000, 0, 50)
