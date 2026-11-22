@@ -110,6 +110,7 @@
     [Parameter] public ConsistMetadata? Consist { get; set; }
     [Parameter] public IReadOnlyList<ConsistCarAssetReference> CarAssets { get; set; } = Array.Empty<ConsistCarAssetReference>();
     [Parameter] public TrainConsistMotionState? MotionState { get; set; }
+    [Parameter] public TrackNetworkRoute? MotionRoute { get; set; }
     private TrainConsistMotionState? lastMotionState;
 
     protected override void OnParametersSet()
@@ -260,7 +261,9 @@
                         var placementBuilder = new RollingStockTrackPlacementBuilder();
                         var placementResult = MotionState is null
                             ? placementBuilder.Build(Consist, CarAssets, meshesByUid, selectedPath)
-                            : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, selectedPath, MotionState);
+                            : MotionRoute is not null
+                                ? placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, MotionRoute, MotionState)
+                                : placementBuilder.BuildAtMotionState(Consist, CarAssets, meshesByUid, selectedPath, MotionState);
                         rollingStockPlacements.AddRange(placementResult.Placements);
                         rollingStockIssues.AddRange(placementResult.Issues);
                     }
