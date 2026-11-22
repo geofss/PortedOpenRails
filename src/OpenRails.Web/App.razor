@@ -352,21 +352,35 @@
         }
     }
 
-    private void SelectTrackStart(ChangeEventArgs args)
+    private async Task SelectTrackStart(ChangeEventArgs args)
     {
         if (uint.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.None,
                 System.Globalization.CultureInfo.InvariantCulture, out var trackNodeIndex))
         {
             selectedTrackNodeIndex = trackNodeIndex;
-            BuildConnectedRoute();
+            await RebuildConnectedRouteAsync();
         }
     }
 
-    private void SelectRouteDirection(ChangeEventArgs args)
+    private async Task SelectRouteDirection(ChangeEventArgs args)
     {
         reverseRouteStart = string.Equals(
             args.Value?.ToString(), "reverse", StringComparison.OrdinalIgnoreCase);
-        BuildConnectedRoute();
+        await RebuildConnectedRouteAsync();
+    }
+
+    private async Task RebuildConnectedRouteAsync()
+    {
+        isBuildingRoute = true;
+        await Task.Yield();
+        try
+        {
+            BuildConnectedRoute();
+        }
+        finally
+        {
+            isBuildingRoute = false;
+        }
     }
 
     private void BuildConnectedRoute()
