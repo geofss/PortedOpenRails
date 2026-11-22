@@ -158,7 +158,7 @@
             @if (consistCatalog is not null)
             {
                 <h3>Train consists discovered</h3>
-                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count(asset => asset.Found)/@consistCatalog.CarAssets.Count rolling-stock assets resolved · @consistCatalog.TcsAssets.Count(asset => asset.Found)/@consistCatalog.TcsAssets.Count TCS scripts resolved</p>
+                <p class="hint">@consistCatalog.Consists.Count valid consist(s) · @consistCatalog.Issues.Count file issue(s) · @consistCatalog.CarAssets.Count(asset => asset.Found)/@consistCatalog.CarAssets.Count rolling-stock definitions resolved · @consistCatalog.CarAssets.Count(asset => asset.ShapeFound)/@consistCatalog.CarAssets.Count rolling-stock shapes resolved · @consistCatalog.TcsAssets.Count(asset => asset.Found)/@consistCatalog.TcsAssets.Count TCS scripts resolved</p>
                 @foreach (var consist in consistCatalog.Consists)
                 {
                     var tcsAsset = consistCatalog.TcsAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name);
@@ -180,7 +180,12 @@
                         <ol class="path-list">
                             @foreach (var car in consist.Cars)
                             {
+                                var carAsset = consistCatalog.CarAssets.FirstOrDefault(asset => asset.ConsistName == consist.Name && asset.Uid == car.Uid);
                                 <li>@(car.IsEngine ? "Engine" : car.IsEndOfTrain ? "EOT" : "Wagon"): @car.Name <span class="hint">(@car.Folder, UID @car.Uid@(car.Flipped ? ", flipped" : ""))</span>
+                                    @if (carAsset is not null && !car.IsEndOfTrain)
+                                    {
+                                        <small class="hint">Shape: @(carAsset.Metadata?.ShapeFileName ?? "not declared") — @(carAsset.ShapeFound ? $"loaded from {carAsset.ShapeSourcePackage ?? "package"}" : carAsset.Metadata?.ShapeFileName is null ? "no shape reference" : "missing shape asset")</small>
+                                    }
                                     @if (car.Loads is not null)
                                     {
                                         <ul>
