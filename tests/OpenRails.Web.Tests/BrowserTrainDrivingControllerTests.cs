@@ -104,6 +104,9 @@ public sealed class BrowserTrainDrivingControllerTests
         var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
         var controller = new BrowserTrainDrivingController(setup);
 
+        Assert.Equal(2, controller.CouplerForceTelemetryNewtons.Count);
+        Assert.All(controller.CouplerForceTelemetryNewtons, force => Assert.Equal(0, force));
+
         controller.SetThrottle(100);
         controller.Advance(0.1);
 
