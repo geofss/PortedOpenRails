@@ -81,6 +81,18 @@
                 }
                 @if (loadedRoute is not null)
                 {
+                    @if (consistCatalog?.Consists.Count > 0)
+                    {
+                        <div class="route-details">
+                            <label for="active-consist">Train consist for simulation</label>
+                            <select id="active-consist" value="@SelectedConsist?.Name" @onchange="SelectConsist">
+                                @foreach (var consist in consistCatalog.Consists)
+                                {
+                                    <option value="@consist.Name">@consist.Name · @consist.Cars.Count cars</option>
+                                }
+                            </select>
+                        </div>
+                    }
                     @if (RouteStartOptions.Count > 0)
                     {
                         <div class="route-details">
@@ -137,7 +149,7 @@
                             MotionChanged="OnTrainMotionChanged" />
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
-                        Consist="consistCatalog?.Consists.FirstOrDefault()"
+                        Consist="SelectedConsist"
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
                         MotionRoute="traversedRoute"
                         MotionState="currentMotionState ?? simulationSetup?.InitialState" />
@@ -284,6 +296,10 @@
     private TrainConsistMotionState? currentMotionState;
     private uint selectedTrackNodeIndex;
     private bool reverseRouteStart;
+    private string? selectedConsistName;
+
+    private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
+        consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
 
     private int RatedCouplerLimitCount => simulationSetup?.CouplerForceLimits.Count(limit =>
         limit.MaximumCompressionNewtons < double.MaxValue || limit.MaximumTensionNewtons < double.MaxValue) ?? 0;
@@ -563,6 +579,8 @@
         composite?.Dispose();
         composite = layers.Count == 0 ? null : new CompositeContentStore(layers, ownsStores: false);
         consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);
+        if (consistCatalog?.Consists.Any(consist => consist.Name == selectedConsistName) != true)
+            selectedConsistName = consistCatalog?.Consists.FirstOrDefault()?.Name;
         InitializeSimulationSetup();
     }
 
@@ -571,7 +589,7 @@
         simulationSetup = null;
         drivingController = null;
         currentMotionState = null;
-        var consist = consistCatalog?.Consists.FirstOrDefault();
+        var consist = SelectedConsist;
         if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
             return;
         try
@@ -585,6 +603,12 @@
         {
             routeBuildMessage = $"Simulation setup unavailable: {exception.Message}";
         }
+    }
+
+    private void SelectConsist(ChangeEventArgs args)
+    {
+        selectedConsistName = args.Value?.ToString();
+        InitializeSimulationSetup();
     }
 
     private Task OnTrainMotionChanged(TrainConsistMotionState state)
