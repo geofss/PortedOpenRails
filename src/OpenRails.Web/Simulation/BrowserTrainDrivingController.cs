@@ -109,14 +109,6 @@ public sealed class BrowserTrainDrivingController
             .Select(powered => powered ? ThrottlePercent : 0f)
             .ToArray();
 
-        var dynamicCouplerForces = couplerDynamics.CalculatePerCarForces(
-            setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
-            couplerStiffness, couplerDamping,
-            couplerMaximumCompressionForces, couplerMaximumTensionForces);
-        CouplerForceTelemetryNewtons = couplerDynamics.CalculatePerBoundaryForcesOnRearCars(
-            setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
-            couplerStiffness, couplerDamping,
-            couplerMaximumCompressionForces, couplerMaximumTensionForces);
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
             throttle,
@@ -125,7 +117,7 @@ public sealed class BrowserTrainDrivingController
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
                 : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
-            dynamicCouplerForces,
+            new double[setup.InitialState.Cars.Count],
             beforeSimulationStep: stepSeconds =>
             {
                 brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds);
@@ -133,7 +125,19 @@ public sealed class BrowserTrainDrivingController
                 brakeCylinderState = brakeCylinderModel.Advance(
                     brakeCylinderState, pipeBrakeCommands, stepSeconds);
             },
-            brakePercentProvider: () => brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState));
+            brakePercentProvider: () => brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState),
+            couplerForceProvider: state =>
+            {
+                var forces = couplerDynamics.CalculatePerCarForces(
+                    state, couplerRestGapsMeters, couplerSlackMeters,
+                    couplerStiffness, couplerDamping,
+                    couplerMaximumCompressionForces, couplerMaximumTensionForces);
+                CouplerForceTelemetryNewtons = couplerDynamics.CalculatePerBoundaryForcesOnRearCars(
+                    state, couplerRestGapsMeters, couplerSlackMeters,
+                    couplerStiffness, couplerDamping,
+                    couplerMaximumCompressionForces, couplerMaximumTensionForces);
+                return forces;
+            });
     }
 
     public void Pause() => setup.Session.Pause();
