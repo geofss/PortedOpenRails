@@ -32,6 +32,22 @@ public sealed class TerrainTileReaderTests
     }
 
     [Fact]
+    public void ReadsCompressedSimisaBinaryFromVirtualContentStream()
+    {
+        var samplesPayload = Concat(
+            FloatBlock(TokenID.terrain_sample_floor, 12),
+            IntBlock(TokenID.terrain_nsamples, 1));
+        var tileBytes = CreateCompressedSbrFile(
+            Block(TokenID.terrain, Block(TokenID.terrain_samples, samplesPayload)));
+
+        using var store = CreateStore(("ROUTES/Test/TILES/compressed.t", tileBytes));
+        var tile = new TerrainTileReader().Read(store, "ROUTES/Test/TILES/compressed.t");
+
+        Assert.Equal(1, tile.Samples.SampleCount);
+        Assert.Equal(12, tile.Samples.Floor);
+    }
+
+    [Fact]
     public void ReadsOriginalTerrainShaderTextureSlotsAndUvCalculations()
     {
         var shader = Block(TokenID.terrain_shader, Concat(
@@ -84,6 +100,32 @@ public sealed class TerrainTileReaderTests
 
         Assert.Equal(12, tile.Altitude.GetElevationMeters(1, 1, tile.Terrain.Samples.Floor, tile.Terrain.Samples.Scale));
         Assert.True(tile.Flags!.IsVertexHidden(1, 0));
+    }
+
+    private static byte[] CreateCompressedSbrFile(byte[] rootBlock)
+    {
+        using var uncompressed = new MemoryStream();
+        using (var writer = new BinaryWriter(uncompressed, Encoding.ASCII, leaveOpen: true))
+        {
+            writer.Write(Encoding.ASCII.GetBytes("JINX0T0b"));
+            writer.Write(new byte[8]);
+            writer.Write(rootBlock);
+        }
+
+        using var compressed = new MemoryStream();
+        using (var deflater = new DeflateStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            deflater.Write(uncompressed.ToArray());
+
+        using var result = new MemoryStream();
+        using (var writer = new BinaryWriter(result, Encoding.ASCII, leaveOpen: true))
+        {
+            writer.Write(Encoding.ASCII.GetBytes("SIMISA@F"));
+            writer.Write(new byte[8]);
+            writer.Write((byte)0x78);
+            writer.Write((byte)0x9C);
+            writer.Write(compressed.ToArray());
+        }
+        return result.ToArray();
     }
 
     private static byte[] CreateSbrFile(byte[] rootBlock)
