@@ -85,6 +85,22 @@ public sealed class CompositeContentStoreTests
         }
     }
 
+
+    [Fact]
+    public void NonOwningCompositeCanBeRebuiltWithoutDisposingPackageStores()
+    {
+        var package = CreateStore(("route.trk", "route"));
+        using (var composite = new CompositeContentStore(
+            new[] { new PackageLayer("Route", package) },
+            ownsStores: false))
+        {
+            Assert.True(composite.Contains("route.trk"));
+        }
+
+        Assert.True(package.Contains("route.trk"));
+        package.Dispose();
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
