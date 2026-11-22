@@ -65,5 +65,6 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/WorldSceneryRenderGeometryBuilder.cs" Link="Parsing/WorldSceneryRenderGeometryBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackGeometryTessellator.cs" Link="Simulation/TrackGeometryTessellator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTrackPlacementBuilder.cs" Link="Parsing/RollingStockTrackPlacementBuilder.cs" />
   </ItemGroup>
 </Project>
