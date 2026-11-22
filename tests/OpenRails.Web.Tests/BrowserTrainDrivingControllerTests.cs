@@ -31,13 +31,11 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(controller.State.Cars[0].SpeedMetersPerSecond,
             controller.State.Cars[1].SpeedMetersPerSecond, 8);
 
+        var speedBeforeBrake = controller.State.Cars[0].SpeedMetersPerSecond;
         controller.SetThrottle(0);
         controller.SetBrake(100);
         controller.Advance(0.1);
-        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond <
-            controller.State.Cars[0].SpeedMetersPerSecond + 1);
-        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond <
-            controller.State.Cars[0].SpeedMetersPerSecond + 0.01);
+        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < speedBeforeBrake);
         Assert.Equal(controller.State.Cars[0].SpeedMetersPerSecond,
             controller.State.Cars[1].SpeedMetersPerSecond, 8);
     }
