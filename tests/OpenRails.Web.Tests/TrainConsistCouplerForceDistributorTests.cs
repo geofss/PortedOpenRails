@@ -84,6 +84,29 @@ public sealed class TrainConsistCouplerForceDistributorTests
     }
 
     [Fact]
+    public void RejectsOverflowingTotalMassAndNullForceRatings()
+    {
+        var state = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1e308, 0, 0),
+            new TrainCarMotionState(1e308, 0, 0)
+        });
+        var external = new[]
+        {
+            new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0),
+            new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0)
+        };
+        var distributor = new TrainConsistCouplerForceDistributor();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => distributor.CalculateBoundaryForces(
+            state, external, 0));
+        Assert.Throws<ArgumentException>(() => distributor.CalculateBoundaryForces(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0), new TrainCarMotionState(1_000, 0, 0) }),
+            new[] { new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0), new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0) },
+            0, new TrainCouplerForceLimit[] { null! }));
+    }
+
+    [Fact]
     public void EqualExternalForcesNeedNoCouplerForce()
     {
         var state = new TrainConsistMotionState(new[]
