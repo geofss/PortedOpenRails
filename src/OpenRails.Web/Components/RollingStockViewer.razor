@@ -1,0 +1,124 @@
+@using System.Numerics
+@using OpenRails.Web.Content
+@using OpenRails.Web.Parsing
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="rolling-stock-preview">
+    <h4>Rolling-stock model preview</h4>
+    <p class="hint">Original WagonShape geometry · first available LOD · simplified material preview</p>
+    <canvas @ref="canvas" class="route-world-canvas" aria-label="3D preview of original rolling-stock models"></canvas>
+    @if (!string.IsNullOrWhiteSpace(status))
+    {
+        <p class="hint">@status</p>
+    }
+    @if (failures.Count > 0)
+    {
+        <ul class="path-list">
+            @foreach (var failure in failures)
+            {
+                <li>@failure</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IVirtualContentStore Store { get; set; } = default!;
+    [Parameter, EditorRequired] public ConsistMetadata Consist { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<ConsistCarAssetReference> CarAssets { get; set; } = Array.Empty<ConsistCarAssetReference>();
+
+    private ElementReference canvas;
+    private IJSObjectReference? module;
+    private string? status;
+    private readonly List<string> failures = [];
+    private bool initialized;
+    private bool drawn;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/route-terrain-renderer.js");
+                await module.InvokeVoidAsync("initialize", canvas);
+                initialized = true;
+            }
+            catch (Exception exception)
+            {
+                status = $"WebGL preview unavailable: {exception.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        if (!initialized || module is null || drawn)
+            return;
+
+        try
+        {
+            var placements = new List<TrackShapePlacement>();
+            var offset = 0f;
+            var loadedCount = 0;
+            var loader = new RollingStockShapeAssetLoader();
+            foreach (var car in Consist.Cars.Where(car => !car.IsEndOfTrain))
+            {
+                var reference = CarAssets.FirstOrDefault(asset => asset.ConsistName == Consist.Name && asset.Uid == car.Uid);
+                if (reference?.ShapeFound != true || reference.ShapeAssetPath is null)
+                {
+                    failures.Add($"{car.Name}: shape asset is unavailable.");
+                    offset += Math.Max(4, reference?.Metadata?.LengthM ?? 10);
+                    continue;
+                }
+
+                try
+                {
+                    var shapeAsset = new RollingStockShapeAssetReference(
+                        reference.Metadata?.ShapeFileName ?? Path.GetFileName(reference.ShapeAssetPath),
+                        reference.ShapeAssetPath);
+                    var mesh = loader.Load(Store, shapeAsset);
+                    var asset = new TrackShapeAssetMesh((uint)loadedCount, Path.GetFileName(reference.ShapeAssetPath), reference.ShapeAssetPath, mesh);
+                    var transform = Matrix4x4.CreateTranslation(offset, 0, 0);
+                    placements.Add(new TrackShapePlacement(
+                        0, (uint)loadedCount, (uint)loadedCount,
+                        new TrackWorldPosition(offset, 0, 0), 0, asset, transform));
+                    offset += Math.Max(4, reference.Metadata?.LengthM ?? 10);
+                    loadedCount++;
+                }
+                catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+                {
+                    failures.Add($"{car.Name}: {exception.Message}");
+                    offset += Math.Max(4, reference.Metadata?.LengthM ?? 10);
+                }
+            }
+
+            var geometry = new TrackShapeRenderGeometryBuilder().Build(placements);
+            await module.InvokeVoidAsync("drawTerrainTextured",
+                Array.Empty<object>(),
+                Array.Empty<object>(),
+                Array.Empty<float>(),
+                new { vertices = geometry.Vertices.SelectMany(vertex => new[] { vertex.X, vertex.Y, vertex.Z }).ToArray(), indices = geometry.Indices });
+            status = $"{loadedCount} original rolling-stock shape(s) loaded · {geometry.Vertices.Count:N0} vertices · {geometry.Indices.Count:N0} indices" +
+                (geometry.WasTruncated ? " · geometry limit reached" : "");
+        }
+        catch (Exception exception)
+        {
+            status = $"Rolling-stock preview failed: {exception.Message}";
+        }
+        finally
+        {
+            drawn = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try { await module.InvokeVoidAsync("cleanup"); } catch { }
+            try { await module.DisposeAsync(); } catch { }
+        }
+    }
+}
