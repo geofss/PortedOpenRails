@@ -430,6 +430,7 @@
                 System.Globalization.CultureInfo.InvariantCulture, out var trackNodeIndex))
         {
             selectedTrackNodeIndex = trackNodeIndex;
+            selectedBranchTrackNodeIndex = null;
             await RebuildConnectedRouteAsync();
         }
     }
