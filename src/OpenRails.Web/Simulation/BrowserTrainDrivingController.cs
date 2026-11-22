@@ -108,11 +108,6 @@ public sealed class BrowserTrainDrivingController
         var throttle = setup.PoweredCars
             .Select(powered => powered ? ThrottlePercent : 0f)
             .ToArray();
-        brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
-        var pipeBrakeCommands = brakePipeModel.GetBrakePercentByCar(brakePipeState);
-        brakeCylinderState = brakeCylinderModel.Advance(
-            brakeCylinderState, pipeBrakeCommands, Math.Clamp(elapsedFrameSeconds, 0, 0.25));
-        var brakes = brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState);
 
         var dynamicCouplerForces = couplerDynamics.CalculatePerCarForces(
             setup.Session.State, couplerRestGapsMeters, couplerSlackMeters,
@@ -130,7 +125,15 @@ public sealed class BrowserTrainDrivingController
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
                 : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
-            dynamicCouplerForces);
+            dynamicCouplerForces,
+            beforeSimulationStep: stepSeconds =>
+            {
+                brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds);
+                var pipeBrakeCommands = brakePipeModel.GetBrakePercentByCar(brakePipeState);
+                brakeCylinderState = brakeCylinderModel.Advance(
+                    brakeCylinderState, pipeBrakeCommands, stepSeconds);
+            },
+            brakePercentProvider: () => brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState));
     }
 
     public void Pause() => setup.Session.Pause();
