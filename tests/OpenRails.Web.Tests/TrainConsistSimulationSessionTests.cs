@@ -31,6 +31,24 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void BrakeCommandSimulationCapsLocomotiveTractionByPerCarAdhesion()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "TestLoco", 100_000, 100_000, 1_000_000, 100, 0, null, "test.eng");
+        var initial = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });
+        var session = new TrainConsistSimulationSession(initial,
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), new[] { 0d },
+            adhesionCoefficientByCar: new[] { 0.1d });
+
+        var expectedAcceleration = 0.1 * TrainCarAdhesionModel.StandardGravityMetersPerSecondSquared;
+        Assert.Equal(expectedAcceleration * 0.1, session.State.Cars[0].SpeedMetersPerSecond, 8);
+    }
+
+    [Fact]
     public void DynamicCouplerProviderRunsForEveryFixedSimulationStep()
     {
         var initial = new TrainConsistMotionState(new[]
