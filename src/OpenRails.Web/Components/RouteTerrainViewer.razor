@@ -265,7 +265,8 @@
                         rollingStockPlacements, rollingStockTextureAssets);
 
                     rollingStockSummary = $"{rollingStockPlacements.Count} vehicle(s) placed along route TrackNode " +
-                        $"{selectedPath?.TrackNodeIndex.ToString() ?? "—"} using original track centerline geometry" +
+                        $"{selectedPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedPath?.LengthMeters.ToString("N0") ?? "0"} m path) " +
+                        $"using original track centerline geometry · {rollingStockTextureAssets.Count} ACE texture(s) decoded" +
                         (rollingStockGeometry.WasTruncated ? " · rolling-stock geometry cap reached" : "");
                 }
 
@@ -295,7 +296,8 @@
                     height = asset.Texture.Height,
                     pixels = asset.Texture.MipLevels[0]
                 }).ToArray();
-                trackGeometryTruncated = trackShapeGeometry.WasTruncated || worldShapeGeometry.WasTruncated;
+                trackGeometryTruncated = trackShapeGeometry.WasTruncated || worldShapeGeometry.WasTruncated ||
+                    rollingStockGeometry.WasTruncated;
                 trackShapeBatchCount = trackShapeGeometry.Batches.Count + worldShapeGeometry.Batches.Count +
                     rollingStockGeometry.Batches.Count;
                 var shapeBatches = trackShapeGeometry.Batches.Select(batch => new
