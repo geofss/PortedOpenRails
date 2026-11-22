@@ -130,10 +130,18 @@
                 <p>@(composite?.Paths.Count ?? 0) unique virtual files available</p>
             </div>
             <h3>Package priority</h3>
-            <ol class="path-list">
+            <ol class="path-list package-priority-list">
                 @foreach (var layer in layers)
                 {
-                    <li><strong>@layer.Name</strong><span class="hint"> — @layer.Store.Paths.Count files · priority @(@layers.IndexOf(layer) + 1)</span></li>
+                    var layerIndex = layers.IndexOf(layer);
+                    <li>
+                        <div><strong>@layer.Name</strong><span class="hint"> — @layer.Store.Paths.Count files · priority @(layerIndex + 1)</span></div>
+                        <div class="package-actions">
+                            <button type="button" @onclick="() => MovePackageAsync(layer, -1)" disabled="@(isLoading || layerIndex == 0)" aria-label="Move @layer.Name higher">Move up</button>
+                            <button type="button" @onclick="() => MovePackageAsync(layer, 1)" disabled="@(isLoading || layerIndex == layers.Count - 1)" aria-label="Move @layer.Name lower">Move down</button>
+                            <button type="button" @onclick="() => RemovePackageAsync(layer)" disabled="@isLoading" aria-label="Remove @layer.Name">Remove</button>
+                        </div>
+                    </li>
                 }
             </ol>
             <h3>Resolved content namespace</h3>
@@ -350,10 +358,53 @@
         return name;
     }
 
+    private async Task MovePackageAsync(PackageLayer layer, int offset)
+    {
+        if (isLoading)
+            return;
+
+        var index = layers.IndexOf(layer);
+        var targetIndex = index + offset;
+        if (index < 0 || targetIndex < 0 || targetIndex >= layers.Count)
+            return;
+
+        layers.RemoveAt(index);
+        layers.Insert(targetIndex, layer);
+        RebuildComposite();
+
+        if (selectedRoute is not null)
+            await BuildRouteNetworkAsync(selectedRoute);
+    }
+
+    private async Task RemovePackageAsync(PackageLayer layer)
+    {
+        if (isLoading)
+            return;
+
+        var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
+        layers.Remove(layer);
+        layer.Store.Dispose();
+
+        routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
+        if (removedSelectedRoute)
+        {
+            selectedRoute = null;
+            loadedRoute = null;
+            routeBuildMessage = null;
+        }
+
+        RebuildComposite();
+
+        if (selectedRoute is not null)
+            await BuildRouteNetworkAsync(selectedRoute);
+    }
+
     private void RebuildComposite()
     {
+        // The composite is only a view over package stores. Keep those stores alive
+        // when changing precedence; removed packages are disposed explicitly.
         composite?.Dispose();
-        composite = layers.Count == 0 ? null : new CompositeContentStore(layers);
+        composite = layers.Count == 0 ? null : new CompositeContentStore(layers, ownsStores: false);
         consistCatalog = composite is null ? null : new ConsistCatalogReader().Read(composite);
     }
 
