@@ -14,6 +14,8 @@ export function readState() {
         reversePressed: pressed(13),
         neutralPressed: pressed(14),
         emergencyStopPressed: pressed(0),
-        emergencyReleasePressed: pressed(1)
+        emergencyReleasePressed: pressed(1),
+        leftDoorTogglePressed: pressed(4),
+        rightDoorTogglePressed: pressed(5)
     };
 }
