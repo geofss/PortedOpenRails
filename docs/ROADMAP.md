@@ -93,7 +93,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 ## Milestone 6 — Full simulator integration
 - [ ] Run a real supported activity from loaded content
 - [ ] Integrate weather, AI traffic, dispatching, and advanced train systems
-- [ ] Investigate multiplayer compatibility
+- [x] Investigate multiplayer compatibility (browser transport and upstream protocol constraints documented in [MULTIPLAYER_COMPATIBILITY_INVESTIGATION.md](MULTIPLAYER_COMPATIBILITY_INVESTIGATION.md); no implementation claimed)
 - [ ] Validate desktop and mobile browser performance
 - [x] Publish documented supported-content and browser compatibility (requirements, supported-content subset, and unverified browser/device matrix in [WEB_SUPPORT_MATRIX.md](WEB_SUPPORT_MATRIX.md))
 
