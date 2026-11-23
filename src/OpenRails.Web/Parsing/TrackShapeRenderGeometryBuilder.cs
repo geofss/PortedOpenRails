@@ -14,8 +14,8 @@ public sealed class TrackShapeRenderGeometryBuilder
     private readonly int maximumIndices;
 
     public TrackShapeRenderGeometryBuilder(
-        int maximumVertices = DefaultmaximumVertices,
-        int maximumIndices = DefaultmaximumIndices)
+        int maximumVertices = DefaultMaximumVertices,
+        int maximumIndices = DefaultMaximumIndices)
     {
         if (maximumVertices < 1)
             throw new ArgumentOutOfRangeException(nameof(maximumVertices));
