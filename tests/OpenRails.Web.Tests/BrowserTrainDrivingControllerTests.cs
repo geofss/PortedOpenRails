@@ -410,6 +410,27 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void EmergencyStopCutsTractionAndAppliesFullBrake()
+    {
+        var consist = new ConsistMetadata("EmergencyStop", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "emergency-stop.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetThrottle(85);
+        controller.SetBrake(10);
+
+        controller.ApplyEmergencyStop();
+
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+    }
+
+    [Fact]
     public void ClampsDriverCommandsAndSupportsPauseAndReset()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
