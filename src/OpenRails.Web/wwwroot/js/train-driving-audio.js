@@ -1,5 +1,5 @@
 let context, engineOscillator, engineGain, brakeNoiseSource, brakeFilter, brakeGain;
-let enabled = false;
+let enabled = false;\nlet volume = 0.35;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
 export function calculateSoundParameters(throttlePercent, speedKmh, brakePercent) {
@@ -52,16 +52,21 @@ export async function start() {
 
 export function setEnabled(value) {
     enabled = Boolean(value) && Boolean(context);
-    if (engineGain) engineGain.gain.setTargetAtTime(enabled ? 0.006 : 0, context.currentTime, 0.05);
+    if (engineGain) engineGain.gain.setTargetAtTime(enabled ? 0.006 * volume : 0, context.currentTime, 0.05);
     if (brakeGain) brakeGain.gain.setTargetAtTime(0, context.currentTime, 0.05);
 }
 
+export function setVolume(value) {
+    const numeric = Number(value);
+    volume = Number.isFinite(numeric) ? Math.max(0, Math.min(1, numeric)) : 0.35;
+    if (enabled && engineGain) engineGain.gain.setTargetAtTime(0.006 * volume, context.currentTime, 0.05);
+}
 export function update(throttlePercent, speedKmh, brakePercent) {
     if (!enabled || !context) return;
     const targets = calculateSoundParameters(throttlePercent, speedKmh, brakePercent);
     engineOscillator.frequency.setTargetAtTime(targets.engineFrequencyHz, context.currentTime, 0.08);
-    engineGain.gain.setTargetAtTime(targets.engineGain, context.currentTime, 0.08);
-    brakeGain.gain.setTargetAtTime(targets.brakeGain, context.currentTime, 0.08);
+    engineGain.gain.setTargetAtTime(targets.engineGain * volume, context.currentTime, 0.08);
+    brakeGain.gain.setTargetAtTime(targets.brakeGain * volume, context.currentTime, 0.08);
 }
 
 export function dispose() {
