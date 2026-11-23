@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { loadSettings, saveSettings, resetSettings } from "../src/OpenRails.Web/wwwroot/js/train-driving-settings.js";
+import { normalizeTrigger } from "../src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js";
+const store=new Map(); globalThis.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))};
+assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100});
+assert.equal(saveSettings(80,125),true); assert.deepEqual(loadSettings(),{audioVolume:80,gamepadSensitivity:125});
+saveSettings(500,-10); assert.deepEqual(loadSettings(),{audioVolume:100,gamepadSensitivity:50},"clamps settings");
+assert.equal(resetSettings(),true); assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100});
+assert.equal(normalizeTrigger(.25,1),.25); assert.ok(normalizeTrigger(.25,1.5)>.25,"higher sensitivity responds earlier"); assert.ok(normalizeTrigger(.25,.5)<.25,"lower sensitivity response is gradual");
+assert.equal(normalizeTrigger(Infinity,1),0); assert.equal(normalizeTrigger(.5,99),normalizeTrigger(.5,1.5),"curve clamps");
+globalThis.localStorage={getItem(){throw Error("blocked")},setItem(){throw Error("blocked")}};
+assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100}); assert.equal(saveSettings(60,110),false);
+delete globalThis.localStorage; assert.equal(resetSettings(),false);
+console.log("Driving settings tests passed.");
