@@ -8,8 +8,8 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class TrackShapeRenderGeometryBuilder
 {
-    private const int DefaultmaximumVertices = 500_000;
-    private const int DefaultmaximumIndices = 1_500_000;
+    private const int DefaultMaximumVertices = 500_000;
+    private const int DefaultMaximumIndices = 1_500_000;
     private readonly int maximumVertices;
     private readonly int maximumIndices;
 
