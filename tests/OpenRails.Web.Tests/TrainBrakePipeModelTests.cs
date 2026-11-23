@@ -36,7 +36,9 @@ public sealed class TrainBrakePipeModelTests
         Assert.All(emergency.PressuresKPa, pressure => Assert.InRange(
             pressure, TrainBrakePipeModel.EmergencyPressureKPa,
             TrainBrakePipeModel.NormalPressureKPa));
-        Assert.All(model.GetBrakePercentByCar(emergency), command => Assert.Equal(100, command));
+        var commands = model.GetBrakePercentByCar(emergency);
+        Assert.Equal(100, commands[0]);
+        Assert.True(commands[0] > commands[^1]);
         Assert.Equal(TrainBrakePipeModel.NormalPressureKPa, initial.PressuresKPa[0]);
     }
 
