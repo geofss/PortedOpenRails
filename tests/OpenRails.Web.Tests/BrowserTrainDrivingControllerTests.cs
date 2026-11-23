@@ -562,6 +562,64 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(0, controller.CouplerForceTelemetryNewtons[0]);
     }
 
+    [Fact]
+    public void EmergencyStopLatchRejectsDriverCommandsUntilExplicitRelease()
+    {
+        var consist = new ConsistMetadata("EmergencyStopLatch", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "emergency-stop-latch.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.ApplyEmergencyStop();
+        controller.SetThrottle(75);
+        controller.SetBrake(25);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+        Assert.True(controller.IsEmergencyStopApplied);
+
+        controller.ReleaseEmergencyStop();
+        Assert.False(controller.IsEmergencyStopApplied);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+        controller.SetBrake(25);
+        controller.SetThrottle(75);
+        Assert.Equal(25, controller.BrakePercent);
+        Assert.Equal(75, controller.ThrottlePercent);
+    }
+
+    [Fact]
+    public void PassengerDoorsInterlockTractionAndRequireStoppedTrain()
+    {
+        var consist = new ConsistMetadata("DoorInterlock", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "door-interlock.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetThrottle(50);
+        Assert.Throws<InvalidOperationException>(() => controller.SetDoors(true, false));
+        controller.SetThrottle(0);
+        controller.SetDoors(true, false);
+        Assert.True(controller.LeftDoorsOpen);
+        controller.SetThrottle(80);
+        Assert.Equal(0, controller.ThrottlePercent);
+
+        controller.SetDoors(false, false);
+        controller.SetThrottle(50);
+        controller.Advance(0.1);
+        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
+    }
+
     private static TrackNetworkRoute CreateSlopeRoute(double length, double rise)
     {
         var start = new TrackWorldPosition(0, 0, 0);
