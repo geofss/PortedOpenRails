@@ -2,6 +2,7 @@ let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
 let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
 const activePointers = new Map();
+let renderScale = 1;
 let pinchStartDistance = 0, pinchStartZoom = 1;
 
 export function initialize(canvas) {
@@ -94,14 +95,16 @@ export function cleanup() {
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
   rotation = 0; pitch = 0.72; zoom = 1; dragging = false;
+  renderScale = 1;
 }
 function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
 function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
 
+export function setRenderScale(scale){ renderScale=Math.max(0.5,Math.min(1,Number(scale)||1)); if(canvasRef) redraw(); }
 export function drawTerrain(vertices, indices, trackLines = []) {
   storedVertices=vertices; storedIndices=indices; storedTrackLines=trackLines; redraw();
 }
-function resizeCanvas(){ const dpr=window.devicePixelRatio||1; const w=Math.max(1,Math.floor(canvasRef.clientWidth*dpr)),h=Math.max(1,Math.floor(canvasRef.clientHeight*dpr)); if(canvasRef.width!==w||canvasRef.height!==h){canvasRef.width=w;canvasRef.height=h;}}
+function resizeCanvas(){ const dpr=(window.devicePixelRatio||1)*renderScale; const w=Math.max(1,Math.floor(canvasRef.clientWidth*dpr)),h=Math.max(1,Math.floor(canvasRef.clientHeight*dpr)); if(canvasRef.width!==w||canvasRef.height!==h){canvasRef.width=w;canvasRef.height=h;}}
 function redraw(){
   if(storedTerrainPatches){drawTerrainTextured(storedTerrainPatches,storedTerrainPixels,storedTerrainLines,storedTrackMesh,storedShapeBatches,storedShapePixels,storedRollingStockBatches);return;}
   resizeCanvas();
