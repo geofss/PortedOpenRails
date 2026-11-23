@@ -17,6 +17,10 @@
         </select>
         <button type="button" class="secondary" @onclick="ResetQuality">Reset to High</button>
         <span class="hint">Preset changes render resolution, terrain tile count, track sampling, and geometry budgets. This is a preview setting, not a browser performance guarantee.</span>
+        @if (!string.IsNullOrWhiteSpace(qualityStorageWarning))
+        {
+            <span class="hint">@qualityStorageWarning</span>
+        }
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
@@ -161,6 +165,7 @@
     private bool hasDrawn;
     private bool trackGeometryTruncated;
     private string qualityPreset = "high";
+    private string? qualityStorageWarning;
     private int TerrainTileLimit => qualityPreset switch { "low" => 1, "medium" => 4, _ => 8 };
     private int GeometryVertexLimit => qualityPreset switch { "low" => 100_000, "medium" => 250_000, _ => 500_000 };
     private int GeometryIndexLimit => GeometryVertexLimit * 3;
@@ -182,7 +187,8 @@
             try
             {
                 await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 });
-                await module.InvokeVoidAsync("saveQualityPreset", qualityPreset);
+                var saved = await module.InvokeAsync<bool>("saveQualityPreset", qualityPreset);
+                qualityStorageWarning = saved ? null : "Browser storage is unavailable; this quality choice applies for this session only.";
             }
             catch (JSException) { renderError = "Unable to apply or save preview quality."; }
         }
