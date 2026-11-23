@@ -192,7 +192,7 @@
             if (!await module.InvokeAsync<bool>("setCameraPreset", preset)) return;
             cameraPreset = preset;
             var saved = await module.InvokeAsync<bool>("saveCameraPreset", preset);
-            if (!saved) qualityStorageWarning = "Browser storage is unavailable; camera selection applies for this session only.";
+            if (!saved) qualityStorageWarning = "Browser storage is unavailable; quality selection applies for this session only.";
         }
         catch (JSException) { renderError = "Unable to change the route preview camera."; }
     }
