@@ -11,6 +11,7 @@ buttons[6] = button(0.35, true);
 buttons[7] = button(0.8, true);
 buttons[12] = button(1, true);
 buttons[0] = button(1, true);
+buttons[4] = button(1, true);
 Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: { getGamepads: () => [{ connected: true, buttons }] }
@@ -22,7 +23,9 @@ assert.deepEqual(readState(), {
     reversePressed: false,
     neutralPressed: false,
     emergencyStopPressed: true,
-    emergencyReleasePressed: false
+    emergencyReleasePressed: false,
+    leftDoorTogglePressed: true,
+    rightDoorTogglePressed: false
 });
 
 buttons[12] = button();
@@ -30,6 +33,8 @@ buttons[13] = button(1, true);
 buttons[14] = button(1, true);
 buttons[0] = button();
 buttons[1] = button(1, true);
+buttons[4] = button();
+buttons[5] = button(1, true);
 assert.deepEqual(readState(), {
     throttle: 0.8,
     brake: 0.35,
@@ -37,6 +42,8 @@ assert.deepEqual(readState(), {
     reversePressed: true,
     neutralPressed: true,
     emergencyStopPressed: false,
-    emergencyReleasePressed: true
+    emergencyReleasePressed: true,
+    leftDoorTogglePressed: false,
+    rightDoorTogglePressed: true
 });
 console.log("Gamepad reader tests passed.");
