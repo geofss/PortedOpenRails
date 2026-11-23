@@ -26,6 +26,19 @@
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
     <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral, left/right shoulder buttons toggle left/right doors, south face button applies emergency stop, east face button explicitly releases it (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
+    <div class="driving-settings" aria-label="Driving settings">
+        <h4>Driving settings</h4>
+        <div class="driving-control-row">
+            <label for="driving-audio-volume">Synthesized audio volume · @audioVolume%</label>
+            <input id="driving-audio-volume" type="range" min="0" max="100" step="5" value="@audioVolume" @oninput="ChangeAudioVolume" />
+        </div>
+        <div class="driving-control-row">
+            <label for="gamepad-sensitivity">Gamepad trigger sensitivity · @gamepadSensitivity%</label>
+            <input id="gamepad-sensitivity" type="range" min="50" max="150" step="5" value="@gamepadSensitivity" @oninput="ChangeGamepadSensitivity" />
+        </div>
+        <button type="button" @onclick="ResetDrivingSettings">Reset driving settings</button>
+        <p class="hint">These preferences are saved on this device. Trigger sensitivity changes throttle/brake response curves; audio volume scales the optional synthesized sound.</p>
+    </div>
     <button type="button" @onclick="ToggleAudioAsync">@((audioEnabled) ? "Disable synthesized driving audio" : "Enable synthesized driving audio")</button>
     <p class="hint">Optional low-volume original synthesis: engine tone follows throttle/speed and brake hiss follows brake pressure. Enable with a button press; not authentic Open Rails recordings.</p>
     <div class="keyboard-control-pad" tabindex="0" role="group"
@@ -113,7 +126,7 @@
 
     private IJSObjectReference? gamepadModule;
     private IJSObjectReference? audioModule;
-    private bool audioEnabled;
+    private bool audioEnabled;\n    private int audioVolume = 35;\n    private int gamepadSensitivity = 100;\n    private IJSObjectReference? settingsModule;
     private bool gamepadConnected;
     private bool previousForwardPressed;
     private bool previousReversePressed;
@@ -239,7 +252,7 @@
         TrainGamepadState? state;
         try
         {
-            state = await gamepadModule.InvokeAsync<TrainGamepadState?>("readState");
+            state = await gamepadModule.InvokeAsync<TrainGamepadState?>("readState", gamepadSensitivity / 100d);
         }
         catch (JSException)
         {
@@ -286,7 +299,7 @@
         previousRightDoorTogglePressed = state.RightDoorTogglePressed;
     }
 
-    private sealed class TrainGamepadState
+    private sealed class DrivingSettings { public int AudioVolume { get; set; } = 35; public int GamepadSensitivity { get; set; } = 100; }\n\n    private async Task ChangeAudioVolume(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; audioVolume = Math.Clamp(value, 0, 100); if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }\n    private async Task ChangeGamepadSensitivity(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; gamepadSensitivity = Math.Clamp(value, 50, 150); await SaveSettingsAsync(); }\n    private async Task ResetDrivingSettings() { audioVolume = 35; gamepadSensitivity = 100; if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }\n    private async Task SaveSettingsAsync() { if (settingsModule is null) return; try { await settingsModule.InvokeVoidAsync("saveSettings", audioVolume, gamepadSensitivity); } catch (JSException) { simulationError = "Driving preferences could not be saved in this browser."; } }\n\n    private sealed class TrainGamepadState
     {
         public double Throttle { get; set; }
         public double Brake { get; set; }
