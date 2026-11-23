@@ -8,8 +8,22 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class TrackShapeRenderGeometryBuilder
 {
-    private const int MaximumVertices = 500_000;
-    private const int MaximumIndices = 1_500_000;
+    private const int DefaultmaximumVertices = 500_000;
+    private const int DefaultmaximumIndices = 1_500_000;
+    private readonly int maximumVertices;
+    private readonly int maximumIndices;
+
+    public TrackShapeRenderGeometryBuilder(
+        int maximumVertices = DefaultmaximumVertices,
+        int maximumIndices = DefaultmaximumIndices)
+    {
+        if (maximumVertices < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumVertices));
+        if (maximumIndices < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumIndices));
+        this.maximumVertices = maximumVertices;
+        this.maximumIndices = maximumIndices;
+    }
 
     public TrackShapeRenderGeometry Build(IEnumerable<TrackShapePlacement> placements)
     {
@@ -30,8 +44,8 @@ public sealed class TrackShapeRenderGeometryBuilder
                 var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
                 var worldTransform = localTransform * placement.WorldTransform;
 
-                if (vertices.Count + subObject.Vertices.Count > MaximumVertices ||
-                    indices.Count + primitive.Indices.Count > MaximumIndices)
+                if (vertices.Count + subObject.Vertices.Count > maximumVertices ||
+                    indices.Count + primitive.Indices.Count > maximumIndices)
                     return new TrackShapeRenderGeometry(vertices, indices, true);
 
                 var baseIndex = vertices.Count;
@@ -82,8 +96,8 @@ public sealed class TrackShapeRenderGeometryBuilder
                 foreach (var primitive in subObject.Primitives)
                 {
                     if (primitive.Indices.Count < 3) continue;
-                    if (totalVertices + subObject.Vertices.Count > MaximumVertices ||
-                        totalIndices + primitive.Indices.Count > MaximumIndices)
+                    if (totalVertices + subObject.Vertices.Count > maximumVertices ||
+                        totalIndices + primitive.Indices.Count > maximumIndices)
                     {
                         truncated = true;
                         break;
