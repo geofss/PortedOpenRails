@@ -68,4 +68,9 @@ assert.deepEqual(readState(), {
     rightDoorTogglePressed: false
 }, "ignores disconnected pads, handles missing analog values, and clamps trigger values");
 
+connectedSecondButtons[6] = { value: Number.NaN, pressed: true };
+assert.equal(readState().brake, 0, "non-finite analog trigger values safely become zero");
+connectedSecondButtons[6] = { value: Number.POSITIVE_INFINITY, pressed: true };
+assert.equal(readState().brake, 0, "infinite analog trigger values safely become zero");
+
 console.log("Gamepad reader tests passed.");
