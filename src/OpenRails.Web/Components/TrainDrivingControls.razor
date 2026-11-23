@@ -40,6 +40,7 @@
         <p class="error" role="alert">@simulationError</p>
     }
     <div class="package-actions">
+        <button type="button" class="danger" @onclick="ApplyEmergencyStop">Emergency stop</button>
         <button type="button" @onclick="StartAsync" disabled="@isRunning">Start</button>
         <button type="button" @onclick="StopAsync" disabled="@(!isRunning)">Pause</button>
         <button type="button" @onclick="ResetAsync">Reset</button>
@@ -187,6 +188,10 @@
                 Controller.SetThrottle(0);
                 Controller.SetBrake(0);
                 break;
+            case "x":
+            case "X":
+                ApplyEmergencyStop();
+                break;
         }
     }
 
@@ -283,6 +288,12 @@
             simulationError = $"Audio could not be enabled: {exception.Message}";
             audioEnabled = false;
         }
+    }
+
+    private void ApplyEmergencyStop()
+    {
+        Controller.ApplyEmergencyStop();
+        simulationError = null;
     }
 
     private Task StartAsync()
