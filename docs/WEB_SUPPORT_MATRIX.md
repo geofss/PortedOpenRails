@@ -31,7 +31,7 @@ This matrix describes the experimental browser port's current implementation sur
 | ACE textures | Supported RGBA8 subset for preview | Seasonal variants and unsupported pixel formats are excluded; material/shader parity is partial |
 | TRAINSET rolling stock | Consist/ENG/WAG metadata and shape assets; first LOD mesh rendering | Cab views, animation, full materials, native control systems and sound remain incomplete |
 | Consist files | Metadata and vehicle placement across selected route | Activity/service integration and full desktop rules remain incomplete |
-| Activities, services, timetable, AI | Not yet supported as runnable simulator systems | Selection/run pipeline remains future work |
+| Activity files (`.act`) | Route-folder activity file selector; selected file is displayed | Activity parsing, services, timetable, event logic, and execution are not implemented |
 
 ## Browser/device validation status
 
