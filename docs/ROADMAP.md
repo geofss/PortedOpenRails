@@ -90,7 +90,8 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Connect throttle, brakes, reverser, doors, and relevant cab controls (prototype controller/UI commands are connected through pointer, keyboard, and supported gamepad inputs; door opening is stopped-train interlocked and blocks traction)
 - [x] Add browser audio output driven by simulation events (optional user-enabled synthesized engine tone and brake hiss; not authentic Open Rails recordings)
 - [x] Persist browser preview-quality and prototype driving preferences, with reset controls and storage-error fallbacks
-- [ ] Implement simulator-state save/restore and comprehensive loading/error UX
+- [x] Provide loading indicators and actionable errors for route/package import and connected-route build failures
+- [ ] Implement simulator-state save/restore and broader simulation loading/error UX
 
 ## Milestone 6 — Full simulator integration
 - [ ] Run a real supported activity from loaded content
