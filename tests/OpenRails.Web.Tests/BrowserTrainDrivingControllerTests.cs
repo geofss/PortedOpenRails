@@ -47,6 +47,50 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void DoorControlsAreStoppedTrainInterlockedAndPreventTraction()
+    {
+        var consist = new ConsistMetadata("DoorInterlock", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "door-interlock.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetThrottle(50);
+        Assert.Throws<InvalidOperationException>(() => controller.SetDoors(true, false));
+        controller.SetThrottle(0);
+        controller.SetDoors(true, false);
+        Assert.True(controller.LeftDoorsOpen);
+        Assert.False(controller.RightDoorsOpen);
+        controller.SetThrottle(75);
+        Assert.Equal(0, controller.ThrottlePercent);
+
+        controller.SetDoors(false, false);
+        controller.SetThrottle(50);
+        controller.Advance(0.1);
+        Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
+    }
+
+    [Fact]
+    public void ResetClosesBothDoorSides()
+    {
+        var consist = new ConsistMetadata("DoorReset", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "door-reset.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        controller.SetDoors(true, true);
+        controller.Reset();
+        Assert.False(controller.LeftDoorsOpen);
+        Assert.False(controller.RightDoorsOpen);
+    }
+
+    [Fact]
     public void ThrottleAcceleratesPoweredConsistAndBrakeCommandSlowsIt()
     {
         var consist = new ConsistMetadata("DriveTest", new[]
