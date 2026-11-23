@@ -126,7 +126,10 @@
 
     private IJSObjectReference? gamepadModule;
     private IJSObjectReference? audioModule;
-    private bool audioEnabled;\n    private int audioVolume = 35;\n    private int gamepadSensitivity = 100;\n    private IJSObjectReference? settingsModule;
+    private bool audioEnabled;
+    private int audioVolume = 35;
+    private int gamepadSensitivity = 100;
+    private IJSObjectReference? settingsModule;
     private bool gamepadConnected;
     private bool previousForwardPressed;
     private bool previousReversePressed;
@@ -236,6 +239,11 @@
             {
                 gamepadModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-gamepad.js");
                 audioModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-audio.js");
+                settingsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-settings.js");
+                var savedSettings = await settingsModule.InvokeAsync<DrivingSettings>("loadSettings");
+                audioVolume = savedSettings.AudioVolume;
+                gamepadSensitivity = savedSettings.GamepadSensitivity;
+                await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d);
             }
             catch (JSException)
             {
@@ -299,7 +307,14 @@
         previousRightDoorTogglePressed = state.RightDoorTogglePressed;
     }
 
-    private sealed class DrivingSettings { public int AudioVolume { get; set; } = 35; public int GamepadSensitivity { get; set; } = 100; }\n\n    private async Task ChangeAudioVolume(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; audioVolume = Math.Clamp(value, 0, 100); if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }\n    private async Task ChangeGamepadSensitivity(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; gamepadSensitivity = Math.Clamp(value, 50, 150); await SaveSettingsAsync(); }\n    private async Task ResetDrivingSettings() { audioVolume = 35; gamepadSensitivity = 100; if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }\n    private async Task SaveSettingsAsync() { if (settingsModule is null) return; try { await settingsModule.InvokeVoidAsync("saveSettings", audioVolume, gamepadSensitivity); } catch (JSException) { simulationError = "Driving preferences could not be saved in this browser."; } }\n\n    private sealed class TrainGamepadState
+    private sealed class DrivingSettings { public int AudioVolume { get; set; } = 35; public int GamepadSensitivity { get; set; } = 100; }
+
+    private async Task ChangeAudioVolume(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; audioVolume = Math.Clamp(value, 0, 100); if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }
+    private async Task ChangeGamepadSensitivity(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; gamepadSensitivity = Math.Clamp(value, 50, 150); await SaveSettingsAsync(); }
+    private async Task ResetDrivingSettings() { audioVolume = 35; gamepadSensitivity = 100; if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }
+    private async Task SaveSettingsAsync() { if (settingsModule is null) return; try { await settingsModule.InvokeVoidAsync("saveSettings", audioVolume, gamepadSensitivity); } catch (JSException) { simulationError = "Driving preferences could not be saved in this browser."; } }
+
+    private sealed class TrainGamepadState
     {
         public double Throttle { get; set; }
         public double Brake { get; set; }
