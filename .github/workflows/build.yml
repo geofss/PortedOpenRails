@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate renderer JavaScript syntax
-        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js
+        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
