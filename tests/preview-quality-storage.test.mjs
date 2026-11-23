@@ -18,4 +18,8 @@ assert.equal(getSavedQualityPreset(), "medium", "invalid preset does not overwri
 globalThis.localStorage = { getItem() { throw new Error("storage unavailable"); }, setItem() { throw new Error("storage unavailable"); } };
 assert.equal(getSavedQualityPreset(), "high", "storage errors safely default to high");
 assert.equal(saveQualityPreset("low"), false, "storage errors are reported without throwing");
+
+delete globalThis.localStorage;
+assert.equal(getSavedQualityPreset(), "high", "missing storage safely defaults to high");
+assert.equal(saveQualityPreset("medium"), false, "missing storage is reported as unavailable");
 console.log("Preview quality persistence tests passed.");
