@@ -5,6 +5,11 @@ const button = (value = 0, pressed = value > 0) => ({ value, pressed });
 const disconnected = () => [];
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { getGamepads: disconnected } });
 assert.equal(readState(), null, "returns null when no connected pad is found");
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: { getGamepads: () => null } });
+assert.equal(readState(), null, "handles a null gamepad list");
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: { getGamepads: () => { throw new Error("blocked"); } } });
+assert.equal(readState(), null, "handles gamepad API errors without propagating");
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: { getGamepads: disconnected } });
 
 const buttons = Array.from({ length: 16 }, () => button());
 buttons[6] = button(0.35, true);
