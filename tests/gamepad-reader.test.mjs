@@ -51,6 +51,7 @@ const disconnectedFirst = { connected: false, buttons: Array.from({ length: 16 }
 const connectedSecondButtons = Array.from({ length: 16 }, () => button());
 connectedSecondButtons[6] = { pressed: true }; // value omitted: pressed fallback
 connectedSecondButtons[7] = { value: 1.4, pressed: true }; // clamp to 1
+connectedSecondButtons[8] = { value: Number.POSITIVE_INFINITY, pressed: true }; // malformed value becomes 0
 Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: { getGamepads: () => [disconnectedFirst, { connected: true, buttons: connectedSecondButtons }] }
