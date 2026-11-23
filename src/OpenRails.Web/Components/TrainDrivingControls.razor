@@ -25,7 +25,7 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
-    <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral, south face button applies emergency stop, east face button explicitly releases it (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
+    <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral, left/right shoulder buttons toggle left/right doors, south face button applies emergency stop, east face button explicitly releases it (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
     <button type="button" @onclick="ToggleAudioAsync">@((audioEnabled) ? "Disable synthesized driving audio" : "Enable synthesized driving audio")</button>
     <p class="hint">Optional low-volume original synthesis: engine tone follows throttle/speed and brake hiss follows brake pressure. Enable with a button press; not authentic Open Rails recordings.</p>
     <div class="keyboard-control-pad" tabindex="0" role="group"
@@ -120,6 +120,8 @@
     private bool previousNeutralPressed;
     private bool previousEmergencyStopPressed;
     private bool previousEmergencyReleasePressed;
+    private bool previousLeftDoorTogglePressed;
+    private bool previousRightDoorTogglePressed;
     private CancellationTokenSource? runCancellation;
     private Task? runTask;
     private bool isRunning;
@@ -254,6 +256,7 @@
             }
             previousForwardPressed = previousReversePressed = previousNeutralPressed = false;
             previousEmergencyStopPressed = previousEmergencyReleasePressed = false;
+            previousLeftDoorTogglePressed = previousRightDoorTogglePressed = false;
             return;
         }
 
@@ -270,11 +273,17 @@
             ApplyEmergencyStop();
         if (state.EmergencyReleasePressed && !previousEmergencyReleasePressed)
             ReleaseEmergencyStop();
+        if (state.LeftDoorTogglePressed && !previousLeftDoorTogglePressed)
+            ToggleLeftDoors();
+        if (state.RightDoorTogglePressed && !previousRightDoorTogglePressed)
+            ToggleRightDoors();
         previousForwardPressed = state.ForwardPressed;
         previousReversePressed = state.ReversePressed;
         previousNeutralPressed = state.NeutralPressed;
         previousEmergencyStopPressed = state.EmergencyStopPressed;
         previousEmergencyReleasePressed = state.EmergencyReleasePressed;
+        previousLeftDoorTogglePressed = state.LeftDoorTogglePressed;
+        previousRightDoorTogglePressed = state.RightDoorTogglePressed;
     }
 
     private sealed class TrainGamepadState
@@ -286,6 +295,8 @@
         public bool NeutralPressed { get; set; }
         public bool EmergencyStopPressed { get; set; }
         public bool EmergencyReleasePressed { get; set; }
+        public bool LeftDoorTogglePressed { get; set; }
+        public bool RightDoorTogglePressed { get; set; }
     }
 
     private async Task ToggleAudioAsync()
