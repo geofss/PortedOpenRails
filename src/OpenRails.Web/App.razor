@@ -93,6 +93,23 @@
                             </select>
                         </div>
                     }
+                    @if (ActivityChoices.Count > 0)
+                    {
+                        <div class="route-details">
+                            <label for="selected-activity">Activity file selection (not runnable yet)</label>
+                            <select id="selected-activity" value="@selectedActivityPath" @onchange="SelectActivity">
+                                <option value="">No activity selected · route preview</option>
+                                @foreach (var activityPath in ActivityChoices)
+                                {
+                                    <option value="@activityPath">@System.IO.Path.GetFileNameWithoutExtension(activityPath)</option>
+                                }
+                            </select>
+                            @if (!string.IsNullOrWhiteSpace(selectedActivityPath))
+                            {
+                                <p class="hint">Selected activity file: <code>@selectedActivityPath</code>. Activity execution is not implemented yet.</p>
+                            }
+                        </div>
+                    }
                     @if (RouteBranchOptions.Count > 1)
                     {
                         <div class="route-details">
@@ -314,6 +331,10 @@
     private bool reverseRouteStart;
     private uint? selectedBranchTrackNodeIndex;
     private string? selectedConsistName;
+    private string? selectedActivityPath;
+    private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
+        ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
+        : Array.Empty<string>();
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
@@ -383,6 +404,7 @@
     private async Task SelectRoute(RouteChoice route)
     {
         selectedRoute = route;
+        selectedActivityPath = null;
         selectedDefault = false;
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
@@ -668,6 +690,11 @@
     {
         selectedConsistName = args.Value?.ToString();
         InitializeSimulationSetup();
+    }
+
+    private void SelectActivity(ChangeEventArgs args)
+    {
+        selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
     }
 
     private Task OnTrainMotionChanged(TrainConsistMotionState state)
