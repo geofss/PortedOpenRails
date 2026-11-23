@@ -170,6 +170,7 @@
     private bool hasDrawn;
     private bool trackGeometryTruncated;
     private string qualityPreset = "high";
+    private string cameraPreset = "overview";
     private string? qualityStorageWarning;
     private int TerrainTileLimit => qualityPreset switch { "low" => 1, "medium" => 4, _ => 8 };
     private int GeometryVertexLimit => qualityPreset switch { "low" => 100_000, "medium" => 250_000, _ => 500_000 };
@@ -186,7 +187,13 @@
     private async Task SetCameraPreset(string preset)
     {
         if (module is null) return;
-        try { await module.InvokeVoidAsync("setCameraPreset", preset); }
+        try
+        {
+            if (!await module.InvokeAsync<bool>("setCameraPreset", preset)) return;
+            cameraPreset = preset;
+            var saved = await module.InvokeAsync<bool>("saveCameraPreset", preset);
+            if (!saved) qualityStorageWarning = "Browser storage is unavailable; camera selection applies for this session only.";
+        }
         catch (JSException) { renderError = "Unable to change the route preview camera."; }
     }
 
@@ -216,6 +223,8 @@
                 module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/route-terrain-renderer.js");
                 qualityPreset = await module.InvokeAsync<string>("getSavedQualityPreset");
                 await module.InvokeVoidAsync("initialize", canvas);
+                cameraPreset = await module.InvokeAsync<string>("getSavedCameraPreset");
+                await module.InvokeVoidAsync("setCameraPreset", cameraPreset);
                 await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 });
                 initialized = true;
             }
