@@ -6,6 +6,23 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainBrakePipeModelTests
 {
     [Fact]
+    public void MultiStepAdvanceDoesNotMutateInputPressureSnapshot()
+    {
+        var model = new TrainBrakePipeModel();
+        var initial = model.CreateInitialState(6);
+        var originalPressures = initial.PressuresKPa.ToArray();
+
+        var result = model.Advance(initial, 65, 1.25);
+
+        Assert.Equal(originalPressures, initial.PressuresKPa);
+        Assert.NotSame(initial.PressuresKPa, result.PressuresKPa);
+        Assert.All(result.PressuresKPa, pressure => Assert.InRange(
+            pressure, TrainBrakePipeModel.MinimumServicePressureKPa,
+            TrainBrakePipeModel.NormalPressureKPa));
+        Assert.True(result.PressuresKPa[0] < result.PressuresKPa[^1]);
+    }
+
+    [Fact]
     public void PressureStateSnapshotsDoNotTrackCallerArrayMutations()
     {
         var source = new[] { TrainBrakePipeModel.NormalPressureKPa };
