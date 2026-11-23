@@ -10,7 +10,7 @@
     <div class="driving-control-row">
         <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
         <input id="train-throttle" type="range" min="0" max="100" step="1"
-               value="@Controller.ThrottlePercent" @oninput="ChangeThrottle" />
+               value="@Controller.ThrottlePercent" disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
     </div>
     <div class="driving-control-row">
         <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train and set throttle to zero")</label>
@@ -91,6 +91,7 @@
         </div>
     }
     <dl>
+        <dt>Passenger doors</dt><dd>Left: @(Controller.LeftDoorsOpen ? "Open" : "Closed") · Right: @(Controller.RightDoorsOpen ? "Open" : "Closed")</dd>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         @if (Controller.LeadCarRouteGradePercent is double gradePercent)
         {
