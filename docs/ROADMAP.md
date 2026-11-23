@@ -85,10 +85,12 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Build browser route/activity/consist selection (route, consist, and route-folder `.act` file selection UI; activities are not executable yet)
 - [x] Add focused keyboard throttle/brake/reverser shortcuts (Up/Down adjust throttle, Space toggles full brake, F/N/R select direction, Escape releases throttle and brake)
 - [x] Add a forward/neutral/reverse traction-direction selector with a stopped-train and zero-throttle interlock
-- [ ] Complete keyboard, pointer, touch, and gamepad input mapping for the full simulator command set
+- [x] Complete the current prototype driving command map across pointer/touch, focused keyboard, and standard-mapped gamepad inputs (see [input reference](INPUT_CONTROLS.md))
+- [ ] Expand input mapping to the full Open Rails simulator command set, including cab, signalling, train-protection, and activity commands
 - [x] Connect throttle, brakes, reverser, doors, and relevant cab controls (prototype controller/UI commands are connected through pointer, keyboard, and supported gamepad inputs; door opening is stopped-train interlocked and blocks traction)
 - [x] Add browser audio output driven by simulation events (optional user-enabled synthesized engine tone and brake hiss; not authentic Open Rails recordings)
-- [ ] Add settings, save/restore, and loading/error UX (preview quality presets now persist locally and can reset to High; broader settings and simulator save/restore remain)
+- [x] Persist browser preview-quality and prototype driving preferences, with reset controls and storage-error fallbacks
+- [ ] Implement simulator-state save/restore and comprehensive loading/error UX
 
 ## Milestone 6 — Full simulator integration
 - [ ] Run a real supported activity from loaded content
