@@ -33,6 +33,26 @@ const cameraPresets = {
   trackside: { rotation: 0.35, pitch: 0.32, zoom: 1.65 },
   topdown: { rotation: 0, pitch: 1.42, zoom: 0.9 }
 };
+const cameraStorageKey = "ported-openrails-camera-preset";
+export function getSavedCameraPreset() {
+  try {
+    const value = globalThis.localStorage?.getItem(cameraStorageKey);
+    return Object.hasOwn(cameraPresets, value) ? value : "overview";
+  } catch {
+    return "overview";
+  }
+}
+export function saveCameraPreset(name) {
+  if (!Object.hasOwn(cameraPresets, name)) return false;
+  try {
+    const storage = globalThis.localStorage;
+    if (!storage) return false;
+    storage.setItem(cameraStorageKey, name);
+    return true;
+  } catch {
+    return false;
+  }
+}
 let activeCameraPreset = "overview";
 export function setCameraPreset(name) {
   const preset = cameraPresets[name];
