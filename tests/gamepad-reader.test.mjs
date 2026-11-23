@@ -46,4 +46,25 @@ assert.deepEqual(readState(), {
     leftDoorTogglePressed: false,
     rightDoorTogglePressed: true
 });
+
+const disconnectedFirst = { connected: false, buttons: Array.from({ length: 16 }, () => button(1, true)) };
+const connectedSecondButtons = Array.from({ length: 16 }, () => button());
+connectedSecondButtons[6] = { pressed: true }; // value omitted: pressed fallback
+connectedSecondButtons[7] = { value: 1.4, pressed: true }; // clamp to 1
+Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { getGamepads: () => [disconnectedFirst, { connected: true, buttons: connectedSecondButtons }] }
+});
+assert.deepEqual(readState(), {
+    throttle: 1,
+    brake: 1,
+    forwardPressed: false,
+    reversePressed: false,
+    neutralPressed: false,
+    emergencyStopPressed: false,
+    emergencyReleasePressed: false,
+    leftDoorTogglePressed: false,
+    rightDoorTogglePressed: false
+}, "ignores disconnected pads, handles missing analog values, and clamps trigger values");
+
 console.log("Gamepad reader tests passed.");
