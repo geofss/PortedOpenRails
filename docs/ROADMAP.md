@@ -95,7 +95,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [ ] Integrate weather, AI traffic, dispatching, and advanced train systems
 - [ ] Investigate multiplayer compatibility
 - [ ] Validate desktop and mobile browser performance
-- [ ] Publish documented supported-content and browser compatibility
+- [x] Publish documented supported-content and browser compatibility (requirements, supported-content subset, and unverified browser/device matrix in [WEB_SUPPORT_MATRIX.md](WEB_SUPPORT_MATRIX.md))
 
 ## Current browser-port status (verified 2026-11-22)
 
