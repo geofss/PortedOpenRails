@@ -39,6 +39,7 @@ public sealed class BrowserTrainDrivingController
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
     public double DroppedTimeSeconds => setup.Session.DroppedTimeSeconds;
     public bool IsPaused => setup.Session.IsPaused;
+    public bool IsEmergencyStopApplied { get; private set; }
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
@@ -106,7 +107,8 @@ public sealed class BrowserTrainDrivingController
     {
         if (!float.IsFinite(percent))
             throw new ArgumentOutOfRangeException(nameof(percent));
-        ThrottlePercent = Math.Clamp(percent, 0, 100);
+        if (!IsEmergencyStopApplied)
+            ThrottlePercent = Math.Clamp(percent, 0, 100);
     }
 
     public void SetReverser(TrainReverserPosition position)
@@ -122,12 +124,22 @@ public sealed class BrowserTrainDrivingController
     {
         if (!double.IsFinite(percent))
             throw new ArgumentOutOfRangeException(nameof(percent));
-        BrakePercent = Math.Clamp(percent, 0, 100);
+        if (!IsEmergencyStopApplied)
+            BrakePercent = Math.Clamp(percent, 0, 100);
     }
 
     /// <summary>Immediately commands zero traction and full service braking.</summary>
     public void ApplyEmergencyStop()
     {
+        ThrottlePercent = 0;
+        BrakePercent = 100;
+        IsEmergencyStopApplied = true;
+    }
+
+    /// <summary>Releases the emergency-stop latch; normal commands may then be accepted.</summary>
+    public void ReleaseEmergencyStop()
+    {
+        IsEmergencyStopApplied = false;
         ThrottlePercent = 0;
         BrakePercent = 100;
     }
@@ -185,6 +197,7 @@ public sealed class BrowserTrainDrivingController
         ThrottlePercent = 0;
         BrakePercent = 0;
         ReverserPosition = TrainReverserPosition.Forward;
+        IsEmergencyStopApplied = false;
         CouplerForceTelemetryNewtons = Array.AsReadOnly(new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
 }
