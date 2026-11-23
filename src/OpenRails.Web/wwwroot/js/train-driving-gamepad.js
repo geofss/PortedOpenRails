@@ -1,5 +1,6 @@
 // Read the first connected standard-mapped gamepad without installing event listeners.
 // Analog triggers (buttons 7/6) map to throttle/brake; D-pad 12/13/14 maps direction.
+// Face buttons 0/1 provide explicit emergency-stop apply/release edges.
 export function readState() {
     const pads = typeof navigator !== "undefined" && navigator.getGamepads ? navigator.getGamepads() : [];
     const pad = Array.from(pads).find(candidate => candidate && candidate.connected);
@@ -11,6 +12,8 @@ export function readState() {
         brake: value(6),
         forwardPressed: pressed(12),
         reversePressed: pressed(13),
-        neutralPressed: pressed(14)
+        neutralPressed: pressed(14),
+        emergencyStopPressed: pressed(0),
+        emergencyReleasePressed: pressed(1)
     };
 }
