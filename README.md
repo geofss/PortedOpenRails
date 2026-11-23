@@ -10,6 +10,7 @@ This repository is the experimental browser-port foundation. The first milestone
 
 - `src/OpenRails.Web/` — browser-hosted .NET WebAssembly app
 - `docs/ROADMAP.md` — project milestones and engineering principles
+- `docs/INPUT_CONTROLS.md` — keyboard, pointer/touch, and standard-mapped gamepad reference
 
 ## First build
 
