@@ -6,7 +6,13 @@ export function normalizeTrigger(value, sensitivity = 1) {
     return Math.max(0, Math.min(1, Math.pow(Math.max(0, Math.min(1, input)), 1 / safeCurve)));
 }
 export function readState(sensitivity = 1) {
-    const pads = typeof navigator !== "undefined" && navigator.getGamepads ? navigator.getGamepads() : [];
+    let pads = [];
+    try {
+        pads = typeof navigator !== "undefined" && navigator.getGamepads ? navigator.getGamepads() : [];
+    } catch {
+        return null;
+    }
+    if (!pads) return null;
     const pad = Array.from(pads).find(candidate => candidate && candidate.connected);
     if (!pad) return null;
     const value = index => normalizeTrigger(Number(pad.buttons?.[index]?.value ?? (pad.buttons?.[index]?.pressed ? 1 : 0)), sensitivity);
