@@ -26,6 +26,8 @@
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
     <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
+    <button type="button" @onclick="ToggleAudioAsync">@((audioEnabled) ? "Disable synthesized driving audio" : "Enable synthesized driving audio")</button>
+    <p class="hint">Optional low-volume original synthesis: engine tone follows throttle/speed and brake hiss follows brake pressure. Enable with a button press; not authentic Open Rails recordings.</p>
     <div class="keyboard-control-pad" tabindex="0" role="group"
          aria-label="Keyboard driving controls"
          @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
@@ -105,6 +107,8 @@
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
 
     private IJSObjectReference? gamepadModule;
+    private IJSObjectReference? audioModule;
+    private bool audioEnabled;
     private bool gamepadConnected;
     private bool previousForwardPressed;
     private bool previousReversePressed;
@@ -193,6 +197,7 @@
             try
             {
                 gamepadModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-gamepad.js");
+                audioModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-audio.js");
             }
             catch (JSException)
             {
@@ -251,6 +256,35 @@
         public bool NeutralPressed { get; set; }
     }
 
+    private async Task ToggleAudioAsync()
+    {
+        if (audioModule is null)
+        {
+            try { audioModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-audio.js"); }
+            catch (JSException) { simulationError = "Synthesized audio is unavailable in this browser."; return; }
+        }
+
+        try
+        {
+            if (!audioEnabled)
+            {
+                await audioModule.InvokeVoidAsync("start");
+                audioEnabled = true;
+            }
+            else
+            {
+                await audioModule.InvokeVoidAsync("setEnabled", false);
+                audioEnabled = false;
+            }
+            simulationError = null;
+        }
+        catch (JSException exception)
+        {
+            simulationError = $"Audio could not be enabled: {exception.Message}";
+            audioEnabled = false;
+        }
+    }
+
     private Task StartAsync()
     {
         if (isRunning)
@@ -258,6 +292,8 @@
         simulationError = null;
         runCancellation = new CancellationTokenSource();
         Controller.Resume();
+        if (audioEnabled && audioModule is not null)
+            _ = audioModule.InvokeVoidAsync("setEnabled", true);
         isRunning = true;
         runTask = RunLoopAsync(runCancellation.Token);
         return Task.CompletedTask;
@@ -278,6 +314,8 @@
                 previousTimestamp = currentTimestamp;
                 await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));
+                if (audioEnabled && audioModule is not null)
+                    await audioModule.InvokeVoidAsync("update", Controller.ThrottlePercent, speedKmh, Controller.BrakePercent);
                 frameCount++;
                 if (frameCount % 2 == 0)
                 {
@@ -303,6 +341,10 @@
     {
         Controller.Pause();
         isRunning = false;
+        if (audioModule is not null)
+        {
+            try { await audioModule.InvokeVoidAsync("setEnabled", false); } catch (JSException) { }
+        }
         var cancellation = runCancellation;
         runCancellation = null;
         cancellation?.Cancel();
@@ -328,6 +370,11 @@
         if (gamepadModule is not null)
         {
             try { await gamepadModule.DisposeAsync(); } catch (JSException) { }
+        }
+        if (audioModule is not null)
+        {
+            try { await audioModule.InvokeVoidAsync("dispose"); } catch (JSException) { }
+            try { await audioModule.DisposeAsync(); } catch (JSException) { }
         }
     }
 }
