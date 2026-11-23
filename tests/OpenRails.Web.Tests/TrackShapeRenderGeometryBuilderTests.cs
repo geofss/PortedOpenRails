@@ -87,7 +87,8 @@ public sealed class TrackShapeRenderGeometryBuilderTests
         var primitive = new TrackShapePrimitiveMesh(0, 0, 0, 0,
             new[] { 1, -1 }, new[] { 0, 1, 2 }, "Solid", null, 0, 0, 1, false, 0);
         var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
-        var mesh = new TrackShapeMesh(0, 0, Array.Empty<TrackShapeMatrix>(),
+        var matrix = new TrackShapeMatrix("root", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0);
+        var mesh = new TrackShapeMesh(0, 0, new[] { matrix },
             new[] { new TrackShapeLodMesh(1000, new[] { 1, -1 }, new[] { subObject }) });
         var asset = new TrackShapeAssetMesh(4, "test.s", "GLOBAL/SHAPES/test.s", mesh);
         var placement = new TrackShapePlacement(1, 2, 4, new TrackWorldPosition(0, 0, 0),
