@@ -3,6 +3,28 @@ let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0
 let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
 const activePointers = new Map();
 let renderScale = 1;
+const qualityStorageKey = "ported-openrails-preview-quality";
+const supportedQualityPresets = new Set(["low", "medium", "high"]);
+
+export function getSavedQualityPreset() {
+  try {
+    const value = globalThis.localStorage?.getItem(qualityStorageKey);
+    return supportedQualityPresets.has(value) ? value : "high";
+  } catch {
+    return "high";
+  }
+}
+
+export function saveQualityPreset(value) {
+  if (!supportedQualityPresets.has(value)) return false;
+  try {
+    globalThis.localStorage?.setItem(qualityStorageKey, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 let pinchStartDistance = 0, pinchStartZoom = 1;
 
 export function initialize(canvas) {
