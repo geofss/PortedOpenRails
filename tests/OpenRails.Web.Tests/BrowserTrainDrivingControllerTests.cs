@@ -524,7 +524,9 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.True(controller.BrakePipeState.PressuresKPa[0] <
             controller.BrakePipeState.PressuresKPa[1]);
         Assert.True(controller.BrakeCylinderState.PressuresKPa[0] > 0);
-        Assert.True(controller.BrakeCylinderState.PressuresKPa[1] >= 0);
+        Assert.True(controller.BrakeCylinderState.PressuresKPa[1] > 0);
+        Assert.True(controller.BrakeCylinderState.PressuresKPa[0] >
+            controller.BrakeCylinderState.PressuresKPa[1]);
         Assert.Equal(100, controller.BrakePercent);
         Assert.True(controller.IsEmergencyStopApplied);
     }
