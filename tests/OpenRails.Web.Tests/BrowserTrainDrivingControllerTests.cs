@@ -426,6 +426,7 @@ public sealed class BrowserTrainDrivingControllerTests
         };
         var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 100);
         var controller = new BrowserTrainDrivingController(setup);
+        var initialDistances = setup.InitialState.Cars.Select(car => car.DistanceMeters).ToArray();
 
         controller.SetThrottle(150);
         controller.SetBrake(-5);
@@ -443,8 +444,7 @@ public sealed class BrowserTrainDrivingControllerTests
         controller.Reset();
 
         Assert.Equal(0, controller.SimulationTimeSeconds);
-        Assert.Equal(10, controller.State.Cars[0].DistanceMeters);
-        Assert.Equal(30, controller.State.Cars[1].DistanceMeters);
+        Assert.Equal(initialDistances, controller.State.Cars.Select(car => car.DistanceMeters));
         Assert.Equal(0, controller.ThrottlePercent);
         Assert.Equal(0, controller.BrakePercent);
         Assert.Equal(TrainReverserPosition.Forward, controller.ReverserPosition);
