@@ -1,5 +1,6 @@
 let context, engineOscillator, engineGain, brakeNoiseSource, brakeFilter, brakeGain;
-let enabled = false;\nlet volume = 0.35;
+let enabled = false;
+let volume = 0.35;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
 export function calculateSoundParameters(throttlePercent, speedKmh, brakePercent) {
