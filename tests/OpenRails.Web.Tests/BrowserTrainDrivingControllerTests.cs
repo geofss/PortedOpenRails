@@ -659,12 +659,12 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(100, controller.ThrottlePercent);
         Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
 
-        controller.Reset();
-        controller.SetThrottle(100);
-        controller.Advance(2);
-        Assert.Contains(controller.State.Cars, car => Math.Abs(car.SpeedMetersPerSecond) > 0.1);
-        Assert.Throws<InvalidOperationException>(() => controller.SetDoors(true, false));
-        Assert.False(controller.LeftDoorsOpen, "door-open request while moving must not change door state");
+        var movingSetup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500,
+            initialSpeedMetersPerSecond: 1.0);
+        var movingController = new BrowserTrainDrivingController(movingSetup);
+        Assert.Contains(movingController.State.Cars, car => Math.Abs(car.SpeedMetersPerSecond) > 0.1);
+        Assert.Throws<InvalidOperationException>(() => movingController.SetDoors(true, false));
+        Assert.False(movingController.LeftDoorsOpen, "door-open request while moving must not change door state");
     }
 
     private static TrackNetworkRoute CreateSlopeRoute(double length, double rise)
