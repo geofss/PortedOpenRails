@@ -5,7 +5,10 @@ export function readState() {
     const pads = typeof navigator !== "undefined" && navigator.getGamepads ? navigator.getGamepads() : [];
     const pad = Array.from(pads).find(candidate => candidate && candidate.connected);
     if (!pad) return null;
-    const value = index => Math.max(0, Math.min(1, Number(pad.buttons?.[index]?.value ?? (pad.buttons?.[index]?.pressed ? 1 : 0)) || 0));
+    const value = index => {
+        const raw = Number(pad.buttons?.[index]?.value ?? (pad.buttons?.[index]?.pressed ? 1 : 0));
+        return Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
+    };
     const pressed = index => Boolean(pad.buttons?.[index]?.pressed);
     return {
         throttle: value(7),
