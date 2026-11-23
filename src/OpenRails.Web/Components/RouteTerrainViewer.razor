@@ -15,6 +15,7 @@
             <option value="medium">Medium</option>
             <option value="high">High · maximum preview detail</option>
         </select>
+        <button type="button" class="secondary" @onclick="ResetQuality">Reset to High</button>
         <span class="hint">Preset changes render resolution, terrain tile count, track sampling, and geometry budgets. This is a preview setting, not a browser performance guarantee.</span>
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
@@ -169,6 +170,8 @@
     private int trackShapeBatchCount;
     private string? rollingStockSummary;
     private readonly List<string> rollingStockIssues = [];
+
+    private Task ResetQuality() => ChangeQuality(new ChangeEventArgs { Value = "high" });
 
     private async Task ChangeQuality(ChangeEventArgs args)
     {
