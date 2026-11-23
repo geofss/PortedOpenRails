@@ -41,7 +41,7 @@ export function setCameraPreset(name) {
   pitch = preset.pitch;
   zoom = preset.zoom;
   activeCameraPreset = name;
-  redraw();
+  if (gl) redraw();
   return true;
 }
 export function getCameraPreset() { return activeCameraPreset; }
