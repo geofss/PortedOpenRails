@@ -28,11 +28,29 @@ export function saveQualityPreset(value) {
 }
 
 let pinchStartDistance = 0, pinchStartZoom = 1;
+const cameraPresets = {
+  overview: { rotation: 0, pitch: 0.72, zoom: 1 },
+  trackside: { rotation: 0.35, pitch: 0.32, zoom: 1.65 },
+  topdown: { rotation: 0, pitch: 1.42, zoom: 0.9 }
+};
+let activeCameraPreset = "overview";
+export function setCameraPreset(name) {
+  const preset = cameraPresets[name];
+  if (!preset) return false;
+  rotation = preset.rotation;
+  pitch = preset.pitch;
+  zoom = preset.zoom;
+  activeCameraPreset = name;
+  redraw();
+  return true;
+}
+export function getCameraPreset() { return activeCameraPreset; }
+
 
 export function initialize(canvas) {
   canvasRef = canvas;
   resizeCanvas();
-  wheelHandler = e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); redraw(); };
+  wheelHandler = e => { e.preventDefault(); zoom = Math.max(0.35, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.89))); activeCameraPreset = "custom"; redraw(); };
   pointerDownHandler = e => {
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     canvas.setPointerCapture(e.pointerId);
@@ -53,11 +71,12 @@ export function initialize(canvas) {
       const points = [...activePointers.values()];
       const distance = pointerDistance(points[0], points[1]);
       if (pinchStartDistance > 0)
-        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance));
+        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance)); activeCameraPreset = "custom";
       redraw();
     } else if (dragging) {
       rotation += (e.clientX-lastX)*0.008;
       pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006));
+      activeCameraPreset = "custom";
       lastX=e.clientX; lastY=e.clientY; redraw();
     }
   };
@@ -118,7 +137,7 @@ export function cleanup() {
   storedVertices = storedIndices = storedTrackLines = null;
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
-  rotation = 0; pitch = 0.72; zoom = 1; dragging = false;
+  rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
   renderScale = 1;
 }
 function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
