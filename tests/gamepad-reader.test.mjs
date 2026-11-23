@@ -73,4 +73,11 @@ assert.equal(readState().brake, 0, "non-finite analog trigger values safely beco
 connectedSecondButtons[6] = { value: Number.POSITIVE_INFINITY, pressed: true };
 assert.equal(readState().brake, 0, "infinite analog trigger values safely become zero");
 
+// Sensitivity changes are applied to the live analog trigger values.
+connectedSecondButtons[7] = { value: 0.25, pressed: true };
+connectedSecondButtons[6] = { value: 0.25, pressed: true };
+assert.ok(readState(1.5).throttle > readState(1).throttle, "higher sensitivity makes low trigger values respond earlier");
+assert.ok(readState(0.5).throttle < readState(1).throttle, "lower sensitivity makes trigger response more gradual");
+assert.equal(readState(Number.NaN).throttle, readState(1).throttle, "invalid sensitivity safely falls back to neutral curve");
+
 console.log("Gamepad reader tests passed.");
