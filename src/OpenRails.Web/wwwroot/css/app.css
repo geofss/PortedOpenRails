@@ -210,3 +210,22 @@ input[type="file"] {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
+
+.route-camera-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+.route-camera-presets button {
+    padding: 8px 12px;
+    border: 1px solid #526b7b;
+    border-radius: 7px;
+    background: #203541;
+    color: #edf3f7;
+    font: inherit;
+    cursor: pointer;
+}
+.route-camera-presets button:hover {
+    border-color: #8ee0ad;
+}
