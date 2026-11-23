@@ -456,5 +456,9 @@
             try { await audioModule.InvokeVoidAsync("dispose"); } catch (JSException) { }
             try { await audioModule.DisposeAsync(); } catch (JSException) { }
         }
+        if (settingsModule is not null)
+        {
+            try { await settingsModule.DisposeAsync(); } catch (JSException) { }
+        }
     }
 }
