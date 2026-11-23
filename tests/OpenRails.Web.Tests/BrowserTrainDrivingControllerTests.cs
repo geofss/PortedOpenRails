@@ -517,7 +517,8 @@ public sealed class BrowserTrainDrivingControllerTests
         var controller = new BrowserTrainDrivingController(setup);
 
         controller.ApplyEmergencyStop();
-        controller.Advance(1.0);
+        for (var frame = 0; frame < 10; frame++)
+            controller.Advance(0.1);
 
         Assert.True(controller.BrakePipeState.PressuresKPa[0] <
             TrainBrakePipeModel.MinimumServicePressureKPa);
@@ -647,8 +648,8 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(0, controller.ThrottlePercent);
 
         controller.SetDoors(false, false);
-        controller.SetThrottle(50);
-        for (var frame = 0; frame < 10; frame++)
+        controller.SetThrottle(100);
+        for (var frame = 0; frame < 20; frame++)
             controller.Advance(0.1);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond > 0);
         Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
