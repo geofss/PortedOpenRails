@@ -21,9 +21,17 @@ Expose multiple ZIP-backed MSTS/Open Rails content packages through one virtual 
 The importer uses selection order as precedence: the first file selected has highest priority. Additional imports are placed above existing layers. This is an explicit prototype rule, not yet a complete implementation of every MSTS/Open Rails content search rule. The next parser integration must verify actual route/global/train lookup behavior against upstream.
 
 
-## Upstream lookup comparison (partial investigation)
+## Upstream lookup comparison (confirmed mismatch)
 
-The upstream `Orts.Content/MSTSPath.cs` helper is path-category based rather than a general ordered package-overlay resolver: route files are resolved under `ROUTES/<route>`, consists under `TRAINS/CONSISTS`, and ENG/WAG files under `TRAINS/TRAINSET/<folder>`. Sound lookup has a specific fallback rule: train-local `SOUND/<file>` is preferred for train sound references, then the global `SOUND/<file>`; SMS references prefer the SMS file's own directory, then global sound. This supports package-local-first fallback for those sound categories, but **does not establish a single universal precedence order for all content types**. The browser overlay's first-layer-wins rule therefore remains an explicit prototype behavior pending comparisons for route, trainset, global, and include-file lookup paths.
+Inspection of upstream `Orts.Content/MSTSPath.cs` confirms that Open Rails resolves MSTS content by category-specific canonical locations rather than by a universal ordered package-overlay stack:
+
+- Routes: `ROUTES/<route>`
+- Consists: `TRAINS/CONSISTS`
+- Trainset ENG/WAG: `TRAINS/TRAINSET/<folder>`
+- Train sound references: train-local `SOUND/<file>` first, then installation-global `SOUND/<file>`
+- SMS sound references: SMS-file-local path first, then installation-global `SOUND/<file>`
+
+The upstream helper does not expose a general first-package-wins override policy. The browser composite store **is therefore not behaviorally equivalent** to upstream content lookup: it intentionally applies selection-order overlays across all virtual paths. This comparison is complete as an investigation and confirms the mismatch. A category-aware browser resolver (including route/global, trainset, sound, and parser include semantics) remains future implementation work; do not describe the existing overlay as upstream-compatible.
 
 ## Safety and limits
 
