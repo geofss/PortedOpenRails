@@ -13,8 +13,22 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class WorldSceneryRenderGeometryBuilder
 {
-    private const int MaximumVertices = 500_000;
-    private const int MaximumIndices = 1_500_000;
+    private const int DefaultMaximumVertices = 500_000;
+    private const int DefaultMaximumIndices = 1_500_000;
+    private readonly int maximumVertices;
+    private readonly int maximumIndices;
+
+    public WorldSceneryRenderGeometryBuilder(
+        int maximumVertices = DefaultmaximumVertices,
+        int maximumIndices = DefaultmaximumIndices)
+    {
+        if (maximumVertices < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumVertices));
+        if (maximumIndices < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumIndices));
+        this.maximumVertices = maximumVertices;
+        this.maximumIndices = maximumIndices;
+    }
 
     public WorldSceneryRenderGeometry Build(IEnumerable<LoadedWorldSceneryTile> tiles)
     {
@@ -63,8 +77,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
                     foreach (var primitive in subObject.Primitives)
                     {
                         if (primitive.Indices.Count < 3) continue;
-                        if (totalVertices + subObject.Vertices.Count > MaximumVertices ||
-                            totalIndices + primitive.Indices.Count > MaximumIndices)
+                        if (totalVertices + subObject.Vertices.Count > maximumVertices ||
+                            totalIndices + primitive.Indices.Count > maximumIndices)
                         {
                             truncated = true;
                             break;
