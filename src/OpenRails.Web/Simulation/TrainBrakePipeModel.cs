@@ -91,7 +91,7 @@ public sealed class TrainBrakePipeModel
                 ? emergency ? emergencyApplicationTimeConstantSeconds : applicationTimeConstantSeconds
                 : releaseTimeConstantSeconds;
             next[0] = Approach(pressures[0], targetPressure, stepSeconds, firstTau,
-                emergency ? EmergencyPressureKPa : MinimumServicePressureKPa);
+                EmergencyPressureKPa);
 
             for (var i = 1; i < pressures.Length; i++)
             {
