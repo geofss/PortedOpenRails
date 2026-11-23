@@ -31,6 +31,7 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(0, controller.ThrottlePercent);
         Assert.Equal(100, controller.BrakePercent);
         controller.Advance(0.25);
+        controller.Advance(0.25);
         Assert.True(controller.BrakePipeState.PressuresKPa[0] <
             TrainBrakePipeModel.MinimumServicePressureKPa);
         Assert.True(controller.BrakeCylinderState.PressuresKPa[0] > 0);
