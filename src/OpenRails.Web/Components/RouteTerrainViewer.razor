@@ -8,6 +8,15 @@
 <section class="route-world-view">
     <h3>Route terrain · WebGL preview</h3>
     <p class="hint">Original terrain materials, track-section geometry and loaded track-shape meshes are uploaded to WebGL. Drag to orbit and tilt, scroll or pinch to zoom.</p>
+    <div class="route-preview-quality">
+        <label for="route-preview-quality">Graphics quality</label>
+        <select id="route-preview-quality" value="@qualityPreset" @onchange="ChangeQuality">
+            <option value="low">Low · mobile-friendly</option>
+            <option value="medium">Medium</option>
+            <option value="high">High · maximum preview detail</option>
+        </select>
+        <span class="hint">Preset changes render resolution, terrain tile count, track sampling, and geometry budgets. This is a preview setting, not a browser performance guarantee.</span>
+    </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
         <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
@@ -28,7 +37,7 @@
         <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
         <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
         <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
-        <dt>Terrain patches sent to preview</dt><dd>@Math.Min(8, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
+        <dt>Terrain patches sent to preview</dt><dd>@Math.Min(TerrainTileLimit, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
@@ -150,9 +159,28 @@
     private bool initialized;
     private bool hasDrawn;
     private bool trackGeometryTruncated;
+    private string qualityPreset = "high";
+    private int TerrainTileLimit => qualityPreset switch { "low" => 1, "medium" => 4, _ => 8 };
+    private int GeometryVertexLimit => qualityPreset switch { "low" => 100_000, "medium" => 250_000, _ => 500_000 };
+    private int GeometryIndexLimit => GeometryVertexLimit * 3;
+    private int TrackPointLimit => qualityPreset switch { "low" => 20_000, "medium" => 60_000, _ => 100_000 };
+    private int TrackLineFloatLimit => TrackPointLimit * 6;
+    private double TrackSampleSpacingMeters => qualityPreset switch { "low" => 40, "medium" => 30, _ => 20 };
     private int trackShapeBatchCount;
     private string? rollingStockSummary;
     private readonly List<string> rollingStockIssues = [];
+
+    private async Task ChangeQuality(ChangeEventArgs args)
+    {
+        qualityPreset = args.Value?.ToString() is "low" or "medium" ? args.Value!.ToString()! : "high";
+        hasDrawn = false;
+        if (module is not null)
+        {
+            try { await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 }); }
+            catch (JSException) { renderError = "Unable to apply preview render scale."; }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -185,7 +213,7 @@
                 }
 
                 var patches = new List<object>();
-                foreach (var loaded in Route.TerrainMeshes.Meshes.Take(8))
+                foreach (var loaded in Route.TerrainMeshes.Meshes.Take(TerrainTileLimit))
                 foreach (var lod in loaded.LodMeshes.Take(1))
                 foreach (var patch in lod.Patches)
                 {
@@ -213,8 +241,8 @@
                 var tessellator = new TrackGeometryTessellator();
                 foreach (var path in Route.TrackNetwork.VectorPaths)
                 {
-                    if (trackLines.Count >= 600000) break;
-                    var points = tessellator.BuildPolyline(path, 20, 100000);
+                    if (trackLines.Count >= TrackLineFloatLimit) break;
+                    var points = tessellator.BuildPolyline(path, TrackSampleSpacingMeters, TrackPointLimit);
                     for (var i = 0; i + 1 < points.Count; i++)
                     {
                         trackLines.Add((float)points[i].X); trackLines.Add((float)points[i].Y); trackLines.Add((float)points[i].Z);
@@ -226,14 +254,14 @@
                         asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
                         asset.Texture.MipLevels.Count > 0)
                     .ToArray();
-                var trackShapeGeometry = new TrackShapeRenderGeometryBuilder()
+                var trackShapeGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
                     .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
-                var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder()
+                var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
                     .Build(Route.WorldScenery.Loaded);
 
                 var rollingStockPlacements = new List<TrackShapePlacement>();
                 rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
-                var rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
+                var rollingStockGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit).BuildTextured(
                     rollingStockPlacements, rollingStockTextureAssets);
 
                 if (Store is not null && Consist is not null)
@@ -410,7 +438,7 @@
         if (placement is null)
             return;
 
-        var geometry = new TrackShapeRenderGeometryBuilder()
+        var geometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
             .BuildTextured(placement.Placements, rollingStockTextureAssets);
         var batches = geometry.Batches.Select(batch => new
         {
