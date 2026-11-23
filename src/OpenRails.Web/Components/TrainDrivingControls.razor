@@ -32,7 +32,7 @@
          aria-label="Keyboard driving controls"
          @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
         <strong>Keyboard controls</strong>
-        <span>Focus here, then use ↑ / ↓ to adjust throttle, Space to toggle full brake, R / N / F for reverser, or Esc to release throttle and brake.</span>
+        <span>Focus here, then use ↑ / ↓ to adjust throttle, Space to toggle full brake, R / N / F for reverser, or Esc to release throttle and brake; X applies emergency stop.</span>
         <span class="keyboard-control-state">Throttle @Controller.ThrottlePercent.ToString("N0")% · Brake @Controller.BrakePercent.ToString("N0")%</span>
     </div>
     @if (!string.IsNullOrWhiteSpace(simulationError))
