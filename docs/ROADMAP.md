@@ -86,7 +86,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Add focused keyboard throttle/brake/reverser shortcuts (Up/Down adjust throttle, Space toggles full brake, F/N/R select direction, Escape releases throttle and brake)
 - [x] Add a forward/neutral/reverse traction-direction selector with a stopped-train and zero-throttle interlock
 - [ ] Complete keyboard, pointer, touch, and gamepad input mapping for the full simulator command set
-- [ ] Connect throttle, brakes, reverser, doors, and relevant cab controls
+- [x] Connect throttle, brakes, reverser, doors, and relevant cab controls (prototype controller/UI commands are connected through pointer, keyboard, and supported gamepad inputs; door opening is stopped-train interlocked and blocks traction)
 - [x] Add browser audio output driven by simulation events (optional user-enabled synthesized engine tone and brake hiss; not authentic Open Rails recordings)
 - [ ] Add settings, save/restore, and loading/error UX (preview quality presets now persist locally and can reset to High; broader settings and simulator save/restore remain)
 
