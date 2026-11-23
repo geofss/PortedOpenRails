@@ -229,7 +229,7 @@
         }
 
         gamepadConnected = true;
-        Controller.SetThrottle(Math.Clamp(state.Throttle * 100, 0, 100));
+        Controller.SetThrottle((float)Math.Clamp(state.Throttle * 100, 0, 100));
         Controller.SetBrake(Math.Clamp(state.Brake * 100, 0, 100));
         if (state.ForwardPressed && !previousForwardPressed)
             ApplyReverser(TrainReverserPosition.Forward);
