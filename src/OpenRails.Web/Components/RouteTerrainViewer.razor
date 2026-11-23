@@ -176,8 +176,12 @@
         hasDrawn = false;
         if (module is not null)
         {
-            try { await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 }); }
-            catch (JSException) { renderError = "Unable to apply preview render scale."; }
+            try
+            {
+                await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 });
+                await module.InvokeVoidAsync("saveQualityPreset", qualityPreset);
+            }
+            catch (JSException) { renderError = "Unable to apply or save preview quality."; }
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -189,7 +193,9 @@
             try
             {
                 module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/route-terrain-renderer.js");
+                qualityPreset = await module.InvokeAsync<string>("getSavedQualityPreset");
                 await module.InvokeVoidAsync("initialize", canvas);
+                await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 });
                 initialized = true;
             }
             catch (Exception ex) { renderError = $"WebGL renderer initialization failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
