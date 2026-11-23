@@ -40,6 +40,10 @@ public sealed class BrowserTrainDrivingController
     public double DroppedTimeSeconds => setup.Session.DroppedTimeSeconds;
     public bool IsPaused => setup.Session.IsPaused;
     public bool IsEmergencyStopApplied { get; private set; }
+    public bool LeftDoorsOpen { get; private set; }
+    public bool RightDoorsOpen { get; private set; }
+    public bool CanOpenDoors => ThrottlePercent <= 0.01f &&
+        State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
@@ -108,7 +112,24 @@ public sealed class BrowserTrainDrivingController
         if (!float.IsFinite(percent))
             throw new ArgumentOutOfRangeException(nameof(percent));
         if (!IsEmergencyStopApplied)
-            ThrottlePercent = Math.Clamp(percent, 0, 100);
+            ThrottlePercent = LeftDoorsOpen || RightDoorsOpen
+                ? 0
+                : Math.Clamp(percent, 0, 100);
+    }
+
+    /// <summary>Controls passenger-door sides; opening is interlocked while moving or applying traction.</summary>
+    public void SetDoors(bool leftOpen, bool rightOpen)
+    {
+        if ((leftOpen && !LeftDoorsOpen) || (rightOpen && !RightDoorsOpen))
+        {
+            if (!CanOpenDoors)
+                throw new InvalidOperationException("Doors can only be opened when the consist is stopped and throttle is zero.");
+        }
+
+        LeftDoorsOpen = leftOpen;
+        RightDoorsOpen = rightOpen;
+        if (LeftDoorsOpen || RightDoorsOpen)
+            ThrottlePercent = 0;
     }
 
     public void SetReverser(TrainReverserPosition position)
@@ -140,6 +161,8 @@ public sealed class BrowserTrainDrivingController
     public void ReleaseEmergencyStop()
     {
         IsEmergencyStopApplied = false;
+        LeftDoorsOpen = false;
+        RightDoorsOpen = false;
         ThrottlePercent = 0;
         BrakePercent = 100;
     }
