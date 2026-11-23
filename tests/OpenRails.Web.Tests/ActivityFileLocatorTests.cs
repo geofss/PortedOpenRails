@@ -22,7 +22,7 @@ public sealed class ActivityFileLocatorTests
 
         Assert.Equal(new[]
         {
-            "ROUTES/RouteA/ACTIVITIES/Freight.ACT",
+            "ROUTES/RouteA/activities/Freight.ACT",
             "ROUTES/RouteA/ACTIVITIES/Passenger.act"
         }, result);
     }
