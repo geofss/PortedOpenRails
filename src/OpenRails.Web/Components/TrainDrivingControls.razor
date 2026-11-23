@@ -1,5 +1,7 @@
 @using OpenRails.Web.Simulation
 @using OpenRails.Web.Parsing
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <section class="route-details driving-controls">
@@ -23,6 +25,7 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
+    <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral (standard mapping).</p>
     <div class="keyboard-control-pad" tabindex="0" role="group"
          aria-label="Keyboard driving controls"
          @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
@@ -101,6 +104,11 @@
     private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
 
+    private IJSObjectReference? gamepadModule;
+    private bool gamepadConnected;
+    private bool previousForwardPressed;
+    private bool previousReversePressed;
+    private bool previousNeutralPressed;
     private CancellationTokenSource? runCancellation;
     private Task? runTask;
     private bool isRunning;
@@ -178,6 +186,71 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                gamepadModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-gamepad.js");
+            }
+            catch (JSException)
+            {
+                // The controls remain usable through keyboard and pointer when gamepad APIs are unavailable.
+            }
+        }
+    }
+
+    private async Task PollGamepadAsync()
+    {
+        if (gamepadModule is null)
+            return;
+
+        TrainGamepadState? state;
+        try
+        {
+            state = await gamepadModule.InvokeAsync<TrainGamepadState?>("readState");
+        }
+        catch (JSException)
+        {
+            return;
+        }
+
+        if (state is null)
+        {
+            if (gamepadConnected)
+            {
+                Controller.SetThrottle(0);
+                Controller.SetBrake(100);
+                gamepadConnected = false;
+            }
+            previousForwardPressed = previousReversePressed = previousNeutralPressed = false;
+            return;
+        }
+
+        gamepadConnected = true;
+        Controller.SetThrottle(Math.Clamp(state.Throttle * 100, 0, 100));
+        Controller.SetBrake(Math.Clamp(state.Brake * 100, 0, 100));
+        if (state.ForwardPressed && !previousForwardPressed)
+            ApplyReverser(TrainReverserPosition.Forward);
+        if (state.ReversePressed && !previousReversePressed)
+            ApplyReverser(TrainReverserPosition.Reverse);
+        if (state.NeutralPressed && !previousNeutralPressed)
+            ApplyReverser(TrainReverserPosition.Neutral);
+        previousForwardPressed = state.ForwardPressed;
+        previousReversePressed = state.ReversePressed;
+        previousNeutralPressed = state.NeutralPressed;
+    }
+
+    private sealed class TrainGamepadState
+    {
+        public double Throttle { get; set; }
+        public double Brake { get; set; }
+        public bool ForwardPressed { get; set; }
+        public bool ReversePressed { get; set; }
+        public bool NeutralPressed { get; set; }
+    }
+
     private Task StartAsync()
     {
         if (isRunning)
@@ -203,6 +276,7 @@
                 var elapsed = (currentTimestamp - previousTimestamp) /
                     (double)System.Diagnostics.Stopwatch.Frequency;
                 previousTimestamp = currentTimestamp;
+                await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));
                 frameCount++;
                 if (frameCount % 2 == 0)
@@ -251,5 +325,9 @@
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
+        if (gamepadModule is not null)
+        {
+            try { await gamepadModule.DisposeAsync(); } catch (JSException) { }
+        }
     }
 }
