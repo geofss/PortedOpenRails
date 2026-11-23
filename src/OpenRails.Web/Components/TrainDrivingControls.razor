@@ -249,6 +249,7 @@
             {
                 // The controls remain usable through keyboard and pointer when gamepad APIs are unavailable.
             }
+            await InvokeAsync(StateHasChanged);
         }
     }
 
