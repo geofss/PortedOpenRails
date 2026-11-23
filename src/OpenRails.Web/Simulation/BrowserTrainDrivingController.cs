@@ -27,6 +27,9 @@ public sealed class BrowserTrainDrivingController
     private readonly IReadOnlyList<double> couplerDamping;
     private readonly IReadOnlyList<double> couplerMaximumCompressionForces;
     private readonly IReadOnlyList<double> couplerMaximumTensionForces;
+    private readonly float[] throttleCommandBuffer;
+    private readonly double[] zeroBrakeCommandBuffer;
+    private readonly double[] zeroCouplerForceBuffer;
     private readonly TrainBrakePipeModel brakePipeModel = new();
     private readonly TrainBrakeCylinderModel brakeCylinderModel = new();
     private TrainBrakePipeState brakePipeState;
@@ -80,6 +83,9 @@ public sealed class BrowserTrainDrivingController
             }).ToArray());
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
         var initialCars = setup.InitialState.Cars;
+        throttleCommandBuffer = new float[initialCars.Count];
+        zeroBrakeCommandBuffer = new double[initialCars.Count];
+        zeroCouplerForceBuffer = new double[initialCars.Count];
         couplerRestGapsMeters = Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, initialCars.Count - 1))
             .Select(i => initialCars[i + 1].DistanceMeters - initialCars[i].DistanceMeters).ToArray());
         // Prototype values pending parsing native ORTS coupler slack and spring/damper parameters.
@@ -127,19 +133,18 @@ public sealed class BrowserTrainDrivingController
         if (IsPaused || elapsedFrameSeconds == 0)
             return 0;
 
-        var throttle = setup.PoweredCars
-            .Select(powered => powered ? ThrottlePercent : 0f)
-            .ToArray();
+        for (var i = 0; i < throttleCommandBuffer.Length; i++)
+            throttleCommandBuffer[i] = setup.PoweredCars[i] ? ThrottlePercent : 0f;
 
         return setup.Session.AdvanceWithBrakeCommands(
             elapsedFrameSeconds,
-            throttle,
-            new double[setup.InitialState.Cars.Count],
+            throttleCommandBuffer,
+            zeroBrakeCommandBuffer,
             setup.MaximumBrakeForceNewtonsByCar,
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
                 : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
-            new double[setup.InitialState.Cars.Count],
+            zeroCouplerForceBuffer,
             beforeSimulationStep: stepSeconds =>
             {
                 brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds);
