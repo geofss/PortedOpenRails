@@ -631,12 +631,17 @@ public sealed class BrowserTrainDrivingControllerTests
     {
         var consist = new ConsistMetadata("DoorInterlock", new[]
         {
-            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
         }, "door-interlock.con");
         var traction = new LocomotiveTractionMetadata(
             "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
-        var setup = new TrainConsistSimulationSetupBuilder().Build(
-            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction),
+            CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
         var controller = new BrowserTrainDrivingController(setup);
 
         controller.SetThrottle(50);
@@ -649,9 +654,10 @@ public sealed class BrowserTrainDrivingControllerTests
 
         controller.SetDoors(false, false);
         controller.SetThrottle(100);
-        for (var frame = 0; frame < 20; frame++)
+        for (var frame = 0; frame < 10; frame++)
             controller.Advance(0.1);
         Assert.True(controller.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.False(controller.CanOpenDoors);
         Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
     }
 
