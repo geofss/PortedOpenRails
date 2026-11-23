@@ -30,7 +30,7 @@ These mappings apply to the experimental route-driving controller; they are not 
 | South face button (button 0) | Apply emergency stop |
 | East face button (button 1) | Explicitly release emergency stop |
 
-Analog trigger values are clamped to 0–100% and non-finite values are treated as zero. The controller polls the first connected standard-mapped pad. If a gamepad disconnects while driving, throttle is cut and full brake is applied.
+Analog trigger values are clamped to 0–100% and non-finite values are treated as zero. The controller polls the first connected standard-mapped pad and ignores connected pads with an incompatible button layout. If a gamepad disconnects while driving, throttle is cut and full brake is applied.
 
 ## Local driving preferences
 - Synthesized audio volume is adjustable from 0–100% and saved locally.
