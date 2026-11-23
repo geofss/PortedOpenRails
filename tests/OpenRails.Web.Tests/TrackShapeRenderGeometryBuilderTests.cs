@@ -75,4 +75,36 @@ public sealed class TrackShapeRenderGeometryBuilderTests
         Assert.Equal(new Vector3(111, 2, 177), result.Vertices[0]);
         Assert.Equal(new[] { 0, 1, 2 }, result.Indices);
     }
+    [Fact]
+    public void TexturedBuilderHonorsConfiguredVertexBudget()
+    {
+        var vertices = new[]
+        {
+            new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitX, Vector3.UnitY, Vector2.Zero, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitY, Vector3.UnitY, Vector2.Zero, 0, 0, 0)
+        };
+        var primitive = new TrackShapePrimitiveMesh(0, 0, 0, 0,
+            new[] { 1, -1 }, new[] { 0, 1, 2 }, "Solid", null, 0, 0, 1, false, 0);
+        var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
+        var mesh = new TrackShapeMesh(0, 0, Array.Empty<TrackShapeMatrix>(),
+            new[] { new TrackShapeLodMesh(1000, new[] { 1, -1 }, new[] { subObject }) });
+        var asset = new TrackShapeAssetMesh(4, "test.s", "GLOBAL/SHAPES/test.s", mesh);
+        var placement = new TrackShapePlacement(1, 2, 4, new TrackWorldPosition(0, 0, 0),
+            0, asset, Matrix4x4.Identity);
+
+        var result = new TrackShapeRenderGeometryBuilder(2, 3).BuildTextured(
+            new[] { placement }, Array.Empty<LoadedTrackShapeTexture>());
+
+        Assert.True(result.WasTruncated);
+        Assert.Empty(result.Batches);
+    }
+
+    [Fact]
+    public void RejectsNonpositiveGeometryBudgets()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrackShapeRenderGeometryBuilder(0, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrackShapeRenderGeometryBuilder(1, 0));
+    }
+
 }
