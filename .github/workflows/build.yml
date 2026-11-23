@@ -20,7 +20,7 @@ jobs:
         run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js
 
       - name: Run gamepad reader unit tests
-        run: node tests/gamepad-reader.test.mjs && node tests/gamepad-audio.test.mjs && node tests/preview-quality-storage.test.mjs
+        run: node tests/gamepad-reader.test.mjs && node tests/gamepad-audio.test.mjs && node tests/preview-quality-storage.test.mjs && node tests/route-camera-presets.test.mjs
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
