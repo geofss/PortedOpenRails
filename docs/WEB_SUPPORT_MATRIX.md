@@ -15,7 +15,7 @@ This matrix describes the experimental browser port's current implementation sur
 | ZIP file import | Browser-side user-selected content; files are not uploaded by the port |
 | Graphics quality presets | Low/Medium/High controls reduce WebGL pixel scale, terrain tile cap, track sampling density, and geometry budgets |\n| Pointer/touch interaction | Route preview orbit/zoom and pointer-driven control sliders |
 | Keyboard input | Focused driving-control pad shortcuts |
-| Standard Gamepad API | Optional; standard-mapped trigger/D-pad driving controls |
+| Standard Gamepad API | Optional; standard-mapped trigger/D-pad driving controls |\n| Web Audio API | Optional low-volume synthesized engine/brake audio; requires explicit enable click |
 
 ## Content formats and scope
 
