@@ -87,7 +87,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Add a forward/neutral/reverse traction-direction selector with a stopped-train and zero-throttle interlock
 - [ ] Complete keyboard, pointer, touch, and gamepad input mapping for the full simulator command set
 - [ ] Connect throttle, brakes, reverser, doors, and relevant cab controls
-- [ ] Add browser audio output driven by simulation events
+- [x] Add browser audio output driven by simulation events (optional user-enabled synthesized engine tone and brake hiss; not authentic Open Rails recordings)
 - [ ] Add settings, save/restore, and loading/error UX
 
 ## Milestone 6 — Full simulator integration
