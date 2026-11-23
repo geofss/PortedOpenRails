@@ -53,7 +53,7 @@ export async function start() {
 export function setEnabled(value) {
     enabled = Boolean(value) && Boolean(context);
     if (engineGain) engineGain.gain.setTargetAtTime(enabled ? 0.006 : 0, context.currentTime, 0.05);
-    if (brakeGain) brakeGain.gain.setTargetAtTime(enabled ? 0 : 0, context.currentTime, 0.05);
+    if (brakeGain) brakeGain.gain.setTargetAtTime(0, context.currentTime, 0.05);
 }
 
 export function update(throttlePercent, speedKmh, brakePercent) {
