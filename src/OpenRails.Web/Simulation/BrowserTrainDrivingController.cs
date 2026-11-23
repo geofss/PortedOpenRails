@@ -128,7 +128,7 @@ public sealed class BrowserTrainDrivingController
             BrakePercent = Math.Clamp(percent, 0, 100);
     }
 
-    /// <summary>Immediately commands zero traction and full service braking.</summary>
+    /// <summary>Immediately cuts traction, latches the stop, and commands emergency brake-pipe venting.</summary>
     public void ApplyEmergencyStop()
     {
         ThrottlePercent = 0;
