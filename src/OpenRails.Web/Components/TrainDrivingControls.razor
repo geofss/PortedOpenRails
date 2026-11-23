@@ -312,7 +312,19 @@
     private async Task ChangeAudioVolume(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; audioVolume = Math.Clamp(value, 0, 100); if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }
     private async Task ChangeGamepadSensitivity(ChangeEventArgs args) { if (!int.TryParse(args.Value?.ToString(), out var value)) return; gamepadSensitivity = Math.Clamp(value, 50, 150); await SaveSettingsAsync(); }
     private async Task ResetDrivingSettings() { audioVolume = 35; gamepadSensitivity = 100; if (audioModule is not null) await audioModule.InvokeVoidAsync("setVolume", audioVolume / 100d); await SaveSettingsAsync(); }
-    private async Task SaveSettingsAsync() { if (settingsModule is null) return; try { await settingsModule.InvokeVoidAsync("saveSettings", audioVolume, gamepadSensitivity); } catch (JSException) { simulationError = "Driving preferences could not be saved in this browser."; } }
+    private async Task SaveSettingsAsync()
+    {
+        if (settingsModule is null) return;
+        try
+        {
+            var saved = await settingsModule.InvokeAsync<bool>("saveSettings", audioVolume, gamepadSensitivity);
+            simulationError = saved ? null : "Browser storage is unavailable; these preferences will not persist.";
+        }
+        catch (JSException)
+        {
+            simulationError = "Driving preferences could not be saved in this browser.";
+        }
+    }
 
     private sealed class TrainGamepadState
     {
