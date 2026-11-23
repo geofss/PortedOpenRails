@@ -24,7 +24,7 @@ See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md
 - [x] Connect user-selected browser ZIP files to the virtual content store
 - [x] Combine multiple packages with deterministic overlay precedence
 - [x] Add package reorder and removal controls (up/down priority and removal actions; package-store ownership is preserved while rebuilding the overlay)
-- [ ] Confirm precedence against upstream Open Rails content lookup behavior
+- [x] Confirm precedence against upstream Open Rails content lookup behavior (confirmed mismatch: upstream uses category-specific paths and local-to-global sound fallback, not universal overlays; details in [MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md](MILESTONE_2D_MULTI_PACKAGE_CONTENT_MANAGER.md))
 - [x] Integrate upstream STFReader with the virtual content store and nested include resolver (see Milestone 2E)
 - [x] Adapt SBR binary readers to browser-provided streams through `SBR.Open(Stream, filename)` and virtual-content terrain loading; regression fixtures verify compressed and uncompressed SIMISA binary blocks from ZIP-backed streams
 - [x] Parse real route metadata from user-imported ZIP content using upstream STFReader
