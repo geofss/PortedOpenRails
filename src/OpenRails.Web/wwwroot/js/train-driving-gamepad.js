@@ -13,7 +13,8 @@ export function readState(sensitivity = 1) {
         return null;
     }
     if (!pads) return null;
-    const pad = Array.from(pads).find(candidate => candidate && candidate.connected);
+    // Ignore connected controllers that do not expose the standard browser button layout.
+    const pad = Array.from(pads).find(candidate => candidate && candidate.connected && candidate.mapping === "standard");
     if (!pad) return null;
     const value = index => normalizeTrigger(Number(pad.buttons?.[index]?.value ?? (pad.buttons?.[index]?.pressed ? 1 : 0)), sensitivity);
     const pressed = index => Boolean(pad.buttons?.[index]?.pressed);
