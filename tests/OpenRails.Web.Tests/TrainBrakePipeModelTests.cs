@@ -43,6 +43,19 @@ public sealed class TrainBrakePipeModelTests
     }
 
     [Fact]
+    public void EmergencyBrakePipeRechargesGraduallyAfterEmergencyRelease()
+    {
+        var model = new TrainBrakePipeModel();
+        var emergency = model.Advance(
+            model.CreateInitialState(1), 100, 0.25, emergency: true);
+
+        var released = model.Advance(emergency, 0, 0.01);
+
+        Assert.True(released.PressuresKPa[0] > emergency.PressuresKPa[0]);
+        Assert.True(released.PressuresKPa[0] < TrainBrakePipeModel.MinimumServicePressureKPa);
+    }
+
+    [Fact]
     public void PressureStateSnapshotsDoNotTrackCallerArrayMutations()
     {
         var source = new[] { TrainBrakePipeModel.NormalPressureKPa };
