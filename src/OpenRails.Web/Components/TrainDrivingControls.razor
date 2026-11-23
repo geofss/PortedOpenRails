@@ -32,7 +32,7 @@
          aria-label="Keyboard driving controls"
          @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
         <strong>Keyboard controls</strong>
-        <span>Focus here, then use ↑ / ↓ to adjust throttle, Space to toggle full brake, R / N / F for reverser, or Esc to release throttle and brake; X applies emergency stop; Z explicitly releases it.</span>
+        <span>Focus here, then use ↑ / ↓ to adjust throttle, Space to toggle full brake, R / N / F for reverser, L / K to toggle left / right doors while stopped, or Esc to release throttle and brake; X applies emergency stop; Z explicitly releases it.</span>
         <span class="keyboard-control-state">Throttle @Controller.ThrottlePercent.ToString("N0")% · Brake @Controller.BrakePercent.ToString("N0")%</span>
     </div>
     @if (!string.IsNullOrWhiteSpace(simulationError))
@@ -40,6 +40,8 @@
         <p class="error" role="alert">@simulationError</p>
     }
     <div class="package-actions">
+        <button type="button" @onclick="ToggleLeftDoors" disabled="@(!Controller.CanOpenDoors && !Controller.LeftDoorsOpen)">@(Controller.LeftDoorsOpen ? "Close left doors" : "Open left doors")</button>
+        <button type="button" @onclick="ToggleRightDoors" disabled="@(!Controller.CanOpenDoors && !Controller.RightDoorsOpen)">@(Controller.RightDoorsOpen ? "Close right doors" : "Open right doors")</button>
         <button type="button" class="danger" @onclick="ApplyEmergencyStop" disabled="@Controller.IsEmergencyStopApplied">Emergency stop</button>
         <button type="button" @onclick="ReleaseEmergencyStop" disabled="@(!Controller.IsEmergencyStopApplied)">Release emergency stop</button>
         <button type="button" @onclick="StartAsync" disabled="@isRunning">Start</button>
@@ -191,6 +193,14 @@
                 Controller.SetThrottle(0);
                 Controller.SetBrake(0);
                 break;
+            case "l":
+            case "L":
+                ToggleLeftDoors();
+                break;
+            case "k":
+            case "K":
+                ToggleRightDoors();
+                break;
             case "x":
             case "X":
                 ApplyEmergencyStop();
@@ -304,6 +314,18 @@
             simulationError = $"Audio could not be enabled: {exception.Message}";
             audioEnabled = false;
         }
+    }
+
+    private void ToggleLeftDoors()
+    {
+        try { Controller.SetDoors(!Controller.LeftDoorsOpen, Controller.RightDoorsOpen); simulationError = null; }
+        catch (InvalidOperationException exception) { simulationError = exception.Message; }
+    }
+
+    private void ToggleRightDoors()
+    {
+        try { Controller.SetDoors(Controller.LeftDoorsOpen, !Controller.RightDoorsOpen); simulationError = null; }
+        catch (InvalidOperationException exception) { simulationError = exception.Message; }
     }
 
     private void ApplyEmergencyStop()
