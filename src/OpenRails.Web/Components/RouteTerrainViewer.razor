@@ -23,9 +23,9 @@
         }
     </div>
     <div class="route-camera-presets" role="group" aria-label="Route preview camera presets">
-        <button type="button" class="secondary" @onclick='() => SetCameraPreset("overview")'>Overview</button>
-        <button type="button" class="secondary" @onclick='() => SetCameraPreset("trackside")'>Trackside</button>
-        <button type="button" class="secondary" @onclick='() => SetCameraPreset("topdown")'>Top-down</button>
+        <button type="button" class="secondary" aria-pressed="@(cameraPreset == "overview")" @onclick='() => SetCameraPreset("overview")'>Overview</button>
+        <button type="button" class="secondary" aria-pressed="@(cameraPreset == "trackside")" @onclick='() => SetCameraPreset("trackside")'>Trackside</button>
+        <button type="button" class="secondary" aria-pressed="@(cameraPreset == "topdown")" @onclick='() => SetCameraPreset("topdown")'>Top-down</button>
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
