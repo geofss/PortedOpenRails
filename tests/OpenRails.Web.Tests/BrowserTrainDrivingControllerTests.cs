@@ -414,10 +414,17 @@ public sealed class BrowserTrainDrivingControllerTests
     {
         var consist = new ConsistMetadata("DriveTest", new[]
         {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
             new ConsistCar("Wagon", "Freight", 2, false, false, false)
         }, "drive-test.con");
-        var setup = new TrainConsistSimulationSetupBuilder().Build(
-            consist, new[] { CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null) }, 100);
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction),
+            CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 100);
         var controller = new BrowserTrainDrivingController(setup);
 
         controller.SetThrottle(150);
@@ -425,12 +432,25 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(100, controller.ThrottlePercent);
         Assert.Equal(0, controller.BrakePercent);
 
+        controller.Advance(0.1);
+        Assert.Single(controller.CouplerForceTelemetryNewtons);
+        Assert.NotEqual(0, controller.CouplerForceTelemetryNewtons[0]);
+
         controller.Pause();
+        var frozenTime = controller.SimulationTimeSeconds;
         Assert.Equal(0, controller.Advance(0.1));
+        Assert.Equal(frozenTime, controller.SimulationTimeSeconds);
         controller.Resume();
         controller.Reset();
+
         Assert.Equal(0, controller.SimulationTimeSeconds);
         Assert.Equal(10, controller.State.Cars[0].DistanceMeters);
+        Assert.Equal(30, controller.State.Cars[1].DistanceMeters);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(0, controller.BrakePercent);
+        Assert.Equal(TrainReverserPosition.Forward, controller.ReverserPosition);
+        Assert.Single(controller.CouplerForceTelemetryNewtons);
+        Assert.Equal(0, controller.CouplerForceTelemetryNewtons[0]);
     }
 
     private static TrackNetworkRoute CreateSlopeRoute(double length, double rise)
