@@ -226,6 +226,8 @@ input[type="file"] {
     font: inherit;
     cursor: pointer;
 }
-.route-camera-presets button:hover {
+ .route-camera-presets button:hover,
+.route-camera-presets button[aria-pressed="true"] {
     border-color: #8ee0ad;
+    box-shadow: 0 0 0 2px #8ee0ad22;
 }
