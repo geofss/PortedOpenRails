@@ -32,7 +32,12 @@ These mappings apply to the experimental route-driving controller; they are not 
 
 Analog trigger values are clamped to 0–100% and non-finite values are treated as zero. The controller polls the first connected standard-mapped pad. If a gamepad disconnects while driving, throttle is cut and full brake is applied.
 
-## Local driving preferences\n- Synthesized audio volume is adjustable from 0–100% and saved locally.\n- Gamepad trigger sensitivity is adjustable from 50–150%; the response curve is clamped and persisted.\n- Reset driving settings restores 35% audio and 100% trigger sensitivity. Storage unavailable/errors fall back to defaults without blocking driving.\n\n## Limitations
+## Local driving preferences
+- Synthesized audio volume is adjustable from 0–100% and saved locally.
+- Gamepad trigger sensitivity is adjustable from 50–150%; the response curve is clamped and persisted.
+- Reset driving settings restores 35% audio and 100% trigger sensitivity. Storage unavailable/errors fall back to defaults without blocking driving.
+
+## Limitations
 - Controls operate a prototype simulation, not the complete Open Rails command set.
 - Door controls are interlocks only; passenger door animations and vehicle-specific door systems are not ported.
 - Keyboard commands require focus on the keyboard-control area to avoid intercepting ordinary browser typing.
