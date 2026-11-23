@@ -19,8 +19,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
     private readonly int maximumIndices;
 
     public WorldSceneryRenderGeometryBuilder(
-        int maximumVertices = DefaultmaximumVertices,
-        int maximumIndices = DefaultmaximumIndices)
+        int maximumVertices = DefaultMaximumVertices,
+        int maximumIndices = DefaultMaximumIndices)
     {
         if (maximumVertices < 1)
             throw new ArgumentOutOfRangeException(nameof(maximumVertices));
