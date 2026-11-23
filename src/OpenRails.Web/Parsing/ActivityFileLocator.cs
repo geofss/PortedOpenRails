@@ -1,3 +1,5 @@
+using OpenRails.Web.Content;
+
 namespace OpenRails.Web.Parsing;
 
 /// <summary>Locates activity files associated with a selected route folder.</summary>
