@@ -6,6 +6,41 @@ namespace OpenRails.Web.Tests;
 
 public sealed class BrowserTrainDrivingControllerTests
 {
+
+    [Fact]
+    public void EmergencyStopRemainsLatchedAgainstThrottleAndBrakeInputsUntilReleased()
+    {
+        var consist = new ConsistMetadata("EmergencyLatch", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "emergency-latch.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction) }, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetThrottle(65);
+        controller.ApplyEmergencyStop();
+        Assert.True(controller.IsEmergencyStopApplied);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+
+        controller.SetThrottle(90);
+        controller.SetBrake(0);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+
+        controller.ReleaseEmergencyStop();
+        Assert.False(controller.IsEmergencyStopApplied);
+        Assert.Equal(0, controller.ThrottlePercent);
+        Assert.Equal(100, controller.BrakePercent);
+        controller.SetBrake(0);
+        controller.SetThrottle(10);
+        Assert.Equal(0, controller.BrakePercent);
+        Assert.Equal(10, controller.ThrottlePercent);
+    }
+
     [Fact]
     public void ThrottleAcceleratesPoweredConsistAndBrakeCommandSlowsIt()
     {
