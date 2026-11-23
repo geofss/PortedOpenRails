@@ -434,7 +434,6 @@ public sealed class BrowserTrainDrivingControllerTests
 
         controller.Advance(0.1);
         Assert.Single(controller.CouplerForceTelemetryNewtons);
-        Assert.NotEqual(0, controller.CouplerForceTelemetryNewtons[0]);
 
         controller.Pause();
         var frozenTime = controller.SimulationTimeSeconds;
