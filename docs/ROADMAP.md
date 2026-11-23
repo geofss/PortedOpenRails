@@ -82,7 +82,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Add responsive graphics quality and performance controls (Low/Medium/High presets scale WebGL pixel resolution, terrain tile count, track sampling, and geometry budgets)
 
 ## Milestone 5 — Player controls, UI, and audio
-- [ ] Build browser route/activity/consist selection
+- [x] Build browser route/activity/consist selection (route, consist, and route-folder `.act` file selection UI; activities are not executable yet)
 - [x] Add focused keyboard throttle/brake/reverser shortcuts (Up/Down adjust throttle, Space toggles full brake, F/N/R select direction, Escape releases throttle and brake)
 - [x] Add a forward/neutral/reverse traction-direction selector with a stopped-train and zero-throttle interlock
 - [ ] Complete keyboard, pointer, touch, and gamepad input mapping for the full simulator command set
