@@ -75,10 +75,10 @@ public sealed class TrainBrakePipeModel
         var steps = Math.Max(1, (int)Math.Ceiling(elapsedSeconds / (1d / 60d)));
         var stepSeconds = elapsedSeconds / steps;
         var pressures = state.PressuresKPa.ToArray();
+        var next = new double[pressures.Length];
 
         for (var step = 0; step < steps; step++)
         {
-            var next = new double[pressures.Length];
             var firstTau = targetPressure < pressures[0]
                 ? applicationTimeConstantSeconds
                 : releaseTimeConstantSeconds;
@@ -92,7 +92,8 @@ public sealed class TrainBrakePipeModel
                     : propagationTimeConstantSeconds * 1.5;
                 next[i] = Approach(pressures[i], upstreamPressure, stepSeconds, tau);
             }
-            pressures = next;
+
+            (pressures, next) = (next, pressures);
         }
 
         return new TrainBrakePipeState(pressures);
