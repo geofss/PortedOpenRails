@@ -231,3 +231,24 @@ input[type="file"] {
     border-color: #8ee0ad;
     box-shadow: 0 0 0 2px #8ee0ad22;
 }
+
+.driving-settings {
+    margin: 14px 0;
+    padding: 14px;
+    border: 1px solid #405666;
+    border-radius: 10px;
+    background: #101d26;
+}
+.driving-settings h4 { margin-top: 0; }
+.driving-control-row { display: grid; gap: 6px; margin: 12px 0; }
+.driving-control-row label { color: #bdcbd4; font-weight: 650; }
+.driving-control-row input[type="range"] { width: 100%; accent-color: #8ee0ad; }
+.driving-settings button {
+    padding: 7px 10px;
+    border: 1px solid #526b7b;
+    border-radius: 7px;
+    background: #203541;
+    color: #edf3f7;
+    font: inherit;
+    cursor: pointer;
+}
