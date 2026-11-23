@@ -19,7 +19,7 @@ buttons[0] = button(1, true);
 buttons[4] = button(1, true);
 Object.defineProperty(globalThis, "navigator", {
     configurable: true,
-    value: { getGamepads: () => [{ connected: true, buttons }] }
+    value: { getGamepads: () => [{ connected: true, mapping: "standard", buttons }] }
 });
 assert.deepEqual(readState(), {
     throttle: 0.8,
@@ -52,14 +52,14 @@ assert.deepEqual(readState(), {
     rightDoorTogglePressed: true
 });
 
-const disconnectedFirst = { connected: false, buttons: Array.from({ length: 16 }, () => button(1, true)) };
+const disconnectedFirst = { connected: false, mapping: "standard", buttons: Array.from({ length: 16 }, () => button(1, true)) };
 const connectedSecondButtons = Array.from({ length: 16 }, () => button());
 connectedSecondButtons[6] = { pressed: true }; // value omitted: pressed fallback
 connectedSecondButtons[7] = { value: 1.4, pressed: true }; // clamp to 1
 connectedSecondButtons[8] = { value: Number.POSITIVE_INFINITY, pressed: true }; // malformed value becomes 0
 Object.defineProperty(globalThis, "navigator", {
     configurable: true,
-    value: { getGamepads: () => [disconnectedFirst, { connected: true, buttons: connectedSecondButtons }] }
+    value: { getGamepads: () => [disconnectedFirst, { connected: true, mapping: "standard", buttons: connectedSecondButtons }] }
 });
 assert.deepEqual(readState(), {
     throttle: 1,
@@ -84,5 +84,17 @@ connectedSecondButtons[6] = { value: 0.25, pressed: true };
 assert.ok(readState(1.5).throttle > readState(1).throttle, "higher sensitivity makes low trigger values respond earlier");
 assert.ok(readState(0.5).throttle < readState(1).throttle, "lower sensitivity makes trigger response more gradual");
 assert.equal(readState(Number.NaN).throttle, readState(1).throttle, "invalid sensitivity safely falls back to neutral curve");
+
+
+// A connected non-standard controller must not be interpreted using standard button indices.
+const nonStandardButtons = Array.from({ length: 16 }, () => button(1, true));
+Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { getGamepads: () => [
+        { connected: true, mapping: "xr-standard", buttons: nonStandardButtons },
+        { connected: true, mapping: "standard", buttons: connectedSecondButtons }
+    ] }
+});
+assert.equal(readState().throttle, 0.25, "skips non-standard controllers and reads the standard-mapped pad");
 
 console.log("Gamepad reader tests passed.");
