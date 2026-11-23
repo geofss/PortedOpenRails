@@ -19,6 +19,9 @@ jobs:
       - name: Validate renderer JavaScript syntax
         run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js
 
+      - name: Run gamepad reader unit tests
+        run: node tests/gamepad-reader.test.mjs
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
