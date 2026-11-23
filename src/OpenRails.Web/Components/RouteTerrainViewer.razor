@@ -22,6 +22,11 @@
             <span class="hint">@qualityStorageWarning</span>
         }
     </div>
+    <div class="route-camera-presets" role="group" aria-label="Route preview camera presets">
+        <button type="button" class="secondary" @onclick="() => SetCameraPreset("overview")">Overview</button>
+        <button type="button" class="secondary" @onclick="() => SetCameraPreset("trackside")">Trackside</button>
+        <button type="button" class="secondary" @onclick="() => SetCameraPreset("topdown")">Top-down</button>
+    </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
         <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
@@ -177,6 +182,13 @@
     private readonly List<string> rollingStockIssues = [];
 
     private Task ResetQuality() => ChangeQuality(new ChangeEventArgs { Value = "high" });
+
+    private async Task SetCameraPreset(string preset)
+    {
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("setCameraPreset", preset); }
+        catch (JSException) { renderError = "Unable to change the route preview camera."; }
+    }
 
     private async Task ChangeQuality(ChangeEventArgs args)
     {
