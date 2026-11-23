@@ -161,8 +161,6 @@ public sealed class BrowserTrainDrivingController
     public void ReleaseEmergencyStop()
     {
         IsEmergencyStopApplied = false;
-        LeftDoorsOpen = false;
-        RightDoorsOpen = false;
         ThrottlePercent = 0;
         BrakePercent = 100;
     }
@@ -221,6 +219,8 @@ public sealed class BrowserTrainDrivingController
         BrakePercent = 0;
         ReverserPosition = TrainReverserPosition.Forward;
         IsEmergencyStopApplied = false;
+        LeftDoorsOpen = false;
+        RightDoorsOpen = false;
         CouplerForceTelemetryNewtons = Array.AsReadOnly(new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
 }
