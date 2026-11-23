@@ -23,6 +23,24 @@ public sealed class TrainBrakePipeModelTests
     }
 
     [Fact]
+    public void EmergencyApplicationVentsBelowServicePressureAndPropagatesRearward()
+    {
+        var model = new TrainBrakePipeModel();
+        var initial = model.CreateInitialState(4);
+
+        var emergency = model.Advance(initial, 100, 0.25, emergency: true);
+
+        Assert.True(emergency.PressuresKPa[0] < TrainBrakePipeModel.MinimumServicePressureKPa);
+        Assert.True(emergency.PressuresKPa[0] < emergency.PressuresKPa[1]);
+        Assert.True(emergency.PressuresKPa[1] < emergency.PressuresKPa[2]);
+        Assert.All(emergency.PressuresKPa, pressure => Assert.InRange(
+            pressure, TrainBrakePipeModel.EmergencyPressureKPa,
+            TrainBrakePipeModel.NormalPressureKPa));
+        Assert.All(model.GetBrakePercentByCar(emergency), command => Assert.Equal(100, command));
+        Assert.Equal(TrainBrakePipeModel.NormalPressureKPa, initial.PressuresKPa[0]);
+    }
+
+    [Fact]
     public void PressureStateSnapshotsDoNotTrackCallerArrayMutations()
     {
         var source = new[] { TrainBrakePipeModel.NormalPressureKPa };
