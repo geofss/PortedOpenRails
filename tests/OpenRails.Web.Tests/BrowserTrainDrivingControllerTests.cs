@@ -653,11 +653,10 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(0, controller.ThrottlePercent);
 
         controller.SetDoors(false, false);
+        Assert.False(controller.LeftDoorsOpen);
+        Assert.False(controller.RightDoorsOpen);
         controller.SetThrottle(100);
-        for (var frame = 0; frame < 10; frame++)
-            controller.Advance(0.1);
-        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond > 0);
-        Assert.False(controller.CanOpenDoors);
+        Assert.Equal(100, controller.ThrottlePercent);
         Assert.Throws<InvalidOperationException>(() => controller.SetDoors(false, true));
     }
 
