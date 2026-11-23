@@ -79,7 +79,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Render WORLD scenery placements with verified upstream matrix/quaternion transforms and basic RGBA8 texture batches (full material features remain incomplete)
 - [x] Render first-LOD rolling-stock meshes in the route WebGL scene with supported RGBA8 ACE textures, UVs, alpha-test materials, and route-aligned transforms (animation, full shader variants, and continuous multi-node traversal remain incomplete)
 - [ ] Add cameras and cab views
-- [ ] Add responsive graphics quality and performance controls
+- [x] Add responsive graphics quality and performance controls (Low/Medium/High presets scale WebGL pixel resolution, terrain tile count, track sampling, and geometry budgets)
 
 ## Milestone 5 — Player controls, UI, and audio
 - [ ] Build browser route/activity/consist selection
