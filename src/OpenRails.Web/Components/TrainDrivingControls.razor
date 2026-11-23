@@ -25,7 +25,7 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
-    <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral (standard mapping).</p>
+    <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
     <div class="keyboard-control-pad" tabindex="0" role="group"
          aria-label="Keyboard driving controls"
          @onkeydown="HandleKeyboardControl" @onkeydown:preventDefault="true">
