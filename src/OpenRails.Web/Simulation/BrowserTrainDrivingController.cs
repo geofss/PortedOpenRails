@@ -166,7 +166,7 @@ public sealed class BrowserTrainDrivingController
             zeroCouplerForceBuffer,
             beforeSimulationStep: stepSeconds =>
             {
-                brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds);
+                brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds, IsEmergencyStopApplied);
                 var pipeBrakeCommands = brakePipeModel.GetBrakePercentByCar(brakePipeState);
                 brakeCylinderState = brakeCylinderModel.Advance(
                     brakeCylinderState, pipeBrakeCommands, stepSeconds);
