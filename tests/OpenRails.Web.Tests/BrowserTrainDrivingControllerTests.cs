@@ -499,6 +499,37 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void EmergencyStopDrivesBrakePipeVentAndCylinderResponse()
+    {
+        var consist = new ConsistMetadata("EmergencyPipe", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "emergency-pipe.con");
+        var traction = new LocomotiveTractionMetadata(
+            "TestLoco", 1_500, 1_500, 100_000, 100, 0, null, "test.eng");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", true, 1_000, 10, 4_000, traction),
+            CreateAsset(2, "Wagon", false, 2_000, 20, 8_000, null)
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.ApplyEmergencyStop();
+        controller.Advance(0.2);
+
+        Assert.True(controller.BrakePipeState.PressuresKPa[0] <
+            TrainBrakePipeModel.MinimumServicePressureKPa);
+        Assert.True(controller.BrakePipeState.PressuresKPa[0] <
+            controller.BrakePipeState.PressuresKPa[1]);
+        Assert.True(controller.BrakeCylinderState.PressuresKPa[0] > 0);
+        Assert.True(controller.BrakeCylinderState.PressuresKPa[1] >= 0);
+        Assert.Equal(100, controller.BrakePercent);
+        Assert.True(controller.IsEmergencyStopApplied);
+    }
+
+    [Fact]
     public void EmergencyStopCutsTractionAndAppliesFullBrake()
     {
         var consist = new ConsistMetadata("EmergencyStop", new[]
