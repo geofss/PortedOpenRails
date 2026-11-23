@@ -8,6 +8,12 @@ saveSettings(500,-10); assert.deepEqual(loadSettings(),{audioVolume:100,gamepadS
 assert.equal(resetSettings(),true); assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100});
 assert.equal(normalizeTrigger(.25,1),.25); assert.ok(normalizeTrigger(.25,1.5)>.25,"higher sensitivity responds earlier"); assert.ok(normalizeTrigger(.25,.5)<.25,"lower sensitivity response is gradual");
 assert.equal(normalizeTrigger(Infinity,1),0); assert.equal(normalizeTrigger(.5,99),normalizeTrigger(.5,1.5),"curve clamps");
+store.set("ported-openrails-driving-settings-v1", "{invalid JSON");
+assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100},"malformed JSON falls back safely");
+store.set("ported-openrails-driving-settings-v1", JSON.stringify({audioVolume:"72",gamepadSensitivity:null}));
+assert.deepEqual(loadSettings(),{audioVolume:72,gamepadSensitivity:50},"partial/coercible stored settings are sanitized");
+store.set("ported-openrails-driving-settings-v1", JSON.stringify({audioVolume:"not a number",gamepadSensitivity:"also invalid"}));
+assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100},"invalid stored values use defaults");
 globalThis.localStorage={getItem(){throw Error("blocked")},setItem(){throw Error("blocked")}};
 assert.deepEqual(loadSettings(),{audioVolume:35,gamepadSensitivity:100}); assert.equal(saveSettings(60,110),false);
 delete globalThis.localStorage; assert.equal(resetSettings(),false);
