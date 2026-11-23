@@ -13,7 +13,7 @@
 - [x] Select and port a dependency-light original C# component
 - [x] Add regression tests and run them in CI
 - [x] Complete the initial full-simulator architecture audit
-- [ ] Complete file-level dependency inventory for parser, format, IO, and simulation core
+- [x] Inventory current browser-port parser, format, virtual IO, and simulation files with their roles and dependency boundaries (upstream desktop source-wide dependency enumeration remains pending; see [browser-port dependency inventory](BROWSER_PORT_FILE_DEPENDENCY_INVENTORY.md))
 
 See [Milestone 2A Content Pipeline Audit](MILESTONE_2A_CONTENT_PIPELINE_AUDIT.md) for parser, format, IO, and browser virtual-filesystem findings.
 
