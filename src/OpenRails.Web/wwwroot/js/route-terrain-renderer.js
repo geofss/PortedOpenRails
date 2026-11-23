@@ -18,7 +18,9 @@ export function getSavedQualityPreset() {
 export function saveQualityPreset(value) {
   if (!supportedQualityPresets.has(value)) return false;
   try {
-    globalThis.localStorage?.setItem(qualityStorageKey, value);
+    const storage = globalThis.localStorage;
+    if (!storage) return false;
+    storage.setItem(qualityStorageKey, value);
     return true;
   } catch {
     return false;
