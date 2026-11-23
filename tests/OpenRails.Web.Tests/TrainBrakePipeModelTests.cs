@@ -43,6 +43,21 @@ public sealed class TrainBrakePipeModelTests
     }
 
     [Fact]
+    public void EmergencyVentIsFasterThanServiceApplicationForSameElapsedTime()
+    {
+        var model = new TrainBrakePipeModel();
+        var initial = model.CreateInitialState(3);
+
+        var service = model.Advance(initial, 100, 0.2);
+        var emergency = model.Advance(initial, 100, 0.2, emergency: true);
+
+        Assert.True(emergency.PressuresKPa[0] < service.PressuresKPa[0]);
+        Assert.True(emergency.PressuresKPa[1] < service.PressuresKPa[1]);
+        Assert.True(emergency.PressuresKPa[2] < service.PressuresKPa[2]);
+        Assert.True(emergency.PressuresKPa[0] < emergency.PressuresKPa[^1]);
+    }
+
+    [Fact]
     public void EmergencyBrakePipeRechargesGraduallyAfterEmergencyRelease()
     {
         var model = new TrainBrakePipeModel();
