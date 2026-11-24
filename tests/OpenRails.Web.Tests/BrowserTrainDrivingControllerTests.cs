@@ -47,6 +47,31 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void BrowserControllerPneumaticStateRoundTripsThroughSessionSnapshot()
+    {
+        var consist = new ConsistMetadata("BrakeSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "brake-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetBrake(100);
+        controller.Advance(0.3);
+        var snapshot = setup.Session.CaptureState();
+        var expectedPipe = snapshot.BrakePipeState!.PressuresKPa.ToArray();
+        var expectedCylinder = snapshot.BrakeCylinderState!.PressuresKPa.ToArray();
+
+        controller.SetBrake(0);
+        controller.Advance(0.3);
+        setup.Session.RestoreState(snapshot);
+
+        Assert.Equal(expectedPipe, controller.BrakePipeState.PressuresKPa);
+        Assert.Equal(expectedCylinder, controller.BrakeCylinderState.PressuresKPa);
+    }
+
+    [Fact]
     public void DoorControlsAreStoppedTrainInterlockedAndPreventTraction()
     {
         var consist = new ConsistMetadata("DoorInterlock", new[]
