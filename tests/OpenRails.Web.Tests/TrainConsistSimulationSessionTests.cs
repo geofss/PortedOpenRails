@@ -408,4 +408,71 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Equal(0, session.SimulationTimeSeconds);
         Assert.Equal(2, session.State.Cars[0].DistanceMeters);
     }
+    [Fact]
+    public void PneumaticBrakeChainPropagatesThroughPipeCylindersAndConsistForces()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 10, 0),
+            new TrainCarMotionState(1_000, 10, 0),
+            new TrainCarMotionState(1_000, 10, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null, null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 1, maximumStepsPerFrame: 20);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        var firstSteps = session.AdvanceWithPneumaticBrakes(
+            0.5, new[] { 0f, 0f, 0f }, 100,
+            new[] { 4_000d, 4_000d, 4_000d }, resistance,
+            new[] { 0d, 0d, 0d });
+
+        Assert.Equal(5, firstSteps);
+        Assert.True(session.BrakePipeState.PressuresKPa[0] < session.BrakePipeState.PressuresKPa[1]);
+        Assert.True(session.BrakePipeState.PressuresKPa[1] < session.BrakePipeState.PressuresKPa[2]);
+        Assert.True(session.BrakeCylinderState.PressuresKPa[0] > session.BrakeCylinderState.PressuresKPa[1]);
+        Assert.True(session.PneumaticBrakePercentByCar[0] > session.PneumaticBrakePercentByCar[2]);
+
+        var speedBeforeSecondApplication = session.State.Cars[0].SpeedMetersPerSecond;
+        session.AdvanceWithPneumaticBrakes(
+            0.5, new[] { 0f, 0f, 0f }, 100,
+            new[] { 4_000d, 4_000d, 4_000d }, resistance,
+            new[] { 0d, 0d, 0d });
+
+        Assert.True(session.State.Cars[0].SpeedMetersPerSecond < speedBeforeSecondApplication);
+        Assert.True(session.BrakeCylinderState.PressuresKPa[0] >
+            session.BrakeCylinderState.PressuresKPa[1]);
+
+        session.Reset(initial);
+        Assert.All(session.BrakePipeState.PressuresKPa,
+            pressure => Assert.Equal(TrainBrakePipeModel.NormalPressureKPa, pressure));
+        Assert.All(session.BrakeCylinderState.PressuresKPa,
+            pressure => Assert.Equal(0, pressure));
+    }
+
+    [Fact]
+    public void PneumaticEmergencyCommandUsesEmergencyPipeVentAndCylinderResponse()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 5, 0),
+            new TrainCarMotionState(1_000, 5, 0)
+        });
+        var session = new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 1, maximumStepsPerFrame: 20);
+
+        session.AdvanceWithPneumaticBrakes(
+            0.5, new[] { 0f, 0f }, 100,
+            new[] { 4_000d, 4_000d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 0d, 0d }, emergency: true);
+
+        Assert.True(session.BrakePipeState.PressuresKPa[0] <
+            TrainBrakePipeModel.MinimumServicePressureKPa);
+        Assert.True(session.BrakeCylinderState.PressuresKPa[0] > 0);
+        Assert.True(session.PneumaticBrakePercentByCar[0] > session.PneumaticBrakePercentByCar[1]);
+    }
+
 }
