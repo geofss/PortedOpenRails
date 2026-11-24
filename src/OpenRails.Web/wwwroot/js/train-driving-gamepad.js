@@ -14,14 +14,35 @@ export function readState(sensitivity = 1) {
     }
     if (!pads) return null;
     // Ignore connected controllers that do not expose the standard browser button layout.
-    const pad = Array.from(pads).find(candidate => candidate && candidate.connected && candidate.mapping === "standard");
+    let pad;
+    try {
+        pad = Array.from(pads).find(candidate => candidate && candidate.connected === true && candidate.mapping === "standard");
+    } catch {
+        return null;
+    }
     if (!pad) return null;
-    const value = index => normalizeTrigger(Number(pad.buttons?.[index]?.value ?? (pad.buttons?.[index]?.pressed ? 1 : 0)), sensitivity);
-    const pressed = index => Boolean(pad.buttons?.[index]?.pressed);
-    return {
-        throttle: value(7), brake: value(6),
-        forwardPressed: pressed(12), reversePressed: pressed(13), neutralPressed: pressed(14),
-        emergencyStopPressed: pressed(0), emergencyReleasePressed: pressed(1),
-        leftDoorTogglePressed: pressed(4), rightDoorTogglePressed: pressed(5)
-    };
+    try {
+        const buttons = pad.buttons;
+        const button = index => {
+            const item = buttons?.[index];
+            return item && typeof item === "object" ? item : null;
+        };
+        const value = index => {
+            const item = button(index);
+            if (!item) return 0;
+            const raw = item.value;
+            const numeric = raw === undefined || raw === null ? (item.pressed === true ? 1 : 0) : Number(raw);
+            return normalizeTrigger(numeric, sensitivity);
+        };
+        const pressed = index => button(index)?.pressed === true;
+        return {
+            throttle: value(7), brake: value(6),
+            forwardPressed: pressed(12), reversePressed: pressed(13), neutralPressed: pressed(14),
+            emergencyStopPressed: pressed(0), emergencyReleasePressed: pressed(1),
+            leftDoorTogglePressed: pressed(4), rightDoorTogglePressed: pressed(5)
+        };
+    } catch {
+        // Browser controller objects can become unavailable between polling frames.
+        return null;
+    }
 }
