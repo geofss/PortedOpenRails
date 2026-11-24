@@ -51,7 +51,20 @@ public sealed class TrainConsistSimulationLoop
         });
     }
 
-    public TrainConsistSimulationSnapshot CaptureState() => new(\n        new TrainConsistMotionState(State.Cars.ToArray()), scheduler.CaptureState());\n\n    public void RestoreState(TrainConsistSimulationSnapshot snapshot)\n    {\n        ArgumentNullException.ThrowIfNull(snapshot);\n        State = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));\n        scheduler.RestoreState(snapshot.ClockState);\n        if (routeLengthMeters is not null)\n            State = ClampCarsToRoute(State, routeLengthMeters.Value);\n    }\n\n    public void Pause() => scheduler.Pause();
+    public TrainConsistSimulationSnapshot CaptureState() => new(\n        new TrainConsistMotionState(State.Cars.ToArray()), scheduler.CaptureState());\n\n    public void RestoreState(TrainConsistSimulationSnapshot snapshot)\n    {\n        ArgumentNullException.ThrowIfNull(snapshot);\n        State = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));\n        scheduler.RestoreState(snapshot.ClockState);\n        if (routeLengthMeters is not null)\n            State = ClampCarsToRoute(State, routeLengthMeters.Value);\n    }\n\n
+    public TrainConsistSimulationSnapshot CaptureState() =>
+        new(new TrainConsistMotionState(State.Cars.ToArray()), scheduler.CaptureState());
+
+    public void RestoreState(TrainConsistSimulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        State = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));
+        scheduler.RestoreState(snapshot.ClockState);
+        if (routeLengthMeters is not null)
+            State = ClampCarsToRoute(State, routeLengthMeters.Value);
+    }
+
+    public void Pause() => scheduler.Pause();
 
     public void Resume() => scheduler.Resume();
 
@@ -97,4 +110,5 @@ public sealed class TrainConsistSimulationLoop
 public sealed record TrainConsistForceFrame(
     IReadOnlyList<TrainCarForceBreakdown> CarForces,
     IReadOnlyList<double> CouplerForcesNewtons);
-\npublic sealed record TrainConsistSimulationSnapshot(\n    TrainConsistMotionState MotionState,\n    FixedStepSchedulerSnapshot ClockState);\n
+
+public sealed record TrainConsistSimulationSnapshot(\n    TrainConsistMotionState MotionState,\n    FixedStepSchedulerSnapshot ClockState);\n
