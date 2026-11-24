@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRails.Web.Simulation;
@@ -6,20 +7,34 @@ namespace OpenRails.Web.Simulation;
 /// Per-vehicle brake-cylinder pressure. Pressure builds after brake-pipe
 /// reduction and exhausts gradually when the pipe is recharged.
 /// </summary>
+[JsonConverter(typeof(TrainBrakeCylinderStateJsonConverter))]
 public sealed record TrainBrakeCylinderState
 {
     public IReadOnlyList<double> PressuresKPa { get; }
 
-    [JsonConstructor]
-    public TrainBrakeCylinderState(IReadOnlyList<double> pressuresKPa)
+    public TrainBrakeCylinderState(IEnumerable<double> pressuresKPa)
     {
         ArgumentNullException.ThrowIfNull(pressuresKPa);
         PressuresKPa = Array.AsReadOnly(pressuresKPa.ToArray());
     }
+}
 
-    public TrainBrakeCylinderState(IEnumerable<double> pressuresKPa)
-        : this(pressuresKPa?.ToArray() ?? throw new ArgumentNullException(nameof(pressuresKPa)))
+internal sealed class TrainBrakeCylinderStateJsonConverter : JsonConverter<TrainBrakeCylinderState>
+{
+    public override TrainBrakeCylinderState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+        using var document = JsonDocument.ParseValue(ref reader);
+        var values = document.RootElement.GetProperty(nameof(TrainBrakeCylinderState.PressuresKPa))
+            .EnumerateArray().Select(value => value.GetDouble()).ToArray();
+        return new TrainBrakeCylinderState(values);
+    }
+
+    public override void Write(Utf8JsonWriter writer, TrainBrakeCylinderState value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName(nameof(TrainBrakeCylinderState.PressuresKPa));
+        JsonSerializer.Serialize(writer, value.PressuresKPa, options);
+        writer.WriteEndObject();
     }
 }
 
