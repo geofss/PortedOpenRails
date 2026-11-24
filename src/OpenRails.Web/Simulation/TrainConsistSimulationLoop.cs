@@ -64,6 +64,22 @@ public sealed class TrainConsistSimulationLoop
             State = ClampCarsToRoute(State, routeLengthMeters.Value);
     }
 
+
+    public TrainConsistSimulationSnapshot CaptureState()
+    {
+        var copiedState = new TrainConsistMotionState(State.Cars.ToArray());
+        return new TrainConsistSimulationSnapshot(copiedState, scheduler.CaptureState());
+    }
+
+    public void RestoreState(TrainConsistSimulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        State = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));
+        scheduler.RestoreState(snapshot.ClockState);
+        if (routeLengthMeters is not null)
+            State = ClampCarsToRoute(State, routeLengthMeters.Value);
+    }
+
     public void Pause() => scheduler.Pause();
 
     public void Resume() => scheduler.Resume();
