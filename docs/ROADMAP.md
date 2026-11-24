@@ -92,6 +92,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Persist browser preview-quality and prototype driving preferences, with reset controls and storage-error fallbacks
 - [x] Provide loading indicators and actionable errors for route/package import and connected-route build failures
 - [ ] Implement simulator-state save/restore and broader simulation loading/error UX
+- [ ] Port the original Open Rails UI system (menu/navigation, route/activity/train selection, driving HUD and cab interaction, options, dialogs, pause/in-game menus, preserving original UI behaviour while adapting responsively; see [original UI port plan](ORIGINAL_UI_PORT_PLAN.md)
 
 ## Milestone 6 — Full simulator integration
 - [ ] Run a real supported activity from loaded content
