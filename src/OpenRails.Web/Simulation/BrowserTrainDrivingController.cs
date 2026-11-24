@@ -28,12 +28,7 @@ public sealed class BrowserTrainDrivingController
     private readonly IReadOnlyList<double> couplerMaximumCompressionForces;
     private readonly IReadOnlyList<double> couplerMaximumTensionForces;
     private readonly float[] throttleCommandBuffer;
-    private readonly double[] zeroBrakeCommandBuffer;
     private readonly double[] zeroCouplerForceBuffer;
-    private readonly TrainBrakePipeModel brakePipeModel = new();
-    private readonly TrainBrakeCylinderModel brakeCylinderModel = new();
-    private TrainBrakePipeState brakePipeState;
-    private TrainBrakeCylinderState brakeCylinderState;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
@@ -49,8 +44,8 @@ public sealed class BrowserTrainDrivingController
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
     public bool CanChangeReverser => ThrottlePercent <= 0.01f &&
         State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
-    public TrainBrakePipeState BrakePipeState => brakePipeState;
-    public TrainBrakeCylinderState BrakeCylinderState => brakeCylinderState;
+    public TrainBrakePipeState BrakePipeState => setup.Session.BrakePipeState;
+    public TrainBrakeCylinderState BrakeCylinderState => setup.Session.BrakeCylinderState;
     public IReadOnlyList<double> CouplerForceTelemetryNewtons { get; private set; } = Array.Empty<double>();
     public IReadOnlyList<double> RouteGradePercentByCar => routeProfile is null
         ? Array.Empty<double>()
@@ -89,7 +84,6 @@ public sealed class BrowserTrainDrivingController
         routeProfile = route is null ? null : TrackNetworkRouteProfile.Build(route);
         var initialCars = setup.InitialState.Cars;
         throttleCommandBuffer = new float[initialCars.Count];
-        zeroBrakeCommandBuffer = new double[initialCars.Count];
         zeroCouplerForceBuffer = new double[initialCars.Count];
         couplerRestGapsMeters = Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, initialCars.Count - 1))
             .Select(i => initialCars[i + 1].DistanceMeters - initialCars[i].DistanceMeters).ToArray());
@@ -101,8 +95,6 @@ public sealed class BrowserTrainDrivingController
             .Select(limit => limit.MaximumCompressionNewtons).ToArray());
         couplerMaximumTensionForces = Array.AsReadOnly(setup.CouplerForceLimits
             .Select(limit => limit.MaximumTensionNewtons).ToArray());
-        brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
-        brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
         CouplerForceTelemetryNewtons = Array.AsReadOnly(
             new double[Math.Max(0, setup.InitialState.Cars.Count - 1)]);
     }
@@ -176,23 +168,16 @@ public sealed class BrowserTrainDrivingController
         for (var i = 0; i < throttleCommandBuffer.Length; i++)
             throttleCommandBuffer[i] = setup.PoweredCars[i] ? ThrottlePercent : 0f;
 
-        return setup.Session.AdvanceWithBrakeCommands(
+        return setup.Session.AdvanceWithPneumaticBrakes(
             elapsedFrameSeconds,
             throttleCommandBuffer,
-            zeroBrakeCommandBuffer,
+            BrakePercent,
             setup.MaximumBrakeForceNewtonsByCar,
             (index, car) => resistanceModel.Calculate(car, routeProfile is null
                 ? resistanceParametersByCar[index]
                 : resistanceParametersByCar[index] with { GradientRadians = routeProfile.Sample(car.DistanceMeters).GradeRadians }),
             zeroCouplerForceBuffer,
-            beforeSimulationStep: stepSeconds =>
-            {
-                brakePipeState = brakePipeModel.Advance(brakePipeState, BrakePercent, stepSeconds, IsEmergencyStopApplied);
-                var pipeBrakeCommands = brakePipeModel.GetBrakePercentByCar(brakePipeState);
-                brakeCylinderState = brakeCylinderModel.Advance(
-                    brakeCylinderState, pipeBrakeCommands, stepSeconds);
-            },
-            brakePercentProvider: () => brakeCylinderModel.GetBrakePercentByCar(brakeCylinderState),
+            emergency: IsEmergencyStopApplied,
             couplerForceProvider: state =>
             {
                 var forces = couplerDynamics.CalculatePerCarForces(
@@ -213,8 +198,6 @@ public sealed class BrowserTrainDrivingController
     public void Reset()
     {
         setup.Session.Reset(setup.InitialState);
-        brakePipeState = brakePipeModel.CreateInitialState(setup.InitialState.Cars.Count);
-        brakeCylinderState = brakeCylinderModel.CreateInitialState(setup.InitialState.Cars.Count);
         ThrottlePercent = 0;
         BrakePercent = 0;
         ReverserPosition = TrainReverserPosition.Forward;
