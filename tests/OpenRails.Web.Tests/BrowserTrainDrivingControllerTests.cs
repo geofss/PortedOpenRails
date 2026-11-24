@@ -127,6 +127,27 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void RejectsSnapshotWithPassengerDoorsOpenWhileConsistIsMoving()
+    {
+        var consist = new ConsistMetadata("MovingDoorSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "moving-door-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200,
+            initialSpeedMetersPerSecond: 1.0);
+        var controller = new BrowserTrainDrivingController(setup);
+        var invalidSnapshot = controller.CaptureState() with { LeftDoorsOpen = true };
+        var motionBeforeRestore = controller.State.Cars.ToArray();
+        var timeBeforeRestore = controller.SimulationTimeSeconds;
+
+        Assert.Throws<ArgumentException>(() => controller.RestoreState(invalidSnapshot));
+        Assert.False(controller.LeftDoorsOpen);
+        Assert.Equal(motionBeforeRestore, controller.State.Cars);
+        Assert.Equal(timeBeforeRestore, controller.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void DoorControlsAreStoppedTrainInterlockedAndPreventTraction()
     {
         var consist = new ConsistMetadata("DoorInterlock", new[]
