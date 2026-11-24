@@ -50,6 +50,7 @@ def audit(path: str, verify_hash: bool = True) -> dict:
         activities = [name for name in route_files if name.lower().endswith(".act")]
         world_tiles = [name for name in route_files if name.lower().endswith(".w")]
         global_tsection = [name for name in normalized if name.lower().endswith("/global/tsection.dat") or name.lower() == "global/tsection.dat"]
+        route_tsection = [name for name in route_files if name.lower().endswith("/tsection.dat")]
         trk = archive.read(route_path)
         try:
             text = trk.decode("utf-16le", errors="strict")
@@ -75,6 +76,7 @@ def audit(path: str, verify_hash: bool = True) -> dict:
             "activities": len(activities),
             "world_tiles": len(world_tiles),
             "global_tsection_files": len(global_tsection),
+            "route_tsection_files": len(route_tsection),
             "extensions": dict(sorted(extensions.items())),
         }
 
