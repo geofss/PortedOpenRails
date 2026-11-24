@@ -74,6 +74,9 @@ public sealed class TrainConsistSimulationSessionTests
         var nullMotionSnapshot = new TrainConsistSimulationSnapshot(
             null!, new FixedStepSchedulerSnapshot(0, 0, 0, false));
         Assert.Throws<ArgumentNullException>(() => session.RestoreState(nullMotionSnapshot));
+        var nullClockSnapshot = new TrainConsistSimulationSnapshot(
+            new TrainConsistMotionState(beforeMotion), null!);
+        Assert.Throws<ArgumentNullException>(() => session.RestoreState(nullClockSnapshot));
 
         var invalidSnapshot = new TrainConsistSimulationSnapshot(
             new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 99) }),
