@@ -100,4 +100,8 @@ public sealed class FixedStepSimulationScheduler
     }
 }
 
-public sealed record FixedStepSchedulerSnapshot(\n    double SimulationTimeSeconds,\n    double DroppedTimeSeconds,\n    double AccumulatorSeconds,\n    bool IsPaused);\n
+public sealed record FixedStepSchedulerSnapshot(
+    double SimulationTimeSeconds,
+    double DroppedTimeSeconds,
+    double AccumulatorSeconds,
+    bool IsPaused);
