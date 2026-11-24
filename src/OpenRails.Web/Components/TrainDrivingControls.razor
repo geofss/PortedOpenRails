@@ -131,6 +131,7 @@
 @code {
     [Parameter, EditorRequired] public BrowserTrainDrivingController Controller { get; set; } = default!;
     [Parameter] public ConsistMetadata? Consist { get; set; }
+    [Parameter] public string StorageKey { get; set; } = "default";
     private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
 
@@ -144,7 +145,7 @@
     private bool hasSavedSnapshot;
     private string? snapshotMessage;
     private bool snapshotError;
-    private string SnapshotKey => (Consist?.Name ?? "unknown") + ":" + Controller.State.Cars.Count;
+    private string SnapshotKey => StorageKey;
     private bool gamepadConnected;
     private bool previousForwardPressed;
     private bool previousReversePressed;
