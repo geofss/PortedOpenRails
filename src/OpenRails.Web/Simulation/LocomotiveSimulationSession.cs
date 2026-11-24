@@ -97,6 +97,11 @@ public sealed class LocomotiveSimulationSession
         });
     }
 
+
+    public TrainCarSimulationSnapshot CaptureState() => loop.CaptureState();
+
+    public void RestoreState(TrainCarSimulationSnapshot snapshot) => loop.RestoreState(snapshot);
+
     public void Pause() => loop.Pause();
 
     public void Resume() => loop.Resume();
