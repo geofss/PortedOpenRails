@@ -25,6 +25,7 @@ public sealed class TrainBrakePipeModel
     public const double NormalPressureKPa = 500;
     public const double MinimumServicePressureKPa = 100;
     public const double EmergencyPressureKPa = 0;
+    private const int MaximumIntegrationSteps = 3600;
 
     private readonly double applicationTimeConstantSeconds;
     private readonly double releaseTimeConstantSeconds;
@@ -80,7 +81,11 @@ public sealed class TrainBrakePipeModel
             ? EmergencyPressureKPa
             : NormalPressureKPa -
                 (NormalPressureKPa - MinimumServicePressureKPa) * brakeCommandPercent / 100;
-        var steps = Math.Max(1, (int)Math.Ceiling(elapsedSeconds / (1d / 60d)));
+        // Bound work for unusually large elapsed intervals. Exponential pressure
+        // relaxation remains stable with a larger final step, while avoiding an
+        // overflowing cast or an effectively unbounded loop.
+        var steps = (int)Math.Clamp(
+            Math.Ceiling(elapsedSeconds * 60), 1, MaximumIntegrationSteps);
         var stepSeconds = elapsedSeconds / steps;
         var pressures = state.PressuresKPa.ToArray();
         var next = new double[pressures.Length];
