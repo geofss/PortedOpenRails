@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OpenRails.Web.Simulation;
 
 /// <summary>
@@ -41,6 +43,7 @@ public sealed class TrainConsistMotionIntegrator
     }
 }
 
+[method: JsonConstructor]
 public sealed record TrainConsistMotionState(IReadOnlyList<TrainCarMotionState> Cars)
 {
     public TrainConsistMotionState(IEnumerable<TrainCarMotionState> cars)
