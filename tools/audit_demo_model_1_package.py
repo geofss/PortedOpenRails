@@ -59,7 +59,7 @@ def audit(path: str, verify_hash: bool = True) -> dict:
             match = re.search(r"\b" + re.escape(name) + r"\s*\(\s*([^()]+?)\s*\)", text, re.I)
             return match.group(1).strip() if match else None
         route_name = None
-        match = re.search(r"\bName\s*\(\s*""([^""]*)""\s*\)", text, re.I | re.S)
+        match = re.search(r'\\bName\\s*\\(\\s*"([^"]*)"\\s*\\)', text, re.I | re.S)
         if match:
             route_name = match.group(2)
         if not route_name or not token("RouteID"):
