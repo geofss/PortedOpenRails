@@ -97,4 +97,28 @@ Object.defineProperty(globalThis, "navigator", {
 });
 assert.equal(readState().throttle, 0.25, "skips non-standard controllers and reads the standard-mapped pad");
 
+
+// Malformed button entries and transient button-access errors must not trigger commands.
+const malformedButtons = Array.from({ length: 16 }, () => button());
+malformedButtons[0] = "pressed";
+malformedButtons[6] = { value: "not numeric", pressed: true };
+malformedButtons[7] = null;
+Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { getGamepads: () => [{ connected: true, mapping: "standard", buttons: malformedButtons }] }
+});
+assert.deepEqual(readState(), {
+    throttle: 0, brake: 0,
+    forwardPressed: false, reversePressed: false, neutralPressed: false,
+    emergencyStopPressed: false, emergencyReleasePressed: false,
+    leftDoorTogglePressed: false, rightDoorTogglePressed: false
+}, "malformed entries are treated as neutral rather than pressed");
+const throwingButtons = [];
+Object.defineProperty(throwingButtons, "7", { get() { throw new Error("controller disconnected during poll"); } });
+Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { getGamepads: () => [{ connected: true, mapping: "standard", buttons: throwingButtons }] }
+});
+assert.equal(readState(), null, "transient button getter errors return null safely");
+
 console.log("Gamepad reader tests passed.");
