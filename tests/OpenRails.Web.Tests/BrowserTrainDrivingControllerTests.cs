@@ -72,6 +72,61 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void ControllerSnapshotRestoresDriverCommandsAndSessionTogether()
+    {
+        var consist = new ConsistMetadata("ControllerSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "controller-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetThrottle(0);
+        controller.SetBrake(35);
+        controller.SetReverser(TrainReverserPosition.Reverse);
+        controller.SetDoors(true, false);
+        controller.Advance(0.3);
+        var snapshot = controller.CaptureState();
+        var expectedTime = controller.SimulationTimeSeconds;
+        var expectedPipe = controller.BrakePipeState.PressuresKPa.ToArray();
+
+        controller.SetDoors(false, false);
+        controller.SetBrake(0);
+        controller.SetReverser(TrainReverserPosition.Forward);
+        controller.RestoreState(snapshot);
+
+        Assert.Equal(35, controller.BrakePercent);
+        Assert.Equal(TrainReverserPosition.Reverse, controller.ReverserPosition);
+        Assert.True(controller.LeftDoorsOpen);
+        Assert.False(controller.RightDoorsOpen);
+        Assert.Equal(expectedTime, controller.SimulationTimeSeconds);
+        Assert.Equal(expectedPipe, controller.BrakePipeState.PressuresKPa);
+    }
+
+    [Fact]
+    public void InvalidControllerSnapshotDoesNotPartiallyRestoreLiveState()
+    {
+        var consist = new ConsistMetadata("InvalidControllerSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "invalid-controller-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        var snapshot = controller.CaptureState() with { ThrottlePercent = 101 };
+
+        controller.SetThrottle(12);
+        var timeBeforeRestore = controller.SimulationTimeSeconds;
+        var motionBeforeRestore = controller.State.Cars.ToArray();
+
+        Assert.Throws<ArgumentException>(() => controller.RestoreState(snapshot));
+        Assert.Equal(12, controller.ThrottlePercent);
+        Assert.Equal(timeBeforeRestore, controller.SimulationTimeSeconds);
+        Assert.Equal(motionBeforeRestore, controller.State.Cars);
+    }
+
+    [Fact]
     public void DoorControlsAreStoppedTrainInterlockedAndPreventTraction()
     {
         var consist = new ConsistMetadata("DoorInterlock", new[]
