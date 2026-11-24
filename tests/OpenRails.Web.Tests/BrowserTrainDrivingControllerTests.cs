@@ -127,6 +127,34 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void RejectsSnapshotForDifferentConsistSizeWithoutChangingLiveState()
+    {
+        var consist = new ConsistMetadata("ConsistSizeSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "consist-size-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        var captured = controller.CaptureState();
+        var invalidSnapshot = captured with
+        {
+            SessionState = captured.SessionState with
+            {
+                MotionState = new TrainConsistMotionState(Array.Empty<TrainCarMotionState>())
+            }
+        };
+        controller.SetBrake(25);
+        var timeBeforeRestore = controller.SimulationTimeSeconds;
+        var motionBeforeRestore = controller.State.Cars.ToArray();
+
+        Assert.Throws<ArgumentException>(() => controller.RestoreState(invalidSnapshot));
+        Assert.Equal(25, controller.BrakePercent);
+        Assert.Equal(timeBeforeRestore, controller.SimulationTimeSeconds);
+        Assert.Equal(motionBeforeRestore, controller.State.Cars);
+    }
+
+    [Fact]
     public void RejectsSnapshotWithPassengerDoorsOpenWhileConsistIsMoving()
     {
         var consist = new ConsistMetadata("MovingDoorSnapshot", new[]
