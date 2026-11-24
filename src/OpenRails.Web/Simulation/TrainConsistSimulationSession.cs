@@ -407,5 +407,9 @@ public sealed class TrainConsistSimulationSession
 
     public void Pause() => loop.Pause();
     public void Resume() => loop.Resume();
-    public void Reset(TrainConsistMotionState initialState)\n    {\n        loop.Reset(initialState);\n        pneumaticBrakes.Reset();\n    }
+    public void Reset(TrainConsistMotionState initialState)
+    {
+        loop.Reset(initialState);
+        pneumaticBrakes.Reset();
+    }
 }
