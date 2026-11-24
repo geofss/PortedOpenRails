@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OpenRails.Web.Simulation;
 
 /// <summary>
@@ -8,10 +10,16 @@ public sealed record TrainBrakeCylinderState
 {
     public IReadOnlyList<double> PressuresKPa { get; }
 
-    public TrainBrakeCylinderState(IEnumerable<double> pressuresKPa)
+    [JsonConstructor]
+    public TrainBrakeCylinderState(IReadOnlyList<double> pressuresKPa)
     {
         ArgumentNullException.ThrowIfNull(pressuresKPa);
         PressuresKPa = Array.AsReadOnly(pressuresKPa.ToArray());
+    }
+
+    public TrainBrakeCylinderState(IEnumerable<double> pressuresKPa)
+        : this(pressuresKPa?.ToArray() ?? throw new ArgumentNullException(nameof(pressuresKPa)))
+    {
     }
 }
 
