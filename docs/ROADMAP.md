@@ -53,7 +53,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Integrate the prototype simulation session with route-aligned multi-car rendering and live browser controls (connected multi-node route profiles, per-car placement, throttle/brake controls, and live telemetry; native Open Rails behavior remains incomplete)
 - [x] Discover the terrain tiles touched by the loaded track network
 - [x] Read SIMISA terrain sample and patch metadata through browser-provided SBR streams
-- [ ] Validate the route pipeline against a real, licensed user-imported route package — use the [real-route validation checklist](REAL_ROUTE_VALIDATION.md)
+- [ ] Validate the route pipeline against a real, licensed user-imported route package — permission to use and distribute Demo Model 1 has now been granted by the Open Rails Management Team, subject to Making Tracks Ltd. copyright acknowledgement; the package still needs to be supplied/imported and tested. Follow the [real-route validation checklist](REAL_ROUTE_VALIDATION.md) and [attribution requirements](DEMO_MODEL_1_ATTRIBUTION.md)
 - [x] Generate terrain meshes from the original terrain patch/sample data, including cross-tile sample resolution and patch LODs (preview rendering remains limited)
 - [x] Load original rolling-stock `.s` assets and supported ACE textures from TRAINSET folders
 - [x] Place consist vehicles along the selected connected TDB route using sampled straight/curved centerline geometry, vehicle lengths, tangent headings, reversed-node handling, and consist flip flags; simulated per-car route distances drive live placement
