@@ -4,7 +4,8 @@ This checklist is for validating the browser route-import pipeline against a rea
 
 ## Test setup
 
-- [ ] Record route/package name, source, license/permission basis, package size, and browser/device used (do not include private download URLs).
+- [ ] Record route/package name, source, permission basis (Open Rails Management Team permission for Demo Model 1, including user distribution, subject to Making Tracks Ltd. copyright acknowledgement), package size, and browser/device used (do not include private download URLs).
+- [ ] Include the required attribution from [Demo Model 1 attribution and permission](DEMO_MODEL_1_ATTRIBUTION.md) wherever the package is included or distributed.
 - [ ] Import the route ZIP through the browser's user-file picker.
 - [ ] Record import warnings, rejected entries, size-limit outcomes, and package provenance.
 - [ ] Select the route's parsed `.trk` metadata and confirm the UI reports the expected route identity.
