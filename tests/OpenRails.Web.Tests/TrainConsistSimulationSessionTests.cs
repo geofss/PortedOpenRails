@@ -88,6 +88,11 @@ public sealed class TrainConsistSimulationSessionTests
             new FixedStepSchedulerSnapshot(-1, 0, 0, false));
 
         Assert.Throws<ArgumentException>(() => session.RestoreState(invalidSnapshot));
+        var invalidPneumaticSnapshot = session.CaptureState() with
+        {
+            BrakePipeState = new TrainBrakePipeState(new[] { double.NaN })
+        };
+        Assert.Throws<ArgumentException>(() => session.RestoreState(invalidPneumaticSnapshot));
         Assert.Equal(beforeMotion, session.State.Cars);
         Assert.Equal(beforeTime, session.SimulationTimeSeconds, 8);
         Assert.Equal(beforeDropped, session.DroppedTimeSeconds, 8);
