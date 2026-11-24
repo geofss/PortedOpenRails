@@ -41,6 +41,36 @@ public sealed class TrainCarSimulationLoopTests
         Assert.True(loop.State.DistanceMeters < 2);
     }
 
+
+    [Fact]
+    public void CapturesAndRestoresSingleCarMotionAndClock()
+    {
+        var initial = new TrainCarMotionState(10_000, 2, 3);
+        var loop = new TrainCarSimulationLoop(initial, 0.1, 0.5, 8);
+        var forces = new TrainCarForceBreakdown(1_000, 0, 0, 0, 0, 0, 0);
+        loop.Advance(0.2, _ => forces);
+        loop.Pause();
+        var snapshot = loop.CaptureState();
+
+        var restored = new TrainCarSimulationLoop(initial, 0.1, 0.5, 8);
+        restored.RestoreState(snapshot);
+
+        Assert.Equal(snapshot.MotionState, restored.State);
+        Assert.Equal(snapshot.ClockState.SimulationTimeSeconds, restored.SimulationTimeSeconds, 8);
+        Assert.Equal(snapshot.ClockState.DroppedTimeSeconds, restored.DroppedTimeSeconds, 8);
+        Assert.True(restored.IsPaused);
+    }
+
+    [Fact]
+    public void RejectsInvalidSingleCarSnapshot()
+    {
+        var loop = new TrainCarSimulationLoop(new TrainCarMotionState(1000, 0, 0));
+        var invalid = new TrainCarSimulationSnapshot(
+            new TrainCarMotionState(0, double.NaN, 0),
+            new FixedStepSchedulerSnapshot(0, 0, 0, false));
+        Assert.Throws<ArgumentException>(() => loop.RestoreState(invalid));
+    }
+
     [Fact]
     public void SupportsPauseResumeAndReset()
     {
