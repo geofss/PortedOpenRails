@@ -265,6 +265,42 @@ public sealed class TrainConsistSimulationSession
     }
 
     /// <summary>
+    /// Advances the complete pneumatic brake chain on each accepted fixed tick:
+    /// driver command -> brake pipe -> per-car cylinders -> braking force.
+    /// </summary>
+    public int AdvanceWithPneumaticBrakes(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        double brakeCommandPercent,
+        IReadOnlyList<double> maximumBrakeForceNewtonsByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        IReadOnlyList<double> couplerForcesNewtons,
+        bool emergency = false,
+        float powerReduction = 0,
+        IReadOnlyList<float>? averageForceByCar = null,
+        Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null,
+        int tractionDirection = 1,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null)
+    {
+        if (!double.IsFinite(brakeCommandPercent) || brakeCommandPercent < 0 || brakeCommandPercent > 100)
+            throw new ArgumentOutOfRangeException(nameof(brakeCommandPercent));
+        return AdvanceWithBrakeCommands(
+            elapsedFrameSeconds,
+            throttlePercentByCar,
+            pneumaticBrakes.BrakePercentByCar,
+            maximumBrakeForceNewtonsByCar,
+            resistanceProvider,
+            couplerForcesNewtons,
+            powerReduction,
+            averageForceByCar,
+            stepSeconds => pneumaticBrakes.Advance(brakeCommandPercent, stepSeconds, emergency),
+            () => pneumaticBrakes.BrakePercentByCar,
+            couplerForceProvider,
+            tractionDirection,
+            adhesionCoefficientByCar);
+    }
+
+    /// <summary>
     /// Advances a train using the net external force over total consist mass to
     /// derive common acceleration, then balances the internal coupler forces.
     /// Unlike a caller-selected target acceleration, this remains consistent
