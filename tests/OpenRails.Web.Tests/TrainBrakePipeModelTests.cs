@@ -26,6 +26,16 @@ public sealed class TrainBrakePipeModelTests
     }
 
     [Fact]
+    public void VeryLargeFiniteElapsedIntervalRemainsBoundedAndReachesTarget()
+    {
+        var model = new TrainBrakePipeModel();
+        var result = model.Advance(model.CreateInitialState(3), 100, 1e300);
+
+        Assert.All(result.PressuresKPa, pressure =>
+            Assert.Equal(TrainBrakePipeModel.MinimumServicePressureKPa, pressure, 8));
+    }
+
+    [Fact]
     public void ZeroElapsedTimeReturnsSameImmutableState()
     {
         var model = new TrainBrakePipeModel();
