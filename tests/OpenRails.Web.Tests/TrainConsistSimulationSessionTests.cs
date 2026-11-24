@@ -44,14 +44,19 @@ public sealed class TrainConsistSimulationSessionTests
             fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
         Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance = (int _, TrainCarMotionState _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
         session.Advance(0.2, new[] { 0f, 0f }, resistance, new[] { 0d, 0d });
+        session.AdvanceWithPneumaticBrakes(0.2, new[] { 0f, 0f }, 60,
+            new[] { 2_000d, 2_000d }, resistance, new[] { 0d, 0d });
         session.Pause();
         var snapshot = session.CaptureState();
         session.Resume();
-        session.Advance(0.1, new[] { 0f, 0f }, resistance, new[] { 0d, 0d });
+        session.AdvanceWithPneumaticBrakes(0.1, new[] { 0f, 0f }, 0,
+            new[] { 2_000d, 2_000d }, resistance, new[] { 0d, 0d });
         session.RestoreState(snapshot);
 
         Assert.Equal(snapshot.MotionState.Cars, session.State.Cars);
         Assert.Equal(snapshot.ClockState.SimulationTimeSeconds, session.SimulationTimeSeconds, 8);
+        Assert.Equal(snapshot.BrakePipeState!.PressuresKPa, session.BrakePipeState.PressuresKPa);
+        Assert.Equal(snapshot.BrakeCylinderState!.PressuresKPa, session.BrakeCylinderState.PressuresKPa);
         Assert.True(session.IsPaused);
     }
 
