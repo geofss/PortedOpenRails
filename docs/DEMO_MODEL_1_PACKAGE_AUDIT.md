@@ -25,6 +25,8 @@ The tool checks the release SHA-256, ZIP CRCs, archive paths, route TRK/TDB pres
 - Route folder: `Demo Model 1/ROUTES/SCE/`
 - Track route file: `SCE.trk`
 - Track database: `SCE.tdb` (2,532,218 bytes)
+- Global track sections: `global/TSECTION.DAT`
+- Route-specific track sections: `ROUTES/SCE/TSECTION.DAT`
 - Activities: 1 `ACTIVITIES/MT_MT_0930 Edinburgh-Glasgow Queen Street.act`
 - World scenery tiles: 114 `.w` files
 - Rolling-stock consist files: 23 `.con`
