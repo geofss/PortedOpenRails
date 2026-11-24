@@ -42,7 +42,7 @@ public sealed class TrainConsistSimulationSessionTests
         var session = new TrainConsistSimulationSession(initial,
             new LocomotiveTractionMetadata?[] { null, null },
             fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
-        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance = (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance = (int _, TrainCarMotionState _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
         session.Advance(0.2, new[] { 0f, 0f }, resistance, new[] { 0d, 0d });
         session.Pause();
         var snapshot = session.CaptureState();
