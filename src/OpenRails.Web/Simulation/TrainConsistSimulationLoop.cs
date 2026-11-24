@@ -110,4 +110,6 @@ public sealed record TrainConsistForceFrame(
     IReadOnlyList<TrainCarForceBreakdown> CarForces,
     IReadOnlyList<double> CouplerForcesNewtons);
 
-public sealed record TrainConsistSimulationSnapshot(\n    TrainConsistMotionState MotionState,\n    FixedStepSchedulerSnapshot ClockState);\n
+public sealed record TrainConsistSimulationSnapshot(
+    TrainConsistMotionState MotionState,
+    FixedStepSchedulerSnapshot ClockState);
