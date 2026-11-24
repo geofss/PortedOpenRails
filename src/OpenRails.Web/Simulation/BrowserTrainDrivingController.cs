@@ -14,6 +14,17 @@ public enum TrainReverserPosition
     Forward = 1
 }
 
+public sealed record BrowserTrainDrivingControllerSnapshot(
+    TrainConsistSimulationSnapshot SessionState,
+    float ThrottlePercent,
+    double BrakePercent,
+    TrainReverserPosition ReverserPosition,
+    bool IsEmergencyStopApplied,
+    bool LeftDoorsOpen,
+    bool RightDoorsOpen,
+    IReadOnlyList<double> CouplerForceTelemetryNewtons);
+
+
 public sealed class BrowserTrainDrivingController
 {
     private readonly TrainConsistSimulationSetup setup;
@@ -191,6 +202,52 @@ public sealed class BrowserTrainDrivingController
                 return forces;
             },
             tractionDirection: (int)ReverserPosition);
+    }
+
+    /// <summary>Captures simulation and driver-command state as one restorable snapshot.</summary>
+    public BrowserTrainDrivingControllerSnapshot CaptureState() =>
+        new(
+            setup.Session.CaptureState(),
+            ThrottlePercent,
+            BrakePercent,
+            ReverserPosition,
+            IsEmergencyStopApplied,
+            LeftDoorsOpen,
+            RightDoorsOpen,
+            CouplerForceTelemetryNewtons.ToArray());
+
+    /// <summary>Validates the complete snapshot before restoring session or controller state.</summary>
+    public void RestoreState(BrowserTrainDrivingControllerSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(snapshot.SessionState);
+        ArgumentNullException.ThrowIfNull(snapshot.CouplerForceTelemetryNewtons);
+        if (!float.IsFinite(snapshot.ThrottlePercent) ||
+            snapshot.ThrottlePercent < 0 || snapshot.ThrottlePercent > 100)
+            throw new ArgumentException("Snapshot throttle must be finite and between 0 and 100.", nameof(snapshot));
+        if (!double.IsFinite(snapshot.BrakePercent) ||
+            snapshot.BrakePercent < 0 || snapshot.BrakePercent > 100)
+            throw new ArgumentException("Snapshot brake command must be finite and between 0 and 100.", nameof(snapshot));
+        if (!Enum.IsDefined(snapshot.ReverserPosition))
+            throw new ArgumentException("Snapshot reverser position is invalid.", nameof(snapshot));
+        if (snapshot.IsEmergencyStopApplied &&
+            (snapshot.ThrottlePercent != 0 || snapshot.BrakePercent != 100))
+            throw new ArgumentException("An emergency-stop snapshot must have zero throttle and full brake.", nameof(snapshot));
+        if ((snapshot.LeftDoorsOpen || snapshot.RightDoorsOpen) && snapshot.ThrottlePercent > 0.01f)
+            throw new ArgumentException("A snapshot cannot apply traction while passenger doors are open.", nameof(snapshot));
+        if (snapshot.CouplerForceTelemetryNewtons.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
+            snapshot.CouplerForceTelemetryNewtons.Any(force => !double.IsFinite(force)))
+            throw new ArgumentException("Snapshot coupler telemetry must contain one finite value per car boundary.", nameof(snapshot));
+
+        // Session restore validates its motion, clock, and pneumatic state before mutation.
+        setup.Session.RestoreState(snapshot.SessionState);
+        ThrottlePercent = snapshot.ThrottlePercent;
+        BrakePercent = snapshot.BrakePercent;
+        ReverserPosition = snapshot.ReverserPosition;
+        IsEmergencyStopApplied = snapshot.IsEmergencyStopApplied;
+        LeftDoorsOpen = snapshot.LeftDoorsOpen;
+        RightDoorsOpen = snapshot.RightDoorsOpen;
+        CouplerForceTelemetryNewtons = Array.AsReadOnly(snapshot.CouplerForceTelemetryNewtons.ToArray());
     }
 
     public void Pause() => setup.Session.Pause();
