@@ -1,3 +1,4 @@
+using System.Text.Json;
 using OpenRails.Web.Parsing;
 using OpenRails.Web.Simulation;
 using Xunit;
@@ -44,6 +45,37 @@ public sealed class BrowserTrainDrivingControllerTests
         controller.SetThrottle(10);
         Assert.Equal(0, controller.BrakePercent);
         Assert.Equal(10, controller.ThrottlePercent);
+    }
+
+    [Fact]
+    public void BrowserControllerSnapshotSurvivesJsonPersistenceRoundTrip()
+    {
+        var consist = new ConsistMetadata("JsonSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "json-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var source = new BrowserTrainDrivingController(setup);
+        source.SetBrake(42);
+        source.SetReverser(TrainReverserPosition.Neutral);
+        source.Advance(0.2);
+        var json = JsonSerializer.Serialize(source.CaptureState());
+        var restoredSnapshot = JsonSerializer.Deserialize<BrowserTrainDrivingControllerSnapshot>(json);
+        Assert.NotNull(restoredSnapshot);
+
+        var targetSetup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var target = new BrowserTrainDrivingController(targetSetup);
+        target.RestoreState(restoredSnapshot!);
+
+        Assert.Equal(source.State.Cars, target.State.Cars);
+        Assert.Equal(source.SimulationTimeSeconds, target.SimulationTimeSeconds, 8);
+        Assert.Equal(source.BrakePercent, target.BrakePercent);
+        Assert.Equal(source.ReverserPosition, target.ReverserPosition);
+        Assert.Equal(source.BrakePipeState.PressuresKPa, target.BrakePipeState.PressuresKPa);
+        Assert.Equal(source.BrakeCylinderState.PressuresKPa, target.BrakeCylinderState.PressuresKPa);
+        Assert.Equal(source.CouplerForceTelemetryNewtons, target.CouplerForceTelemetryNewtons);
     }
 
     [Fact]
