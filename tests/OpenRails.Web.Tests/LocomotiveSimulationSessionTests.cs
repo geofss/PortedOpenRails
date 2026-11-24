@@ -22,6 +22,27 @@ public sealed class LocomotiveSimulationSessionTests
         Assert.Equal(0.005, session.State.DistanceMeters, 8);
     }
 
+
+    [Fact]
+    public void CapturesAndRestoresLocomotiveSessionMotionAndClock()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "TestLoco", 1_000, 1_000, 100_000, 100, 0, null, "test.eng");
+        var session = new LocomotiveSimulationSession(
+            metadata, new TrainCarMotionState(1_000, 1, 5),
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        session.Advance(0.2, 0, _ => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0));
+        session.Pause();
+        var snapshot = session.CaptureState();
+        session.Resume();
+        session.Advance(0.1, 0, _ => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0));
+        session.RestoreState(snapshot);
+
+        Assert.Equal(snapshot.MotionState, session.State);
+        Assert.Equal(snapshot.ClockState.SimulationTimeSeconds, session.SimulationTimeSeconds, 8);
+        Assert.True(session.IsPaused);
+    }
+
     [Fact]
     public void BrakeCommandSessionRejectsInvalidRatingBeforeStepping()
     {
