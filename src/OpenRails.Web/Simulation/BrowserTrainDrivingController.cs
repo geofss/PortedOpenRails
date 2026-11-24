@@ -235,6 +235,9 @@ public sealed class BrowserTrainDrivingController
             throw new ArgumentException("An emergency-stop snapshot must have zero throttle and full brake.", nameof(snapshot));
         if ((snapshot.LeftDoorsOpen || snapshot.RightDoorsOpen) && snapshot.ThrottlePercent > 0.01f)
             throw new ArgumentException("A snapshot cannot apply traction while passenger doors are open.", nameof(snapshot));
+        if ((snapshot.LeftDoorsOpen || snapshot.RightDoorsOpen) &&
+            snapshot.SessionState.MotionState.Cars.Any(car => Math.Abs(car.SpeedMetersPerSecond) > 0.1))
+            throw new ArgumentException("A snapshot cannot have passenger doors open while the consist is moving.", nameof(snapshot));
         if (snapshot.CouplerForceTelemetryNewtons.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
             snapshot.CouplerForceTelemetryNewtons.Any(force => !double.IsFinite(force)))
             throw new ArgumentException("Snapshot coupler telemetry must contain one finite value per car boundary.", nameof(snapshot));
