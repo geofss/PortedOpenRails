@@ -78,6 +78,37 @@ public sealed class TrainConsistSimulationLoopTests
         Assert.Equal(1, loop.State.Cars.Count);
     }
 
+
+    [Fact]
+    public void CapturesAndRestoresMotionAndClockStateForConsist()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(10_000, 2, 25),
+            new TrainCarMotionState(20_000, 2, 10)
+        });
+        var loop = new TrainConsistSimulationLoop(initial, 0.1, 0.5, 8, 100);
+        var zeroFrame = new TrainConsistForceFrame(
+            new[]
+            {
+                new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0),
+                new TrainCarForceBreakdown(0, 0, 0, 0, 0, 0, 0)
+            },
+            new[] { 0d, 0d });
+        loop.Advance(0.2, _ => zeroFrame);
+        loop.Pause();
+        var snapshot = loop.CaptureState();
+
+        var restored = new TrainConsistSimulationLoop(initial, 0.1, 0.5, 8, 100);
+        restored.RestoreState(snapshot);
+
+        Assert.Equal(loop.State.Cars, restored.State.Cars);
+        Assert.Equal(loop.SimulationTimeSeconds, restored.SimulationTimeSeconds, 8);
+        Assert.Equal(loop.InterpolationAlpha, restored.InterpolationAlpha, 8);
+        Assert.True(restored.IsPaused);
+        Assert.Equal(0, restored.Advance(1, _ => throw new InvalidOperationException()));
+    }
+
     [Fact]
     public void PausesAndResetsTheWholeConsistTogether()
     {
