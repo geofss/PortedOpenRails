@@ -4,6 +4,7 @@ This checklist is for validating the browser route-import pipeline against a rea
 
 ## Test setup
 
+- [ ] Verify the imported ZIP SHA-256 matches the published Demo Model 1 asset digest (`5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b`) before import, if checksum tooling is available.
 - [ ] Record route/package name, source, permission basis (Open Rails Management Team permission for Demo Model 1, including user distribution, subject to Making Tracks Ltd. copyright acknowledgement), package size, and browser/device used (do not include private download URLs).
 - [ ] Include the required attribution from [Demo Model 1 attribution and permission](DEMO_MODEL_1_ATTRIBUTION.md) wherever the package is included or distributed.
 - [ ] Import the route ZIP through the browser's user-file picker.
