@@ -6,6 +6,38 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainBrakePipeModelTests
 {
     [Fact]
+    public void ZeroElapsedTimeReturnsSameImmutableState()
+    {
+        var model = new TrainBrakePipeModel();
+        var state = model.Advance(model.CreateInitialState(3), 45, 0);
+
+        Assert.Same(state, model.Advance(state, 45, 0));
+    }
+
+    [Fact]
+    public void RejectsInvalidElapsedTimeAndBrakeCommand()
+    {
+        var model = new TrainBrakePipeModel();
+        var state = model.CreateInitialState(2);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Advance(state, -1, 0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Advance(state, 101, 0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Advance(state, 50, -0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Advance(state, 50, double.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Advance(state, 50, double.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => model.Advance(new TrainBrakePipeState(Array.Empty<double>()), 50, 0.1));
+    }
+
+    [Fact]
+    public void RejectsNonPositiveOrNonFiniteModelTimeConstants()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainBrakePipeModel(applicationTimeConstantSeconds: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainBrakePipeModel(releaseTimeConstantSeconds: -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainBrakePipeModel(propagationTimeConstantSeconds: double.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainBrakePipeModel(emergencyApplicationTimeConstantSeconds: double.PositiveInfinity));
+    }
+
+    [Fact]
     public void MultiStepAdvanceDoesNotMutateInputPressureSnapshot()
     {
         var model = new TrainBrakePipeModel();
