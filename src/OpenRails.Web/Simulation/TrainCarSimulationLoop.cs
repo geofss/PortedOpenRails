@@ -67,3 +67,7 @@ public sealed class TrainCarSimulationLoop
         scheduler.Reset();
     }
 }
+
+public sealed record TrainCarSimulationSnapshot(
+    TrainCarMotionState MotionState,
+    FixedStepSchedulerSnapshot ClockState);
