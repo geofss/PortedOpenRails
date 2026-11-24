@@ -68,7 +68,6 @@ public sealed class FixedStepSimulationScheduler
         return LastStepsExecuted;
     }
 
-    public FixedStepSchedulerSnapshot CaptureState() => new(\n        SimulationTimeSeconds, DroppedTimeSeconds, accumulatorSeconds, IsPaused);\n\n    public void RestoreState(FixedStepSchedulerSnapshot snapshot)\n    {\n        ArgumentNullException.ThrowIfNull(snapshot);\n        if (!double.IsFinite(snapshot.SimulationTimeSeconds) || snapshot.SimulationTimeSeconds < 0 ||\n            !double.IsFinite(snapshot.DroppedTimeSeconds) || snapshot.DroppedTimeSeconds < 0 ||\n            !double.IsFinite(snapshot.AccumulatorSeconds) || snapshot.AccumulatorSeconds < 0 ||\n            snapshot.AccumulatorSeconds >= fixedStepSeconds)\n            throw new ArgumentException(\"Scheduler snapshot values must be finite, non-negative, and have an accumulator below one fixed step.\", nameof(snapshot));\n        SimulationTimeSeconds = snapshot.SimulationTimeSeconds;\n        DroppedTimeSeconds = snapshot.DroppedTimeSeconds;\n        accumulatorSeconds = snapshot.AccumulatorSeconds;\n        IsPaused = snapshot.IsPaused;\n        LastStepsExecuted = 0;\n    }\n\n
     public FixedStepSchedulerSnapshot CaptureState() =>
         new(SimulationTimeSeconds, DroppedTimeSeconds, accumulatorSeconds, IsPaused);
 
@@ -77,7 +76,7 @@ public sealed class FixedStepSimulationScheduler
         ArgumentNullException.ThrowIfNull(snapshot);
         if (!double.IsFinite(snapshot.SimulationTimeSeconds) || snapshot.SimulationTimeSeconds < 0 ||
             !double.IsFinite(snapshot.DroppedTimeSeconds) || snapshot.DroppedTimeSeconds < 0 ||
-            !double.isFinite(snapshot.AccumulatorSeconds) || snapshot.AccumulatorSeconds < 0 ||
+            !double.IsFinite(snapshot.AccumulatorSeconds) || snapshot.AccumulatorSeconds < 0 ||
             snapshot.AccumulatorSeconds >= fixedStepSeconds)
             throw new ArgumentException("Scheduler snapshot values must be finite, non-negative, and have an accumulator below one fixed step.", nameof(snapshot));
         SimulationTimeSeconds = snapshot.SimulationTimeSeconds;
