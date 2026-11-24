@@ -6,6 +6,26 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainBrakePipeModelTests
 {
     [Fact]
+    public void RejectsOutOfRangeAndNonFinitePressureSnapshotsBeforeAdvancing()
+    {
+        var model = new TrainBrakePipeModel();
+        var invalidStates = new[]
+        {
+            new TrainBrakePipeState(new[] { -0.01 }),
+            new TrainBrakePipeState(new[] { TrainBrakePipeModel.NormalPressureKPa + 0.01 }),
+            new TrainBrakePipeState(new[] { double.NaN }),
+            new TrainBrakePipeState(new[] { double.PositiveInfinity }),
+            new TrainBrakePipeState(new[] { double.NegativeInfinity })
+        };
+
+        foreach (var invalidState in invalidStates)
+        {
+            Assert.Throws<ArgumentException>(() => model.Advance(invalidState, 20, 0.1));
+            Assert.Throws<ArgumentException>(() => model.GetBrakePercentByCar(invalidState));
+        }
+    }
+
+    [Fact]
     public void ZeroElapsedTimeReturnsSameImmutableState()
     {
         var model = new TrainBrakePipeModel();
