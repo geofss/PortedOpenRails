@@ -4,6 +4,16 @@ The Open Rails Management Team has granted permission for this project to use De
 
 The permission was communicated by Chris on behalf of the Open Rails Management Team on 24 November 2026. The stated condition is that the project acknowledges the copyright of Making Tracks Ltd.
 
+## Published package provenance
+
+- GitHub release: `demorouteassets` (published 24 November 2026)
+- Asset: `DemoModel1.zip`
+- Published size: 272,422,379 bytes
+- SHA-256: `5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b`
+- Release page: https://github.com/geofss/PortedOpenRails/releases/tag/demorouteassets
+
+Verify the package checksum before importing it when a checksum-capable tool is available.
+
 ## Required acknowledgement
 
 Use this acknowledgement wherever Demo Model 1 is included or distributed, and in relevant project documentation and user-facing download information:
