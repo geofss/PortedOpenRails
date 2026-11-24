@@ -36,6 +36,34 @@ public sealed class RouteMetadataReaderTests
     }
 
     [Fact]
+    public void ReadsUtf16BomRouteMetadataLikeRealMstsRoutePackages()
+    {
+        const string routeText = """
+            SIMISA@@@@@@@@@@JINX0r0t
+            Tr_RouteFile (
+                RouteID ( SCE )
+                Name ( "Scottish Capital Express" )
+                Description ( "A UTF-16 route metadata fixture with multiple fields." )
+                FileName ( SCE )
+                Electrified ( 00000000 )
+                RouteStart ( -6144 15144 877.176 -869.309 )
+            )
+            """;
+        var routeBytes = Encoding.Unicode.GetPreamble()
+            .Concat(Encoding.Unicode.GetBytes(routeText))
+            .ToArray();
+        using var store = CreateStoreBytes(("ROUTES/SCE/SCE.trk", routeBytes));
+
+        var metadata = new RouteMetadataReader().Read(store, "ROUTES/SCE/SCE.trk");
+
+        Assert.Equal("SCE", metadata.RouteId);
+        Assert.Equal("Scottish Capital Express", metadata.Name);
+        Assert.Equal("SCE", metadata.FileName);
+        Assert.False(metadata.Electrified);
+        Assert.Equal(new RouteStartCoordinates(-6144, 15144, 877.176, -869.309), metadata.RouteStart);
+    }
+
+    [Fact]
     public void RejectsRouteFileWithoutTrRouteFileBlock()
     {
         using var store = CreateStore(("ROUTES/TestRoute/TEST.trk", """
@@ -45,6 +73,23 @@ public sealed class RouteMetadataReaderTests
 
         Assert.Throws<InvalidDataException>(() =>
             new RouteMetadataReader().Read(store, "ROUTES/TestRoute/TEST.trk"));
+    }
+
+    private static ZipContentStore CreateStoreBytes(params (string Path, byte[] Content)[] files)
+    {
+        var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in files)
+            {
+                var entry = archive.CreateEntry(file.Path);
+                using var stream = entry.Open();
+                stream.Write(file.Content);
+            }
+        }
+
+        memory.Position = 0;
+        return new ZipContentStore(memory);
     }
 
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
