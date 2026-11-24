@@ -19,9 +19,13 @@ class DemoPackageAuditTests(unittest.TestCase):
         self.addCleanup(lambda: os.path.exists(temporary.name) and os.unlink(temporary.name))
         return temporary.name
 
+    @staticmethod
+    def route_text():
+        return 'SIMISA(Tr_RouteFile (RouteID ( R ) Name ( "Route name" )))'.encode("utf-16le")
+
     def test_accepts_valid_minimal_route_archive_without_release_hash(self):
         path = self.make_zip({
-            "Demo/ROUTES/Route/Route.trk": b"\\xff\\xfe" + "SIMISA".encode("utf-16le") + "(Tr_RouteFile (RouteID ( R ) Name ( \\"Route name\\" )))".encode("utf-16le"),
+            "Demo/ROUTES/Route/Route.trk": self.route_text(),
             "Demo/ROUTES/Route/Route.tdb": b"tdb",
             "Demo/ROUTES/Route/WORLD/w-000000+000000.w": b"world",
             "Demo/ROUTES/Route/ACTIVITIES/test.act": b"activity",
@@ -35,12 +39,16 @@ class DemoPackageAuditTests(unittest.TestCase):
         self.assertEqual(result["global_tsection_files"], 1)
 
     def test_rejects_missing_tdb(self):
-        path = self.make_zip({"route/route.trk": b"\\xff\\xfe" + "SIMISA(Tr_RouteFile (RouteID ( R ) Name ( \\"Route name\\" )))".encode("utf-16le")})
+        path = self.make_zip({"route/route.trk": self.route_text()})
         with self.assertRaisesRegex(ValueError, "Missing route TDB"):
             MODULE.audit(path, verify_hash=False)
 
     def test_rejects_traversal_entry(self):
-        path = self.make_zip({"../outside.txt": b"bad", "route/route.trk": b"\\xff\\xfe" + "SIMISA(Tr_RouteFile (RouteID ( R ) Name ( \\"Route name\\" )))".encode("utf-16le"), "route/route.tdb": b"tdb"})
+        path = self.make_zip({
+            "../outside.txt": b"bad",
+            "route/route.trk": self.route_text(),
+            "route/route.tdb": b"tdb",
+        })
         with self.assertRaisesRegex(ValueError, "Unsafe archive path"):
             MODULE.audit(path, verify_hash=False)
 
