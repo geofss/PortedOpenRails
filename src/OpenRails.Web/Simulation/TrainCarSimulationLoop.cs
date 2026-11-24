@@ -41,6 +41,22 @@ public sealed class TrainCarSimulationLoop
         });
     }
 
+
+    public TrainCarSimulationSnapshot CaptureState() =>
+        new(State with { }, scheduler.CaptureState());
+
+    public void RestoreState(TrainCarSimulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var state = snapshot.MotionState;
+        if (!double.IsFinite(state.MassKg) || state.MassKg <= 0 ||
+            !double.IsFinite(state.SpeedMetersPerSecond) ||
+            !double.IsFinite(state.DistanceMeters))
+            throw new ArgumentException("Snapshot car motion must have finite values and positive mass.", nameof(snapshot));
+        State = state with { };
+        scheduler.RestoreState(snapshot.ClockState);
+    }
+
     public void Pause() => scheduler.Pause();
 
     public void Resume() => scheduler.Resume();
