@@ -6,6 +6,7 @@ The browser-port simulation now exposes in-memory snapshots for its fixed-step c
 
 - `FixedStepSimulationScheduler.CaptureState()` records simulation time, dropped time, the residual accumulator, and pause state.
 - `FixedStepSimulationScheduler.RestoreState(snapshot)` validates finite non-negative times and requires the accumulator to be below one fixed step.
+- `TrainCarSimulationLoop.CaptureState()` and `RestoreState(snapshot)` support validated single-car motion and clock snapshots.
 - `TrainConsistSimulationLoop.CaptureState()` copies the per-car motion records and clock snapshot.
 - `TrainConsistSimulationLoop.RestoreState(snapshot)` validates the restored consist and clock, and reapplies route-boundary clamping when a route-length constraint is configured.
 
