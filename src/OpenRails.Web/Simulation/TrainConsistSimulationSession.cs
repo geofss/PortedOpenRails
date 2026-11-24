@@ -13,6 +13,7 @@ public sealed class TrainConsistSimulationSession
     private readonly TrainConsistSimulationLoop loop;
     private readonly IReadOnlyList<LocomotiveTractionModel?> tractionModels;
     private readonly IReadOnlyList<LocomotiveThrottleResponse> throttleResponses;
+    private readonly TrainPneumaticBrakeSystem pneumaticBrakes;
     private static readonly TrainCarAdhesionModel AdhesionModel = new();
 
     public TrainConsistMotionState State => loop.State;
@@ -20,6 +21,9 @@ public sealed class TrainConsistSimulationSession
     public double InterpolationAlpha => loop.InterpolationAlpha;
     public double DroppedTimeSeconds => loop.DroppedTimeSeconds;
     public bool IsPaused => loop.IsPaused;
+    public TrainBrakePipeState BrakePipeState => pneumaticBrakes.PipeState;
+    public TrainBrakeCylinderState BrakeCylinderState => pneumaticBrakes.CylinderState;
+    public IReadOnlyList<double> PneumaticBrakePercentByCar => pneumaticBrakes.BrakePercentByCar;
 
     public TrainConsistSimulationSession(
         TrainConsistMotionState initialState,
@@ -43,6 +47,7 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentException("Each car must have a matching throttle response.", nameof(throttleResponses));
         loop = new TrainConsistSimulationLoop(
             initialState, fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame, routeLengthMeters);
+        pneumaticBrakes = new TrainPneumaticBrakeSystem(initialState.Cars.Count);
     }
 
     public int Advance(
@@ -366,5 +371,5 @@ public sealed class TrainConsistSimulationSession
 
     public void Pause() => loop.Pause();
     public void Resume() => loop.Resume();
-    public void Reset(TrainConsistMotionState initialState) => loop.Reset(initialState);
+    public void Reset(TrainConsistMotionState initialState)\n    {\n        loop.Reset(initialState);\n        pneumaticBrakes.Reset();\n    }
 }
