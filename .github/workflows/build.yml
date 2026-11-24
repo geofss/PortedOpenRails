@@ -16,7 +16,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Validate renderer JavaScript syntax
+      - name: Run package-audit utility tests\n        run: python3 -m unittest tests/test_demo_model_1_package_audit.py\n\n      - name: Validate renderer JavaScript syntax
         run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js
 
       - name: Run gamepad reader unit tests
