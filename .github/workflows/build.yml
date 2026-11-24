@@ -19,6 +19,7 @@ jobs:
       - name: Run package-audit utility tests
         run: python3 tests/test_demo_model_1_package_audit.py
 
+      - name: Validate renderer JavaScript syntax
         run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js
 
       - name: Run gamepad reader unit tests
