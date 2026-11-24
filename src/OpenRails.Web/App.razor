@@ -179,6 +179,7 @@
                         <TrainDrivingControls @key="drivingController"
                             Controller="drivingController"
                             Consist="SelectedConsist"
+                            StorageKey="@SimulationSnapshotKey"
                             MotionChanged="OnTrainMotionChanged" />
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
@@ -335,6 +336,8 @@
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
         : Array.Empty<string>();
+
+    private string SimulationSnapshotKey => string.Join("|", selectedRoute?.Metadata.RouteId ?? "no-route", SelectedConsist?.Name ?? "no-consist", selectedTrackNodeIndex, reverseRouteStart, selectedBranchTrackNodeIndex?.ToString() ?? "automatic");
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
