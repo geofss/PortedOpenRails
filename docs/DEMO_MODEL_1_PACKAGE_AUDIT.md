@@ -1,5 +1,15 @@
 # Demo Model 1 package audit
 
+## Reproducible audit
+
+Run the audit tool against the local licensed archive:
+
+\`\`\`sh
+python3 tools/audit_demo_model_1_package.py DemoModel1.zip
+\`\`\`
+
+The tool checks the release SHA-256, ZIP CRCs, archive paths, route TRK/TDB presence, and basic TRK route identity without extracting the copyrighted package.
+
 ## Package identity and integrity
 
 - Package: `DemoModel1.zip`
