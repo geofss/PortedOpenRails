@@ -30,6 +30,10 @@ Open Rails upstream: https://github.com/openrails/openrails
 
 Open Rails is licensed under **GPL-3.0**. Any upstream source copied or modified for this project must retain its applicable copyright and license notices, and derivative distributions must comply with the GPL-3.0. This initial browser-host scaffold is a separate experimental layer; check each upstream component's notices before porting it.
 
+## Demo Model 1 permission and attribution
+
+The Open Rails Management Team has granted permission to use Demo Model 1 to test this browser port and to distribute it to project users, subject to acknowledging the copyright of Making Tracks Ltd. The required acknowledgement and handling conditions are recorded in [Demo Model 1 attribution and permission](docs/DEMO_MODEL_1_ATTRIBUTION.md). The route package still needs to be supplied/imported and validated; permission does not mean integration is complete. Keep the copyrighted route assets out of this source repository.
+
 ## Status
 
 See [browser support and content compatibility matrix](docs/WEB_SUPPORT_MATRIX.md) for the prototype's supported subset and explicitly unverified browser/device expectations.
