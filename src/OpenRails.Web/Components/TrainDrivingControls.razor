@@ -1,6 +1,7 @@
 @using OpenRails.Web.Simulation
 @using OpenRails.Web.Parsing
 @using Microsoft.JSInterop
+@using System.Text.Json
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -51,6 +52,15 @@
     @if (!string.IsNullOrWhiteSpace(simulationError))
     {
         <p class="error" role="alert">@simulationError</p>
+    }
+    <div class="package-actions">
+        <button type="button" @onclick="SaveSimulationSnapshotAsync">Save simulation</button>
+        <button type="button" @onclick="RestoreSimulationSnapshotAsync" disabled="@(!hasSavedSnapshot)">Restore saved simulation</button>
+        <button type="button" @onclick="ClearSimulationSnapshotAsync" disabled="@(!hasSavedSnapshot)">Delete saved simulation</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(snapshotMessage))
+    {
+        <p class="@(snapshotError ? "error" : "hint")" role="status">@snapshotMessage</p>
     }
     <div class="package-actions">
         <button type="button" @onclick="ToggleLeftDoors" disabled="@(!Controller.CanOpenDoors && !Controller.LeftDoorsOpen)">@(Controller.LeftDoorsOpen ? "Close left doors" : "Open left doors")</button>
@@ -130,6 +140,11 @@
     private int audioVolume = 35;
     private int gamepadSensitivity = 100;
     private IJSObjectReference? settingsModule;
+    private IJSObjectReference? snapshotStorageModule;
+    private bool hasSavedSnapshot;
+    private string? snapshotMessage;
+    private bool snapshotError;
+    private string SnapshotKey => (Consist?.Name ?? "unknown") + ":" + Controller.State.Cars.Count;
     private bool gamepadConnected;
     private bool previousForwardPressed;
     private bool previousReversePressed;
@@ -240,6 +255,9 @@
                 gamepadModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-gamepad.js");
                 audioModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-audio.js");
                 settingsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-driving-settings.js");
+                snapshotStorageModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/train-simulation-storage.js");
+                var storedSnapshot = await snapshotStorageModule.InvokeAsync<string?>("loadSnapshot", SnapshotKey);
+                hasSavedSnapshot = !string.IsNullOrWhiteSpace(storedSnapshot);
                 var savedSettings = await settingsModule.InvokeAsync<DrivingSettings>("loadSettings");
                 audioVolume = savedSettings.AudioVolume;
                 gamepadSensitivity = savedSettings.GamepadSensitivity;
@@ -338,6 +356,46 @@
         public bool EmergencyReleasePressed { get; set; }
         public bool LeftDoorTogglePressed { get; set; }
         public bool RightDoorTogglePressed { get; set; }
+    }
+
+    private async Task SaveSimulationSnapshotAsync()
+    {
+        if (snapshotStorageModule is null) { snapshotError = true; snapshotMessage = "Simulation storage is unavailable in this browser."; return; }
+        try
+        {
+            var json = JsonSerializer.Serialize(Controller.CaptureState());
+            hasSavedSnapshot = await snapshotStorageModule.InvokeAsync<bool>("saveSnapshot", SnapshotKey, json);
+            snapshotError = !hasSavedSnapshot;
+            snapshotMessage = hasSavedSnapshot ? "Simulation saved on this device. Import the same route and select the same consist to restore it." : "Browser storage is unavailable or full; the simulation was not saved.";
+        }
+        catch (Exception exception) when (exception is JSException || exception is JsonException)
+        { snapshotError = true; snapshotMessage = $"Simulation could not be saved: {exception.Message}"; }
+    }
+
+    private async Task RestoreSimulationSnapshotAsync()
+    {
+        if (snapshotStorageModule is null) { snapshotError = true; snapshotMessage = "Simulation storage is unavailable in this browser."; return; }
+        await StopAsync();
+        try
+        {
+            var json = await snapshotStorageModule.InvokeAsync<string?>("loadSnapshot", SnapshotKey);
+            if (string.IsNullOrWhiteSpace(json)) { hasSavedSnapshot = false; snapshotError = true; snapshotMessage = "No saved simulation was found for this consist."; return; }
+            var snapshot = JsonSerializer.Deserialize<BrowserTrainDrivingControllerSnapshot>(json) ?? throw new JsonException("The saved simulation was empty.");
+            Controller.RestoreState(snapshot);
+            hasSavedSnapshot = true; snapshotError = false; snapshotMessage = "Saved simulation restored successfully.";
+            await MotionChanged.InvokeAsync(Controller.State);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception exception) when (exception is JSException || exception is JsonException || exception is ArgumentException || exception is InvalidOperationException)
+        { snapshotError = true; snapshotMessage = $"Saved simulation was rejected: {exception.Message}"; }
+    }
+
+    private async Task ClearSimulationSnapshotAsync()
+    {
+        if (snapshotStorageModule is null) return;
+        hasSavedSnapshot = !await snapshotStorageModule.InvokeAsync<bool>("clearSnapshot", SnapshotKey);
+        snapshotError = hasSavedSnapshot;
+        snapshotMessage = hasSavedSnapshot ? "The saved simulation could not be deleted from browser storage." : "Saved simulation deleted.";
     }
 
     private async Task ToggleAudioAsync()
@@ -487,6 +545,10 @@
         if (settingsModule is not null)
         {
             try { await settingsModule.DisposeAsync(); } catch (JSException) { }
+        }
+        if (snapshotStorageModule is not null)
+        {
+            try { await snapshotStorageModule.DisposeAsync(); } catch (JSException) { }
         }
     }
 }
