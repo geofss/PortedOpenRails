@@ -57,10 +57,13 @@ public sealed class TrainConsistSimulationLoop
     public void RestoreState(TrainConsistSimulationSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        State = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));
-        scheduler.RestoreState(snapshot.ClockState);
+        // Validate motion before touching either live state component. The scheduler
+        // validates its snapshot before mutation, so failed restores stay atomic.
+        var restoredMotion = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));
         if (routeLengthMeters is not null)
-            State = ClampCarsToRoute(State, routeLengthMeters.Value);
+            restoredMotion = ClampCarsToRoute(restoredMotion, routeLengthMeters.Value);
+        scheduler.RestoreState(snapshot.ClockState);
+        State = restoredMotion;
     }
 
     public void Pause() => scheduler.Pause();
