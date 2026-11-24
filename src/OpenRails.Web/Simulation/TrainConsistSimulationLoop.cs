@@ -59,6 +59,8 @@ public sealed class TrainConsistSimulationLoop
         ArgumentNullException.ThrowIfNull(snapshot);
         // Validate motion before touching either live state component. The scheduler
         // validates its snapshot before mutation, so failed restores stay atomic.
+        ArgumentNullException.ThrowIfNull(snapshot.MotionState);
+        ArgumentNullException.ThrowIfNull(snapshot.ClockState);
         var restoredMotion = ValidateState(new TrainConsistMotionState(snapshot.MotionState.Cars.ToArray()));
         if (routeLengthMeters is not null)
             restoredMotion = ClampCarsToRoute(restoredMotion, routeLengthMeters.Value);
@@ -97,6 +99,7 @@ public sealed class TrainConsistSimulationLoop
 
     private static TrainConsistMotionState ValidateState(TrainConsistMotionState state)
     {
+        ArgumentNullException.ThrowIfNull(state.Cars);
         if (state.Cars.Count == 0)
             throw new ArgumentException("A consist simulation requires at least one car.", nameof(state));
         foreach (var car in state.Cars)
