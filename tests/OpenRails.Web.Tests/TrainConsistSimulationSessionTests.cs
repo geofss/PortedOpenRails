@@ -56,6 +56,33 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void FailedSnapshotRestoreLeavesMotionAndClockUnchanged()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 1, 5)
+        });
+        var session = new TrainConsistSimulationSession(initial, new LocomotiveTractionMetadata?[] { null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (int _, TrainCarMotionState _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+        session.Advance(0.2, new[] { 0f }, resistance, new[] { 0d });
+        var beforeMotion = session.State.Cars.ToArray();
+        var beforeTime = session.SimulationTimeSeconds;
+        var beforeDropped = session.DroppedTimeSeconds;
+        var beforePaused = session.IsPaused;
+        var invalidSnapshot = new TrainConsistSimulationSnapshot(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 99) }),
+            new FixedStepSchedulerSnapshot(-1, 0, 0, false));
+
+        Assert.Throws<ArgumentException>(() => session.RestoreState(invalidSnapshot));
+        Assert.Equal(beforeMotion, session.State.Cars);
+        Assert.Equal(beforeTime, session.SimulationTimeSeconds, 8);
+        Assert.Equal(beforeDropped, session.DroppedTimeSeconds, 8);
+        Assert.Equal(beforePaused, session.IsPaused);
+    }
+
+    [Fact]
     public void BrakeCommandSimulationCapsLocomotiveTractionByPerCarAdhesion()
     {
         var locomotive = new LocomotiveTractionMetadata(
