@@ -54,6 +54,36 @@ public sealed class FixedStepSimulationSchedulerTests
         Assert.InRange(scheduler.InterpolationAlpha, 0, 1);
     }
 
+
+    [Fact]
+    public void CapturedClockRestoresTimeAccumulatorDroppedTimeAndPause()
+    {
+        var scheduler = new FixedStepSimulationScheduler(0.1, 0.5, 4);
+        scheduler.Advance(0.15, _ => { });
+        scheduler.Advance(1.0, _ => { });
+        scheduler.Pause();
+        var snapshot = scheduler.CaptureState();
+
+        var restored = new FixedStepSimulationScheduler(0.1, 0.5, 4);
+        restored.RestoreState(snapshot);
+
+        Assert.Equal(scheduler.SimulationTimeSeconds, restored.SimulationTimeSeconds, 8);
+        Assert.Equal(scheduler.DroppedTimeSeconds, restored.DroppedTimeSeconds, 8);
+        Assert.Equal(scheduler.InterpolationAlpha, restored.InterpolationAlpha, 8);
+        Assert.True(restored.IsPaused);
+        Assert.Equal(0, restored.LastStepsExecuted);
+    }
+
+    [Fact]
+    public void RejectsInvalidClockSnapshot()
+    {
+        var scheduler = new FixedStepSimulationScheduler(0.1, 0.5, 4);
+        Assert.Throws<ArgumentException>(() => scheduler.RestoreState(
+            new FixedStepSchedulerSnapshot(1, 0, 0.1, false)));
+        Assert.Throws<ArgumentException>(() => scheduler.RestoreState(
+            new FixedStepSchedulerSnapshot(double.NaN, 0, 0, false)));
+    }
+
     [Fact]
     public void PauseStopsAdvancementAndResetClearsClockState()
     {
