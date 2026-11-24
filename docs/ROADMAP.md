@@ -91,7 +91,7 @@ See [Milestone 3D Traction and Consist Simulation Sessions](MILESTONE_3D_TRACTIO
 - [x] Add browser audio output driven by simulation events (optional user-enabled synthesized engine tone and brake hiss; not authentic Open Rails recordings)
 - [x] Persist browser preview-quality and prototype driving preferences, with reset controls and storage-error fallbacks
 - [x] Provide loading indicators and actionable errors for route/package import and connected-route build failures
-- [ ] Implement simulator-state save/restore and broader simulation loading/error UX (initial in-memory single-car/consist loop and session motion plus fixed-step clock snapshot APIs are implemented and regression-tested; browser persistence, control state, pneumatic/brake/traction controller state, and broader loading/error recovery remain pending)
+- [ ] Implement simulator-state save/restore and broader simulation loading/error UX (initial in-memory single-car/consist loop and session motion plus fixed-step clock snapshot APIs are implemented and regression-tested, including atomic rejection of invalid/null restore snapshots without changing live motion or clock state; browser persistence, control state, pneumatic/brake/traction controller state, and broader loading/error recovery remain pending)
 - [ ] Port the original Open Rails UI system (menu/navigation, route/activity/train selection, driving HUD and cab interaction, options, dialogs, pause/in-game menus, preserving original UI behaviour while adapting responsively; see [original UI port plan](ORIGINAL_UI_PORT_PLAN.md)
 
 ## Milestone 6 — Full simulator integration
