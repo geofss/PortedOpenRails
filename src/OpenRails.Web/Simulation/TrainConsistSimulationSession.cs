@@ -359,6 +359,11 @@ public sealed class TrainConsistSimulationSession
             requestedForce, car.MassKg, coefficient);
     }
 
+
+    public TrainConsistSimulationSnapshot CaptureState() => loop.CaptureState();
+
+    public void RestoreState(TrainConsistSimulationSnapshot snapshot) => loop.RestoreState(snapshot);
+
     public void Pause() => loop.Pause();
     public void Resume() => loop.Resume();
     public void Reset(TrainConsistMotionState initialState) => loop.Reset(initialState);
