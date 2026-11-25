@@ -407,7 +407,10 @@ public sealed class TrainConsistSimulationSession
         return snapshot with
         {
             BrakePipeState = new TrainBrakePipeState(pneumaticBrakes.PipeState.PressuresKPa),
-            BrakeCylinderState = new TrainBrakeCylinderState(pneumaticBrakes.CylinderState.PressuresKPa)
+            BrakeCylinderState = new TrainBrakeCylinderState(pneumaticBrakes.CylinderState.PressuresKPa),
+            BrakeDistributorState = new TrainBrakeDistributorState(
+                pneumaticBrakes.DistributorState.AuxiliaryReservoirPressuresKPa,
+                pneumaticBrakes.DistributorState.Modes)
         };
     }
 
@@ -417,7 +420,7 @@ public sealed class TrainConsistSimulationSession
         if ((snapshot.BrakePipeState is null) != (snapshot.BrakeCylinderState is null))
             throw new ArgumentException("Pneumatic snapshot must include both brake-pipe and brake-cylinder state.", nameof(snapshot));
         if (snapshot.BrakePipeState is not null)
-            pneumaticBrakes.ValidateSnapshot(snapshot.BrakePipeState, snapshot.BrakeCylinderState!);
+            pneumaticBrakes.ValidateSnapshot(snapshot.BrakePipeState, snapshot.BrakeCylinderState!, snapshot.BrakeDistributorState);
 
         // Restore the loop first: its motion and clock validation is atomic.
         // Pneumatic state has already been fully validated and cannot fail here.
@@ -425,7 +428,7 @@ public sealed class TrainConsistSimulationSession
         if (snapshot.BrakePipeState is null)
             pneumaticBrakes.Reset();
         else
-            pneumaticBrakes.RestoreState(snapshot.BrakePipeState, snapshot.BrakeCylinderState!);
+            pneumaticBrakes.RestoreState(snapshot.BrakePipeState, snapshot.BrakeCylinderState!, snapshot.BrakeDistributorState);
     }
 
     public void Pause() => loop.Pause();
