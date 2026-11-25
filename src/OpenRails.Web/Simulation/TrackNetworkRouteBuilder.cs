@@ -59,7 +59,7 @@ public sealed class TrackNetworkRouteBuilder
         var visited = new HashSet<uint> { first.TrackNodeIndex };
         var currentNode = segments[0].ExitNodeIndex;
         var currentPosition = GetEndPosition(first, startReversed);
-        var preferredContinuationUsed = false;
+        var isFirstJunction = true;
 
         while (segments.Count < maximumSegments)
         {
@@ -83,7 +83,8 @@ public sealed class TrackNetworkRouteBuilder
             if (candidates.Length == 0)
                 break;
 
-            if (!preferredContinuationUsed && preferredNextTrackNodeIndex is { } preferredNode)
+            var preferredSelectedAtThisJunction = false;
+            if (isFirstJunction && preferredNextTrackNodeIndex is { } preferredNode)
             {
                 var preferredIndex = Array.FindIndex(candidates,
                     candidate => candidate.Path.TrackNodeIndex == preferredNode);
@@ -93,11 +94,12 @@ public sealed class TrackNetworkRouteBuilder
                     candidates = new[] { preferred }
                         .Concat(candidates.Where((_, index) => index != preferredIndex))
                         .ToArray();
-                    preferredContinuationUsed = true;
+                    preferredSelectedAtThisJunction = true;
                 }
             }
+            isFirstJunction = false;
 
-            if (!preferredContinuationUsed && candidates.Length > 1 &&
+            if (!preferredSelectedAtThisJunction && candidates.Length > 1 &&
                 double.IsFinite(candidates[0].Gap) &&
                 Math.Abs(candidates[1].Gap - candidates[0].Gap) <= GeometryTieToleranceMeters)
             {
