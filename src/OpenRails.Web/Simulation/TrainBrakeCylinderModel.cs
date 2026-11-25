@@ -46,8 +46,6 @@ internal sealed class TrainBrakeCylinderStateJsonConverter : JsonConverter<Train
 public sealed class TrainBrakeCylinderModel
 {
     public const double MaximumCylinderPressureKPa = 380;
-    private const int MaximumIntegrationSteps = 3600;
-
     private readonly double applicationTimeConstantSeconds;
     private readonly double releaseTimeConstantSeconds;
 
@@ -90,25 +88,21 @@ public sealed class TrainBrakeCylinderModel
         if (elapsedSeconds == 0)
             return state;
 
-        // Bound per-call work for large elapsed intervals, matching the brake-pipe
-        // integrator. Clamp before converting to int so huge finite values cannot
-        // overflow the step count or create an effectively unbounded loop.
-        var steps = (int)Math.Clamp(Math.Ceiling(elapsedSeconds * 60), 1, MaximumIntegrationSteps);
-        var stepSeconds = elapsedSeconds / steps;
-        var pressures = state.PressuresKPa.ToArray();
-        for (var step = 0; step < steps; step++)
+        // Each vehicle approaches a fixed target independently during this
+        // update. The exponential relaxation has a closed-form solution, so one
+        // calculation per vehicle is exact and avoids time-step loops entirely.
+        var pressures = new double[state.PressuresKPa.Count];
+        for (var i = 0; i < pressures.Length; i++)
         {
-            for (var i = 0; i < pressures.Length; i++)
-            {
-                var target = MaximumCylinderPressureKPa * brakePipeBrakePercentByCar[i] / 100d;
-                var tau = target > pressures[i]
-                    ? applicationTimeConstantSeconds
-                    : releaseTimeConstantSeconds;
-                var alpha = 1 - Math.Exp(-stepSeconds / tau);
-                pressures[i] = Math.Clamp(
-                    pressures[i] + (target - pressures[i]) * alpha,
-                    0, MaximumCylinderPressureKPa);
-            }
+            var current = state.PressuresKPa[i];
+            var target = MaximumCylinderPressureKPa * brakePipeBrakePercentByCar[i] / 100d;
+            var tau = target > current
+                ? applicationTimeConstantSeconds
+                : releaseTimeConstantSeconds;
+            var remainingFraction = Math.Exp(-elapsedSeconds / tau);
+            pressures[i] = Math.Clamp(
+                target + (current - target) * remainingFraction,
+                0, MaximumCylinderPressureKPa);
         }
         return new TrainBrakeCylinderState(pressures);
     }
