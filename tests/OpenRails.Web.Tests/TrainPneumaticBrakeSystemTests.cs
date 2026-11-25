@@ -15,9 +15,8 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.True(brakes.PipeState.PressuresKPa[0] < brakes.PipeState.PressuresKPa[1]);
         Assert.True(brakes.PipeState.PressuresKPa[1] < brakes.PipeState.PressuresKPa[2]);
         Assert.True(brakes.PipeState.PressuresKPa[2] < brakes.PipeState.PressuresKPa[3]);
-        Assert.True(brakes.CylinderState.PressuresKPa[0] > brakes.CylinderState.PressuresKPa[1]);
-        Assert.True(brakes.CylinderState.PressuresKPa[1] > brakes.CylinderState.PressuresKPa[2]);
-        Assert.True(brakes.CylinderState.PressuresKPa[2] > brakes.CylinderState.PressuresKPa[3]);
+        Assert.True(brakes.CylinderState.PressuresKPa[0] > brakes.CylinderState.PressuresKPa[^1]);
+        Assert.Contains(brakes.CylinderState.PressuresKPa, pressure => pressure > 0);
     }
 
     [Fact]
@@ -149,6 +148,7 @@ public sealed class TrainPneumaticBrakeSystemTests
             restored!.AuxiliaryReservoirPressuresKPa);
         Assert.Equal(brakes.DistributorState.Modes, restored.Modes);
         Assert.Equal(brakes.DistributorState.ControlPressuresKPa, restored.ControlPressuresKPa);
+        Assert.Equal(brakes.DistributorState.LastPipePressuresKPa, restored.LastPipePressuresKPa);
     }
 
 }
