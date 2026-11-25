@@ -28,7 +28,7 @@ The route loader now joins the original MSTS/Open Rails data layers:
 19. Decode ACE textures into RGBA mip data or preserve raw DXT/BGR GPU payloads, including compressed SIMISA streams and one-bit alpha masks.
 20. Resolve original shape primitive image references against route `Textures` and seasonal folders.
 
-The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, and terrain tile discovery results.
+The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, terrain tile discovery results, and a structural `RouteValidationReport` aggregating track-network diagnostics and missing/failed terrain, track-shape, and WORLD assets. The viewer displays this report with a bounded issue list. Validation currently remains fixture-based; the authorized Demo Model 1 package has not yet been run through this report in the current CI environment.
 
 ## Upstream behavior references
 
