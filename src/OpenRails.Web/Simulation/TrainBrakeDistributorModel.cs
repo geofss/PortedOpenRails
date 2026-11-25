@@ -135,14 +135,16 @@ public sealed class TrainBrakeDistributorModel
         TrainBrakeDistributorState state,
         TrainBrakePipeState pipe,
         TrainBrakeCylinderState cylinders,
-        double elapsedSeconds)
+        double elapsedSeconds,
+        IReadOnlyList<bool>? enabledByCar = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(cylinders);
         var count = state.Modes.Count;
-        if (pipe.PressuresKPa.Count != count || cylinders.PressuresKPa.Count != count)
-            throw new ArgumentException("Pipe, distributor, and cylinder state must have the same vehicle count.");
+        if (pipe.PressuresKPa.Count != count || cylinders.PressuresKPa.Count != count ||
+            (enabledByCar is not null && enabledByCar.Count != count))
+            throw new ArgumentException("Pipe, distributor, cylinder, and brake-profile state must have the same vehicle count.");
         if (pipe.PressuresKPa.Any(p => !double.IsFinite(p) || p < 0 || p > TrainBrakePipeModel.NormalPressureKPa) ||
             cylinders.PressuresKPa.Any(p => !double.IsFinite(p) || p < 0 || p > TrainBrakeCylinderModel.MaximumCylinderPressureKPa))
             throw new ArgumentException("Pneumatic pressures are outside the supported range.");
@@ -161,6 +163,19 @@ public sealed class TrainBrakeDistributorModel
             var reservoir = state.AuxiliaryReservoirPressuresKPa[i];
             var control = state.ControlPressuresKPa[i];
             var cylinder = cylinders.PressuresKPa[i];
+
+            // Unsupported brake families must not be silently simulated as an
+            // air distributor. Keep their cylinder inactive until a matching
+            // brake-system implementation is available.
+            if (enabledByCar is not null && !enabledByCar[i])
+            {
+                reservoirs[i] = reservoir;
+                controls[i] = control;
+                lastPipes[i] = pipePressure;
+                modes[i] = TrainBrakeDistributorMode.Lap;
+                cylinderPressures[i] = 0;
+                continue;
+            }
 
             // A renewed pipe reduction must take priority over a distributor
             // that was previously releasing; otherwise a second brake demand
