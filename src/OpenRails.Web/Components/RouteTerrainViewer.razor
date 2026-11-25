@@ -63,7 +63,7 @@
         <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
         <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
         <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
-        <dt>Terrain patches sent to preview</dt><dd>@Math.Min(TerrainTileLimit, Route.TerrainMeshes.Meshes.Count) tile(s), first LOD</dd>
+        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · first LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
@@ -188,13 +188,16 @@
     private string qualityPreset = "high";
     private string cameraPreset = "overview";
     private string? qualityStorageWarning;
-    private int TerrainTileLimit => qualityPreset switch { "low" => 1, "medium" => 4, _ => 8 };
+    private int TerrainVertexLimit => qualityPreset switch { "low" => 80_000, "medium" => 200_000, _ => 500_000 };
     private int GeometryVertexLimit => qualityPreset switch { "low" => 100_000, "medium" => 250_000, _ => 500_000 };
     private int GeometryIndexLimit => GeometryVertexLimit * 3;
     private int TrackPointLimit => qualityPreset switch { "low" => 20_000, "medium" => 60_000, _ => 100_000 };
     private int TrackLineFloatLimit => TrackPointLimit * 6;
     private double TrackSampleSpacingMeters => qualityPreset switch { "low" => 40, "medium" => 30, _ => 20 };
     private int trackShapeBatchCount;
+    private int terrainTilesSent;
+    private int terrainPatchesSent;
+    private int terrainVerticesSent;
     private string? rollingStockSummary;
     private readonly List<string> rollingStockIssues = [];
 
@@ -265,10 +268,17 @@
                 }
 
                 var patches = new List<object>();
-                foreach (var loaded in Route.TerrainMeshes.Meshes.Take(TerrainTileLimit))
+                var terrainVerticesSent = 0;
+                var terrainPatchesSent = 0;
+                var terrainTileIdsSent = new HashSet<(int TileX, int TileZ)>();
+                foreach (var loaded in Route.TerrainMeshes.Meshes)
                 foreach (var lod in loaded.LodMeshes.Take(1))
                 foreach (var patch in lod.Patches)
                 {
+                    // Select across the complete discovered route instead of an arbitrary
+                    // first-N tile cutoff. Keep the preview bounded for mobile GPUs.
+                    if (terrainVerticesSent + patch.Vertices.Count > TerrainVertexLimit)
+                        continue;
                     var tileXOffset = loaded.Content.Reference.TileX * 2048f;
                     var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
                     var primaryAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
@@ -302,6 +312,9 @@
                         overlayTextureIndex,
                         overlayScale = patch.Material?.OverlayScale ?? 32
                     });
+                    terrainVerticesSent += patch.Vertices.Count;
+                    terrainPatchesSent++;
+                    terrainTileIdsSent.Add((loaded.Content.Reference.TileX, loaded.Content.Reference.TileZ));
                 }
                 var trackLines = new List<float>();
                 var tessellator = new TrackGeometryTessellator();
@@ -464,6 +477,9 @@
                     zBias = batch.ZBias
                 }).ToArray();
                 rollingStockGeometryBatchCount = rollingStockBatches.Length;
+                terrainTilesSent = terrainTileIdsSent.Count;
+                terrainPatchesSent = terrainPatchesSent;
+                terrainVerticesSent = terrainVerticesSent;
                 await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
                     null, shapeBatches, shapeTextures, rollingStockBatches);
                 hasDrawn = true;
