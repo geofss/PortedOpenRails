@@ -173,6 +173,7 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     [InlineData("", "distributor", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("unknown_system", "triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("air_single_pipe", "graduated_release_triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("air_twin_pipe", "distributing_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("AIR_SINGLE_PIPE", "DISTRIBUTOR", RollingStockBrakeSupport.PrototypeAirDistributor)]
     [InlineData("air_single_pipe", "", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("air_single_pipe", "graduated_release_triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
