@@ -47,6 +47,39 @@ public sealed class RouteAssetLocatorTests
         Assert.Null(assets.RouteTrackSectionsPath);
     }
 
+    [Fact]
+    public void RejectsMissingSelectedTrkFile()
+    {
+        using var store = CreateStore(
+            ("ROUTES/TestRoute/TestRoute.tdb", "TrackDB ( )"),
+            ("GLOBAL/TSECTION.DAT", "TrackSections ( )"));
+
+        var metadata = new RouteMetadata(
+            "TestRoute", "Test Route", "Fixture", false, 0,
+            new RouteStartCoordinates(0, 0, 0, 0));
+
+        Assert.Throws<FileNotFoundException>(() =>
+            new RouteAssetLocator().Locate(store, "ROUTES/TestRoute/missing.trk", metadata));
+    }
+
+    [Fact]
+    public void RejectsAmbiguousRouteSpecificTrackSectionFiles()
+    {
+        using var store = CreateStore(
+            ("ROUTES/TestRoute/Test.trk", "Tr_RouteFile ( )"),
+            ("ROUTES/TestRoute/Test.tdb", "TrackDB ( )"),
+            ("ROUTES/TestRoute/TSECTION.DAT", "TrackSections ( )"),
+            ("ROUTES/TestRoute/Sub/TSECTION.DAT", "TrackSections ( )"),
+            ("GLOBAL/TSECTION.DAT", "TrackSections ( )"));
+
+        var metadata = new RouteMetadata(
+            "TestRoute", "Test Route", "Fixture", false, 0,
+            new RouteStartCoordinates(0, 0, 0, 0));
+
+        Assert.Throws<InvalidDataException>(() =>
+            new RouteAssetLocator().Locate(store, "ROUTES/TestRoute/Test.trk", metadata));
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
