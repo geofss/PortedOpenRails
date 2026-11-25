@@ -80,6 +80,13 @@ public sealed class RouteLoaderTests
         Assert.Empty(route.WorldTiles.Missing);
         Assert.Single(route.TerrainTiles.Found);
         Assert.Empty(route.TerrainTiles.Missing);
+        Assert.True(route.Validation.TrackNetworkUsable);
+        Assert.Equal(1, route.Validation.VectorPathCount);
+        Assert.Equal(10, route.Validation.TotalTrackLengthMeters);
+        Assert.True(route.Validation.AssetIssueCount > 0);
+        Assert.Contains(route.Validation.Issues, issue => issue.Category == "Terrain");
+        Assert.Contains(route.Validation.Issues, issue => issue.Category == "Track shape");
+        Assert.Contains(route.Validation.Issues, issue => issue.Category == "WORLD");
     }
 
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
