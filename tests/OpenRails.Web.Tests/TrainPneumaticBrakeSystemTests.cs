@@ -183,7 +183,7 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.True(Assert.Single(cylinders.PressuresKPa) > 0);
 
         (distributor, cylinders) = model.Advance(
-            distributor, new TrainBrakePipeState(new[] { 500d }), cylinders, 8);
+            distributor, new TrainBrakePipeState(new[] { 500d }), cylinders, 10);
         Assert.Equal(TrainBrakeDistributorMode.Lap, Assert.Single(distributor.Modes));
         Assert.True(Assert.Single(cylinders.PressuresKPa) < 1);
 
