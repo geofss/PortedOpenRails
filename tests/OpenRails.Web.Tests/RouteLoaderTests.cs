@@ -112,7 +112,7 @@ public sealed class RouteLoaderTests
             ("ROUTES/Test/TDB/TESTDB.tdb", """
                 SIMISA@@@@@@@@@@JINX0t1t
                 TrackDB (
-                    TrackNodes ( 2
+                    TrackNodes ( 1
                         TrackNode ( 1
                             TrVectorNode ( TrVectorSections ( 1 1 0 0 0 0 1 "00" 0 0 0 0 0 0 0 0 ) TrItemRefs ( 0 ) )
                             TrPins ( 1 0 TrPin ( 2 0 ) )
