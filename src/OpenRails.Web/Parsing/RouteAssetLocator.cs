@@ -14,6 +14,9 @@ public sealed class RouteAssetLocator
         ArgumentNullException.ThrowIfNull(metadata);
 
         var normalizedRoutePath = VirtualPath.Normalize(routeFilePath);
+        if (!store.Contains(normalizedRoutePath))
+            throw new FileNotFoundException($"The selected route metadata file was not found: {normalizedRoutePath}", normalizedRoutePath);
+
         var separator = normalizedRoutePath.LastIndexOf('/');
         if (separator < 0)
             throw new InvalidDataException("The selected TRK file is not inside a route directory.");
@@ -52,10 +55,14 @@ public sealed class RouteAssetLocator
                     ? "Could not find GLOBAL/TSECTION.DAT in the imported content."
                     : "More than one GLOBAL/TSECTION.DAT file is visible in the content packages.");
 
-        var routeTrackSections = routeFiles
+        var routeTrackSectionCandidates = routeFiles
             .Where(path => GetFileName(path).Equals("TSECTION.DAT", StringComparison.OrdinalIgnoreCase))
             .OrderBy(path => path.Length)
-            .FirstOrDefault();
+            .ToArray();
+        if (routeTrackSectionCandidates.Length > 1)
+            throw new InvalidDataException($"More than one route-specific TSECTION.DAT file is visible below '{routeRoot}'.");
+
+        var routeTrackSections = routeTrackSectionCandidates.SingleOrDefault();
 
         return new RouteAssetPaths(
             routeRoot,
