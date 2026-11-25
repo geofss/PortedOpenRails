@@ -9,7 +9,7 @@
     <h3>Route terrain · WebGL preview</h3>
     <section class="route-validation-summary" aria-label="Route structural validation">
         <strong>Route validation: @(Route.Validation.TrackNetworkUsable ? "Track network usable" : "Track network requires attention")</strong>
-        <p class="hint">@Route.Validation.VectorPathCount vector path(s) · @Route.Validation.TotalTrackLengthMeters.ToString("N0") m track · @Route.Validation.TrackDiagnosticsCount topology diagnostic(s) · @Route.Validation.AssetIssueCount missing/failed terrain, track-shape, or WORLD assets</p>
+        <p class="hint">@Route.Validation.VectorPathCount vector path(s) · @Route.Validation.TotalTrackLengthMeters.ToString("N0") m track · @Route.Validation.TrackDiagnosticsCount topology diagnostic(s) · @Route.Validation.AssetIssueCount missing/failed terrain, track, WORLD, or texture assets</p>
         @if (Route.Validation.Issues.Count > 0)
         {
             <details>
