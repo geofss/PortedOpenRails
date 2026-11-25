@@ -178,10 +178,14 @@ public sealed class TrackShapeRenderGeometryBuilder
         var visited = new HashSet<int>();
         while (node >= 0)
         {
-            if ((uint)node >= (uint)matrices.Count)
-                throw new InvalidDataException($"Track-shape primitive references missing matrix {node}.");
             if ((uint)node >= (uint)hierarchy.Count)
                 throw new InvalidDataException($"Track-shape hierarchy has no parent entry for matrix {node}.");
+            // MSTS hierarchy entries of -1 terminate a chain; the sentinel is
+            // not itself a matrix and must not be resolved through the matrix table.
+            if (hierarchy[node] == -1)
+                break;
+            if ((uint)node >= (uint)matrices.Count)
+                throw new InvalidDataException($"Track-shape primitive references missing matrix {node}.");
             if (!visited.Add(node))
                 throw new InvalidDataException("Track-shape matrix hierarchy contains a cycle.");
 
