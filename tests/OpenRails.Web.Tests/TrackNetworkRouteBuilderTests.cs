@@ -86,6 +86,23 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void StopsWhenConnectedTrackGeometryHasAnExcessiveGap()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var disconnectedGeometry = CreatePath(20, new[] { 2, 3 }, 140, 240);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, disconnectedGeometry },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10);
+
+        Assert.Single(route.Segments);
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("geometry gap"));
+        Assert.Equal(100, route.LengthMeters);
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
