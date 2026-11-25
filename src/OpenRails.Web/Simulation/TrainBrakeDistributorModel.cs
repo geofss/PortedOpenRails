@@ -162,28 +162,36 @@ public sealed class TrainBrakeDistributorModel
             var control = state.ControlPressuresKPa[i];
             var cylinder = cylinders.PressuresKPa[i];
 
-            var isReleasing = state.Modes[i] == TrainBrakeDistributorMode.Release ||
-                pipePressure > state.LastPipePressuresKPa[i] + 0.5;
-            if (isReleasing)
+            // A renewed pipe reduction must take priority over a distributor
+            // that was previously releasing; otherwise a second brake demand
+            // could be ignored until the cylinder had completely exhausted.
+            if (pipePressure < control - MinimumApplicationDifferentialKPa)
             {
-                cylinderPressures[i] = Relax(cylinder, 0, elapsedSeconds, releaseTimeConstantSeconds);
-                reservoirs[i] = Relax(reservoir, pipePressure, elapsedSeconds, reservoirRechargeTimeConstantSeconds);
-                modes[i] = TrainBrakeDistributorMode.Release;
-                controls[i] = pipePressure >= control - MinimumApplicationDifferentialKPa
-                    ? pipePressure
-                    : control;
-            }
-            else if (pipePressure < control - MinimumApplicationDifferentialKPa)
-            {
-                var target = Math.Clamp((control - pipePressure) * 0.76,
-                    0, TrainBrakeCylinderModel.MaximumCylinderPressureKPa);
+                var requestedCylinderPressure = Math.Clamp(
+                    (control - pipePressure) * 0.76,
+                    0,
+                    TrainBrakeCylinderModel.MaximumCylinderPressureKPa);
+                // The auxiliary reservoir is the air source. The cylinder
+                // target cannot exceed the pressure still available there.
+                var target = Math.Min(requestedCylinderPressure, reservoir);
                 var nextCylinder = Relax(cylinder, target, elapsedSeconds, applicationTimeConstantSeconds);
-                reservoirs[i] = Math.Max(0, reservoir - Math.Max(0, nextCylinder - cylinder));
+                var transferredPressure = Math.Max(0, nextCylinder - cylinder);
+                reservoirs[i] = Math.Max(0, reservoir - transferredPressure);
                 cylinderPressures[i] = nextCylinder;
                 modes[i] = Math.Abs(target - nextCylinder) <= 1
                     ? TrainBrakeDistributorMode.Lap
                     : TrainBrakeDistributorMode.Apply;
                 controls[i] = control;
+            }
+            else if (pipePressure > state.LastPipePressuresKPa[i] + 0.5 ||
+                     (state.Modes[i] == TrainBrakeDistributorMode.Release && cylinder > 0.5))
+            {
+                cylinderPressures[i] = Relax(cylinder, 0, elapsedSeconds, releaseTimeConstantSeconds);
+                reservoirs[i] = Relax(reservoir, pipePressure, elapsedSeconds, reservoirRechargeTimeConstantSeconds);
+                modes[i] = cylinderPressures[i] <= 0.5
+                    ? TrainBrakeDistributorMode.Lap
+                    : TrainBrakeDistributorMode.Release;
+                controls[i] = pipePressure;
             }
             else
             {
