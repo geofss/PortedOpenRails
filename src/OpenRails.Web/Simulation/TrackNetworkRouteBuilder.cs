@@ -119,9 +119,11 @@ public sealed class TrackNetworkRouteBuilder
             }
             isFirstJunction = false;
 
+            // Every competing branch must have usable endpoint geometry.
+            // Checking only the two nearest candidates would silently ignore a
+            // third branch whose distance is unknown.
             var geometryCannotDisambiguate = candidates.Length > 1 &&
-                (!double.IsFinite(candidates[0].Gap) ||
-                 !double.IsFinite(candidates[1].Gap));
+                candidates.Any(candidate => !double.IsFinite(candidate.Gap));
             var geometryIsTied = candidates.Length > 1 &&
                 double.IsFinite(candidates[0].Gap) &&
                 double.IsFinite(candidates[1].Gap) &&
