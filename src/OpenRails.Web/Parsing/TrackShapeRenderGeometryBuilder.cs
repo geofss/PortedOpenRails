@@ -176,12 +176,14 @@ public sealed class TrackShapeRenderGeometryBuilder
         var transform = Matrix4x4.Identity;
         var node = matrixIndex;
         var visited = new HashSet<int>();
-        while (node >= 0 && node < hierarchy.Count && hierarchy[node] != -1)
+        while (node >= 0)
         {
+            if ((uint)node >= (uint)matrices.Count)
+                throw new InvalidDataException($"Track-shape primitive references missing matrix {node}.");
+            if ((uint)node >= (uint)hierarchy.Count)
+                throw new InvalidDataException($"Track-shape hierarchy has no parent entry for matrix {node}.");
             if (!visited.Add(node))
                 throw new InvalidDataException("Track-shape matrix hierarchy contains a cycle.");
-            if ((uint)node >= (uint)matrices.Count)
-                throw new InvalidDataException($"Track-shape hierarchy references missing matrix {node}.");
 
             transform *= ToOpenRailsMatrix(matrices[node]);
             node = hierarchy[node];
