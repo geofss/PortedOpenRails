@@ -81,12 +81,52 @@ public sealed class VirtualContentTests
         Assert.Contains("exceeds", exception.Message);
     }
 
+    [Fact]
+    public void ZipStore_EnforcesTotalUncompressedSizeLimitAcrossEntries()
+    {
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            CreateStoreWithLimits(new[] { ("one.txt", "1234"), ("two.txt", "5678") }, maxTotalBytes: 7));
+
+        Assert.Contains("uncompressed limit", exception.Message);
+    }
+
+    [Fact]
+    public void ZipStore_EnforcesArchiveEntryCountLimit()
+    {
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            CreateStoreWithLimits(new[] { ("one.txt", "1"), ("two.txt", "2") }, maxEntries: 1));
+
+        Assert.Contains("more than 1 entries", exception.Message);
+    }
+
+    [Fact]
+    public void ZipStore_RejectsDuplicateVirtualPathsCaseInsensitively()
+    {
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            CreateStoreWithLimits(new[] { ("ROUTES/Test.trk", "a"), ("routes/test.TRK", "b") }));
+
+        Assert.Contains("duplicate virtual paths", exception.Message);
+    }
+
+    [Fact]
+    public void ZipStore_ThrowsObjectDisposedAfterStoreDisposal()
+    {
+        var store = CreateStore(("route.trk", "data"));
+        store.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => store.Contains("route.trk"));
+        Assert.Throws<ObjectDisposedException>(() => store.OpenRead("route.trk"));
+        Assert.Throws<ObjectDisposedException>(() => store.TryOpenRead("route.trk", out _));
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files) =>
         CreateStoreWithLimits(files, ZipContentStore.DefaultMaxEntryBytes);
 
     private static ZipContentStore CreateStoreWithLimits(
         (string Path, string Content)[] files,
-        long maxEntryBytes)
+        long maxEntryBytes = ZipContentStore.DefaultMaxEntryBytes,
+        long maxTotalBytes = ZipContentStore.DefaultMaxTotalBytes,
+        int maxEntries = ZipContentStore.DefaultMaxEntries)
     {
         var memory = new MemoryStream();
         using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
@@ -100,6 +140,6 @@ public sealed class VirtualContentTests
         }
 
         memory.Position = 0;
-        return new ZipContentStore(memory, maxEntryBytes: maxEntryBytes);
+        return new ZipContentStore(memory, maxEntryBytes: maxEntryBytes, maxTotalBytes: maxTotalBytes, maxEntries: maxEntries);
     }
 }
