@@ -14,7 +14,7 @@ This repository is the experimental browser-port foundation. The first milestone
 
 ## Upstream port strategy
 
-The project is now explicitly prioritizing reuse and browser-porting of the real Open Rails source over expanding parallel prototype implementations. See the [upstream port audit and migration sequence](docs/UPSTREAM_PORT_AUDIT.md) for the pinned upstream revision, dependency findings, and acceptance gates. This is a migration plan; upstream code integration is not yet complete.
+The project is now explicitly prioritizing reuse and browser-porting of the real Open Rails source over expanding parallel prototype implementations. See the [upstream port audit and migration sequence](docs/UPSTREAM_PORT_AUDIT.md) for the pinned upstream revision, dependency findings, and acceptance gates. This is a migration plan; upstream code integration is not yet complete. See [existing upstream source provenance](docs/UPSTREAM_SOURCE_PROVENANCE.md) for files already derived from Open Rails and the remaining parity audit.
 
 ## First build
 
