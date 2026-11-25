@@ -434,7 +434,9 @@
             loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
             var traversalStart = RouteStartOptions.FirstOrDefault();
             selectedTrackNodeIndex = traversalStart?.TrackNodeIndex ?? 0;
-            reverseRouteStart = false;
+            reverseRouteStart = traversalStart is not null &&
+                new RouteStartVectorSelector().IsStartReversed(
+                    traversalStart, loadedRoute.Metadata.RouteStart);
             selectedBranchTrackNodeIndex = null;
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
             BuildConnectedRoute();
