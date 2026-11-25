@@ -146,6 +146,20 @@
                         <dt>Track database nodes</dt><dd>@loadedRoute.TrackDatabase.NodeCount</dd>
                         <dt>Connected vector paths</dt><dd>@loadedRoute.TrackNetwork.VectorPathCount</dd>
                         <dt>Traversed connected route</dt><dd>@(traversedRoute is null ? "Not available" : $"{traversedRoute.Segments.Count} vector nodes · {traversedRoute.LengthMeters:N1} m")</dd>
+                    </dl>
+                    @if (traversedRoute is not null && traversedRoute.Diagnostics.Count > 0)
+                    {
+                        <div class="route-details">
+                            <h4>Route traversal diagnostics</h4>
+                            <ul class="path-list">
+                                @foreach (var diagnostic in traversedRoute.Diagnostics)
+                                {
+                                    <li>@diagnostic</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    <dl>
                         <dt>Parsed track length</dt><dd>@(loadedRoute.TrackNetwork.TotalTrackLengthMeters.ToString("N1")) m</dd>
                         <dt>Terrain tiles found</dt><dd>@loadedRoute.TerrainTiles.Found.Count</dd>
                         <dt>Terrain tiles missing</dt><dd>@loadedRoute.TerrainTiles.Missing.Count</dd>
