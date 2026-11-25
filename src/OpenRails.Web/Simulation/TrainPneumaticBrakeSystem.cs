@@ -7,20 +7,23 @@ namespace OpenRails.Web.Simulation;
 public sealed class TrainPneumaticBrakeSystem
 {
     private readonly TrainBrakePipeModel pipeModel;
-    private readonly TrainBrakeCylinderModel cylinderModel;
+    private readonly TrainBrakeDistributorModel distributorModel;
 
     public TrainBrakePipeState PipeState { get; private set; }
     public TrainBrakeCylinderState CylinderState { get; private set; }
+    public TrainBrakeDistributorState DistributorState { get; private set; }
 
     public TrainPneumaticBrakeSystem(
         int carCount,
         TrainBrakePipeModel? pipeModel = null,
-        TrainBrakeCylinderModel? cylinderModel = null)
+        TrainBrakeCylinderModel? cylinderModel = null,
+        TrainBrakeDistributorModel? distributorModel = null)
     {
         this.pipeModel = pipeModel ?? new TrainBrakePipeModel();
-        this.cylinderModel = cylinderModel ?? new TrainBrakeCylinderModel();
+        this.distributorModel = distributorModel ?? new TrainBrakeDistributorModel();
         PipeState = this.pipeModel.CreateInitialState(carCount);
-        CylinderState = this.cylinderModel.CreateInitialState(carCount);
+        DistributorState = this.distributorModel.CreateInitialState(carCount);
+        CylinderState = (cylinderModel ?? new TrainBrakeCylinderModel()).CreateInitialState(carCount);
     }
 
     public IReadOnlyList<double> BrakePercentByCar =>
@@ -29,13 +32,14 @@ public sealed class TrainPneumaticBrakeSystem
     public void Advance(double brakeCommandPercent, double elapsedSeconds, bool emergency = false)
     {
         var nextPipe = pipeModel.Advance(PipeState, brakeCommandPercent, elapsedSeconds, emergency);
-        var pipeBrakePercent = pipeModel.GetBrakePercentByCar(nextPipe);
-        var nextCylinders = cylinderModel.Advance(CylinderState, pipeBrakePercent, elapsedSeconds);
+        var (nextDistributor, nextCylinders) = distributorModel.Advance(
+            DistributorState, nextPipe, CylinderState, elapsedSeconds);
         PipeState = nextPipe;
+        DistributorState = nextDistributor;
         CylinderState = nextCylinders;
     }
 
-    public void ValidateSnapshot(TrainBrakePipeState pipeState, TrainBrakeCylinderState cylinderState)
+    public void ValidateSnapshot(TrainBrakePipeState pipeState, TrainBrakeCylinderState cylinderState, TrainBrakeDistributorState? distributorState = null)
     {
         ArgumentNullException.ThrowIfNull(pipeState);
         ArgumentNullException.ThrowIfNull(cylinderState);
@@ -46,15 +50,20 @@ public sealed class TrainPneumaticBrakeSystem
                 value < TrainBrakePipeModel.EmergencyPressureKPa ||
                 value > TrainBrakePipeModel.NormalPressureKPa) ||
             cylinderState.PressuresKPa.Any(value => !double.IsFinite(value) ||
-                value < 0 || value > TrainBrakeCylinderModel.MaximumCylinderPressureKPa))
+                value < 0 || value > TrainBrakeCylinderModel.MaximumCylinderPressureKPa) ||
+            (distributorState is not null && (distributorState.Modes.Count != carCount ||
+                distributorState.AuxiliaryReservoirPressuresKPa.Count != carCount)))
             throw new ArgumentException("Pneumatic snapshot pressures must be valid and match the consist size.");
     }
 
-    public void RestoreState(TrainBrakePipeState pipeState, TrainBrakeCylinderState cylinderState)
+    public void RestoreState(TrainBrakePipeState pipeState, TrainBrakeCylinderState cylinderState, TrainBrakeDistributorState? distributorState = null)
     {
-        ValidateSnapshot(pipeState, cylinderState);
+        ValidateSnapshot(pipeState, cylinderState, distributorState);
         PipeState = new TrainBrakePipeState(pipeState.PressuresKPa);
         CylinderState = new TrainBrakeCylinderState(cylinderState.PressuresKPa);
+        DistributorState = distributorState is null
+            ? distributorModel.CreateInitialState(PipeState.PressuresKPa.Count)
+            : new TrainBrakeDistributorState(distributorState.AuxiliaryReservoirPressuresKPa, distributorState.Modes);
     }
 
     public void Reset()
