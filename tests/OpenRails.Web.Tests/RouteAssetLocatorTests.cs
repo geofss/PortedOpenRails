@@ -67,7 +67,7 @@ public sealed class RouteAssetLocatorTests
     {
         using var store = CreateStore(
             ("ROUTES/TestRoute/Test.trk", "Tr_RouteFile ( )"),
-            ("ROUTES/TestRoute/Test.tdb", "TrackDB ( )"),
+            ("ROUTES/TestRoute/TestRoute.tdb", "TrackDB ( )"),
             ("ROUTES/TestRoute/TSECTION.DAT", "TrackSections ( )"),
             ("ROUTES/TestRoute/Sub/TSECTION.DAT", "TrackSections ( )"),
             ("GLOBAL/TSECTION.DAT", "TrackSections ( )"));
