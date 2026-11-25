@@ -107,7 +107,7 @@ public sealed class RouteLoaderTests
         using var store = CreateStore(
             ("ROUTES/Test/Test.trk", """
                 SIMISA@@@@@@@@@@JINX0T0t
-                Tr_RouteFile ( RouteID ( "TEST" ) Name ( "Test Route" ) FileName ( "TESTDB" ) RouteStart ( 0 0 0 0 ) )
+                Tr_RouteFile ( RouteID ( "TEST" ) Name ( "Test Route" ) Description ( "Topology validation fixture" ) FileName ( "TESTDB" ) RouteStart ( 0 0 0 0 ) )
                 """),
             ("ROUTES/Test/TDB/TESTDB.tdb", """
                 SIMISA@@@@@@@@@@JINX0t1t
