@@ -28,6 +28,21 @@ public sealed class RouteStartVectorSelector
             .ToArray());
     }
 
+    public bool IsStartReversed(TrackVectorPath path, OpenRails.Web.Parsing.RouteStartCoordinates routeStart)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(routeStart);
+        var targetX = routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X;
+        var targetZ = routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z;
+        var first = path.Sections.FirstOrDefault()?.Start;
+        var end = path.EndPosition;
+        if (first is null || end is null)
+            return false;
+
+        return HorizontalDistance(end.X, end.Z, targetX, targetZ) <
+            HorizontalDistance(first.X, first.Z, targetX, targetZ);
+    }
+
     private static double DistanceToRouteStart(TrackVectorPath path, double targetX, double targetZ)
     {
         var first = path.Sections.FirstOrDefault()?.Start;
