@@ -4,12 +4,12 @@ namespace OpenRails.Web.Content;
 
 /// <summary>
 /// Bridges a user-selected browser file to the ZIP-backed virtual content store.
-/// The compressed archive is copied into a bounded in-memory stream because
+/// The compressed archive is copied into a bounded in-memory stream (300 MiB default cap) because
 /// browser file streams are not guaranteed to be seekable.
 /// </summary>
 public static class BrowserZipPackageLoader
 {
-    public const long DefaultMaxArchiveBytes = 256L * 1024 * 1024;
+    public const long DefaultMaxArchiveBytes = 300L * 1024 * 1024;
 
     public static async Task<ZipContentStore> LoadAsync(
         IBrowserFile file,
