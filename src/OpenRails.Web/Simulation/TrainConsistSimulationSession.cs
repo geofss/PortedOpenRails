@@ -410,7 +410,8 @@ public sealed class TrainConsistSimulationSession
             BrakeCylinderState = new TrainBrakeCylinderState(pneumaticBrakes.CylinderState.PressuresKPa),
             BrakeDistributorState = new TrainBrakeDistributorState(
                 pneumaticBrakes.DistributorState.AuxiliaryReservoirPressuresKPa,
-                pneumaticBrakes.DistributorState.Modes)
+                pneumaticBrakes.DistributorState.Modes,
+                pneumaticBrakes.DistributorState.ControlPressuresKPa)
         };
     }
 
