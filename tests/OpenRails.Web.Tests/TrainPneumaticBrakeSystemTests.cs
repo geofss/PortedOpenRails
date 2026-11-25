@@ -20,6 +20,25 @@ public sealed class TrainPneumaticBrakeSystemTests
     }
 
     [Fact]
+    public void UnsupportedBrakeProfileDoesNotSilentlyUseAirDistributorPhysics()
+    {
+        var brakes = new TrainPneumaticBrakeSystem(2, brakeProfilesByCar: new[]
+        {
+            new RollingStockBrakeProfile("air_single_pipe", "distributor",
+                RollingStockBrakeSupport.PrototypeAirDistributor),
+            new RollingStockBrakeProfile("vacuum_single_pipe", "vacuum_brake",
+                RollingStockBrakeSupport.UnsupportedOrUnverified)
+        });
+
+        brakes.Advance(100, 2);
+
+        Assert.True(brakes.CylinderState.PressuresKPa[0] > 0);
+        Assert.Equal(0, brakes.CylinderState.PressuresKPa[1]);
+        Assert.Equal(TrainBrakePipeModel.NormalPressureKPa,
+            brakes.DistributorState.AuxiliaryReservoirPressuresKPa[1]);
+    }
+
+    [Fact]
     public void EmergencyApplicationProducesStrongerFrontResponseThanServiceApplication()
     {
         var service = new TrainPneumaticBrakeSystem(4);
