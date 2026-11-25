@@ -110,18 +110,20 @@
                             }
                         </div>
                     }
-                    @if (RouteBranchOptions.Count > 1)
+                    @if (traversedRoute?.PendingJunctionNodeIndex is { } pendingJunction && RouteBranchOptions.Count > 1)
                     {
                         <div class="route-details">
-                            <label for="route-branch-node">First junction continuation</label>
-                            <select id="route-branch-node" value="@(selectedBranchTrackNodeIndex?.ToString() ?? "automatic")" @onchange="SelectRouteBranch">
-                                <option value="automatic">Automatic (stop if ambiguous)</option>
+                            <label for="route-branch-node">Continuation at junction node @pendingJunction</label>
+                            <select id="route-branch-node"
+                                value="@(selectedBranchTrackNodeIndices.TryGetValue(pendingJunction, out var selectedBranch) ? selectedBranch.ToString() : "automatic")"
+                                @onchange="SelectRouteBranch">
+                                <option value="automatic">Stop here until a branch is selected</option>
                                 @foreach (var branch in RouteBranchOptions)
                                 {
                                     <option value="@branch.TrackNodeIndex">TrackNode @branch.TrackNodeIndex · @branch.LengthMeters.ToString("N0") m</option>
                                 }
                             </select>
-                            <p class="hint">Choose which connected vector to follow at the first junction after the selected starting vector.</p>
+                            <p class="hint">Choose the continuation at this junction. The route builder will then continue and ask again only if another junction is ambiguous.</p>
                         </div>
                     }
                     @if (RouteStartOptions.Count > 0)
@@ -344,14 +346,20 @@
     private TrainConsistMotionState? currentMotionState;
     private uint selectedTrackNodeIndex;
     private bool reverseRouteStart;
-    private uint? selectedBranchTrackNodeIndex;
+    private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
     private string? selectedActivityPath;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
         : Array.Empty<string>();
 
-    private string SimulationSnapshotKey => string.Join("|", selectedRoute?.Metadata.RouteId ?? "no-route", SelectedConsist?.Name ?? "no-consist", selectedTrackNodeIndex, reverseRouteStart, selectedBranchTrackNodeIndex?.ToString() ?? "automatic");
+    private string SimulationSnapshotKey => string.Join("|",
+        selectedRoute?.Metadata.RouteId ?? "no-route",
+        SelectedConsist?.Name ?? "no-consist",
+        selectedTrackNodeIndex,
+        reverseRouteStart,
+        string.Join(",", selectedBranchTrackNodeIndices.OrderBy(pair => pair.Key)
+            .Select(pair => $"{pair.Key}:{pair.Value}")));
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
@@ -372,32 +380,40 @@
         get
         {
             var network = loadedRoute?.TrackNetwork;
-            var start = network?.VectorPaths.FirstOrDefault(path =>
-                path.TrackNodeIndex == selectedTrackNodeIndex);
-            if (start is null || start.ConnectedNodeIndices.Count != 2)
+            var junctionNode = traversedRoute?.PendingJunctionNodeIndex;
+            if (network is null || junctionNode is null)
                 return Array.Empty<TrackVectorPath>();
-            var exitNode = reverseRouteStart
-                ? start.ConnectedNodeIndices[0]
-                : start.ConnectedNodeIndices[1];
-            return network!.VectorPaths
-                .Where(path => path.TrackNodeIndex != start.TrackNodeIndex &&
+            var visited = traversedRoute!.Segments
+                .Select(segment => segment.Path.TrackNodeIndex)
+                .ToHashSet();
+            return network.VectorPaths
+                .Where(path => !visited.Contains(path.TrackNodeIndex) &&
                     path.ConnectedNodeIndices.Count == 2 &&
-                    path.ConnectedNodeIndices.Contains(exitNode))
+                    path.ConnectedNodeIndices.Contains(junctionNode.Value))
                 .OrderByDescending(path => path.LengthMeters)
+                .ThenBy(path => path.TrackNodeIndex)
                 .ToArray();
         }
     }
 
     private async Task SelectRouteBranch(ChangeEventArgs args)
     {
-        selectedBranchTrackNodeIndex = uint.TryParse(args.Value?.ToString(),
+        if (traversedRoute?.PendingJunctionNodeIndex is not { } junctionNode)
+            return;
+
+        if (uint.TryParse(args.Value?.ToString(),
             System.Globalization.NumberStyles.None,
-            System.Globalization.CultureInfo.InvariantCulture, out var nodeIndex)
-            ? nodeIndex
-            : null;
-        if (selectedBranchTrackNodeIndex is { } selected &&
-            RouteBranchOptions.All(path => path.TrackNodeIndex != selected))
-            selectedBranchTrackNodeIndex = null;
+            System.Globalization.CultureInfo.InvariantCulture, out var nodeIndex))
+        {
+            if (RouteBranchOptions.All(path => path.TrackNodeIndex != nodeIndex))
+                return;
+            selectedBranchTrackNodeIndices[junctionNode] = nodeIndex;
+        }
+        else
+        {
+            selectedBranchTrackNodeIndices.Remove(junctionNode);
+        }
+
         await RebuildConnectedRouteAsync();
     }
 
@@ -414,7 +430,7 @@
         currentMotionState = null;
         selectedTrackNodeIndex = 0;
         reverseRouteStart = false;
-        selectedBranchTrackNodeIndex = null;
+        selectedBranchTrackNodeIndices.Clear();
         routeBuildMessage = null;
     }
 
@@ -451,7 +467,7 @@
             reverseRouteStart = traversalStart is not null &&
                 new RouteStartVectorSelector().IsStartReversed(
                     traversalStart, loadedRoute.Metadata.RouteStart);
-            selectedBranchTrackNodeIndex = null;
+            selectedBranchTrackNodeIndices.Clear();
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}.";
             BuildConnectedRoute();
         }
@@ -471,7 +487,7 @@
                 System.Globalization.CultureInfo.InvariantCulture, out var trackNodeIndex))
         {
             selectedTrackNodeIndex = trackNodeIndex;
-            selectedBranchTrackNodeIndex = null;
+            selectedBranchTrackNodeIndices.Clear();
             await RebuildConnectedRouteAsync();
         }
     }
@@ -480,7 +496,7 @@
     {
         reverseRouteStart = string.Equals(
             args.Value?.ToString(), "reverse", StringComparison.OrdinalIgnoreCase);
-        selectedBranchTrackNodeIndex = null;
+        selectedBranchTrackNodeIndices.Clear();
         await RebuildConnectedRouteAsync();
     }
 
@@ -514,7 +530,7 @@
                 : new TrackNetworkRouteBuilder().Build(
                     loadedRoute.TrackNetwork, selectedTrackNodeIndex,
                     startReversed: reverseRouteStart,
-                    preferredNextTrackNodeIndex: selectedBranchTrackNodeIndex);
+                    preferredNextTrackNodeIndices: selectedBranchTrackNodeIndices);
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
                 (traversedRoute is null
                     ? " No two-ended vector path was available for connected traversal."
