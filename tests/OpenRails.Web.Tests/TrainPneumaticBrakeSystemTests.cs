@@ -123,7 +123,7 @@ public sealed class TrainPneumaticBrakeSystemTests
     public void DistributorReleaseExhaustsCylinderAndRechargesAuxiliaryReservoir()
     {
         var model = new TrainBrakeDistributorModel();
-        var state = new TrainBrakeDistributorState(new[] { 300d }, new[] { TrainBrakeDistributorMode.Apply }, new[] { 300d });
+        var state = new TrainBrakeDistributorState(new[] { 300d }, new[] { TrainBrakeDistributorMode.Apply }, new[] { 300d }, new[] { 300d });
         var cylinders = new TrainBrakeCylinderState(new[] { 180d });
 
         var result = model.Advance(state,
