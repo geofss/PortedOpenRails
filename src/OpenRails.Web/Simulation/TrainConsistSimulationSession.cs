@@ -23,6 +23,7 @@ public sealed class TrainConsistSimulationSession
     public bool IsPaused => loop.IsPaused;
     public TrainBrakePipeState BrakePipeState => pneumaticBrakes.PipeState;
     public TrainBrakeCylinderState BrakeCylinderState => pneumaticBrakes.CylinderState;
+    public TrainBrakeDistributorState BrakeDistributorState => pneumaticBrakes.DistributorState;
     public IReadOnlyList<double> PneumaticBrakePercentByCar => pneumaticBrakes.BrakePercentByCar;
 
     public TrainConsistSimulationSession(
