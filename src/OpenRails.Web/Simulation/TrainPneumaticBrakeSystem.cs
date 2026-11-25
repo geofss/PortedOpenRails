@@ -9,6 +9,7 @@ public sealed class TrainPneumaticBrakeSystem
     private readonly TrainBrakePipeModel pipeModel;
     private readonly TrainBrakeDistributorModel distributorModel;
     private readonly TrainBrakeCylinderModel cylinderModel;
+    private readonly IReadOnlyList<bool>? distributorEnabledByCar;
 
     public TrainBrakePipeState PipeState { get; private set; }
     public TrainBrakeCylinderState CylinderState { get; private set; }
@@ -18,8 +19,13 @@ public sealed class TrainPneumaticBrakeSystem
         int carCount,
         TrainBrakePipeModel? pipeModel = null,
         TrainBrakeCylinderModel? cylinderModel = null,
-        TrainBrakeDistributorModel? distributorModel = null)
+        TrainBrakeDistributorModel? distributorModel = null,
+        IReadOnlyList<RollingStockBrakeProfile>? brakeProfilesByCar = null)
     {
+        if (brakeProfilesByCar is not null && brakeProfilesByCar.Count != carCount)
+            throw new ArgumentException("Brake profiles must match the pneumatic consist size.", nameof(brakeProfilesByCar));
+        distributorEnabledByCar = brakeProfilesByCar?.Select(profile =>
+            profile.Support != RollingStockBrakeSupport.UnsupportedOrUnverified).ToArray();
         this.pipeModel = pipeModel ?? new TrainBrakePipeModel();
         this.distributorModel = distributorModel ?? new TrainBrakeDistributorModel();
         this.cylinderModel = cylinderModel ?? new TrainBrakeCylinderModel();
@@ -35,7 +41,7 @@ public sealed class TrainPneumaticBrakeSystem
     {
         var nextPipe = pipeModel.Advance(PipeState, brakeCommandPercent, elapsedSeconds, emergency);
         var (nextDistributor, nextCylinders) = distributorModel.Advance(
-            DistributorState, nextPipe, CylinderState, elapsedSeconds);
+            DistributorState, nextPipe, CylinderState, elapsedSeconds, distributorEnabledByCar);
         PipeState = nextPipe;
         DistributorState = nextDistributor;
         CylinderState = nextCylinders;
