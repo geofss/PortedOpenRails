@@ -350,37 +350,8 @@
 
     private IReadOnlyList<TrackVectorPath> RouteStartOptions => loadedRoute is null
         ? Array.Empty<TrackVectorPath>()
-        : loadedRoute.TrackNetwork.VectorPaths
-            .Where(path => path.ConnectedNodeIndices.Count == 2)
-            .OrderBy(path => DistanceToRouteStart(path, loadedRoute.Metadata.RouteStart))
-            .ThenByDescending(path => path.LengthMeters)
-            .Take(100)
-            .ToArray();
-
-    private static double DistanceToRouteStart(
-        TrackVectorPath path,
-        RouteStartCoordinates routeStart)
-    {
-        // MSTS route-start coordinates use the same 2048 m tile origin as TDB vectors.
-        var targetX = routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X;
-        var targetZ = routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z;
-        var sectionStart = path.Sections.FirstOrDefault()?.Start;
-        var end = path.EndPosition;
-        var startDistance = sectionStart is null
-            ? double.PositiveInfinity
-            : HorizontalDistance(sectionStart.X, sectionStart.Z, targetX, targetZ);
-        var endDistance = end is null
-            ? double.PositiveInfinity
-            : HorizontalDistance(end.X, end.Z, targetX, targetZ);
-        return Math.Min(startDistance, endDistance);
-    }
-
-    private static double HorizontalDistance(double x1, double z1, double x2, double z2)
-    {
-        var dx = x1 - x2;
-        var dz = z1 - z2;
-        return Math.Sqrt(dx * dx + dz * dz);
-    }
+        : new RouteStartVectorSelector().SelectNearest(
+            loadedRoute.TrackNetwork, loadedRoute.Metadata.RouteStart, maximumResults: 100);
 
     private IReadOnlyList<TrackVectorPath> RouteBranchOptions
     {
