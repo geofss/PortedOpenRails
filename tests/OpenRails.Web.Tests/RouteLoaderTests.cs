@@ -87,6 +87,18 @@ public sealed class RouteLoaderTests
         Assert.Contains(route.Validation.Issues, issue => issue.Category == "Terrain");
         Assert.Contains(route.Validation.Issues, issue => issue.Category == "Track shape");
         Assert.Contains(route.Validation.Issues, issue => issue.Category == "WORLD");
+        Assert.Equal(route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count), route.Validation.MissingWorldShapes);
+        Assert.Equal(route.WorldScenery.Loaded.Sum(tile => tile.FailedShapes.Count), route.Validation.FailedWorldShapes);
+        Assert.Equal(
+            route.TerrainTextures.Missing.Count +
+            route.TrackShapeMeshes.Textures.Missing.Count +
+            route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count),
+            route.Validation.MissingTextures);
+        Assert.Equal(
+            route.TerrainTextures.Failed.Count +
+            route.TrackShapeMeshes.Textures.Failed.Count +
+            route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count),
+            route.Validation.FailedTextures);
     }
 
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
