@@ -273,9 +273,13 @@
                     var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
                     var primaryAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
                         asset.Reference.SeasonFolder is null &&
+                        asset.Reference.TextureSlotIndex == 0 &&
+                        string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(asset.Reference.FileName, patch.Material.PrimaryTextureFileName, StringComparison.OrdinalIgnoreCase));
                     var overlayAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
                         asset.Reference.SeasonFolder is null &&
+                        asset.Reference.TextureSlotIndex == 1 &&
+                        string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(asset.Reference.FileName, patch.Material.OverlayTextureFileName, StringComparison.OrdinalIgnoreCase));
                     var textureIndex = primaryAsset is not null && textureIndexes.TryGetValue(primaryAsset.Reference.Path, out var foundIndex) ? foundIndex : -1;
                     var overlayTextureIndex = overlayAsset is not null && textureIndexes.TryGetValue(overlayAsset.Reference.Path, out var overlayIndex) ? overlayIndex : -1;
