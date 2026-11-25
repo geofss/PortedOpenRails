@@ -21,6 +21,7 @@ public interface IVirtualContentStore
 public sealed class ZipContentStore : IVirtualContentStore, IDisposable
 {
     public const long DefaultMaxEntryBytes = 128L * 1024 * 1024;
+    public const long DefaultMaxBrowserArchiveBytes = 300L * 1024 * 1024;
     public const long DefaultMaxTotalBytes = 512L * 1024 * 1024;
     public const int DefaultMaxEntries = 100_000;
 
