@@ -83,7 +83,24 @@ public sealed class TrainBrakeCylinderModelTests
             new TrainBrakeCylinderState(new[] { -1d }), new[] { 0d }, 0.1));
     }
     [Fact]
-    public void VeryLargeFiniteElapsedIntervalRemainsBoundedAndReachesCylinderTargets()
+    public void UsesExactExponentialRelaxationForApplicationAndRelease()
+    {
+        var model = new TrainBrakeCylinderModel(
+            applicationTimeConstantSeconds: 2,
+            releaseTimeConstantSeconds: 4);
+        var initial = new TrainBrakeCylinderState(new[] { 100d });
+
+        var applied = model.Advance(initial, new[] { 100d }, 1);
+        var expectedApplied = 380 + (100 - 380) * Math.Exp(-1d / 2);
+        Assert.Equal(expectedApplied, applied.PressuresKPa[0], precision: 10);
+
+        var released = model.Advance(applied, new[] { 0d }, 1);
+        var expectedReleased = expectedApplied * Math.Exp(-1d / 4);
+        Assert.Equal(expectedReleased, released.PressuresKPa[0], precision: 10);
+    }
+
+    [Fact]
+    public void VeryLargeFiniteElapsedIntervalReachesCylinderTargetsWithoutTimeStepping()
     {
         var model = new TrainBrakeCylinderModel();
         var initial = model.CreateInitialState(2);
