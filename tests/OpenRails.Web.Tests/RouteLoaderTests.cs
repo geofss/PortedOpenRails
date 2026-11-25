@@ -101,6 +101,44 @@ public sealed class RouteLoaderTests
             route.Validation.FailedTextures);
     }
 
+    [Fact]
+    public void MarksVectorPathWithInvalidPinTopologyAsNotUsable()
+    {
+        using var store = CreateStore(
+            ("ROUTES/Test/Test.trk", """
+                SIMISA@@@@@@@@@@JINX0T0t
+                Tr_RouteFile ( RouteID ( "TEST" ) Name ( "Test Route" ) FileName ( "TESTDB" ) RouteStart ( 0 0 0 0 ) )
+                """),
+            ("ROUTES/Test/TDB/TESTDB.tdb", """
+                SIMISA@@@@@@@@@@JINX0t1t
+                TrackDB (
+                    TrackNodes ( 2
+                        TrackNode ( 1
+                            TrVectorNode ( TrVectorSections ( 1 1 0 0 0 0 1 "00" 0 0 0 0 0 0 0 0 ) TrItemRefs ( 0 ) )
+                            TrPins ( 1 0 TrPin ( 2 0 ) )
+                        )
+                    )
+                    TrItemTable ( 0 )
+                )
+                """),
+            ("GLOBAL/TSECTION.DAT", """
+                SIMISA@@@@@@@@@@JINX0T0t
+                TrackSections ( 1 TrackSection ( 1 SectionSize ( 1m 10m ) ) )
+                TrackShapes ( 0 )
+                """));
+
+        var metadata = new RouteMetadataReader().Read(store, "ROUTES/Test/Test.trk");
+        var route = new RouteLoader().Load(store, "ROUTES/Test/Test.trk", metadata);
+
+        Assert.Equal(1, route.TrackNetwork.VectorPathCount);
+        Assert.True(route.TrackNetwork.TotalTrackLengthMeters > 0);
+        Assert.False(route.Validation.TrackNetworkUsable);
+        Assert.True(route.Validation.HasCriticalIssues);
+        Assert.Contains(route.Validation.Issues,
+            issue => issue.Category == "Track network" &&
+                issue.Message.Contains("critical topology problems", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
