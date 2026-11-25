@@ -151,4 +151,48 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.Equal(brakes.DistributorState.LastPipePressuresKPa, restored.LastPipePressuresKPa);
     }
 
+    [Fact]
+    public void DistributorCannotBuildCylinderPressureBeyondAvailableReservoirPressure()
+    {
+        var model = new TrainBrakeDistributorModel();
+        var state = new TrainBrakeDistributorState(
+            new[] { 40d },
+            new[] { TrainBrakeDistributorMode.Lap },
+            new[] { 500d },
+            new[] { 500d });
+
+        var result = model.Advance(
+            state,
+            new TrainBrakePipeState(new[] { 0d }),
+            new TrainBrakeCylinderState(new[] { 0d }),
+            20);
+
+        Assert.InRange(Assert.Single(result.Cylinders.PressuresKPa), 0, 40);
+        Assert.InRange(Assert.Single(result.Distributor.AuxiliaryReservoirPressuresKPa), 0, 0.01);
+    }
+
+    [Fact]
+    public void DistributorAcceptsNewBrakeApplicationWhilePreviouslyReleasing()
+    {
+        var model = new TrainBrakeDistributorModel();
+        var distributor = model.CreateInitialState(1);
+        var cylinders = new TrainBrakeCylinderState(new[] { 0d });
+
+        (distributor, cylinders) = model.Advance(
+            distributor, new TrainBrakePipeState(new[] { 350d }), cylinders, 1);
+        Assert.True(Assert.Single(cylinders.PressuresKPa) > 0);
+
+        (distributor, cylinders) = model.Advance(
+            distributor, new TrainBrakePipeState(new[] { 500d }), cylinders, 8);
+        Assert.Equal(TrainBrakeDistributorMode.Lap, Assert.Single(distributor.Modes));
+        Assert.True(Assert.Single(cylinders.PressuresKPa) < 1);
+
+        (distributor, cylinders) = model.Advance(
+            distributor, new TrainBrakePipeState(new[] { 350d }), cylinders, 0.5);
+
+        Assert.True(Assert.Single(cylinders.PressuresKPa) > 1);
+        Assert.Contains(Assert.Single(distributor.Modes),
+            mode => mode is TrainBrakeDistributorMode.Apply or TrainBrakeDistributorMode.Lap);
+    }
+
 }
