@@ -118,14 +118,62 @@ public sealed class TrainConsistSimulationSetupBuilderTests
             new TrainConsistSimulationSetupBuilder().Build(consist, Array.Empty<ConsistCarAssetReference>(), 0));
     }
 
+    [Fact]
+    public void CarriesDeclaredAirBrakeMetadataIntoPerCarSetupProfile()
+    {
+        var consist = new ConsistMetadata("Air", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "air.con");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", 20_000, 15, 50_000, null,
+                brakeSystemType: " air_single_pipe ", brakeEquipmentType: "Distributor"),
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null,
+                brakeSystemType: "air_twin_pipe", brakeEquipmentType: "triple_valve")
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+
+        Assert.Equal(2, setup.BrakeProfilesByCar.Count);
+        Assert.All(setup.BrakeProfilesByCar,
+            profile => Assert.Equal(RollingStockBrakeSupport.PrototypeAirDistributor, profile.Support));
+        Assert.Equal(" air_single_pipe ", setup.BrakeProfilesByCar[0].DeclaredSystemType);
+    }
+
+    [Theory]
+    [InlineData("vacuum_single_pipe", "vacuum_brake")]
+    [InlineData("ep_single_pipe", "ep_brake")]
+    [InlineData("unknown_system", "unknown_equipment")]
+    public void ReportsBrakeTypesThatPrototypeDoesNotModel(string systemType, string equipmentType)
+    {
+        var consist = new ConsistMetadata("OtherBrake", new[]
+        {
+            new ConsistCar("Vehicle", "Freight", 1, false, false, false)
+        }, "other.con");
+        var assets = new[]
+        {
+            CreateAsset(1, "Vehicle", 20_000, 15, 50_000, null,
+                brakeSystemType: systemType, brakeEquipmentType: equipmentType)
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+
+        Assert.Equal(RollingStockBrakeSupport.UnsupportedOrUnverified,
+            Assert.Single(setup.BrakeProfilesByCar).Support);
+        Assert.Contains(setup.Diagnostics, message => message.Contains("not modelled"));
+    }
+
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, float mass, float length, float brake,
         LocomotiveTractionMetadata? traction, float? couplerStrength = null,
-        float? davisA = null, float? davisB = null, float? davisC = null) =>
+        float? davisA = null, float? davisB = null, float? davisC = null,
+        string? brakeSystemType = null, string? brakeEquipmentType = null) =>
         new("Freight", uid, name, "Freight", uid == 1, false, name + ".eng",
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + ".eng", MinCouplerStrengthN: couplerStrength,
+                brakeSystemType, brakeEquipmentType, brake, name + ".eng", MinCouplerStrengthN: couplerStrength,
                 DavisAForceN: davisA, DavisBResistance: davisB, DavisCResistance: davisC),
             name + ".s", true, null, traction);
 }
