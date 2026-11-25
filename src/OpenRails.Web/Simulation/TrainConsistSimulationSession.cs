@@ -33,12 +33,15 @@ public sealed class TrainConsistSimulationSession
         double fixedStepSeconds = 1d / 60d,
         double maximumFrameSeconds = 0.25d,
         int maximumStepsPerFrame = 8,
-        double? routeLengthMeters = null)
+        double? routeLengthMeters = null,
+        IReadOnlyList<RollingStockBrakeProfile>? brakeProfilesByCar = null)
     {
         ArgumentNullException.ThrowIfNull(initialState);
         ArgumentNullException.ThrowIfNull(locomotiveMetadataByCar);
         if (initialState.Cars.Count != locomotiveMetadataByCar.Count)
             throw new ArgumentException("Each car must have a matching locomotive metadata slot.", nameof(locomotiveMetadataByCar));
+        if (brakeProfilesByCar is not null && brakeProfilesByCar.Count != initialState.Cars.Count)
+            throw new ArgumentException("Each car must have a matching brake profile.", nameof(brakeProfilesByCar));
         this.tractionModels = locomotiveMetadataByCar
             .Select(metadata => metadata is null ? null : new LocomotiveTractionModel(metadata))
             .ToArray();
@@ -48,7 +51,8 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentException("Each car must have a matching throttle response.", nameof(throttleResponses));
         loop = new TrainConsistSimulationLoop(
             initialState, fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame, routeLengthMeters);
-        pneumaticBrakes = new TrainPneumaticBrakeSystem(initialState.Cars.Count);
+        pneumaticBrakes = new TrainPneumaticBrakeSystem(
+            initialState.Cars.Count, brakeProfilesByCar: brakeProfilesByCar);
     }
 
     public int Advance(
