@@ -11,7 +11,7 @@ public sealed class BrowserZipPackageLoaderTests
         const long demoModel1ArchiveBytes = 272_422_379;
 
         Assert.True(
-            BrowserZipPackageLoader.DefaultMaxArchiveBytes >= demoModel1ArchiveBytes,
+            ZipContentStore.DefaultMaxBrowserArchiveBytes >= demoModel1ArchiveBytes,
             $"The browser upload limit ({BrowserZipPackageLoader.DefaultMaxArchiveBytes} bytes) must permit the authorized Demo Model 1 archive ({demoModel1ArchiveBytes} bytes).");
     }
 
