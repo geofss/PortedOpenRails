@@ -22,6 +22,16 @@ public sealed class RouteStartVectorSelectorTests
     }
 
     [Fact]
+    public void DetectsWhenDeclaredRouteStartIsNearestTheStoredVectorEnd()
+    {
+        var path = CreatePath(42, new[] { 1, 2 }, 100, 500, 0);
+        var selector = new RouteStartVectorSelector();
+
+        Assert.True(selector.IsStartReversed(path, new RouteStartCoordinates(0, 0, 490, 0)));
+        Assert.False(selector.IsStartReversed(path, new RouteStartCoordinates(0, 0, 110, 0)));
+    }
+
+    [Fact]
     public void ConvertsRouteStartTileCoordinatesIntoWorldCoordinates()
     {
         var targetX = TrackNetworkBuilder.TileSizeMeters * 12 + 40;
