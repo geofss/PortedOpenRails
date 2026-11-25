@@ -74,5 +74,6 @@ public sealed class TrainPneumaticBrakeSystem
     {
         PipeState = pipeModel.CreateInitialState(PipeState.PressuresKPa.Count);
         CylinderState = cylinderModel.CreateInitialState(CylinderState.PressuresKPa.Count);
+        DistributorState = distributorModel.CreateInitialState(PipeState.PressuresKPa.Count);
     }
 }
