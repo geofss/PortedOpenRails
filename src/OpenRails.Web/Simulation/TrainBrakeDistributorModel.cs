@@ -17,6 +17,7 @@ public sealed record TrainBrakeDistributorState
     public IReadOnlyList<double> AuxiliaryReservoirPressuresKPa { get; }
     public IReadOnlyList<TrainBrakeDistributorMode> Modes { get; }
     public IReadOnlyList<double> ControlPressuresKPa { get; }
+    public IReadOnlyList<double> LastPipePressuresKPa { get; }
 
     public TrainBrakeDistributorState(
         IEnumerable<double> auxiliaryReservoirPressuresKPa,
@@ -30,18 +31,32 @@ public sealed record TrainBrakeDistributorState
         IEnumerable<double> auxiliaryReservoirPressuresKPa,
         IEnumerable<TrainBrakeDistributorMode> modes,
         IEnumerable<double> controlPressuresKPa)
+        : this(auxiliaryReservoirPressuresKPa, modes, controlPressuresKPa,
+            Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, auxiliaryReservoirPressuresKPa?.Count() ?? 0))
+    {
+    }
+
+    public TrainBrakeDistributorState(
+        IEnumerable<double> auxiliaryReservoirPressuresKPa,
+        IEnumerable<TrainBrakeDistributorMode> modes,
+        IEnumerable<double> controlPressuresKPa,
+        IEnumerable<double> lastPipePressuresKPa)
     {
         ArgumentNullException.ThrowIfNull(auxiliaryReservoirPressuresKPa);
         ArgumentNullException.ThrowIfNull(modes);
         ArgumentNullException.ThrowIfNull(controlPressuresKPa);
+        ArgumentNullException.ThrowIfNull(lastPipePressuresKPa);
         AuxiliaryReservoirPressuresKPa = Array.AsReadOnly(auxiliaryReservoirPressuresKPa.ToArray());
         Modes = Array.AsReadOnly(modes.ToArray());
         ControlPressuresKPa = Array.AsReadOnly(controlPressuresKPa.ToArray());
+        LastPipePressuresKPa = Array.AsReadOnly(lastPipePressuresKPa.ToArray());
         if (AuxiliaryReservoirPressuresKPa.Count == 0 ||
             AuxiliaryReservoirPressuresKPa.Count != Modes.Count ||
             AuxiliaryReservoirPressuresKPa.Count != ControlPressuresKPa.Count ||
+            AuxiliaryReservoirPressuresKPa.Count != LastPipePressuresKPa.Count ||
             AuxiliaryReservoirPressuresKPa.Any(p => !double.IsFinite(p) || p < 0 || p > TrainBrakePipeModel.NormalPressureKPa) ||
             ControlPressuresKPa.Any(p => !double.IsFinite(p) || p < 0 || p > TrainBrakePipeModel.NormalPressureKPa) ||
+            LastPipePressuresKPa.Any(p => !double.IsFinite(p) || p < 0 || p > TrainBrakePipeModel.NormalPressureKPa) ||
             Modes.Any(m => !Enum.IsDefined(m)))
             throw new ArgumentException("Distributor state must contain matching, valid per-car reservoir, control pressures, and modes.");
     }
@@ -58,7 +73,10 @@ internal sealed class TrainBrakeDistributorStateJsonConverter : JsonConverter<Tr
         var controls = root.TryGetProperty(nameof(TrainBrakeDistributorState.ControlPressuresKPa), out var controlElement)
             ? controlElement.EnumerateArray().Select(x => x.GetDouble()).ToArray()
             : Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, reservoirs.Length).ToArray();
-        return new TrainBrakeDistributorState(reservoirs, modes, controls);
+        var lastPipes = root.TryGetProperty(nameof(TrainBrakeDistributorState.LastPipePressuresKPa), out var lastPipeElement)
+            ? lastPipeElement.EnumerateArray().Select(x => x.GetDouble()).ToArray()
+            : Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, reservoirs.Length).ToArray();
+        return new TrainBrakeDistributorState(reservoirs, modes, controls, lastPipes);
     }
 
     public override void Write(Utf8JsonWriter writer, TrainBrakeDistributorState value, JsonSerializerOptions options)
@@ -70,6 +88,8 @@ internal sealed class TrainBrakeDistributorStateJsonConverter : JsonConverter<Tr
         JsonSerializer.Serialize(writer, value.Modes, options);
         writer.WritePropertyName(nameof(TrainBrakeDistributorState.ControlPressuresKPa));
         JsonSerializer.Serialize(writer, value.ControlPressuresKPa, options);
+        writer.WritePropertyName(nameof(TrainBrakeDistributorState.LastPipePressuresKPa));
+        JsonSerializer.Serialize(writer, value.LastPipePressuresKPa, options);
         writer.WriteEndObject();
     }
 }
@@ -107,6 +127,7 @@ public sealed class TrainBrakeDistributorModel
         return new TrainBrakeDistributorState(
             Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, carCount),
             Enumerable.Repeat(TrainBrakeDistributorMode.Lap, carCount),
+            Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, carCount),
             Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, carCount));
     }
 
@@ -131,6 +152,7 @@ public sealed class TrainBrakeDistributorModel
 
         var reservoirs = new double[count];
         var controls = new double[count];
+        var lastPipes = new double[count];
         var modes = new TrainBrakeDistributorMode[count];
         var cylinderPressures = new double[count];
         for (var i = 0; i < count; i++)
@@ -140,7 +162,18 @@ public sealed class TrainBrakeDistributorModel
             var control = state.ControlPressuresKPa[i];
             var cylinder = cylinders.PressuresKPa[i];
 
-            if (pipePressure < control - MinimumApplicationDifferentialKPa)
+            var isReleasing = state.Modes[i] == TrainBrakeDistributorMode.Release ||
+                pipePressure > state.LastPipePressuresKPa[i] + 0.5;
+            if (isReleasing)
+            {
+                cylinderPressures[i] = Relax(cylinder, 0, elapsedSeconds, releaseTimeConstantSeconds);
+                reservoirs[i] = Relax(reservoir, pipePressure, elapsedSeconds, reservoirRechargeTimeConstantSeconds);
+                modes[i] = TrainBrakeDistributorMode.Release;
+                controls[i] = pipePressure >= control - MinimumApplicationDifferentialKPa
+                    ? pipePressure
+                    : control;
+            }
+            else if (pipePressure < control - MinimumApplicationDifferentialKPa)
             {
                 var target = Math.Clamp((control - pipePressure) * 0.76,
                     0, TrainBrakeCylinderModel.MaximumCylinderPressureKPa);
@@ -152,13 +185,6 @@ public sealed class TrainBrakeDistributorModel
                     : TrainBrakeDistributorMode.Apply;
                 controls[i] = control;
             }
-            else if (pipePressure > control + MinimumApplicationDifferentialKPa)
-            {
-                cylinderPressures[i] = Relax(cylinder, 0, elapsedSeconds, releaseTimeConstantSeconds);
-                reservoirs[i] = Relax(reservoir, pipePressure, elapsedSeconds, reservoirRechargeTimeConstantSeconds);
-                modes[i] = TrainBrakeDistributorMode.Release;
-                controls[i] = pipePressure;
-            }
             else
             {
                 cylinderPressures[i] = cylinder;
@@ -166,10 +192,11 @@ public sealed class TrainBrakeDistributorModel
                 modes[i] = TrainBrakeDistributorMode.Lap;
                 controls[i] = control;
             }
+            lastPipes[i] = pipePressure;
         }
 
         return (
-            new TrainBrakeDistributorState(reservoirs, modes, controls),
+            new TrainBrakeDistributorState(reservoirs, modes, controls, lastPipes),
             new TrainBrakeCylinderState(cylinderPressures));
     }
 
