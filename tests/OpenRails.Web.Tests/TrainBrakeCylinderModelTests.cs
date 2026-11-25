@@ -100,6 +100,27 @@ public sealed class TrainBrakeCylinderModelTests
     }
 
     [Fact]
+    public void ConstantBrakeCommandIsIndependentOfHowElapsedTimeIsPartitioned()
+    {
+        var model = new TrainBrakeCylinderModel();
+        var initial = new TrainBrakeCylinderState(new[] { 75d });
+
+        var oneUpdate = model.Advance(initial, new[] { 100d }, 1.25);
+        var splitUpdates = model.Advance(
+            model.Advance(initial, new[] { 100d }, 0.5),
+            new[] { 100d }, 0.75);
+
+        Assert.Equal(oneUpdate.PressuresKPa[0], splitUpdates.PressuresKPa[0], precision: 10);
+
+        var oneRelease = model.Advance(oneUpdate, new[] { 0d }, 2);
+        var splitRelease = model.Advance(
+            model.Advance(oneUpdate, new[] { 0d }, 0.8),
+            new[] { 0d }, 1.2);
+
+        Assert.Equal(oneRelease.PressuresKPa[0], splitRelease.PressuresKPa[0], precision: 10);
+    }
+
+    [Fact]
     public void VeryLargeFiniteElapsedIntervalReachesCylinderTargetsWithoutTimeStepping()
     {
         var model = new TrainBrakeCylinderModel();
