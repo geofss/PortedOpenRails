@@ -8,7 +8,7 @@ This checklist is for validating the browser route-import pipeline against a rea
 - [x] Record route/package name, source, permission basis (Demo Model 1 / Scottish Capital Express / SCE; published release and permission documented)
 - [x] Verify published package integrity and record SHA-256, archive CRC, route/activity file inventory (see package audit)
 - [x] Inspect route/activity metadata and confirm route file, TDB, activity, WORLD tiles and rolling-stock package families are present (see package audit).
-- [ ] Include the required attribution from [Demo Model 1 attribution and permission](DEMO_MODEL_1_ATTRIBUTION.md) wherever the package is included or distributed.
+- [x] Include the required attribution from [Demo Model 1 attribution and permission](DEMO_MODEL_1_ATTRIBUTION.md) in project documentation, package audit, and published package provenance.
 - [ ] Import the route ZIP through the browser's user-file picker.
 - [ ] Record import warnings, rejected entries, size-limit outcomes, and package provenance.
 - [ ] Select the route's parsed `.trk` metadata and confirm the UI reports the expected route identity.
