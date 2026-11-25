@@ -55,7 +55,8 @@ public sealed class TrainPneumaticBrakeSystem
                 value < 0 || value > TrainBrakeCylinderModel.MaximumCylinderPressureKPa) ||
             (distributorState is not null && (distributorState.Modes.Count != carCount ||
                 distributorState.AuxiliaryReservoirPressuresKPa.Count != carCount ||
-                distributorState.ControlPressuresKPa.Count != carCount)))
+                distributorState.ControlPressuresKPa.Count != carCount ||
+                distributorState.LastPipePressuresKPa.Count != carCount)))
             throw new ArgumentException("Pneumatic snapshot pressures must be valid and match the consist size.");
     }
 
@@ -66,7 +67,7 @@ public sealed class TrainPneumaticBrakeSystem
         CylinderState = new TrainBrakeCylinderState(cylinderState.PressuresKPa);
         DistributorState = distributorState is null
             ? distributorModel.CreateInitialState(PipeState.PressuresKPa.Count)
-            : new TrainBrakeDistributorState(distributorState.AuxiliaryReservoirPressuresKPa, distributorState.Modes, distributorState.ControlPressuresKPa);
+            : new TrainBrakeDistributorState(distributorState.AuxiliaryReservoirPressuresKPa, distributorState.Modes, distributorState.ControlPressuresKPa, distributorState.LastPipePressuresKPa);
     }
 
     public void Reset()
