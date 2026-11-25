@@ -99,14 +99,24 @@ public sealed class TrackNetworkRouteBuilder
             }
             isFirstJunction = false;
 
-            if (!preferredSelectedAtThisJunction && candidates.Length > 1 &&
+            var geometryCannotDisambiguate = candidates.Length > 1 &&
+                !double.IsFinite(candidates[0].Gap) &&
+                !double.IsFinite(candidates[1].Gap);
+            var geometryIsTied = candidates.Length > 1 &&
                 double.IsFinite(candidates[0].Gap) &&
-                Math.Abs(candidates[1].Gap - candidates[0].Gap) <= GeometryTieToleranceMeters)
+                double.IsFinite(candidates[1].Gap) &&
+                Math.Abs(candidates[1].Gap - candidates[0].Gap) <= GeometryTieToleranceMeters;
+
+            if (!preferredSelectedAtThisJunction && (geometryCannotDisambiguate || geometryIsTied))
             {
+                var reason = geometryCannotDisambiguate
+                    ? "endpoint geometry is unavailable"
+                    : "endpoint geometry is equally close";
                 diagnostics.Add(
                     $"Route traversal stopped at junction node {currentNode}: " +
                     $"continuation is ambiguous between vector nodes " +
-                    $"{candidates[0].Path.TrackNodeIndex} and {candidates[1].Path.TrackNodeIndex}.");
+                    $"{candidates[0].Path.TrackNodeIndex} and {candidates[1].Path.TrackNodeIndex} " +
+                    $"because {reason}.");
                 break;
             }
 
