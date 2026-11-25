@@ -108,4 +108,34 @@ public sealed class TrackShapeRenderGeometryBuilderTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new TrackShapeRenderGeometryBuilder(1, 0));
     }
 
+
+    [Fact]
+    public void RejectsPrimitiveMatrixAndHierarchyReferencesOutsideAvailableData()
+    {
+        var vertices = new[]
+        {
+            new TrackShapeMeshVertex(Vector3.Zero, Vector3.UnitY, Vector2.Zero, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitX, Vector3.UnitY, Vector2.Zero, 0, 0, 0),
+            new TrackShapeMeshVertex(Vector3.UnitY, Vector3.UnitY, Vector2.Zero, 0, 0, 0)
+        };
+        var matrix = new TrackShapeMatrix("root", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0);
+
+        TrackShapePlacement CreatePlacement(int matrixIndex, int[] hierarchy)
+        {
+            var primitive = new TrackShapePrimitiveMesh(0, matrixIndex, 0, 0,
+                hierarchy, new[] { 0, 1, 2 }, "Solid", null, 0, 0, 1, false, 0);
+            var subObject = new TrackShapeSubObjectMesh(vertices, Array.Empty<int>(), new[] { primitive });
+            var mesh = new TrackShapeMesh(0, 0, new[] { matrix },
+                new[] { new TrackShapeLodMesh(1000, hierarchy, new[] { subObject }) });
+            var asset = new TrackShapeAssetMesh(4, "test.s", "GLOBAL/SHAPES/test.s", mesh);
+            return new TrackShapePlacement(1, 2, 4, new TrackWorldPosition(0, 0, 0),
+                0, asset, Matrix4x4.Identity);
+        }
+
+        var builder = new TrackShapeRenderGeometryBuilder();
+        Assert.Throws<InvalidDataException>(() =>
+            builder.Build(new[] { CreatePlacement(2, new[] { -1 }) }));
+        Assert.Throws<InvalidDataException>(() =>
+            builder.Build(new[] { CreatePlacement(0, Array.Empty<int>()) }));
+    }
 }
