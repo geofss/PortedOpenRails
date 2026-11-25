@@ -13,6 +13,10 @@ This checklist is for validating the browser route-import pipeline against a rea
 - [ ] Record import warnings, rejected entries, size-limit outcomes, and package provenance.
 - [ ] Select the route's parsed `.trk` metadata and confirm the UI reports the expected route identity.
 
+## Import size compatibility
+
+The published Demo Model 1 archive is 272,422,379 bytes, which exceeds the previous 256 MiB browser upload cap. The browser ZIP loader default was raised to 300 MiB so the authorized archive is not rejected solely by its compressed size. This still requires validation on supported devices: copying the ZIP into WebAssembly memory and indexing/decompressing it can be memory-intensive, and the virtual ZIP store retains separate uncompressed-entry limits.
+
 ## Parsing and virtual-content checks
 
 - [ ] Confirm route/global metadata files resolve through virtual content paths (case-insensitive where intended).
