@@ -32,7 +32,7 @@
             <option value="high">High · maximum preview detail</option>
         </select>
         <button type="button" class="secondary" @onclick="ResetQuality">Reset to High</button>
-        <span class="hint">Preset changes render resolution, terrain tile count, track sampling, and geometry budgets. This is a preview setting, not a browser performance guarantee.</span>
+        <span class="hint">Preset changes render resolution, the route-wide terrain vertex budget, track sampling, and geometry budgets. This is a preview setting, not a browser performance guarantee.</span>
         @if (!string.IsNullOrWhiteSpace(qualityStorageWarning))
         {
             <span class="hint">@qualityStorageWarning</span>
@@ -271,12 +271,24 @@
                 var selectedTerrainVertices = 0;
                 var selectedTerrainPatches = 0;
                 var selectedTerrainTileIds = new HashSet<(int TileX, int TileZ)>();
+                var terrainCandidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch)>();
+                var maximumPatchCount = Route.TerrainMeshes.Meshes
+                    .Select(loaded => loaded.LodMeshes.FirstOrDefault()?.Patches.Count ?? 0)
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                // Round-robin patch selection gives every discovered tile a chance to
+                // contribute before any one tile consumes the route-wide vertex budget.
+                for (var patchIndex = 0; patchIndex < maximumPatchCount; patchIndex++)
                 foreach (var loaded in Route.TerrainMeshes.Meshes)
-                foreach (var lod in loaded.LodMeshes.Take(1))
-                foreach (var patch in lod.Patches)
                 {
-                    // Select across the complete discovered route instead of an arbitrary
-                    // first-N tile cutoff. Keep the preview bounded for mobile GPUs.
+                    var lod = loaded.LodMeshes.FirstOrDefault();
+                    if (lod is not null && patchIndex < lod.Patches.Count)
+                        terrainCandidates.Add((loaded, lod.Patches[patchIndex]));
+                }
+
+                foreach (var (loaded, patch) in terrainCandidates)
+                {
                     if (selectedTerrainVertices + patch.Vertices.Count > TerrainVertexLimit)
                         continue;
                     var tileXOffset = loaded.Content.Reference.TileX * 2048f;
