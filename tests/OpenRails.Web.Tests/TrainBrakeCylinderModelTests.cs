@@ -82,4 +82,20 @@ public sealed class TrainBrakeCylinderModelTests
         Assert.Throws<ArgumentException>(() => model.Advance(
             new TrainBrakeCylinderState(new[] { -1d }), new[] { 0d }, 0.1));
     }
+    [Fact]
+    public void VeryLargeFiniteElapsedIntervalRemainsBoundedAndReachesCylinderTargets()
+    {
+        var model = new TrainBrakeCylinderModel();
+        var initial = model.CreateInitialState(2);
+
+        var applied = model.Advance(initial, new[] { 100d, 50d }, 1e300);
+        var released = model.Advance(applied, new[] { 0d, 0d }, 1e300);
+
+        Assert.Equal(TrainBrakeCylinderModel.MaximumCylinderPressureKPa, applied.PressuresKPa[0]);
+        Assert.Equal(TrainBrakeCylinderModel.MaximumCylinderPressureKPa * 0.5, applied.PressuresKPa[1]);
+        Assert.Equal(0, released.PressuresKPa[0]);
+        Assert.Equal(0, released.PressuresKPa[1]);
+        Assert.Equal(0, initial.PressuresKPa[0]);
+    }
+
 }
