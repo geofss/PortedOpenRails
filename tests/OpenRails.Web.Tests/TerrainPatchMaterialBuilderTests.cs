@@ -10,8 +10,7 @@ public sealed class TerrainPatchMaterialBuilderTests
     {
         var terrain = CreateTerrain(
             new TerrainTextureSlot("grass.ace", 0, 0),
-            new TerrainTextureSlot("rock.ace", 0, 0),
-            overlayScale: 64);
+            new TerrainTextureSlot("rock.ace", 0, 0));
 
         var material = new TerrainPatchMaterialBuilder().Build(terrain, 0, usesCustomIndexBuffer: false);
 
