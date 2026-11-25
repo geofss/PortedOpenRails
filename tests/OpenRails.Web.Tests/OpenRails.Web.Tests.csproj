@@ -35,6 +35,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakePipeModel.cs" Link="Simulation/TrainBrakePipeModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakeCylinderModel.cs" Link="Simulation/TrainBrakeCylinderModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakeDistributorModel.cs" Link="Simulation/TrainBrakeDistributorModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/RollingStockBrakeProfile.cs" Link="Simulation/RollingStockBrakeProfile.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainPneumaticBrakeSystem.cs" Link="Simulation/TrainPneumaticBrakeSystem.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerForceDistributor.cs" Link="Simulation/TrainConsistCouplerForceDistributor.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerForceLimit.cs" Link="Simulation/TrainCouplerForceLimit.cs" />
