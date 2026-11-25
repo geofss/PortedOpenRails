@@ -135,7 +135,8 @@ public sealed class TrainConsistSimulationSetupBuilder
         var session = new TrainConsistSimulationSession(
             initialState,
             traction,
-            routeLengthMeters: routeLengthMeters);
+            routeLengthMeters: routeLengthMeters,
+            brakeProfilesByCar: brakeProfiles);
 
         return new TrainConsistSimulationSetup(
             session,
