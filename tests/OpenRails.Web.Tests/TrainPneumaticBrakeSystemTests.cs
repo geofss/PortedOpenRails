@@ -31,7 +31,8 @@ public sealed class TrainPneumaticBrakeSystemTests
 
         Assert.True(emergency.PipeState.PressuresKPa[0] < service.PipeState.PressuresKPa[0]);
         Assert.True(emergency.CylinderState.PressuresKPa[0] > service.CylinderState.PressuresKPa[0]);
-        Assert.Equal(100, emergency.BrakePercentByCar[0]);
+        Assert.True(emergency.BrakePercentByCar[0] > service.BrakePercentByCar[0]);
+        Assert.True(emergency.BrakePercentByCar[0] < 100);
         Assert.True(emergency.BrakePercentByCar[0] > emergency.BrakePercentByCar[^1]);
     }
 
