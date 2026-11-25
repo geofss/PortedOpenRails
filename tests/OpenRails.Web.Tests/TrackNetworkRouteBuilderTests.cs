@@ -63,6 +63,7 @@ public sealed class TrackNetworkRouteBuilderTests
         var route = new TrackNetworkRouteBuilder().Build(network, 10);
 
         Assert.Single(route.Segments);
+        Assert.Equal(2, route.PendingJunctionNodeIndex);
         Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("ambiguous"));
     }
 
@@ -82,6 +83,33 @@ public sealed class TrackNetworkRouteBuilderTests
 
         Assert.Equal(new uint[] { 10, 30 },
             route.Segments.Select(segment => segment.Path.TrackNodeIndex));
+        Assert.Empty(route.Diagnostics);
+    }
+
+    [Fact]
+    public void FollowsExplicitBranchChoicesAtMultipleJunctions()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var firstUnselected = CreatePath(20, new[] { 2, 3 }, 100, 200);
+        var selectedFirst = CreatePath(30, new[] { 2, 3 }, 100, 200);
+        var secondUnselected = CreatePath(40, new[] { 3, 4 }, 200, 300);
+        var selectedSecond = CreatePath(50, new[] { 3, 5 }, 200, 300);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, firstUnselected, selectedFirst, secondUnselected, selectedSecond },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(
+            network, 10,
+            preferredNextTrackNodeIndices: new Dictionary<int, uint>
+            {
+                [2] = 30,
+                [3] = 50
+            });
+
+        Assert.Equal(new uint[] { 10, 30, 50 },
+            route.Segments.Select(segment => segment.Path.TrackNodeIndex));
+        Assert.Null(route.PendingJunctionNodeIndex);
         Assert.Empty(route.Diagnostics);
     }
 
