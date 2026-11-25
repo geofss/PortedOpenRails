@@ -120,4 +120,5 @@ public sealed record TrainConsistSimulationSnapshot(
     TrainConsistMotionState MotionState,
     FixedStepSchedulerSnapshot ClockState,
     TrainBrakePipeState? BrakePipeState = null,
-    TrainBrakeCylinderState? BrakeCylinderState = null);
+    TrainBrakeCylinderState? BrakeCylinderState = null,
+    TrainBrakeDistributorState? BrakeDistributorState = null);
