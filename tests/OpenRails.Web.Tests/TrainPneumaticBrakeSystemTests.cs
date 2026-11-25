@@ -124,7 +124,7 @@ public sealed class TrainPneumaticBrakeSystemTests
     public void DistributorReleaseExhaustsCylinderAndRechargesAuxiliaryReservoir()
     {
         var model = new TrainBrakeDistributorModel();
-        var state = new TrainBrakeDistributorState(new[] { 300d }, new[] { TrainBrakeDistributorMode.Apply });
+        var state = new TrainBrakeDistributorState(new[] { 300d }, new[] { TrainBrakeDistributorMode.Apply }, new[] { 300d });
         var cylinders = new TrainBrakeCylinderState(new[] { 180d });
 
         var result = model.Advance(state,
@@ -148,6 +148,7 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.Equal(brakes.DistributorState.AuxiliaryReservoirPressuresKPa,
             restored!.AuxiliaryReservoirPressuresKPa);
         Assert.Equal(brakes.DistributorState.Modes, restored.Modes);
+        Assert.Equal(brakes.DistributorState.ControlPressuresKPa, restored.ControlPressuresKPa);
     }
 
 }
