@@ -141,6 +141,25 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void StopsAtAmbiguousJunctionWhenOnlyOneBranchHasEndpointGeometry()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var branchWithGeometry = CreatePath(20, new[] { 2, 3 }, 100, 200);
+        var branchWithoutGeometry = CreatePathWithoutGeometry(30, new[] { 2, 4 });
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, branchWithGeometry, branchWithoutGeometry },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10);
+
+        Assert.Single(route.Segments);
+        Assert.Contains(route.Diagnostics, diagnostic =>
+            diagnostic.Contains("ambiguous") &&
+            diagnostic.Contains("geometry is unavailable for at least one branch"));
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
