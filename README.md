@@ -12,6 +12,10 @@ This repository is the experimental browser-port foundation. The first milestone
 - `docs/ROADMAP.md` — project milestones and engineering principles
 - `docs/INPUT_CONTROLS.md` — keyboard, pointer/touch, and standard-mapped gamepad reference
 
+## Upstream port strategy
+
+The project is now explicitly prioritizing reuse and browser-porting of the real Open Rails source over expanding parallel prototype implementations. See the [upstream port audit and migration sequence](docs/UPSTREAM_PORT_AUDIT.md) for the pinned upstream revision, dependency findings, and acceptance gates. This is a migration plan; upstream code integration is not yet complete.
+
 ## First build
 
 With the .NET 10 SDK installed:
