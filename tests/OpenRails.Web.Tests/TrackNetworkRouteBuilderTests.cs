@@ -123,6 +123,24 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void StopsAtAmbiguousJunctionWhenEndpointGeometryIsUnavailable()
+    {
+        var first = CreatePathWithoutGeometry(10, new[] { 1, 2 });
+        var branchA = CreatePathWithoutGeometry(20, new[] { 2, 3 });
+        var branchB = CreatePathWithoutGeometry(30, new[] { 2, 4 });
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, branchA, branchB },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10);
+
+        Assert.Single(route.Segments);
+        Assert.Contains(route.Diagnostics, diagnostic =>
+            diagnostic.Contains("ambiguous") && diagnostic.Contains("geometry is unavailable"));
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
@@ -132,6 +150,9 @@ public sealed class TrackNetworkRouteBuilderTests
 
         Assert.Throws<ArgumentException>(() => new TrackNetworkRouteBuilder().Build(network, 999));
     }
+
+    private static TrackVectorPath CreatePathWithoutGeometry(uint id, int[] nodes) =>
+        new(id, nodes, Array.Empty<TrackSectionPlacement>(), 100, endPosition: null);
 
     private static TrackVectorPath CreatePath(uint id, int[] nodes, double startX, double endX)
     {
