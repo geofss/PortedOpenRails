@@ -20,7 +20,8 @@ public sealed record TrackNetworkRouteSegment(TrackVectorPath Path, bool IsRever
 public sealed record TrackNetworkRoute(
     IReadOnlyList<TrackNetworkRouteSegment> Segments,
     IReadOnlyList<string> Diagnostics,
-    double LengthMeters);
+    double LengthMeters,
+    int? PendingJunctionNodeIndex = null);
 
 /// <summary>
 /// Follows connected vector nodes through TDB pins instead of treating each
@@ -36,7 +37,8 @@ public sealed class TrackNetworkRouteBuilder
         uint startingTrackNodeIndex,
         int maximumSegments = 100_000,
         bool startReversed = false,
-        uint? preferredNextTrackNodeIndex = null)
+        uint? preferredNextTrackNodeIndex = null,
+        IReadOnlyDictionary<int, uint>? preferredNextTrackNodeIndices = null)
     {
         ArgumentNullException.ThrowIfNull(network);
         if (maximumSegments <= 0)
@@ -60,6 +62,7 @@ public sealed class TrackNetworkRouteBuilder
         var currentNode = segments[0].ExitNodeIndex;
         var currentPosition = GetEndPosition(first, startReversed);
         var isFirstJunction = true;
+        int? pendingJunctionNodeIndex = null;
 
         while (segments.Count < maximumSegments)
         {
@@ -84,18 +87,35 @@ public sealed class TrackNetworkRouteBuilder
                 break;
 
             var preferredSelectedAtThisJunction = false;
-            if (isFirstJunction && preferredNextTrackNodeIndex is { } preferredNode)
+            uint? preferredNodeAtJunction = null;
+            if (preferredNextTrackNodeIndices is not null &&
+                preferredNextTrackNodeIndices.TryGetValue(currentNode, out var selectedNode))
+            {
+                preferredNodeAtJunction = selectedNode;
+            }
+            else if (isFirstJunction)
+            {
+                preferredNodeAtJunction = preferredNextTrackNodeIndex;
+            }
+
+            if (preferredNodeAtJunction is { } preferredNode)
             {
                 var preferredIndex = Array.FindIndex(candidates,
                     candidate => candidate.Path.TrackNodeIndex == preferredNode);
-                if (preferredIndex >= 0)
+                if (preferredIndex < 0)
                 {
-                    var preferred = candidates[preferredIndex];
-                    candidates = new[] { preferred }
-                        .Concat(candidates.Where((_, index) => index != preferredIndex))
-                        .ToArray();
-                    preferredSelectedAtThisJunction = true;
+                    pendingJunctionNodeIndex = currentNode;
+                    diagnostics.Add(
+                        $"Route traversal stopped at junction node {currentNode}: selected vector " +
+                        $"{preferredNode} is not a connected, unvisited continuation.");
+                    break;
                 }
+
+                var preferred = candidates[preferredIndex];
+                candidates = new[] { preferred }
+                    .Concat(candidates.Where((_, index) => index != preferredIndex))
+                    .ToArray();
+                preferredSelectedAtThisJunction = true;
             }
             isFirstJunction = false;
 
@@ -109,6 +129,7 @@ public sealed class TrackNetworkRouteBuilder
 
             if (!preferredSelectedAtThisJunction && (geometryCannotDisambiguate || geometryIsTied))
             {
+                pendingJunctionNodeIndex = currentNode;
                 var reason = geometryCannotDisambiguate
                     ? "endpoint geometry is unavailable for at least one branch"
                     : "endpoint geometry is equally close";
@@ -143,7 +164,8 @@ public sealed class TrackNetworkRouteBuilder
         return new TrackNetworkRoute(
             Array.AsReadOnly(segments.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()),
-            length);
+            length,
+            pendingJunctionNodeIndex);
     }
 
     private static TrackWorldPosition? GetStartPosition(TrackVectorPath path, bool reversed) =>
