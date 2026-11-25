@@ -30,8 +30,10 @@ public sealed record RollingStockBrakeProfile(
         // approximation. Do not silently treat vacuum, EP/ECP, manual, SME,
         // or unknown declarations as equivalent.
         var supportedSystem = system is "air_single_pipe" or "air_twin_pipe";
-        var supportedEquipment = equipment is "" or "distributor" or "triple_valve" or
-            "graduated_release_triple_valve" or "distributing_valve";
+        // Equipment-less declarations are ambiguous, and the browser model
+        // does not yet implement equipment-specific valve behaviour. Only
+        // explicit, verified basic air-distributor declarations opt in.
+        var supportedEquipment = equipment is "distributor" or "triple_valve";
         var support = supportedSystem && supportedEquipment
             ? RollingStockBrakeSupport.PrototypeAirDistributor
             : RollingStockBrakeSupport.UnsupportedOrUnverified;
