@@ -36,6 +36,7 @@ public sealed class RouteLoader
         var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
         var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
         var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
+        var validation = RouteValidationReport.Build(network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery);
 
         return new RouteLoadResult(
             metadata,
@@ -52,7 +53,8 @@ public sealed class RouteLoader
             terrainMeshes,
             terrainTextureAssets,
             terrainTextures,
-            worldScenery);
+            worldScenery,
+            validation);
     }
 }
 
@@ -71,7 +73,8 @@ public sealed record RouteLoadResult(
     RouteTerrainMeshLoadResult TerrainMeshes,
     TerrainTextureAssetDiscovery TerrainTextureAssets,
     TerrainTextureAssetLoadResult TerrainTextures,
-    RouteWorldSceneryLoadResult WorldScenery);
+    RouteWorldSceneryLoadResult WorldScenery,
+    RouteValidationReport Validation);
 
 
 /// <summary>Loads route scenery chunks independently so malformed tiles do not abort the route.</summary>
