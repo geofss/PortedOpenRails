@@ -18,11 +18,11 @@ The following files under `src/OpenRails.Web/Parsing` have same-named source fil
 A byte-for-byte comparison at the audited revision found:
 
 - `TokenID.cs`: exact match.
-- `STFReader.cs`: not an exact match; the browser copy is substantially shorter (about 85 KB versus about 178 KB upstream).
+- `STFReader.cs`: not byte-for-byte identical. The upstream file contains both the legacy reader (`#if !NEW_READER`, lines 34–2026) and the newer reader (`#if NEW_READER`, lines 2030–3978). The browser copy is about 85 KB and is based on the newer-reader branch, not a wholesale truncation of the upstream parser. It also contains browser-specific include-resolution and `System.Numerics` adaptations. The next comparison must therefore target the upstream NEW_READER branch, not the full dual-implementation file.
 - `SBR.cs`: not an exact match.
 - `Interpolator.cs` and `ShapeFile.cs`: same-named upstream sources exist; exact content equivalence has not yet been established.
 
-This means the repository already contains upstream-derived MSTS parser code. The immediate task is not to blindly import a second copy. It is to identify the exact upstream baseline for each existing file, review local changes and omissions, and restore upstream behaviour where browser compatibility permits.
+This means the repository already contains upstream-derived MSTS parser code. In particular, the shorter STFReader is an intentional selection of the newer upstream implementation plus browser adaptations; its file-size difference alone is not evidence of missing parser features. The immediate task is to compare that selected implementation against the exact upstream NEW_READER branch, review local adaptations and omissions, and restore upstream behaviour where browser compatibility permits.
 
 ## Browser-specific layer
 
