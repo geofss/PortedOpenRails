@@ -50,9 +50,15 @@ public sealed record RouteValidationReport(
 
         var issues = new List<RouteValidationIssue>();
         var length = network.TotalTrackLengthMeters;
-        var usable = network.VectorPathCount > 0 && double.IsFinite(length) && length > 0;
-        if (!usable)
+        var hasValidPathLength = network.VectorPathCount > 0 && double.IsFinite(length) && length > 0;
+        var criticalTopologyDiagnostics = network.Diagnostics.Count(diagnostic =>
+            diagnostic.Contains("contains no vector sections", StringComparison.OrdinalIgnoreCase) ||
+            diagnostic.Contains("distinct connected nodes; expected 2", StringComparison.OrdinalIgnoreCase));
+        var usable = hasValidPathLength && criticalTopologyDiagnostics == 0;
+        if (!hasValidPathLength)
             issues.Add(new("Track network", "No usable vector track paths or finite positive total track length were produced."));
+        if (criticalTopologyDiagnostics > 0)
+            issues.Add(new("Track network", $"{criticalTopologyDiagnostics} vector track path(s) have critical topology problems (empty geometry or a pin-link count other than two)."));
         foreach (var diagnostic in network.Diagnostics)
             issues.Add(new("Track network", diagnostic));
 
