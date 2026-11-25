@@ -117,7 +117,6 @@ public sealed class TrainBrakeDistributorModel
             var pipePressure = pipe.PressuresKPa[i];
             var reservoir = state.AuxiliaryReservoirPressuresKPa[i];
             var cylinder = cylinders.PressuresKPa[i];
-            var previousPipe = i == 0 ? TrainBrakePipeModel.NormalPressureKPa : pipe.PressuresKPa[i - 1];
             var differential = reservoir - pipePressure;
             var mode = differential > MinimumApplicationDifferentialKPa
                 ? TrainBrakeDistributorMode.Apply
