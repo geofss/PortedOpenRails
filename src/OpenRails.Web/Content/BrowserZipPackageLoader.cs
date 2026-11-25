@@ -9,7 +9,7 @@ namespace OpenRails.Web.Content;
 /// </summary>
 public static class BrowserZipPackageLoader
 {
-    public const long DefaultMaxArchiveBytes = 300L * 1024 * 1024;
+    public const long DefaultMaxArchiveBytes = ZipContentStore.DefaultMaxBrowserArchiveBytes;
 
     public static async Task<ZipContentStore> LoadAsync(
         IBrowserFile file,
