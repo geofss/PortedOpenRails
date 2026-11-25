@@ -271,11 +271,14 @@
                 {
                     var tileXOffset = loaded.Content.Reference.TileX * 2048f;
                     var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
-                    var materialPath = Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
-                        asset.Reference.TextureSlotIndex == 0 &&
+                    var primaryAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
                         asset.Reference.SeasonFolder is null &&
-                        string.Equals(asset.Reference.ShaderName, patch.Material?.ShaderName, StringComparison.OrdinalIgnoreCase))?.Reference.Path;
-                    var textureIndex = materialPath is not null && textureIndexes.TryGetValue(materialPath, out var foundIndex) ? foundIndex : -1;
+                        string.Equals(asset.Reference.FileName, patch.Material.PrimaryTextureFileName, StringComparison.OrdinalIgnoreCase));
+                    var overlayAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
+                        asset.Reference.SeasonFolder is null &&
+                        string.Equals(asset.Reference.FileName, patch.Material.OverlayTextureFileName, StringComparison.OrdinalIgnoreCase));
+                    var textureIndex = primaryAsset is not null && textureIndexes.TryGetValue(primaryAsset.Reference.Path, out var foundIndex) ? foundIndex : -1;
+                    var overlayTextureIndex = overlayAsset is not null && textureIndexes.TryGetValue(overlayAsset.Reference.Path, out var overlayIndex) ? overlayIndex : -1;
                     var vertices = new float[patch.Vertices.Count * 5];
                     for (var i = 0; i < patch.Vertices.Count; i++)
                     {
@@ -287,7 +290,14 @@
                         vertices[offset + 3] = vertex.TextureCoordinate.X;
                         vertices[offset + 4] = vertex.TextureCoordinate.Y;
                     }
-                    patches.Add(new { vertices, indices = patch.Indices, textureIndex });
+                    patches.Add(new
+                    {
+                        vertices,
+                        indices = patch.Indices,
+                        textureIndex,
+                        overlayTextureIndex,
+                        overlayScale = patch.Material?.OverlayScale ?? 32
+                    });
                 }
                 var trackLines = new List<float>();
                 var tessellator = new TrackGeometryTessellator();
