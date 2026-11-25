@@ -100,8 +100,8 @@ public sealed class TrackNetworkRouteBuilder
             isFirstJunction = false;
 
             var geometryCannotDisambiguate = candidates.Length > 1 &&
-                !double.IsFinite(candidates[0].Gap) &&
-                !double.IsFinite(candidates[1].Gap);
+                (!double.IsFinite(candidates[0].Gap) ||
+                 !double.IsFinite(candidates[1].Gap));
             var geometryIsTied = candidates.Length > 1 &&
                 double.IsFinite(candidates[0].Gap) &&
                 double.IsFinite(candidates[1].Gap) &&
@@ -110,7 +110,7 @@ public sealed class TrackNetworkRouteBuilder
             if (!preferredSelectedAtThisJunction && (geometryCannotDisambiguate || geometryIsTied))
             {
                 var reason = geometryCannotDisambiguate
-                    ? "endpoint geometry is unavailable"
+                    ? "endpoint geometry is unavailable for at least one branch"
                     : "endpoint geometry is equally close";
                 diagnostics.Add(
                     $"Route traversal stopped at junction node {currentNode}: " +
