@@ -7,6 +7,28 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainConsistSimulationSessionTests
 {
     [Fact]
+    public void BrakeCommandConsistScenarioRetardsTrainAcrossFixedSteps()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(20_000, 4, 0)
+        });
+        var session = new TrainConsistSimulationSession(initial,
+            new LocomotiveTractionMetadata?[] { null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        var steps = session.AdvanceWithBrakeCommands(
+            0.5, new[] { 0f }, new[] { 50d }, new[] { 20_000d },
+            resistance, new[] { 0d });
+
+        Assert.Equal(5, steps);
+        Assert.Equal(3.75, session.State.Cars[0].SpeedMetersPerSecond, 8);
+        Assert.Equal(1.875, session.State.Cars[0].DistanceMeters, 8);
+    }
+
+    [Fact]
     public void AppliesLocomotiveForceToPoweredCarAndCouplerForceToTrailer()
     {
         var locomotive = new LocomotiveTractionMetadata(
