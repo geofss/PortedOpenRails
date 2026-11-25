@@ -478,8 +478,6 @@ public sealed class BrowserTrainDrivingControllerTests
 
         var executedSteps = controller.Advance(0.25);
         var simulatedSeconds = 8d / 60d;
-        var pipeModel = new TrainBrakePipeModel();
-        var expectedPipe = pipeModel.CreateInitialState(1);
         var expectedBrakeSystem = new TrainPneumaticBrakeSystem(1);
         for (var step = 0; step < executedSteps; step++)
             expectedBrakeSystem.Advance(100, 1d / 60d);
@@ -487,7 +485,7 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(8, executedSteps);
         Assert.Equal(simulatedSeconds, controller.SimulationTimeSeconds, 10);
         Assert.Equal(0.25 - simulatedSeconds, controller.DroppedTimeSeconds, 10);
-        Assert.Equal(expectedPipe.PressuresKPa[0], controller.BrakePipeState.PressuresKPa[0], 10);
+        Assert.Equal(expectedBrakeSystem.PipeState.PressuresKPa[0], controller.BrakePipeState.PressuresKPa[0], 10);
         Assert.Equal(expectedBrakeSystem.CylinderState.PressuresKPa[0], controller.BrakeCylinderState.PressuresKPa[0], 10);
     }
 
