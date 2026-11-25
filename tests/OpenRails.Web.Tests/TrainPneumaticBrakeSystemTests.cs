@@ -228,4 +228,24 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.Equal(TrainBrakeDistributorMode.Apply, Assert.Single(distributor.Modes));
     }
 
+    [Fact]
+    public void SupportedDistributorLapsAfterReductionAndBeginsReleaseOnRecharge()
+    {
+        var brakes = new TrainPneumaticBrakeSystem(1, brakeProfilesByCar: new[]
+        {
+            new RollingStockBrakeProfile("air_single_pipe", "distributor",
+                RollingStockBrakeSupport.PrototypeAirDistributor)
+        });
+
+        brakes.Advance(100, 2);
+        var appliedCylinder = Assert.Single(brakes.CylinderState.PressuresKPa);
+        Assert.True(appliedCylinder > 0);
+        Assert.Equal(TrainBrakeDistributorMode.Lap, Assert.Single(brakes.DistributorState.Modes));
+
+        brakes.Advance(0, 0.1);
+        Assert.True(Assert.Single(brakes.PipeState.PressuresKPa) > 0);
+        Assert.True(Assert.Single(brakes.CylinderState.PressuresKPa) < appliedCylinder);
+        Assert.Equal(TrainBrakeDistributorMode.Release, Assert.Single(brakes.DistributorState.Modes));
+    }
+
 }
