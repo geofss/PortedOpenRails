@@ -46,6 +46,7 @@ internal sealed class TrainBrakeCylinderStateJsonConverter : JsonConverter<Train
 public sealed class TrainBrakeCylinderModel
 {
     public const double MaximumCylinderPressureKPa = 380;
+    private const int MaximumIntegrationSteps = 3600;
 
     private readonly double applicationTimeConstantSeconds;
     private readonly double releaseTimeConstantSeconds;
@@ -89,7 +90,10 @@ public sealed class TrainBrakeCylinderModel
         if (elapsedSeconds == 0)
             return state;
 
-        var steps = Math.Max(1, (int)Math.Ceiling(elapsedSeconds / (1d / 60d)));
+        // Bound per-call work for large elapsed intervals, matching the brake-pipe
+        // integrator. Clamp before converting to int so huge finite values cannot
+        // overflow the step count or create an effectively unbounded loop.
+        var steps = (int)Math.Clamp(Math.Ceiling(elapsedSeconds * 60), 1, MaximumIntegrationSteps);
         var stepSeconds = elapsedSeconds / steps;
         var pressures = state.PressuresKPa.ToArray();
         for (var step = 0; step < steps; step++)
