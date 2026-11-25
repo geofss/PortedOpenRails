@@ -268,16 +268,16 @@
                 }
 
                 var patches = new List<object>();
-                var terrainVerticesSent = 0;
-                var terrainPatchesSent = 0;
-                var terrainTileIdsSent = new HashSet<(int TileX, int TileZ)>();
+                var selectedTerrainVertices = 0;
+                var selectedTerrainPatches = 0;
+                var selectedTerrainTileIds = new HashSet<(int TileX, int TileZ)>();
                 foreach (var loaded in Route.TerrainMeshes.Meshes)
                 foreach (var lod in loaded.LodMeshes.Take(1))
                 foreach (var patch in lod.Patches)
                 {
                     // Select across the complete discovered route instead of an arbitrary
                     // first-N tile cutoff. Keep the preview bounded for mobile GPUs.
-                    if (terrainVerticesSent + patch.Vertices.Count > TerrainVertexLimit)
+                    if (selectedTerrainVertices + patch.Vertices.Count > TerrainVertexLimit)
                         continue;
                     var tileXOffset = loaded.Content.Reference.TileX * 2048f;
                     var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
@@ -312,9 +312,9 @@
                         overlayTextureIndex,
                         overlayScale = patch.Material?.OverlayScale ?? 32
                     });
-                    terrainVerticesSent += patch.Vertices.Count;
-                    terrainPatchesSent++;
-                    terrainTileIdsSent.Add((loaded.Content.Reference.TileX, loaded.Content.Reference.TileZ));
+                    selectedTerrainVertices += patch.Vertices.Count;
+                    selectedTerrainPatches++;
+                    selectedTerrainTileIds.Add((loaded.Content.Reference.TileX, loaded.Content.Reference.TileZ));
                 }
                 var trackLines = new List<float>();
                 var tessellator = new TrackGeometryTessellator();
@@ -477,9 +477,9 @@
                     zBias = batch.ZBias
                 }).ToArray();
                 rollingStockGeometryBatchCount = rollingStockBatches.Length;
-                terrainTilesSent = terrainTileIdsSent.Count;
-                terrainPatchesSent = terrainPatchesSent;
-                terrainVerticesSent = terrainVerticesSent;
+                terrainTilesSent = selectedTerrainTileIds.Count;
+                terrainPatchesSent = selectedTerrainPatches;
+                terrainVerticesSent = selectedTerrainVertices;
                 await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
                     null, shapeBatches, shapeTextures, rollingStockBatches);
                 hasDrawn = true;
