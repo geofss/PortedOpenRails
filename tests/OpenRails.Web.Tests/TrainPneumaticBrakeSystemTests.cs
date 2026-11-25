@@ -87,4 +87,67 @@ public sealed class TrainPneumaticBrakeSystemTests
         Assert.Equal(originalPipe, brakes.PipeState.PressuresKPa);
         Assert.Equal(originalCylinders, brakes.CylinderState.PressuresKPa);
     }
+
+    [Fact]
+    public void DistributorTransfersAirFromAuxiliaryReservoirIntoCylinderDuringApplication()
+    {
+        var model = new TrainBrakeDistributorModel();
+        var initial = model.CreateInitialState(2);
+        var pipe = new TrainBrakePipeState(new[] { 350d, 350d });
+        var cylinders = new TrainBrakeCylinderState(new[] { 0d, 0d });
+
+        var result = model.Advance(initial, pipe, cylinders, 0.5);
+
+        Assert.All(result.Distributor.Modes, mode => Assert.Equal(TrainBrakeDistributorMode.Apply, mode));
+        Assert.All(result.Distributor.AuxiliaryReservoirPressuresKPa,
+            pressure => Assert.InRange(pressure, 0, TrainBrakePipeModel.NormalPressureKPa));
+        Assert.All(result.Cylinders.PressuresKPa, pressure => Assert.True(pressure > 0));
+        Assert.True(result.Distributor.AuxiliaryReservoirPressuresKPa[0] < TrainBrakePipeModel.NormalPressureKPa);
+    }
+
+    [Fact]
+    public void DistributorLapHoldsCylinderAndReservoirPressure()
+    {
+        var model = new TrainBrakeDistributorModel();
+        var state = new TrainBrakeDistributorState(new[] { 500d }, new[] { TrainBrakeDistributorMode.Apply });
+        var cylinders = new TrainBrakeCylinderState(new[] { 120d });
+
+        var result = model.Advance(state,
+            new TrainBrakePipeState(new[] { 495d }), cylinders, 1);
+
+        Assert.Equal(TrainBrakeDistributorMode.Lap, Assert.Single(result.Distributor.Modes));
+        Assert.Equal(500, Assert.Single(result.Distributor.AuxiliaryReservoirPressuresKPa));
+        Assert.Equal(120, Assert.Single(result.Cylinders.PressuresKPa));
+    }
+
+    [Fact]
+    public void DistributorReleaseExhaustsCylinderAndRechargesAuxiliaryReservoir()
+    {
+        var model = new TrainBrakeDistributorModel();
+        var state = new TrainBrakeDistributorState(new[] { 300d }, new[] { TrainBrakeDistributorMode.Apply });
+        var cylinders = new TrainBrakeCylinderState(new[] { 180d });
+
+        var result = model.Advance(state,
+            new TrainBrakePipeState(new[] { 500d }), cylinders, 1);
+
+        Assert.Equal(TrainBrakeDistributorMode.Release, Assert.Single(result.Distributor.Modes));
+        Assert.True(Assert.Single(result.Cylinders.PressuresKPa) < 180);
+        Assert.True(Assert.Single(result.Distributor.AuxiliaryReservoirPressuresKPa) > 300);
+    }
+
+    [Fact]
+    public void PneumaticDistributorStateSurvivesJsonSnapshotRoundTrip()
+    {
+        var brakes = new TrainPneumaticBrakeSystem(2);
+        brakes.Advance(100, 0.5, emergency: true);
+        var options = new System.Text.Json.JsonSerializerOptions();
+        var serialized = System.Text.Json.JsonSerializer.Serialize(brakes.DistributorState, options);
+        var restored = System.Text.Json.JsonSerializer.Deserialize<TrainBrakeDistributorState>(serialized, options);
+
+        Assert.NotNull(restored);
+        Assert.Equal(brakes.DistributorState.AuxiliaryReservoirPressuresKPa,
+            restored!.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(brakes.DistributorState.Modes, restored.Modes);
+    }
+
 }
