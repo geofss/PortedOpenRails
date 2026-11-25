@@ -103,6 +103,26 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void ExplicitFirstBranchChoiceDoesNotSuppressLaterAmbiguityChecks()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var selectedFirstBranch = CreatePath(30, new[] { 2, 3 }, 100, 200);
+        var laterBranchA = CreatePath(40, new[] { 3, 4 }, 200, 300);
+        var laterBranchB = CreatePath(50, new[] { 3, 5 }, 200, 300);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, selectedFirstBranch, laterBranchA, laterBranchB },
+            Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(
+            network, 10, preferredNextTrackNodeIndex: 30);
+
+        Assert.Equal(new uint[] { 10, 30 },
+            route.Segments.Select(segment => segment.Path.TrackNodeIndex));
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("ambiguous"));
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
