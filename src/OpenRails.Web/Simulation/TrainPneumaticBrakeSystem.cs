@@ -1,7 +1,7 @@
 namespace OpenRails.Web.Simulation;
 
 /// <summary>
-/// Couples brake-pipe propagation to per-vehicle brake-cylinder response.
+/// Couples brake-pipe propagation to per-vehicle auxiliary reservoirs, distributors, and brake cylinders.
 /// The state advances only when the owning fixed-step simulation accepts a tick.
 /// </summary>
 public sealed class TrainPneumaticBrakeSystem
