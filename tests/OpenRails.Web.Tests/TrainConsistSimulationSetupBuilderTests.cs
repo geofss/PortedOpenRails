@@ -166,6 +166,25 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         Assert.Contains(setup.Diagnostics, message => message.Contains("not modelled"));
     }
 
+    [Theory]
+    [InlineData("air_single_pipe", "", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("air_single_pipe", "graduated_release_triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("air_single_pipe", "distributing_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("air_twin_pipe", "distributor", RollingStockBrakeSupport.PrototypeAirDistributor)]
+    [InlineData("air_single_pipe", "triple_valve", RollingStockBrakeSupport.PrototypeAirDistributor)]
+    [InlineData("vacuum_single_pipe", "distributor", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("ep_single_pipe", "distributor", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("manual_braking", "distributor", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("sme", "distributor", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    [InlineData("air_single_pipe", "unknown_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
+    public void BrakeProfileClassificationRequiresExplicitSupportedEquipment(
+        string systemType, string equipmentType, RollingStockBrakeSupport expected)
+    {
+        var metadata = new RollingStockMetadata("Car", "Freight", 20_000, 3, 4, 15, 4, 8,
+            systemType, equipmentType, 50_000, "car.wag");
+        Assert.Equal(expected, RollingStockBrakeProfile.FromMetadata(metadata).Support);
+    }
+
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, float mass, float length, float brake,
         LocomotiveTractionMetadata? traction, float? couplerStrength = null,
