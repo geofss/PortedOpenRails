@@ -8,6 +8,7 @@ public sealed class TrainPneumaticBrakeSystem
 {
     private readonly TrainBrakePipeModel pipeModel;
     private readonly TrainBrakeDistributorModel distributorModel;
+    private readonly TrainBrakeCylinderModel cylinderModel;
 
     public TrainBrakePipeState PipeState { get; private set; }
     public TrainBrakeCylinderState CylinderState { get; private set; }
@@ -21,9 +22,10 @@ public sealed class TrainPneumaticBrakeSystem
     {
         this.pipeModel = pipeModel ?? new TrainBrakePipeModel();
         this.distributorModel = distributorModel ?? new TrainBrakeDistributorModel();
+        this.cylinderModel = cylinderModel ?? new TrainBrakeCylinderModel();
         PipeState = this.pipeModel.CreateInitialState(carCount);
         DistributorState = this.distributorModel.CreateInitialState(carCount);
-        CylinderState = (cylinderModel ?? new TrainBrakeCylinderModel()).CreateInitialState(carCount);
+        CylinderState = this.cylinderModel.CreateInitialState(carCount);
     }
 
     public IReadOnlyList<double> BrakePercentByCar =>
