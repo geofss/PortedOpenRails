@@ -9,6 +9,7 @@ public sealed record TrainConsistSimulationSetup(
     IReadOnlyList<TrainCarResistanceParameters> ResistanceParametersByCar,
     IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
+    IReadOnlyList<RollingStockBrakeProfile> BrakeProfilesByCar,
     IReadOnlyList<string> Diagnostics);
 
 /// <summary>
@@ -55,6 +56,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         var brakeRatings = new List<double>(cars.Length);
         var resistanceParameters = new List<TrainCarResistanceParameters>(cars.Length);
         var poweredCars = new List<bool>(cars.Length);
+        var brakeProfiles = new List<RollingStockBrakeProfile>(cars.Length);
         var diagnostics = new List<string>();
         var cursor = startDistanceMeters;
 
@@ -79,6 +81,11 @@ public sealed class TrainConsistSimulationSetupBuilder
 
             if (car.IsEngine && asset?.TractionMetadata is null)
                 diagnostics.Add($"{car.Name}: locomotive traction metadata is unavailable; this vehicle will not generate motive force.");
+
+            var brakeProfile = RollingStockBrakeProfile.FromMetadata(metadata);
+            brakeProfiles.Add(brakeProfile);
+            if (brakeProfile.Support == RollingStockBrakeSupport.UnsupportedOrUnverified)
+                diagnostics.Add($"{car.Name}: declared brake system '{brakeProfile.DeclaredSystemType ?? "unspecified"}' / equipment '{brakeProfile.DeclaredEquipmentType ?? "unspecified"}' is not modelled by the browser pneumatic prototype; its response remains approximate.");
 
             var maximumBrakeForce = metadata?.MaxBrakeForceN ?? 0;
             if (!float.IsFinite(maximumBrakeForce) || maximumBrakeForce <= 0)
@@ -137,6 +144,7 @@ public sealed class TrainConsistSimulationSetupBuilder
             Array.AsReadOnly(resistanceParameters.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(couplerLimits.ToArray()),
+            Array.AsReadOnly(brakeProfiles.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
     }
 }
