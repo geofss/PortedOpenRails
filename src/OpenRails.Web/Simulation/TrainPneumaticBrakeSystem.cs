@@ -24,8 +24,12 @@ public sealed class TrainPneumaticBrakeSystem
     {
         if (brakeProfilesByCar is not null && brakeProfilesByCar.Count != carCount)
             throw new ArgumentException("Brake profiles must match the pneumatic consist size.", nameof(brakeProfilesByCar));
+
+        // When metadata is supplied, only an explicitly classified prototype
+        // air profile may use this air-distributor approximation. Missing
+        // metadata is not evidence that the vehicle has an air brake system.
         distributorEnabledByCar = brakeProfilesByCar?.Select(profile =>
-            profile.Support != RollingStockBrakeSupport.UnsupportedOrUnverified).ToArray();
+            profile.Support == RollingStockBrakeSupport.PrototypeAirDistributor).ToArray();
         this.pipeModel = pipeModel ?? new TrainBrakePipeModel();
         this.distributorModel = distributorModel ?? new TrainBrakeDistributorModel();
         this.cylinderModel = cylinderModel ?? new TrainBrakeCylinderModel();
