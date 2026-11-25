@@ -1,6 +1,6 @@
 # Milestone 2F — Route track network and terrain data pipeline
 
-**Status:** Initial browser-safe route data pipeline implemented; fixture-validated in CI. Real-route validation and rendering remain pending.
+**Status:** Browser-safe route data pipeline and structural validation report implemented. Synthetic-fixture coverage is present; real Demo Model 1 validation and full browser rendering remain pending.
 
 ## What is implemented
 
@@ -20,13 +20,13 @@ The route loader now joins the original MSTS/Open Rails data layers:
 12. Load WORLD tiles on demand and resolve their static/track-object shape filenames against route and global `SHAPES` content.
 13. Convert tile-relative static and track-object positions into the global route coordinate system while preserving original orientation matrices and junction positions.
 14. Assemble a WORLD scenery tile on demand, loading its original `.s` meshes, resolving shape textures, decoding ACE textures, and isolating individual asset failures.
-14. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
-15. Resolve elevation and hidden-vertex samples across adjacent terrain tiles using the upstream TileManager coordinate conversion.
-16. Parse original terrain shader definitions, texture slots, and UV calculations from each `.t` tile.
-17. Build 17×17 terrain patch mesh data with original UV mapping, normals, alternating triangle winding, and hidden-triangle removal.
-18. Preserve original terrain material selection and locate route `TerrTex` textures, seasonal variants, and implicit `microtex.ace` overlays.
-19. Decode ACE textures into RGBA mip data or preserve raw DXT/BGR GPU payloads, including compressed SIMISA streams and one-bit alpha masks.
-20. Resolve original shape primitive image references against route `Textures` and seasonal folders.
+15. Read SIMISA terrain sample buffers, water offsets, and patch metadata through the stream-based SBR reader.
+16. Resolve elevation and hidden-vertex samples across adjacent terrain tiles using the upstream TileManager coordinate conversion.
+17. Parse original terrain shader definitions, texture slots, and UV calculations from each `.t` tile.
+18. Build 17×17 terrain patch mesh data with original UV mapping, normals, alternating triangle winding, and hidden-triangle removal.
+19. Preserve original terrain material selection and locate route `TerrTex` textures, seasonal variants, and implicit `microtex.ace` overlays.
+20. Decode ACE textures into RGBA mip data or preserve raw DXT/BGR GPU payloads, including compressed SIMISA streams and one-bit alpha masks.
+21. Resolve original shape primitive image references against route `Textures` and seasonal folders.
 
 The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, terrain tile discovery results, and a structural `RouteValidationReport` aggregating track-network diagnostics and missing/failed terrain, track-shape, and WORLD assets. The viewer displays this report with a bounded issue list. Validation currently remains fixture-based; the authorized Demo Model 1 package has not yet been run through this report in the current CI environment.
 
@@ -73,9 +73,9 @@ The tests use synthetic fixtures. They do not yet establish compatibility with e
 
 - TDB `TrItemTable` payloads such as signals, platforms, sidings, speed posts, and sound regions are not yet parsed.
 - Road database (`.rdb`) support is not included.
-- Terrain mesh generation, patch LOD selection, and terrain texture/material loading are not yet implemented.
-- Original `.s` shape structures are parsed and converted to portable mesh data, but the meshes are not yet submitted to a browser GPU renderer; ACE textures, forests, signals, and buildings are not yet rendered.
-- The route network is data and centerline geometry, not yet a fully rendered 3D route.
+- Terrain patch mesh generation and texture/material asset loading are implemented as data pipelines; browser GPU rendering, patch LOD selection, and full visual parity remain incomplete.
+- Original `.s` shape structures are parsed and converted to portable mesh data, and WORLD scenery assembly resolves meshes and texture assets. Full browser GPU submission/rendering, forests, signals, and complete building/scenery parity remain incomplete.
+- The route network, terrain patches, track-shape meshes, and WORLD scenery are loaded as browser-side data; a complete, visually faithful 3D route renderer is still pending.
 - No route asset is bundled or redistributed as part of this milestone.
 
 ## Next route-building work
