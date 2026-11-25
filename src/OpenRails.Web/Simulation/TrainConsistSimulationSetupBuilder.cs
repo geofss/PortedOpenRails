@@ -86,6 +86,8 @@ public sealed class TrainConsistSimulationSetupBuilder
             brakeProfiles.Add(brakeProfile);
             if (brakeProfile.Support == RollingStockBrakeSupport.UnsupportedOrUnverified)
                 diagnostics.Add($"{car.Name}: declared brake system '{brakeProfile.DeclaredSystemType ?? "unspecified"}' / equipment '{brakeProfile.DeclaredEquipmentType ?? "unspecified"}' is not modelled by the browser pneumatic prototype; its response remains approximate.");
+            else if (brakeProfile.Support == RollingStockBrakeSupport.Unspecified)
+                diagnostics.Add($"{car.Name}: brake-system metadata is missing; browser pneumatic braking is disabled for this vehicle rather than assuming air-brake equipment.");
 
             var maximumBrakeForce = metadata?.MaxBrakeForceN ?? 0;
             if (!float.IsFinite(maximumBrakeForce) || maximumBrakeForce <= 0)
