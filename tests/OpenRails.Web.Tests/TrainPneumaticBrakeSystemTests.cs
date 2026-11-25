@@ -39,6 +39,21 @@ public sealed class TrainPneumaticBrakeSystemTests
     }
 
     [Fact]
+    public void UnspecifiedBrakeProfileDoesNotAssumeAirDistributorPhysics()
+    {
+        var brakes = new TrainPneumaticBrakeSystem(1, brakeProfilesByCar: new[]
+        {
+            new RollingStockBrakeProfile(null, null, RollingStockBrakeSupport.Unspecified)
+        });
+
+        brakes.Advance(100, 2);
+
+        Assert.Equal(0, Assert.Single(brakes.CylinderState.PressuresKPa));
+        Assert.Equal(TrainBrakePipeModel.NormalPressureKPa,
+            Assert.Single(brakes.DistributorState.AuxiliaryReservoirPressuresKPa));
+    }
+
+    [Fact]
     public void EmergencyApplicationProducesStrongerFrontResponseThanServiceApplication()
     {
         var service = new TrainPneumaticBrakeSystem(4);
