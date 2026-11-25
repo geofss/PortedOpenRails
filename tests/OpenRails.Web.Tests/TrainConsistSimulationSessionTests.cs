@@ -79,6 +79,13 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Equal(snapshot.ClockState.SimulationTimeSeconds, session.SimulationTimeSeconds, 8);
         Assert.Equal(snapshot.BrakePipeState!.PressuresKPa, session.BrakePipeState.PressuresKPa);
         Assert.Equal(snapshot.BrakeCylinderState!.PressuresKPa, session.BrakeCylinderState.PressuresKPa);
+        Assert.Equal(snapshot.BrakeDistributorState!.AuxiliaryReservoirPressuresKPa,
+            session.BrakeDistributorState.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(snapshot.BrakeDistributorState.Modes, session.BrakeDistributorState.Modes);
+        Assert.Equal(snapshot.BrakeDistributorState.ControlPressuresKPa,
+            session.BrakeDistributorState.ControlPressuresKPa);
+        Assert.Equal(snapshot.BrakeDistributorState.LastPipePressuresKPa,
+            session.BrakeDistributorState.LastPipePressuresKPa);
         Assert.True(session.IsPaused);
     }
 
@@ -115,6 +122,13 @@ public sealed class TrainConsistSimulationSessionTests
             BrakePipeState = new TrainBrakePipeState(new[] { double.NaN })
         };
         Assert.Throws<ArgumentException>(() => session.RestoreState(invalidPneumaticSnapshot));
+        var invalidDistributorSnapshot = session.CaptureState() with
+        {
+            BrakeDistributorState = new TrainBrakeDistributorState(
+                new[] { 500d, 500d },
+                new[] { TrainBrakeDistributorMode.Lap, TrainBrakeDistributorMode.Lap })
+        };
+        Assert.Throws<ArgumentException>(() => session.RestoreState(invalidDistributorSnapshot));
         Assert.Equal(beforeMotion, session.State.Cars);
         Assert.Equal(beforeTime, session.SimulationTimeSeconds, 8);
         Assert.Equal(beforeDropped, session.DroppedTimeSeconds, 8);
