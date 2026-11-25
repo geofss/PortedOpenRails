@@ -235,9 +235,13 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
       in vec3 position; in vec2 uv; out vec2 vUv;
       void main(){ gl_Position=vec4(position,1.0); vUv=uv; }`);
     const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
-      precision highp float; in vec2 vUv; uniform sampler2D terrainTexture;
-      uniform bool hasTexture; out vec4 outColor;
-      void main(){ outColor=hasTexture ? texture(terrainTexture,vUv) : vec4(0.22,0.42,0.20,1.0); }`);
+      precision highp float; in vec2 vUv; uniform sampler2D terrainTexture; uniform sampler2D overlayTexture;
+      uniform bool hasTexture; uniform bool hasOverlay; uniform float overlayScale; out vec4 outColor;
+      void main(){
+        vec4 color=hasTexture ? texture(terrainTexture,vUv) : vec4(0.22,0.42,0.20,1.0);
+        if(hasOverlay) color.rgb *= texture(overlayTexture,vUv*overlayScale).rgb*2.0;
+        outColor=color;
+      }`);
     terrainProgram=gl.createProgram();
     gl.attachShader(terrainProgram,vertex); gl.attachShader(terrainProgram,fragment); gl.linkProgram(terrainProgram);
     if(!gl.getProgramParameter(terrainProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(terrainProgram));
@@ -299,7 +303,10 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   const p=gl.getAttribLocation(terrainProgram,"position"),uv=gl.getAttribLocation(terrainProgram,"uv");
   gl.enableVertexAttribArray(p);gl.enableVertexAttribArray(uv);
   const sampler=gl.getUniformLocation(terrainProgram,"terrainTexture");
+  const overlaySampler=gl.getUniformLocation(terrainProgram,"overlayTexture");
   const hasTexture=gl.getUniformLocation(terrainProgram,"hasTexture");
+  const hasOverlay=gl.getUniformLocation(terrainProgram,"hasOverlay");
+  const overlayScale=gl.getUniformLocation(terrainProgram,"overlayScale");
   for(const patch of all){
     const packed=new Float32Array((patch.vertices.length/5)*5);
     for(let i=0,j=0;i<patch.vertices.length;i+=5,j+=5){
@@ -312,8 +319,16 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
     const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(patch.indices),gl.STREAM_DRAW);
     const valid=patch.textureIndex>=0&&terrainTextures[patch.textureIndex];
+    const overlayValid=patch.overlayTextureIndex>=0&&terrainTextures[patch.overlayTextureIndex];
     gl.uniform1i(hasTexture,valid?1:0);
-    if(valid){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,terrainTextures[patch.textureIndex]);gl.uniform1i(sampler,0);}
+    gl.uniform1i(hasOverlay,overlayValid?1:0);
+    gl.uniform1f(overlayScale,Number.isFinite(patch.overlayScale)&&patch.overlayScale>0?patch.overlayScale:32);
+    if(valid){
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,terrainTextures[patch.textureIndex]);gl.uniform1i(sampler,0);
+    }
+    if(overlayValid){
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,terrainTextures[patch.overlayTextureIndex]);gl.uniform1i(overlaySampler,1);
+    }
     gl.drawElements(gl.TRIANGLES,patch.indices.length,gl.UNSIGNED_INT,0);
     gl.deleteBuffer(ib);
   }
