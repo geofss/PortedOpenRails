@@ -28,7 +28,12 @@ public sealed class WorldObjectPlacementBuilder
                 null,
                 0,
                 0,
-                null));
+                null,
+                item.TreeTexture,
+                item.ForestScaleRange,
+                item.ForestArea,
+                item.ForestPopulation,
+                item.ForestTreeSize));
         }
 
         foreach (var item in tile.TrackObjects)
@@ -72,4 +77,9 @@ public sealed record WorldObjectPlacement(
     uint? TrackSectionIndex,
     float Elevation,
     uint CollideFlags,
-    WorldTilePosition? JunctionWorldPosition);
+    WorldTilePosition? JunctionWorldPosition,
+    string? TreeTexture = null,
+    WorldFloatRange? ForestScaleRange = null,
+    WorldFloatPair? ForestArea = null,
+    int? ForestPopulation = null,
+    WorldFloatPair? ForestTreeSize = null);
