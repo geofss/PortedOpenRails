@@ -65,7 +65,7 @@ public sealed class RouteLoaderTests
                             Station ( "Central" )
                             PlatformMinWaitingTime ( 30 )
                             PlatformNumPassengersWaiting ( 12 )
-                            PlatformTrItemData ( "00000001" 0 )
+                            PlatformTrItemData ( "00000001" 99 )
                         )
                     )
                 )
@@ -111,7 +111,9 @@ public sealed class RouteLoaderTests
         Assert.Equal("Central", platform.Station);
         Assert.Equal((uint)30, platform.PlatformMinimumWaitingTime);
         Assert.Equal((uint)12, platform.PlatformPassengersWaiting);
-        Assert.Equal((uint)0, platform.LinkedItemId);
+        Assert.Equal((uint)99, platform.LinkedItemId);
+        Assert.Equal(1, route.Validation.TrackDatabaseDiagnosticsCount);
+        Assert.Contains(route.Validation.Issues, issue => issue.Category == "Track database" && issue.Message.Contains("links to missing track item 99", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
