@@ -119,7 +119,7 @@ public sealed class TrackDatabaseReaderTests
 
         var database = new TrackDatabaseReader().Read(store, "ROUTES/Test/ITEMS.tdb");
 
-        var crossover = Assert.IsType<TrackItem>(database.TrackItems[0]);
+        var signal = Assert.IsType<TrackItem>(database.TrackItems[0]);\n        Assert.Equal("signal", signal.Type);\n        Assert.Equal("00000001", signal.SignalFlags);\n        Assert.Equal((uint)1, signal.SignalDirection);\n        Assert.Equal(0.5f, signal.SignalData);\n        Assert.Equal("main", signal.SignalType);\n        Assert.Equal(new TrackSignalDirection(27, 1, 0, 1), Assert.Single(signal.SignalDirections!));\n\n        var crossover = Assert.IsType<TrackItem>(database.TrackItems[1]);
         Assert.Equal("crossover", crossover.Type);
         Assert.Equal((uint)27, crossover.CrossoverTrackNode);
         Assert.Equal((uint)6, crossover.CrossoverShapeId);
