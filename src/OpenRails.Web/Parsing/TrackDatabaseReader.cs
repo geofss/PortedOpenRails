@@ -10,8 +10,8 @@ namespace OpenRails.Web.Parsing;
 
 /// <summary>
 /// Reads the text-based MSTS/Open Rails track database (.tdb). The parser preserves
-/// the original TrackNode / TrVectorNode / TrJunctionNode topology and section anchors.
-/// Binary road databases and track-item payloads are deliberately outside this reader.
+/// the original TrackNode / TrVectorNode / TrJunctionNode topology, section anchors, and common TrItem records.
+/// Signal-specific control data remains a later porting step; common track-item placement data is retained.
 /// </summary>
 public sealed class TrackDatabaseReader
 {
