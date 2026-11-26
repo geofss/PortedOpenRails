@@ -92,6 +92,10 @@ public sealed record RouteValidationReport(
                 issues.Add(new("Texture", $"Missing world shape texture {missing.ImageName}: {missing.Reason}"));
             foreach (var failed in tile.Textures.Failed)
                 issues.Add(new("Texture", $"Failed world shape texture {failed.Path}: {failed.Reason}"));
+            foreach (var missing in tile.ForestTextures?.Missing ?? Array.Empty<TrackShapeTextureAssetIssue>())
+                issues.Add(new("Forest texture", $"Missing forest texture {missing.ImageName}: {missing.Reason}"));
+            foreach (var failed in tile.ForestTextures?.Failed ?? Array.Empty<TrackShapeTextureLoadIssue>())
+                issues.Add(new("Forest texture", $"Failed forest texture {failed.Path}: {failed.Reason}"));
         }
         foreach (var missing in terrainTextures.Missing)
             issues.Add(new("Texture", $"Missing terrain texture {missing.FileName} for shader {missing.ShaderName}: {missing.Reason}"));
@@ -110,9 +114,9 @@ public sealed record RouteValidationReport(
             worldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count),
             worldScenery.Loaded.Sum(tile => tile.FailedShapes.Count),
             terrainTextures.Missing.Count + trackShapeMeshes.Textures.Missing.Count +
-                worldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count),
+                worldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count + (tile.ForestTextures?.Missing.Count ?? 0)),
             terrainTextures.Failed.Count + trackShapeMeshes.Textures.Failed.Count +
-                worldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count),
+                worldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count + (tile.ForestTextures?.Failed.Count ?? 0)),
             Array.AsReadOnly(issues.ToArray()),
             trackDatabase.Diagnostics.Count,
             worldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count));
