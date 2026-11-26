@@ -63,6 +63,8 @@
         <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
         <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
         <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
+        <dt>Forest objects / generated tree billboards</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
+        <dt>Forest textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
         <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · first LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
@@ -113,6 +115,14 @@
                 @foreach (var issue in tile.Textures.Failed)
                 {
                     <li>Failed world texture: @issue.Path — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.ForestTextures?.Missing ?? Array.Empty<TrackShapeTextureAssetIssue>())
+                {
+                    <li>Missing forest texture: @issue.ImageName (forest @issue.ShapeIndex) — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.ForestTextures?.Failed ?? Array.Empty<TrackShapeTextureLoadIssue>())
+                {
+                    <li>Failed forest texture: @issue.Path — @issue.Reason</li>
                 }
             }
         </ul>
