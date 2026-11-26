@@ -81,6 +81,11 @@ public sealed class WorldTileReader
         WorldMatrix3x3? matrix = null;
         uint staticFlags = 0;
         uint worldDatabaseId = 0;
+        string? treeTexture = null;
+        WorldFloatRange? forestScaleRange = null;
+        WorldFloatPair? forestArea = null;
+        int? forestPopulation = null;
+        WorldFloatPair? forestTreeSize = null;
 
         while (!block.EndOfBlock())
         {
@@ -94,11 +99,33 @@ public sealed class WorldTileReader
                 case TokenID.Matrix3x3: matrix = ReadMatrix(field); break;
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
+                case TokenID.TreeTexture: treeTexture = field.ReadString(); break;
+                case TokenID.ScaleRange: forestScaleRange = ReadFloatRange(field); break;
+                case TokenID.Area: forestArea = ReadFloatPair(field); break;
+                case TokenID.Population: forestPopulation = field.ReadInt(); break;
+                case TokenID.TreeSize: forestTreeSize = ReadFloatPair(field); break;
                 default: AddDiagnostic(diagnostics, $"Skipped unsupported STATIC field token 0x{(ushort)field.ID:X4}."); field.Skip(); break;
             }
         }
 
-        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags, worldDatabaseId, objectKind);
+        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags,
+            worldDatabaseId, objectKind, treeTexture, forestScaleRange, forestArea, forestPopulation, forestTreeSize);
+    }
+
+    private static WorldFloatRange ReadFloatRange(SBR block)
+    {
+        block.VerifyID(TokenID.ScaleRange);
+        var value = new WorldFloatRange(block.ReadFloat(), block.ReadFloat());
+        block.VerifyEndOfBlock();
+        return value;
+    }
+
+    private static WorldFloatPair ReadFloatPair(SBR block)
+    {
+        var first = block.ReadFloat();
+        var second = block.ReadFloat();
+        block.VerifyEndOfBlock();
+        return new WorldFloatPair(first, second);
     }
 
     private static TrackWorldObject ReadTrackObject(SBR block, List<string> diagnostics)
@@ -233,6 +260,9 @@ public sealed record WorldMatrix3x3(
     float CX, float CY, float CZ);
 public sealed record WorldJunctionPosition(int TileX, int TileZ, float X, float Y, float Z);
 
+public sealed record WorldFloatRange(float Minimum, float Maximum);
+public sealed record WorldFloatPair(float First, float Second);
+
 public sealed record StaticWorldObject(
     uint Uid,
     string? FileName,
@@ -241,7 +271,12 @@ public sealed record StaticWorldObject(
     WorldMatrix3x3? Matrix,
     uint StaticFlags,
     uint WorldDatabaseId,
-    string ObjectKind = "Static");
+    string ObjectKind = "Static",
+    string? TreeTexture = null,
+    WorldFloatRange? ForestScaleRange = null,
+    WorldFloatPair? ForestArea = null,
+    int? ForestPopulation = null,
+    WorldFloatPair? ForestTreeSize = null);
 
 public sealed record TrackWorldObject(
     uint Uid,
