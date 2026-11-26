@@ -54,7 +54,20 @@ public sealed class RouteLoaderTests
                             TrPins ( 1 0 TrPin ( 2 1 ) )
                         )
                     )
-                    TrItemTable ( 1 EmptyItem ( TrItemId ( 0 ) ) )
+                    TrItemTable ( 2
+                        EmptyItem ( TrItemId ( 0 ) )
+                        PlatformItem (
+                            TrItemId ( 1 )
+                            TrItemRData ( 2 0 3 0 0 )
+                            TrItemPData ( 2 3 0 0 )
+                            TrItemSData ( 5.5 "platform-data" )
+                            PlatformName ( "Central Platform" )
+                            Station ( "Central" )
+                            PlatformMinWaitingTime ( 30 )
+                            PlatformNumPassengersWaiting ( 12 )
+                            PlatformTrItemData ( "00000001" 0 )
+                        )
+                    )
                 )
                 """),
             ("GLOBAL/TSECTION.DAT", """
@@ -87,11 +100,18 @@ public sealed class RouteLoaderTests
         Assert.Equal(1, route.Metadata.SuperElevationMode);
         Assert.Equal("ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
         Assert.Equal(3, route.TrackDatabase.NodeCount);
-        Assert.Equal(1, route.TrackDatabase.TrackItemCount);
+        Assert.Equal(2, route.TrackDatabase.TrackItemCount);
         Assert.Equal(new[] { 0 }, route.TrackDatabase.GetRequiredNode(2).TrackItemReferences);
         var trackItem = Assert.IsType<TrackItem>(Assert.Single(route.TrackDatabase.TrackItems));
         Assert.Equal("empty", trackItem.Type);
         Assert.Equal(0, trackItem.Index);
+        var platform = Assert.IsType<TrackItem>(route.TrackDatabase.TrackItems[1]);
+        Assert.Equal("platform", platform.Type);
+        Assert.Equal("Central Platform", platform.Name);
+        Assert.Equal("Central", platform.Station);
+        Assert.Equal((uint)30, platform.PlatformMinimumWaitingTime);
+        Assert.Equal((uint)12, platform.PlatformPassengersWaiting);
+        Assert.Equal((uint)0, platform.LinkedItemId);
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
