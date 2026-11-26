@@ -42,7 +42,7 @@ public sealed class TrackDatabaseReader
     {
         reader.MustMatch("(");
         TrackNode?[]? nodes = null;
-        var trackItemCount = 0;
+        var trackItems = Array.Empty<TrackItem?>();
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tracknodes", () =>
@@ -73,18 +73,33 @@ public sealed class TrackDatabaseReader
             new STFReader.TokenProcessor("tritemtable", () =>
             {
                 reader.MustMatch("(");
-                trackItemCount = reader.ReadInt(null);
-                if (trackItemCount < 0 || trackItemCount > 5_000_000)
-                    throw new InvalidDataException($"Track item count {trackItemCount} is outside the supported range.");
-                // Track-item payloads are ported separately; retain the declared table size
-                // so vector-node references can still be validated like upstream TrackDB.
-                reader.SkipRestOfBlock();
+                var count = reader.ReadInt(null);
+                if (count < 0 || count > 5_000_000)
+                    throw new InvalidDataException($"Track item count {count} is outside the supported range.");
+                trackItems = new TrackItem?[count];
+                var nextIndex = -1;
+                reader.ParseBlock(() => ++nextIndex < count, new[]
+                {
+                    new STFReader.TokenProcessor("crossoveritem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "crossover")),
+                    new STFReader.TokenProcessor("signalitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "signal")),
+                    new STFReader.TokenProcessor("speedpostitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "speedpost")),
+                    new STFReader.TokenProcessor("platformitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "platform")),
+                    new STFReader.TokenProcessor("soundregionitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "sound-region")),
+                    new STFReader.TokenProcessor("emptyitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "empty")),
+                    new STFReader.TokenProcessor("levelcritem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "level-crossing")),
+                    new STFReader.TokenProcessor("sidingitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "siding")),
+                    new STFReader.TokenProcessor("hazzarditem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "hazard")),
+                    new STFReader.TokenProcessor("pickupitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "pickup"))
+                });
+                if (nextIndex != count)
+                    throw new InvalidDataException($"Track item table declares {count} items but contains {nextIndex}.");
             })
         });
 
         if (nodes is null)
             throw new InvalidDataException("Track database is missing TrackNodes.");
 
+        var trackItemCount = trackItems.Length;
         var diagnostics = new List<string>();
         for (var i = 1; i < nodes.Length; i++)
         {
@@ -101,7 +116,69 @@ public sealed class TrackDatabaseReader
             }
         }
 
-        return new TrackDatabase(nodes, trackItemCount, diagnostics);
+        return new TrackDatabase(nodes, trackItems, diagnostics);
+    }
+
+    private static TrackItem ReadTrackItem(STFReader reader, int expectedIndex, string type)
+    {
+        reader.MustMatch("(");
+        uint? id = null;
+        var tileX = 0;
+        var tileZ = 0;
+        var x = 0f;
+        var y = 0f;
+        var z = 0f;
+        var tilePX = 0;
+        var tilePZ = 0;
+        var px = 0f;
+        var pz = 0f;
+        var distance = 0f;
+        var data2 = string.Empty;
+        var name = string.Empty;
+        var station = string.Empty;
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("tritemid", () =>
+            {
+                reader.MustMatch("(");
+                id = reader.ReadUInt(null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("tritemrdata", () =>
+            {
+                reader.MustMatch("(");
+                x = reader.ReadFloat(STFReader.UNITS.None, null);
+                y = reader.ReadFloat(STFReader.UNITS.None, null);
+                z = reader.ReadFloat(STFReader.UNITS.None, null);
+                tileX = reader.ReadInt(null);
+                tileZ = reader.ReadInt(null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("tritempdata", () =>
+            {
+                reader.MustMatch("(");
+                px = reader.ReadFloat(STFReader.UNITS.None, null);
+                pz = reader.ReadFloat(STFReader.UNITS.None, null);
+                tilePX = reader.ReadInt(null);
+                tilePZ = reader.ReadInt(null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("tritemsdata", () =>
+            {
+                reader.MustMatch("(");
+                distance = reader.ReadFloat(STFReader.UNITS.None, null);
+                data2 = reader.ReadString();
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("platformname", () => name = reader.ReadStringBlock(string.Empty)),
+            new STFReader.TokenProcessor("sidingname", () => name = reader.ReadStringBlock(string.Empty)),
+            new STFReader.TokenProcessor("station", () => station = reader.ReadStringBlock(string.Empty))
+        });
+
+        if (id is null || id.Value != (uint)expectedIndex)
+            throw new InvalidDataException($"Track item index mismatch: expected {expectedIndex}, found {(id.HasValue ? id.Value : uint.MaxValue)}.");
+        return new TrackItem(expectedIndex, type, tileX, tileZ, x, y, z,
+            tilePX, tilePZ, px, pz, distance, data2, name, station);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -314,24 +391,34 @@ public sealed class TrackNode
     }
 }
 
+public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, float X, float Y, float Z,
+    int TilePX, int TilePZ, float PX, float PZ, float DistanceAlongTrack, string Data2, string Name, string Station);
+
 public sealed class TrackDatabase
 {
     private readonly TrackNode?[] nodes;
+    private readonly TrackItem?[] trackItems;
     public int NodeCount => nodes.Length - 1;
-    public int TrackItemCount { get; }
+    public int TrackItemCount => trackItems.Length;
+    public IReadOnlyList<TrackItem?> TrackItems => Array.AsReadOnly(trackItems);
     public IReadOnlyList<string> Diagnostics { get; }
 
     public TrackDatabase(TrackNode?[] nodes, IEnumerable<string> diagnostics)
-        : this(nodes, 0, diagnostics)
+        : this(nodes, Array.Empty<TrackItem?>(), diagnostics)
     {
     }
 
     public TrackDatabase(TrackNode?[] nodes, int trackItemCount, IEnumerable<string> diagnostics)
+        : this(nodes, new TrackItem?[trackItemCount], diagnostics)
+    {
+    }
+
+    public TrackDatabase(TrackNode?[] nodes, IEnumerable<TrackItem?> trackItems, IEnumerable<string> diagnostics)
     {
         if (nodes.Length == 0 || nodes[0] is not null)
             throw new ArgumentException("Track database node array must reserve index zero.", nameof(nodes));
         this.nodes = (TrackNode?[])nodes.Clone();
-        TrackItemCount = trackItemCount;
+        this.trackItems = trackItems.ToArray();
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
     }
 
