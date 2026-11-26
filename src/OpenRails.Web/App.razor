@@ -3,6 +3,8 @@
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 @implements IDisposable
 
 <main class="shell">
@@ -29,7 +31,16 @@
 
         @if (isLoading)
         {
-            <p class="status">Scanning ZIP and reading route metadata…</p>
+            <p class="status">@(largeUploadInProgress ? "Streaming large ZIP into browser disk storage…" : "Scanning ZIP and reading route metadata…")</p>
+        }
+        @if (largeUploadInProgress)
+        {
+            <p class="hint">Large archive upload: @((largeUploadBytes / 1_000_000_000d).ToString("N2")) / @((largeUploadTotalBytes / 1_000_000_000d).ToString("N2")) GB (@largeUploadPercent%)</p>
+            <progress max="100" value="@largeUploadPercent"></progress>
+        }
+        @if (!string.IsNullOrWhiteSpace(largePackageMessage))
+        {
+            <p class="success">@largePackageMessage</p>
         }
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
@@ -335,6 +346,11 @@
     private RouteChoice? selectedRoute;
     private string? errorMessage;
     private bool isLoading;
+    private bool largeUploadInProgress;
+    private long largeUploadBytes;
+    private long largeUploadTotalBytes;
+    private int largeUploadPercent;
+    private string? largePackageMessage;
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
@@ -565,6 +581,29 @@
         try
         {
             var file = args.File;
+            largePackageMessage = null;
+            if (file.Size > BrowserZipPackageLoader.DefaultMaxArchiveBytes)
+            {
+                largeUploadInProgress = true;
+                largeUploadBytes = 0;
+                largeUploadTotalBytes = file.Size;
+                largeUploadPercent = 0;
+                var progress = new BrowserPackageUploadProgress((uploaded, total) =>
+                {
+                    _ = InvokeAsync(() =>
+                    {
+                        largeUploadBytes = uploaded;
+                        largeUploadTotalBytes = total;
+                        largeUploadPercent = total <= 0 ? 0 : (int)Math.Clamp(uploaded * 100d / total, 0, 100);
+                        StateHasChanged();
+                    });
+                });
+                using var progressReference = DotNetObjectReference.Create(progress);
+                var stored = await BrowserPackageArchiveUploader.StoreAsync(JS, file, progressReference);
+                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to persistent browser storage. Large-archive ZIP indexing and route loading are the next integration step; this archive is safely staged, not yet playable.";
+                return;
+            }
+
             var store = await BrowserZipPackageLoader.LoadAsync(file);
             var packageName = GetUniquePackageName(file.Name);
             var layer = new PackageLayer(packageName, store);
@@ -605,6 +644,7 @@
         finally
         {
             isLoading = false;
+            largeUploadInProgress = false;
         }
     }
 

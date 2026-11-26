@@ -16,11 +16,16 @@ public sealed class BrowserZipPackageLoaderTests
     }
 
     [Fact]
-    public void DefaultUploadLimitRemainsBounded()
+    public void DiskBackedBrowserUploadSupportsThirtyGigabytes()
     {
-        Assert.InRange(
-            ZipContentStore.DefaultMaxBrowserArchiveBytes,
-            272_422_379,
-            512L * 1024 * 1024);
+        Assert.Equal(30_000_000_000L, BrowserPackageArchiveLimits.MaxArchiveBytes);
+        Assert.True(BrowserPackageArchiveLimits.MaxArchiveBytes > 5_000_000_000L);
+    }
+
+    [Fact]
+    public void InMemoryZipParserRemainsSeparatelyBounded()
+    {
+        Assert.Equal(300L * 1024 * 1024, ZipContentStore.DefaultMaxBrowserArchiveBytes);
+        Assert.True(BrowserPackageArchiveLimits.MaxArchiveBytes > ZipContentStore.DefaultMaxBrowserArchiveBytes);
     }
 }
