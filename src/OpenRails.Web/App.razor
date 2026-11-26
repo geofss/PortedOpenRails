@@ -52,7 +52,20 @@
                         <strong>@package.FileName</strong>
                         <span>@((package.SizeBytes / 1_000_000_000d).ToString("N2")) GB</span>
                         <small>OPFS · persistent protection: @(package.PersistentStorageGranted ? "granted" : "not granted")</small>
+                        <button type="button" @onclick="() => IndexStoredPackageAsync(package)" disabled="@isLoading">Index ZIP contents</button>
                         <button type="button" @onclick="() => DeleteStoredPackageAsync(package)" disabled="@isLoading">Delete stored archive</button>
+                        @if (indexedPackages.TryGetValue(package.Id, out var archiveIndex))
+                        {
+                            <small>ZIP index: @archiveIndex.EntryCount files · @archiveIndex.RouteFiles.Count route metadata file(s) · @((archiveIndex.TotalUncompressedBytes / 1_000_000_000d).ToString("N2")) GB uncompressed</small>
+                            @foreach (var routeFile in archiveIndex.RouteFiles)
+                            {
+                                <small>Route candidate: <code>@routeFile</code></small>
+                            }
+                            @if (archiveIndex.RouteFiles.Count == 0)
+                            {
+                                <small class="hint">No .trk route metadata files were found.</small>
+                            }
+                        }
                     </div>
                 }
             </div>
@@ -367,6 +380,7 @@
     private int largeUploadPercent;
     private string? largePackageMessage;
     private readonly List<StoredBrowserPackage> storedPackages = [];
+    private readonly Dictionary<string, BrowserPackageArchiveIndex> indexedPackages = [];
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
@@ -589,12 +603,33 @@
         }
     }
 
+    private async Task IndexStoredPackageAsync(StoredBrowserPackage package)
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var index = await BrowserPackageArchiveIndexer.InspectAsync(JS, package.Id);
+            indexedPackages[package.Id] = index;
+            largePackageMessage = $"Indexed {index.EntryCount:N0} files in {package.FileName}. Found {index.RouteFiles.Count} .trk route candidate(s). This is ZIP discovery only; route files are not yet connected to the synchronous Open Rails content readers.";
+        }
+        catch (Exception exception) when (exception is JSException || exception is IOException || exception is InvalidDataException || exception is ArgumentException)
+        {
+            errorMessage = $"Could not index {package.FileName}: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
     private async Task DeleteStoredPackageAsync(StoredBrowserPackage package)
     {
         try
         {
             await BrowserPackageArchiveUploader.DeleteAsync(JS, package.Id);
             storedPackages.RemoveAll(item => item.Id == package.Id);
+            indexedPackages.Remove(package.Id);
             largePackageMessage = $"Deleted staged archive {package.FileName}.";
         }
         catch (JSException exception)
