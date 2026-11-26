@@ -40,20 +40,8 @@ public sealed class TrackShapeAssetLocator
                 continue;
             }
 
-            var candidates = new[]
-            {
-                fileName.StartsWith("GLOBAL/", StringComparison.OrdinalIgnoreCase) ||
-                fileName.StartsWith("ROUTES/", StringComparison.OrdinalIgnoreCase)
-                    ? fileName
-                    : null,
-                $"{root}/SHAPES/{fileName}",
-                $"GLOBAL/SHAPES/{fileName}"
-            };
-
-            var resolved = candidates
-                .Where(candidate => candidate is not null)
-                .Select(candidate => available.TryGetValue(candidate!, out var actual) ? actual : null)
-                .FirstOrDefault(actual => actual is not null);
+            var resolved = RouteContentPathResolver.Resolve(
+                store, root, "SHAPES", "GLOBAL/SHAPES", fileName);
 
             if (resolved is null)
                 missing.Add(new TrackShapeAssetIssue(shape.ShapeIndex, shape.FileName,
