@@ -44,7 +44,7 @@ public sealed class RouteLoaderTests
                                 TrVectorSections ( 1
                                     1 0 0 0 0 0 1 "00" 0 0 0 0 0 0 0 0
                                 )
-                                TrItemRefs ( 0 )
+                                TrItemRefs ( 1 TrItemRef ( 0 ) )
                             )
                             TrPins ( 1 1 TrPin ( 1 1 ) TrPin ( 3 0 ) )
                         )
@@ -54,7 +54,7 @@ public sealed class RouteLoaderTests
                             TrPins ( 1 0 TrPin ( 2 1 ) )
                         )
                     )
-                    TrItemTable ( 0 )
+                    TrItemTable ( 1 EmptyItem ( ) )
                 )
                 """),
             ("GLOBAL/TSECTION.DAT", """
@@ -87,6 +87,8 @@ public sealed class RouteLoaderTests
         Assert.Equal(1, route.Metadata.SuperElevationMode);
         Assert.Equal("ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
         Assert.Equal(3, route.TrackDatabase.NodeCount);
+        Assert.Equal(1, route.TrackDatabase.TrackItemCount);
+        Assert.Equal(new[] { 0 }, route.TrackDatabase.GetRequiredNode(2).TrackItemReferences);
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
