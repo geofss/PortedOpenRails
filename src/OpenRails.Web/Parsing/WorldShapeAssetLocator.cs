@@ -33,7 +33,8 @@ public sealed class WorldShapeAssetLocator
 
         foreach (var tile in worldTiles)
         {
-            foreach (var item in tile.StaticObjects.Select(value => (value.Uid, value.FileName, Kind: "Static"))
+            foreach (var item in tile.StaticObjects.Select(value =>
+                    (value.Uid, value.FileName, Kind: value.ObjectKind))
                 .Concat(tile.TrackObjects.Select(value => (value.Uid, value.FileName, Kind: "TrackObj"))))
             {
                 if (string.IsNullOrWhiteSpace(item.FileName))
