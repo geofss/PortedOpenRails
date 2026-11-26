@@ -1,0 +1,105 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Orts.IO/Orts.IO.csproj" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/AccelerationController.cs" Link="Upstream/AccelerationController.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteContentPathResolver.cs" Link="Parsing/RouteContentPathResolver.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/CompositeContentStore.cs" Link="Content/CompositeContentStore.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/VirtualContentStreamReaderFactory.cs" Link="Content/VirtualContentStreamReaderFactory.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/STFReader.cs" Link="Parsing/STFReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/Interpolator.cs" Link="Parsing/Interpolator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/LocomotiveTractionMetadataReader.cs" Link="Parsing/LocomotiveTractionMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionModel.cs" Link="Simulation/LocomotiveTractionModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveSimulationSession.cs" Link="Simulation/LocomotiveSimulationSession.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationSession.cs" Link="Simulation/TrainConsistSimulationSession.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationSetupBuilder.cs" Link="Simulation/TrainConsistSimulationSetupBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/BrowserTrainDrivingController.cs" Link="Simulation/BrowserTrainDrivingController.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarResistanceModel.cs" Link="Simulation/TrainCarResistanceModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarAdhesionModel.cs" Link="Simulation/TrainCarAdhesionModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakePipeModel.cs" Link="Simulation/TrainBrakePipeModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakeCylinderModel.cs" Link="Simulation/TrainBrakeCylinderModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainBrakeDistributorModel.cs" Link="Simulation/TrainBrakeDistributorModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/RollingStockBrakeProfile.cs" Link="Simulation/RollingStockBrakeProfile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainPneumaticBrakeSystem.cs" Link="Simulation/TrainPneumaticBrakeSystem.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerForceDistributor.cs" Link="Simulation/TrainConsistCouplerForceDistributor.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerForceLimit.cs" Link="Simulation/TrainCouplerForceLimit.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCouplerSlackModel.cs" Link="Simulation/TrainCouplerSlackModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistCouplerDynamics.cs" Link="Simulation/TrainConsistCouplerDynamics.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/SBR.cs" Link="Parsing/SBR.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TokenID.cs" Link="Parsing/TokenID.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ShapeFile.cs" Link="Parsing/ShapeFile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeFileReader.cs" Link="Parsing/TrackShapeFileReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/AceTextureReader.cs" Link="Parsing/AceTextureReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeMeshBuilder.cs" Link="Parsing/TrackShapeMeshBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAssetLoader.cs" Link="Parsing/TrackShapeAssetLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapePlacementBuilder.cs" Link="Parsing/TrackShapePlacementBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeRenderGeometryBuilder.cs" Link="Parsing/TrackShapeRenderGeometryBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeTextureAssetLocator.cs" Link="Parsing/TrackShapeTextureAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeTextureAssetLoader.cs" Link="Parsing/TrackShapeTextureAssetLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTextureAssetLocator.cs" Link="Parsing/RollingStockTextureAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileReader.cs" Link="Parsing/TerrainTileReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainRawFileReaders.cs" Link="Parsing/TerrainRawFileReaders.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainMeshBuilder.cs" Link="Parsing/TerrainMeshBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainPatchMaterialBuilder.cs" Link="Parsing/TerrainPatchMaterialBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTextureAssetLocator.cs" Link="Parsing/TerrainTextureAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTextureAssetLoader.cs" Link="Parsing/TerrainTextureAssetLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TerrainTileSampleResolver.cs" Link="Parsing/TerrainTileSampleResolver.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainTileLocator.cs" Link="Parsing/RouteTerrainTileLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/Upstream/TerrainFile.cs" Link="Parsing/Upstream/TerrainFile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainMeshLoader.cs" Link="Parsing/RouteTerrainMeshLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/StfReaderAccess.cs" Link="Parsing/StfReaderAccess.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackSectionGeometryReader.cs" Link="Parsing/TrackSectionGeometryReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ActivityFileLocator.cs" Link="Parsing/ActivityFileLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ConsistReader.cs" Link="Parsing/ConsistReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ConsistFileReader.cs" Link="Parsing/ConsistFileReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ConsistCatalogReader.cs" Link="Parsing/ConsistCatalogReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockMetadataReader.cs" Link="Parsing/RollingStockMetadataReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockShapeAssetLoader.cs" Link="Parsing/RollingStockShapeAssetLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackDatabaseReader.cs" Link="Parsing/TrackDatabaseReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteAssetLocator.cs" Link="Parsing/RouteAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteLoader.cs" Link="Parsing/RouteLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteValidationReport.cs" Link="Parsing/RouteValidationReport.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAssetLocator.cs" Link="Parsing/TrackShapeAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldTileReader.cs" Link="Parsing/WorldTileReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteWorldTileLocator.cs" Link="Parsing/RouteWorldTileLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldShapeAssetLocator.cs" Link="Parsing/WorldShapeAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteWorldTileLoader.cs" Link="Parsing/RouteWorldTileLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldSceneryTileLoader.cs" Link="Parsing/WorldSceneryTileLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldObjectPlacementBuilder.cs" Link="Parsing/WorldObjectPlacementBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/WorldSceneryRenderGeometryBuilder.cs" Link="Parsing/WorldSceneryRenderGeometryBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ForestMeshBuilder.cs" Link="Parsing/ForestMeshBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ForestTextureAssetLocator.cs" Link="Parsing/ForestTextureAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteBuilder.cs" Link="Simulation/TrackNetworkRouteBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/RouteStartVectorSelector.cs" Link="Simulation/RouteStartVectorSelector.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteProfile.cs" Link="Simulation/TrackNetworkRouteProfile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackGeometryTessellator.cs" Link="Simulation/TrackGeometryTessellator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTrackPlacementBuilder.cs" Link="Parsing/RollingStockTrackPlacementBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/FixedStepSimulationScheduler.cs" Link="Simulation/FixedStepSimulationScheduler.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarMotionIntegrator.cs" Link="Simulation/TrainCarMotionIntegrator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarForceModel.cs" Link="Simulation/TrainCarForceModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarBrakeModel.cs" Link="Simulation/TrainCarBrakeModel.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarSimulationLoop.cs" Link="Simulation/TrainCarSimulationLoop.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistMotionIntegrator.cs" Link="Simulation/TrainConsistMotionIntegrator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationLoop.cs" Link="Simulation/TrainConsistSimulationLoop.cs" />
+  </ItemGroup>
+</Project>

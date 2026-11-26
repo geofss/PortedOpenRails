@@ -1,0 +1,74 @@
+using OpenRails.Web.Simulation;
+using Xunit;
+
+namespace OpenRails.Web.Tests;
+
+public sealed class TrainCarMotionIntegratorTests
+{
+    [Fact]
+    public void BrakeRetardationScenarioMatchesExpectedLongitudinalMotion()
+    {
+        const double massKg = 20_000;
+        const double initialSpeedMetersPerSecond = 4;
+        const double brakeCommandPercent = 50;
+        const double brakeRatingNewtons = 20_000;
+        const double stepSeconds = 0.5;
+
+        var brakeForce = new TrainCarBrakeModel().CalculateBrakeRetardForceNewtons(
+            initialSpeedMetersPerSecond, brakeCommandPercent, brakeRatingNewtons);
+        var result = new TrainCarMotionIntegrator().Step(
+            new TrainCarMotionState(massKg, initialSpeedMetersPerSecond, 0),
+            -brakeForce, stepSeconds);
+
+        Assert.Equal(10_000, brakeForce, 8);
+        Assert.Equal(-0.5, result.AccelerationMetersPerSecondSquared, 8);
+        Assert.Equal(3.75, result.State.SpeedMetersPerSecond, 8);
+        Assert.Equal(1.9375, result.State.DistanceMeters, 8);
+    }
+
+    [Fact]
+    public void AppliesSignedNewtonianForceToLongitudinalMotion()
+    {
+        var initial = new TrainCarMotionState(20_000, 0, 0);
+
+        var result = new TrainCarMotionIntegrator().Step(initial, 40_000, 0.5);
+
+        Assert.Equal(2, result.AccelerationMetersPerSecondSquared, 8);
+        Assert.Equal(1, result.State.SpeedMetersPerSecond, 8);
+        Assert.Equal(0.25, result.State.DistanceMeters, 8);
+    }
+
+    [Fact]
+    public void ResistingForceStopsCarWithoutReversingIt()
+    {
+        var initial = new TrainCarMotionState(10_000, 1, 12);
+
+        var result = new TrainCarMotionIntegrator().Step(initial, -20_000, 1);
+
+        Assert.Equal(0, result.State.SpeedMetersPerSecond);
+        Assert.Equal(12.25, result.State.DistanceMeters, 8);
+    }
+
+    [Fact]
+    public void StopsReverseMotionAtTheExactZeroSpeedTime()
+    {
+        var initial = new TrainCarMotionState(10_000, -1, 12);
+
+        var result = new TrainCarMotionIntegrator().Step(initial, 20_000, 1);
+
+        Assert.Equal(0, result.State.SpeedMetersPerSecond);
+        Assert.Equal(11.75, result.State.DistanceMeters, 8);
+    }
+
+    [Fact]
+    public void SupportsReverseMotionAndRejectsInvalidMass()
+    {
+        var reverse = new TrainCarMotionIntegrator().Step(
+            new TrainCarMotionState(5_000, -2, 10), -5_000, 1);
+
+        Assert.Equal(-3, reverse.State.SpeedMetersPerSecond, 8);
+        Assert.Equal(7.5, reverse.State.DistanceMeters, 8);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrainCarMotionIntegrator().Step(new TrainCarMotionState(0, 0, 0), 1, 1));
+    }
+}

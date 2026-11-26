@@ -1,0 +1,256 @@
+using System.IO.Compression;
+using System.Text;
+using OpenRails.Web.Content;
+using OpenRails.Web.Parsing;
+using Orts.Parsers.Msts;
+using Xunit;
+
+namespace OpenRails.Web.Tests;
+
+public sealed class WorldTileReaderTests
+{
+    [Fact]
+    public void ReportsUnknownWorldBlocksAndStaticAndTrackObjectFields()
+    {
+        var staticObject = Block(TokenID.Static, Concat(
+            Block((TokenID)0x7FFE, Array.Empty<byte>()),
+            Block((TokenID)0x7FFE, Array.Empty<byte>())));
+        var trackObject = Block(TokenID.TrackObj, Concat(
+            Block((TokenID)0x7FFD, Array.Empty<byte>()),
+            Block((TokenID)0x7FFD, Array.Empty<byte>())));
+        var unknownWorldBlock = Block((TokenID)0x7FFF, Array.Empty<byte>());
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, Concat(staticObject, trackObject, unknownWorldBlock, unknownWorldBlock)))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+
+        Assert.Equal(3, tile.Diagnostics.Count);
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("STATIC field token 0x7FFE"));
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("TrackObj field token 0x7FFD"));
+        Assert.Contains(tile.Diagnostics, diagnostic => diagnostic.Contains("WORLD block token 0x7FFF"));
+    }
+
+    [Fact]
+    public void PlacementBuilderPreservesOrientationAndHandlesMissingPositions()
+    {
+        var direction = new WorldQuaternion(0.1f, 0.2f, 0.3f, 0.9f);
+        var matrix = new WorldMatrix3x3(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        var tile = new WorldTileData(
+            "ROUTES/Test/WORLD/W-000001+000002.w",
+            -1,
+            2,
+            new[]
+            {
+                new StaticWorldObject(10, "tree.s", new WorldTilePosition(4, 5, 6),
+                    direction, matrix, 3, 4),
+                new StaticWorldObject(11, "unknown.s", null, null, null, 0, 0)
+            },
+            Array.Empty<TrackWorldObject>(),
+            Array.Empty<string>());
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+
+        Assert.Equal(2, placements.Count);
+        Assert.Equal(new WorldTilePosition(-2044, 5, 4102), placements[0].WorldPosition);
+        Assert.Equal(direction, placements[0].Direction);
+        Assert.Equal(matrix, placements[0].Matrix);
+        Assert.Null(placements[1].WorldPosition);
+        Assert.Null(placements[1].Direction);
+    }
+
+    [Fact]
+    public void ReadsStaticAndTrackObjectPlacementsFromOriginalWorldTile()
+    {
+        var staticObject = Block(TokenID.Static, Concat(
+            UIntPayload(TokenID.UiD, 42),
+            StringBlock(TokenID.FileName, "building.s"),
+            FloatBlock(TokenID.Position, 1, 2, 3),
+            FloatBlock(TokenID.QDirection, 0, 0, 0, 1),
+            UIntPayload(TokenID.StaticFlags, 0x10),
+            UIntPayload(TokenID.VDbId, 5)));
+
+        var trackObject = Block(TokenID.TrackObj, Concat(
+            UIntPayload(TokenID.UiD, 43),
+            UIntPayload(TokenID.SectionIdx, 7),
+            FloatBlock(TokenID.Elevation, 1.5f),
+            UIntPayload(TokenID.CollideFlags, 2),
+            StringBlock(TokenID.FileName, "trackside.s"),
+            Block(TokenID.JNodePosn, Concat(IntPayload(4, -5), FloatPayload(6, 7, 8)))));
+
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, Concat(staticObject, trackObject)))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+
+        Assert.Equal(1, tile.TileX);
+        Assert.Equal(-2, tile.TileZ);
+        var scenery = Assert.Single(tile.StaticObjects);
+        Assert.Equal((uint)42, scenery.Uid);
+        Assert.Equal("building.s", scenery.FileName);
+        Assert.Equal(new WorldTilePosition(1, 2, 3), scenery.Position);
+        Assert.Equal(new WorldQuaternion(0, 0, 0, 1), scenery.Direction);
+        Assert.Equal((uint)0x10, scenery.StaticFlags);
+        Assert.Equal((uint)5, scenery.WorldDatabaseId);
+
+        var track = Assert.Single(tile.TrackObjects);
+        Assert.Equal((uint)43, track.Uid);
+        Assert.Equal((uint)7, track.SectionIndex);
+        Assert.Equal(1.5f, track.Elevation);
+        Assert.Equal((uint)2, track.CollideFlags);
+        Assert.Equal("trackside.s", track.FileName);
+        Assert.Equal(new WorldJunctionPosition(4, -5, 6, 7, 8), track.JunctionPosition);
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        Assert.Equal(new WorldTilePosition(2049, 2, -4093), placements[0].WorldPosition);
+        Assert.Equal(new WorldTilePosition(8198, 7, -10232), placements[1].JunctionWorldPosition);
+    }
+
+    [Fact]
+    public void ReadsOriginalOpenRailsWorldObjectFamiliesAsSceneryPlacements()
+    {
+        var objectTokens = new[]
+        {
+            TokenID.CarSpawner, TokenID.Siding, TokenID.Platform, TokenID.Forest,
+            TokenID.LevelCr, TokenID.Dyntrack, TokenID.Transfer, TokenID.Gantry,
+            TokenID.Pickup, TokenID.Hazard, TokenID.Signal, TokenID.Speedpost
+        };
+        var blocks = objectTokens.Select((token, index) => Block(token, Concat(
+            UIntPayload(TokenID.UiD, (uint)(100 + index)),
+            StringBlock(TokenID.FileName, $"object-{index}.s"),
+            FloatBlock(TokenID.Position, index, 2, 3),
+            FloatBlock(TokenID.QDirection, 0, 0, 0, 1)))).ToArray();
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, Concat(blocks)))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+
+        Assert.Equal(objectTokens.Length, tile.StaticObjects.Count);
+        Assert.Empty(tile.Diagnostics);
+        for (var i = 0; i < objectTokens.Length; i++)
+        {
+            Assert.Equal(objectTokens[i].ToString(), tile.StaticObjects[i].ObjectKind);
+            Assert.Equal($"object-{i}.s", tile.StaticObjects[i].FileName);
+            Assert.Equal((uint)(100 + i), tile.StaticObjects[i].Uid);
+        }
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        Assert.Equal(objectTokens.Length, placements.Count);
+        Assert.Equal(objectTokens.Select(token => token.ToString()), placements.Select(item => item.ObjectKind));
+    }
+
+    [Fact]
+    public void ReadsAndPreservesOriginalForestObjectParameters()
+    {
+        var forest = Block(TokenID.Forest, Concat(
+            UIntPayload(TokenID.UiD, 901),
+            StringBlock(TokenID.TreeTexture, "forest.ace"),
+            FloatBlock(TokenID.ScaleRange, 0.75f, 1.25f),
+            FloatBlock(TokenID.Area, 120, 80),
+            Block(TokenID.Population, IntPayload(350)),
+            FloatBlock(TokenID.TreeSize, 8, 18),
+            FloatBlock(TokenID.Position, 10, 2, 30),
+            FloatBlock(TokenID.QDirection, 0, 0, 0, 1)));
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, forest))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+        var item = Assert.Single(tile.StaticObjects);
+
+        Assert.Equal("Forest", item.ObjectKind);
+        Assert.Equal("forest.ace", item.TreeTexture);
+        Assert.Equal(new WorldFloatRange(0.75f, 1.25f), item.ForestScaleRange);
+        Assert.Equal(new WorldFloatPair(120, 80), item.ForestArea);
+        Assert.Equal(350, item.ForestPopulation);
+        Assert.Equal(new WorldFloatPair(8, 18), item.ForestTreeSize);
+
+        var placement = Assert.Single(new WorldObjectPlacementBuilder().Build(tile));
+        Assert.Equal("forest.ace", placement.TreeTexture);
+        Assert.Equal(item.ForestScaleRange, placement.ForestScaleRange);
+        Assert.Equal(item.ForestArea, placement.ForestArea);
+        Assert.Equal(350, placement.ForestPopulation);
+        Assert.Equal(item.ForestTreeSize, placement.ForestTreeSize);
+        Assert.Empty(tile.Diagnostics);
+    }
+
+    private static byte[] CreateSbrFile(byte[] rootBlock)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
+        writer.Write(Encoding.ASCII.GetBytes("SIMISA@@@@@@@@@@"));
+        writer.Write(Encoding.ASCII.GetBytes("JINX0T0b"));
+        writer.Write(new byte[8]);
+        writer.Write(rootBlock);
+        writer.Flush();
+        return stream.ToArray();
+    }
+
+    private static byte[] Block(TokenID id, byte[] payload)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        writer.Write((ushort)id);
+        writer.Write((ushort)0);
+        writer.Write((uint)(payload.Length + 1));
+        writer.Write((byte)0);
+        writer.Write(payload);
+        return stream.ToArray();
+    }
+
+    private static byte[] UIntPayload(TokenID id, uint value) => Block(id, UIntPayload(value));
+    private static byte[] FloatBlock(TokenID id, params float[] values) => Block(id, FloatPayload(values));
+    private static byte[] StringBlock(TokenID id, string value)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.Unicode, leaveOpen: true);
+        writer.Write((ushort)value.Length);
+        writer.Write(Encoding.Unicode.GetBytes(value));
+        return Block(id, stream.ToArray());
+    }
+
+    private static byte[] IntPayload(params int[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return stream.ToArray();
+    }
+
+    private static byte[] UIntPayload(params uint[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return stream.ToArray();
+    }
+
+    private static byte[] FloatPayload(params float[] values)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        foreach (var value in values) writer.Write(value);
+        return stream.ToArray();
+    }
+
+    private static byte[] Concat(params byte[][] values)
+    {
+        using var stream = new MemoryStream();
+        foreach (var value in values) stream.Write(value);
+        return stream.ToArray();
+    }
+
+    private static ZipContentStore CreateStore(params (string Path, byte[] Content)[] files)
+    {
+        var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in files)
+            {
+                var entry = archive.CreateEntry(file.Path);
+                using var output = entry.Open();
+                output.Write(file.Content);
+            }
+        }
+        memory.Position = 0;
+        return new ZipContentStore(memory);
+    }
+}

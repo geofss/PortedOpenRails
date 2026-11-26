@@ -1,0 +1,160 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace OpenRails.Web.Simulation;
+
+/// <summary>
+/// Brake-pipe pressure for each vehicle, ordered front-to-rear in consist order.
+/// </summary>
+[JsonConverter(typeof(TrainBrakePipeStateJsonConverter))]
+public sealed record TrainBrakePipeState
+{
+    public IReadOnlyList<double> PressuresKPa { get; }
+
+    public TrainBrakePipeState(IEnumerable<double> pressuresKPa)
+    {
+        ArgumentNullException.ThrowIfNull(pressuresKPa);
+        PressuresKPa = Array.AsReadOnly(pressuresKPa.ToArray());
+    }
+}
+
+internal sealed class TrainBrakePipeStateJsonConverter : JsonConverter<TrainBrakePipeState>
+{
+    public override TrainBrakePipeState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var document = JsonDocument.ParseValue(ref reader);
+        var values = document.RootElement.GetProperty(nameof(TrainBrakePipeState.PressuresKPa))
+            .EnumerateArray().Select(value => value.GetDouble()).ToArray();
+        return new TrainBrakePipeState(values);
+    }
+
+    public override void Write(Utf8JsonWriter writer, TrainBrakePipeState value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName(nameof(TrainBrakePipeState.PressuresKPa));
+        JsonSerializer.Serialize(writer, value.PressuresKPa, options);
+        writer.WriteEndObject();
+    }
+}
+
+/// <summary>
+/// A simplified pneumatic brake-pipe propagation model. The driver's command
+/// changes pressure at the leading vehicle first; downstream vehicles follow
+/// with a configurable propagation delay. It is not a complete Open Rails
+/// triple-valve or reservoir model, but avoids instantaneous whole-train braking.
+/// </summary>
+public sealed class TrainBrakePipeModel
+{
+    public const double NormalPressureKPa = 500;
+    public const double MinimumServicePressureKPa = 100;
+    public const double EmergencyPressureKPa = 0;
+    private const int MaximumIntegrationSteps = 3600;
+
+    private readonly double applicationTimeConstantSeconds;
+    private readonly double releaseTimeConstantSeconds;
+    private readonly double propagationTimeConstantSeconds;
+    private readonly double emergencyApplicationTimeConstantSeconds;
+
+    public TrainBrakePipeModel(
+        double applicationTimeConstantSeconds = 0.5,
+        double releaseTimeConstantSeconds = 1.2,
+        double propagationTimeConstantSeconds = 0.8,
+        double emergencyApplicationTimeConstantSeconds = 0.15)
+    {
+        if (!double.IsFinite(applicationTimeConstantSeconds) || applicationTimeConstantSeconds <= 0 ||
+            !double.IsFinite(releaseTimeConstantSeconds) || releaseTimeConstantSeconds <= 0 ||
+            !double.IsFinite(propagationTimeConstantSeconds) || propagationTimeConstantSeconds <= 0 ||
+            !double.IsFinite(emergencyApplicationTimeConstantSeconds) || emergencyApplicationTimeConstantSeconds <= 0)
+            throw new ArgumentOutOfRangeException(nameof(applicationTimeConstantSeconds),
+                "Brake-pipe time constants must be finite and positive.");
+
+        this.applicationTimeConstantSeconds = applicationTimeConstantSeconds;
+        this.releaseTimeConstantSeconds = releaseTimeConstantSeconds;
+        this.propagationTimeConstantSeconds = propagationTimeConstantSeconds;
+        this.emergencyApplicationTimeConstantSeconds = emergencyApplicationTimeConstantSeconds;
+    }
+
+    public TrainBrakePipeState CreateInitialState(int carCount)
+    {
+        if (carCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(carCount));
+        return new TrainBrakePipeState(Enumerable.Repeat(NormalPressureKPa, carCount));
+    }
+
+    public TrainBrakePipeState Advance(
+        TrainBrakePipeState state,
+        double brakeCommandPercent,
+        double elapsedSeconds,
+        bool emergency = false)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (state.PressuresKPa.Count == 0 ||
+            state.PressuresKPa.Any(pressure => !double.IsFinite(pressure) ||
+                pressure < EmergencyPressureKPa || pressure > NormalPressureKPa))
+            throw new ArgumentException("Brake-pipe pressures must be between emergency minimum and normal pressure.", nameof(state));
+        if (!double.IsFinite(brakeCommandPercent) || brakeCommandPercent < 0 || brakeCommandPercent > 100)
+            throw new ArgumentOutOfRangeException(nameof(brakeCommandPercent));
+        if (!double.IsFinite(elapsedSeconds) || elapsedSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+
+        if (elapsedSeconds == 0)
+            return state;
+
+        var targetPressure = emergency
+            ? EmergencyPressureKPa
+            : NormalPressureKPa -
+                (NormalPressureKPa - MinimumServicePressureKPa) * brakeCommandPercent / 100;
+        // Bound work for unusually large elapsed intervals. Exponential pressure
+        // relaxation remains stable with a larger final step, while avoiding an
+        // overflowing cast or an effectively unbounded loop.
+        var steps = (int)Math.Clamp(
+            Math.Ceiling(elapsedSeconds * 60), 1, MaximumIntegrationSteps);
+        var stepSeconds = elapsedSeconds / steps;
+        var pressures = state.PressuresKPa.ToArray();
+        var next = new double[pressures.Length];
+
+        for (var step = 0; step < steps; step++)
+        {
+            var firstTau = targetPressure < pressures[0]
+                ? emergency ? emergencyApplicationTimeConstantSeconds : applicationTimeConstantSeconds
+                : releaseTimeConstantSeconds;
+            next[0] = Approach(pressures[0], targetPressure, stepSeconds, firstTau,
+                EmergencyPressureKPa);
+
+            for (var i = 1; i < pressures.Length; i++)
+            {
+                var upstreamPressure = next[i - 1];
+                var tau = upstreamPressure < pressures[i]
+                    ? propagationTimeConstantSeconds
+                    : propagationTimeConstantSeconds * 1.5;
+                next[i] = Approach(pressures[i], upstreamPressure, stepSeconds, tau,
+                    emergency ? EmergencyPressureKPa : MinimumServicePressureKPa);
+            }
+
+            (pressures, next) = (next, pressures);
+        }
+
+        return new TrainBrakePipeState(pressures);
+    }
+
+    public IReadOnlyList<double> GetBrakePercentByCar(TrainBrakePipeState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (state.PressuresKPa.Count == 0 ||
+            state.PressuresKPa.Any(pressure => !double.IsFinite(pressure) ||
+                pressure < EmergencyPressureKPa || pressure > NormalPressureKPa))
+            throw new ArgumentException("Brake-pipe pressures must be between emergency minimum and normal pressure.", nameof(state));
+        return Array.AsReadOnly(state.PressuresKPa.Select(pressure =>
+            Math.Clamp(
+                (NormalPressureKPa - pressure) /
+                (NormalPressureKPa - MinimumServicePressureKPa) * 100,
+                0, 100)).ToArray());
+    }
+
+    private static double Approach(double current, double target, double elapsed, double timeConstant, double minimumPressureKPa)
+    {
+        var alpha = 1 - Math.Exp(-elapsed / timeConstant);
+        return Math.Clamp(current + (target - current) * alpha,
+            minimumPressureKPa, NormalPressureKPa);
+    }
+}
