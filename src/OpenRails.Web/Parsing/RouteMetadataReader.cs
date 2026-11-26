@@ -4,8 +4,8 @@ using Orts.Parsers.Msts;
 namespace OpenRails.Web.Parsing;
 
 /// <summary>
-/// Reads the portable, identifying metadata from an MSTS/Open Rails .trk route file.
-/// The tokenization, include handling, and STF grammar are provided by upstream STFReader.
+/// Reads route metadata using the upstream Open Rails STF parser and mirrors
+/// the portable route settings consumed from Orts.Formats.Msts.RouteFile.
 /// </summary>
 public sealed class RouteMetadataReader
 {
@@ -40,8 +40,14 @@ public sealed class RouteMetadataReader
         string? name = null;
         string? description = null;
         string? fileName = null;
-        bool electrified = true;
+        var electrified = true;
         float maxLineVoltage = 0;
+        float overheadWireHeight = 6.0f;
+        float speedLimit = 500.0f;
+        float tempRestrictedSpeed = -1.0f;
+        float routeGaugeMeters = 0;
+        var milepostUnitsMetric = false;
+        var superElevationMode = -1;
         RouteStartCoordinates? routeStart = null;
 
         reader.MustMatch("(");
@@ -51,8 +57,14 @@ public sealed class RouteMetadataReader
             new STFReader.TokenProcessor("name", () => name = reader.ReadStringBlock(null)),
             new STFReader.TokenProcessor("description", () => description = reader.ReadStringBlock(null)),
             new STFReader.TokenProcessor("filename", () => fileName = reader.ReadStringBlock(null)),
-            new STFReader.TokenProcessor("electrified", () => electrified = reader.ReadBoolBlock(true)),
+            new STFReader.TokenProcessor("electrified", () => electrified = reader.ReadBoolBlock(false)),
             new STFReader.TokenProcessor("maxlinevoltage", () => maxLineVoltage = reader.ReadFloatBlock(STFReader.UNITS.None, 0)),
+            new STFReader.TokenProcessor("overheadwireheight", () => overheadWireHeight = reader.ReadFloatBlock(STFReader.UNITS.Distance, 6.0f)),
+            new STFReader.TokenProcessor("speedlimit", () => speedLimit = reader.ReadFloatBlock(STFReader.UNITS.Speed, 500.0f)),
+            new STFReader.TokenProcessor("temprestrictedspeed", () => tempRestrictedSpeed = reader.ReadFloatBlock(STFReader.UNITS.Speed, -1.0f)),
+            new STFReader.TokenProcessor("trackgauge", () => routeGaugeMeters = reader.ReadFloatBlock(STFReader.UNITS.Distance, 0)),
+            new STFReader.TokenProcessor("milepostunitskilometers", () => milepostUnitsMetric = true),
+            new STFReader.TokenProcessor("ortsforcesuperelevation", () => superElevationMode = reader.ReadBoolBlock(false) ? 1 : 0),
             new STFReader.TokenProcessor("routestart", () => routeStart = ReadRouteStart(reader))
         });
 
@@ -65,7 +77,10 @@ public sealed class RouteMetadataReader
         if (routeStart is null)
             throw new InvalidDataException("The route metadata is missing RouteStart.");
 
-        return new RouteMetadata(routeId, name, description, electrified, maxLineVoltage, routeStart, fileName);
+        return new RouteMetadata(
+            routeId, name, description, electrified, maxLineVoltage, routeStart, fileName,
+            overheadWireHeight, speedLimit, tempRestrictedSpeed, routeGaugeMeters,
+            milepostUnitsMetric, superElevationMode);
     }
 
     private static RouteStartCoordinates ReadRouteStart(STFReader reader)
@@ -87,6 +102,12 @@ public sealed record RouteMetadata(
     bool Electrified,
     float MaxLineVoltage,
     RouteStartCoordinates RouteStart,
-    string? FileName = null);
+    string? FileName = null,
+    float OverheadWireHeightMeters = 6.0f,
+    float SpeedLimitMetersPerSecond = 500.0f,
+    float TempRestrictedSpeedMetersPerSecond = -1.0f,
+    float TrackGaugeMeters = 0,
+    bool MilepostUnitsMetric = false,
+    int SuperElevationMode = -1);
 
 public sealed record RouteStartCoordinates(double TileX, double TileZ, double X, double Z);
