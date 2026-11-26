@@ -15,6 +15,7 @@ or a JavaScript `ArrayBuffer`.
 - Writes are chunked, progress is reported, and incomplete uploads are removed.
 - The browser storage quota is checked before writing, with a safety margin.
 - Persistent-storage permission is requested where supported and its result is reported.
+- Completed staged archives are listed again after reload and can be deleted from the UI.
 - A browser may still deny storage, evict non-persistent data, or have insufficient quota.
   The 30 GB value is a maximum accepted archive size, not a guarantee that every device has
   30 GB available.

@@ -99,3 +99,57 @@ export async function storeArchive(streamReference, originalName, expectedBytes,
         }
     }
 }
+
+function validateArchiveId(id) {
+    if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) {
+        throw new Error("Invalid staged archive identifier.");
+    }
+    return id;
+}
+
+export async function listArchives() {
+    if (!("storage" in navigator) || typeof navigator.storage.getDirectory !== "function") {
+        return [];
+    }
+    const root = await navigator.storage.getDirectory();
+    let directory;
+    try {
+        directory = await root.getDirectoryHandle(DIRECTORY_NAME);
+    } catch (error) {
+        if (error?.name === "NotFoundError") return [];
+        throw error;
+    }
+
+    const packages = [];
+    for await (const [name, handle] of directory.entries()) {
+        if (!name.endsWith(".json") || handle.kind !== "file") continue;
+        try {
+            const metadata = JSON.parse(await (await handle.getFile()).text());
+            const id = validateArchiveId(metadata.id);
+            const archiveName = `${id}.zip`;
+            await directory.getFileHandle(archiveName);
+            packages.push({
+                id,
+                fileName: safeDisplayName(metadata.fileName),
+                sizeBytes: Number(metadata.sizeBytes),
+                persistentStorageGranted: metadata.persistentStorageGranted === true
+            });
+        } catch {
+            // Ignore stale or incomplete metadata records.
+        }
+    }
+    return packages.sort((a, b) => a.fileName.localeCompare(b.fileName));
+}
+
+export async function deleteArchive(id) {
+    const safeId = validateArchiveId(id);
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
+    for (const suffix of [".zip", ".json"]) {
+        try {
+            await directory.removeEntry(`${safeId}${suffix}`);
+        } catch (error) {
+            if (error?.name !== "NotFoundError") throw error;
+        }
+    }
+}

@@ -42,6 +42,21 @@
         {
             <p class="success">@largePackageMessage</p>
         }
+        @if (storedPackages.Count > 0)
+        {
+            <div class="route-details">
+                <h3>Large archives stored in this browser</h3>
+                @foreach (var package in storedPackages)
+                {
+                    <div class="route-row">
+                        <strong>@package.FileName</strong>
+                        <span>@((package.SizeBytes / 1_000_000_000d).ToString("N2")) GB</span>
+                        <small>OPFS · persistent protection: @(package.PersistentStorageGranted ? "granted" : "not granted")</small>
+                        <button type="button" @onclick="() => DeleteStoredPackageAsync(package)" disabled="@isLoading">Delete stored archive</button>
+                    </div>
+                }
+            </div>
+        }
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
             <p class="error" role="alert">@errorMessage</p>
@@ -351,6 +366,7 @@
     private long largeUploadTotalBytes;
     private int largeUploadPercent;
     private string? largePackageMessage;
+    private readonly List<StoredBrowserPackage> storedPackages = [];
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
@@ -561,6 +577,32 @@
         InitializeSimulationSetup();
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            storedPackages.AddRange(await BrowserPackageArchiveUploader.ListAsync(JS));
+        }
+        catch (JSException)
+        {
+            // OPFS may be unavailable or disabled; small in-memory route imports remain usable.
+        }
+    }
+
+    private async Task DeleteStoredPackageAsync(StoredBrowserPackage package)
+    {
+        try
+        {
+            await BrowserPackageArchiveUploader.DeleteAsync(JS, package.Id);
+            storedPackages.RemoveAll(item => item.Id == package.Id);
+            largePackageMessage = $"Deleted staged archive {package.FileName}.";
+        }
+        catch (JSException exception)
+        {
+            errorMessage = $"Could not delete the staged archive: {exception.Message}";
+        }
+    }
+
     private async Task HandleRouteZip(InputFileChangeEventArgs args)
     {
         errorMessage = null;
@@ -600,6 +642,8 @@
                 });
                 using var progressReference = DotNetObjectReference.Create(progress);
                 var stored = await BrowserPackageArchiveUploader.StoreAsync(JS, file, progressReference);
+                storedPackages.RemoveAll(item => item.Id == stored.Id);
+                storedPackages.Insert(0, stored);
                 largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to browser OPFS storage. Persistent-storage protection: {(stored.PersistentStorageGranted ? "granted" : "not granted")}. Large-archive ZIP indexing and route loading are the next integration step; this archive is staged, not yet playable.";
                 return;
             }

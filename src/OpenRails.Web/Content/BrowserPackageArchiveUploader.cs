@@ -9,6 +9,35 @@ namespace OpenRails.Web.Content;
 /// </summary>
 public static class BrowserPackageArchiveUploader
 {
+    public static async Task<IReadOnlyList<StoredBrowserPackage>> ListAsync(IJSRuntime js)
+    {
+        ArgumentNullException.ThrowIfNull(js);
+        var module = await js.InvokeAsync<IJSObjectReference>("import", "./js/route-package-storage.js");
+        try
+        {
+            return await module.InvokeAsync<StoredBrowserPackage[]>("listArchives");
+        }
+        finally
+        {
+            await module.DisposeAsync();
+        }
+    }
+
+    public static async Task DeleteAsync(IJSRuntime js, string id)
+    {
+        ArgumentNullException.ThrowIfNull(js);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var module = await js.InvokeAsync<IJSObjectReference>("import", "./js/route-package-storage.js");
+        try
+        {
+            await module.InvokeVoidAsync("deleteArchive", id);
+        }
+        finally
+        {
+            await module.DisposeAsync();
+        }
+    }
+
     public static async Task<StoredBrowserPackage> StoreAsync(
         IJSRuntime js,
         IBrowserFile file,
