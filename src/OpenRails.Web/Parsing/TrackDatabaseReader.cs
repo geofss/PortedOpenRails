@@ -42,6 +42,7 @@ public sealed class TrackDatabaseReader
     {
         reader.MustMatch("(");
         TrackNode?[]? nodes = null;
+        var trackItemCount = 0;
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tracknodes", () =>
@@ -69,7 +70,16 @@ public sealed class TrackDatabaseReader
                 if (nextIndex != count + 1)
                     throw new InvalidDataException($"Track database declares {count} nodes but contains {nextIndex - 1}.");
             }),
-            new STFReader.TokenProcessor("tritemtable", () => reader.SkipBlock())
+            new STFReader.TokenProcessor("tritemtable", () =>
+            {
+                reader.MustMatch("(");
+                trackItemCount = reader.ReadInt(null);
+                if (trackItemCount < 0 || trackItemCount > 5_000_000)
+                    throw new InvalidDataException($"Track item count {trackItemCount} is outside the supported range.");
+                // Track-item payloads are ported separately; retain the declared table size
+                // so vector-node references can still be validated like upstream TrackDB.
+                reader.SkipRestOfBlock();
+            })
         });
 
         if (nodes is null)
@@ -84,9 +94,14 @@ public sealed class TrackDatabaseReader
                 if (pin.Link <= 0 || pin.Link >= nodes.Length || nodes[pin.Link] is null)
                     diagnostics.Add($"TrackNode {node.Index} has a pin to missing node {pin.Link}.");
             }
+            foreach (var itemReference in node.TrackItemReferences)
+            {
+                if (itemReference < 0 || itemReference >= trackItemCount)
+                    diagnostics.Add($"TrackNode {node.Index} has a reference to missing track item {itemReference} (table size {trackItemCount}).");
+            }
         }
 
-        return new TrackDatabase(nodes, diagnostics);
+        return new TrackDatabase(nodes, trackItemCount, diagnostics);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -97,6 +112,7 @@ public sealed class TrackDatabaseReader
         TrackNodeLocation? location = null;
         TrackJunctionData? junction = null;
         TrackVectorSection[] sections = Array.Empty<TrackVectorSection>();
+        int[] itemReferences = Array.Empty<int>();
         var pins = Array.Empty<TrackPin>();
 
         reader.ParseBlock(new[]
@@ -113,7 +129,7 @@ public sealed class TrackDatabaseReader
             }),
             new STFReader.TokenProcessor("trvectornode", () =>
             {
-                sections = ReadVectorNode(reader);
+                sections = ReadVectorNode(reader, out itemReferences);
                 kind = TrackNodeKind.Vector;
             }),
             new STFReader.TokenProcessor("trendnode", () =>
@@ -127,7 +143,7 @@ public sealed class TrackDatabaseReader
         if (kind == TrackNodeKind.Unknown)
             throw new InvalidDataException($"TrackNode {index} has no recognized node type.");
 
-        return new TrackNode(index, kind, location, junction, sections, pins);
+        return new TrackNode(index, kind, location, junction, sections, pins, itemReferences);
     }
 
     private static TrackNodeLocation ReadUid(STFReader reader)
@@ -171,8 +187,9 @@ public sealed class TrackDatabaseReader
         return pins;
     }
 
-    private static TrackVectorSection[] ReadVectorNode(STFReader reader)
+    private static TrackVectorSection[] ReadVectorNode(STFReader reader, out int[] itemReferences)
     {
+        itemReferences = Array.Empty<int>();
         reader.MustMatch("(");
         TrackVectorSection[]? sections = null;
         reader.ParseBlock(new[]
@@ -210,7 +227,26 @@ public sealed class TrackDatabaseReader
                 }
                 reader.SkipRestOfBlock();
             }),
-            new STFReader.TokenProcessor("tritemrefs", () => reader.SkipBlock())
+            new STFReader.TokenProcessor("tritemrefs", () =>
+            {
+                reader.MustMatch("(");
+                var count = reader.ReadInt(null);
+                if (count < 0 || count > 5_000_000)
+                    throw new InvalidDataException($"Track item reference count {count} is outside the supported range.");
+                var references = new List<int>(count);
+                reader.ParseBlock(new[]
+                {
+                    new STFReader.TokenProcessor("tritemref", () =>
+                    {
+                        if (references.Count >= count)
+                            throw new InvalidDataException("TrVectorNode contains more TrItemRef blocks than declared.");
+                        references.Add(reader.ReadIntBlock(null));
+                    })
+                });
+                if (references.Count != count)
+                    throw new InvalidDataException($"TrVectorNode declares {count} track item references but contains {references.Count}.");
+                itemReferences = references.ToArray();
+            })
         });
 
         return sections ?? throw new InvalidDataException("TrVectorNode is missing TrVectorSections.");
@@ -261,9 +297,11 @@ public sealed class TrackNode
     public TrackJunctionData? Junction { get; }
     public IReadOnlyList<TrackVectorSection> Sections { get; }
     public IReadOnlyList<TrackPin> Pins { get; }
+    public IReadOnlyList<int> TrackItemReferences { get; }
 
     public TrackNode(uint index, TrackNodeKind kind, TrackNodeLocation? location,
-        TrackJunctionData? junction, IEnumerable<TrackVectorSection> sections, IEnumerable<TrackPin> pins)
+        TrackJunctionData? junction, IEnumerable<TrackVectorSection> sections, IEnumerable<TrackPin> pins,
+        IEnumerable<int>? trackItemReferences = null)
     {
         Index = index;
         Kind = kind;
@@ -271,6 +309,7 @@ public sealed class TrackNode
         Junction = junction;
         Sections = Array.AsReadOnly(sections.ToArray());
         Pins = Array.AsReadOnly(pins.ToArray());
+        TrackItemReferences = Array.AsReadOnly((trackItemReferences ?? Array.Empty<int>()).ToArray());
     }
 }
 
@@ -278,13 +317,15 @@ public sealed class TrackDatabase
 {
     private readonly TrackNode?[] nodes;
     public int NodeCount => nodes.Length - 1;
+    public int TrackItemCount { get; }
     public IReadOnlyList<string> Diagnostics { get; }
 
-    public TrackDatabase(TrackNode?[] nodes, IEnumerable<string> diagnostics)
+    public TrackDatabase(TrackNode?[] nodes, int trackItemCount, IEnumerable<string> diagnostics)
     {
         if (nodes.Length == 0 || nodes[0] is not null)
             throw new ArgumentException("Track database node array must reserve index zero.", nameof(nodes));
         this.nodes = (TrackNode?[])nodes.Clone();
+        TrackItemCount = trackItemCount;
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
     }
 
