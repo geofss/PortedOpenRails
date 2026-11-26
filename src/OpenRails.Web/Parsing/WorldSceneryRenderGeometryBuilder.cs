@@ -125,7 +125,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
             if (!truncated)
             {
                 var forestTextureIndexes = new Dictionary<uint, int>();
-                foreach (var texture in tile.ForestTextures.Loaded)
+                foreach (var texture in tile.ForestTextures?.Loaded ?? Array.Empty<LoadedTrackShapeTexture>())
                 {
                     if (texture.Reference.SeasonFolder is not null ||
                         texture.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
