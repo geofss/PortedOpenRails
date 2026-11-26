@@ -23,7 +23,8 @@ public sealed record RouteValidationReport(
     int MissingTextures,
     int FailedTextures,
     IReadOnlyList<RouteValidationIssue> Issues,
-    int TrackDatabaseDiagnosticsCount = 0)
+    int TrackDatabaseDiagnosticsCount = 0,
+    int WorldParseDiagnosticsCount = 0)
 {
     public bool HasCriticalIssues => !TrackNetworkUsable;
     public int AssetIssueCount => MissingTerrainTiles + FailedTerrainTiles +
@@ -81,6 +82,8 @@ public sealed record RouteValidationReport(
             issues.Add(new("WORLD", $"Failed world tile {failed.TileX},{failed.TileZ}: {failed.Reason}"));
         foreach (var tile in worldScenery.Loaded)
         {
+            foreach (var diagnostic in tile.Tile.Diagnostics)
+                issues.Add(new("WORLD parse", $"Tile {tile.Tile.TileX},{tile.Tile.TileZ}: {diagnostic}"));
             foreach (var missing in tile.ShapeDiscovery.Missing)
                 issues.Add(new("WORLD shape", $"Missing world shape {missing.FileName}: {missing.Reason}"));
             foreach (var failed in tile.FailedShapes)
@@ -111,6 +114,7 @@ public sealed record RouteValidationReport(
             terrainTextures.Failed.Count + trackShapeMeshes.Textures.Failed.Count +
                 worldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count),
             Array.AsReadOnly(issues.ToArray()),
-            trackDatabase.Diagnostics.Count);
+            trackDatabase.Diagnostics.Count,
+            worldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count));
     }
 }
