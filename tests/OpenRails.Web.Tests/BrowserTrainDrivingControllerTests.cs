@@ -842,7 +842,7 @@ public sealed class BrowserTrainDrivingControllerTests
         new("DriveTest", uid, name, "Freight", isEngine, false, name + (isEngine ? ".eng" : ".wag"),
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + (isEngine ? ".eng" : ".wag"),
+                "air_single_pipe", "distributor", brake, name + (isEngine ? ".eng" : ".wag"),
                 MinCouplerStrengthN: couplerStrength,
                 DavisAForceN: davisA, DavisBResistance: davisB, DavisCResistance: davisC),
             name + ".s", true, null, traction);
