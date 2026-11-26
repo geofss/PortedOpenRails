@@ -105,6 +105,28 @@ public sealed class TrackSectionGeometryReaderTests
         Assert.True(catalog.GetRequired(2).IsRouteSpecific);
     }
 
+    [Fact]
+    public void ReadsRouteSpecificDynamicTrackPathMappings()
+    {
+        using var store = CreateStore(("ROUTES/Test/tsection.dat", """
+            SIMISA@@@@@@@@@@JINX0T0t
+            TrackSections ( 1 TrackSection ( SectionCurve ( ) 10 8m 0 ) )
+            SectionIdx (
+                2
+                TrackPath ( 100000 2 10 11 )
+                TrackPath ( 100001 3 12 13 14 )
+            )
+            """));
+
+        var catalog = new TrackSectionGeometryReader().ReadRouteSections(store, "ROUTES/Test/tsection.dat");
+
+        Assert.Equal(2, catalog.DynamicPaths.Count);
+        Assert.True(catalog.TryGetDynamicPath(100000, out var first));
+        Assert.Equal(new uint[] { 10, 11 }, first.TrackSectionIndices);
+        Assert.True(catalog.TryGetDynamicPath(100001, out var second));
+        Assert.Equal(new uint[] { 12, 13, 14 }, second.TrackSectionIndices);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
