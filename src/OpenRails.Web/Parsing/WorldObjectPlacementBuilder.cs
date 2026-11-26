@@ -18,7 +18,7 @@ public sealed class WorldObjectPlacementBuilder
         {
             placements.Add(new WorldObjectPlacement(
                 item.Uid,
-                "Static",
+                item.ObjectKind,
                 item.FileName,
                 item.Position is null ? null : ToWorldPosition(tile.TileX, tile.TileZ, item.Position),
                 item.Direction,
