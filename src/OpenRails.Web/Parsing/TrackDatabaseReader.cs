@@ -123,6 +123,30 @@ public sealed class TrackDatabaseReader
             }
         }
 
+        // Preserve the upstream TDB references and validate their targets before
+        // downstream route, signal, and junction systems attempt to resolve them.
+        foreach (var item in trackItems)
+        {
+            if (item is null)
+                continue;
+
+            if (item.LinkedItemId is { } linkedItemId && linkedItemId >= trackItemCount)
+                diagnostics.Add($"Track item {item.Index} links to missing track item {linkedItemId} (table size {trackItemCount}).");
+
+            if (item.CrossoverTrackNode is { } crossoverNode &&
+                (crossoverNode == 0 || crossoverNode >= nodes.Length || nodes[crossoverNode] is null))
+                diagnostics.Add($"Crossover track item {item.Index} references missing TrackNode {crossoverNode}.");
+
+            if (item.SignalDirections is null)
+                continue;
+
+            foreach (var direction in item.SignalDirections)
+            {
+                if (direction.TrackNode == 0 || direction.TrackNode >= nodes.Length || nodes[direction.TrackNode] is null)
+                    diagnostics.Add($"Signal track item {item.Index} references missing direction TrackNode {direction.TrackNode}.");
+            }
+        }
+
         return new TrackDatabase(nodes, trackItems, diagnostics);
     }
 
