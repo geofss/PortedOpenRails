@@ -67,5 +67,5 @@ public sealed record LoadedWorldSceneryTile(
     IReadOnlyList<WorldShapeMeshIssue> FailedShapes,
     TrackShapeTextureAssetDiscovery TextureDiscovery,
     TrackShapeTextureAssetLoadResult Textures,
-    TrackShapeTextureAssetDiscovery ForestTextureDiscovery,
-    TrackShapeTextureAssetLoadResult ForestTextures);
+    TrackShapeTextureAssetDiscovery ForestTextureDiscovery = null!,
+    TrackShapeTextureAssetLoadResult ForestTextures = null!);
