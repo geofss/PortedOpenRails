@@ -7,7 +7,7 @@ public sealed class UpstreamIoCompatibilityTests
     [Fact]
     public void ByteEncoding_RoundTripsAllByteValues()
     {
-        var source = new[] { '\\0', '\\u007F', '\\u0080', '\\u00FF' };
+        var source = new[] { '\0', '\u007F', '\u0080', '\u00FF' };
         var encoding = new ByteEncoding();
 
         var bytes = encoding.GetBytes(source, 0, source.Length);
