@@ -102,6 +102,36 @@ public sealed class TerrainTileReaderTests
         Assert.True(tile.Flags!.IsVertexHidden(1, 0));
     }
 
+    [Fact]
+    public void BrowserTerrainReaderMatchesPinnedUpstreamTerrainParserForCoreSampleMetadata()
+    {
+        var samplesPayload = Concat(
+            FloatBlock(TokenID.terrain_sample_floor, 37.5f),
+            FloatBlock(TokenID.terrain_sample_scale, 0.25f),
+            FloatBlock(TokenID.terrain_sample_size, 2f),
+            IntBlock(TokenID.terrain_nsamples, 4),
+            FloatBlock(TokenID.terrain_sample_rotation, 0.125f),
+            StringBlock(TokenID.terrain_sample_ybuffer, "tile_y.raw"));
+        var tileBytes = CreateSbrFile(Block(TokenID.terrain,
+            Block(TokenID.terrain_samples, samplesPayload)));
+
+        using var store = CreateStore(("ROUTES/Test/TILES/upstream-parity.t", tileBytes));
+        var browser = new TerrainTileReader().Read(store, "ROUTES/Test/TILES/upstream-parity.t");
+
+        using var upstreamStream = new MemoryStream(tileBytes);
+        using var upstreamReader = SBR.Open(upstreamStream, "upstream-parity.t");
+        using var upstreamBlock = upstreamReader.ReadSubBlock();
+        var upstream = new Orts.Formats.Msts.terrain(upstreamBlock);
+
+        Assert.NotNull(upstream.terrain_samples);
+        Assert.Equal(upstream.terrain_samples.terrain_nsamples, browser.Samples.SampleCount);
+        Assert.Equal(upstream.terrain_samples.terrain_sample_floor, browser.Samples.Floor);
+        Assert.Equal(upstream.terrain_samples.terrain_sample_scale, browser.Samples.Scale);
+        Assert.Equal(upstream.terrain_samples.terrain_sample_size, browser.Samples.SampleSize);
+        Assert.Equal(upstream.terrain_samples.terrain_sample_rotation, browser.Samples.Rotation);
+        Assert.Equal(upstream.terrain_samples.terrain_sample_ybuffer, browser.Samples.SampleYBuffer);
+    }
+
     private static byte[] CreateCompressedSbrFile(byte[] rootBlock)
     {
         using var uncompressed = new MemoryStream();
