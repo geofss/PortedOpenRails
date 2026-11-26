@@ -20,6 +20,7 @@
     <ProjectReference Include="../../src/Orts.IO/Orts.IO.csproj" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AccelerationController.cs" Link="Upstream/AccelerationController.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
+    <Compile Include="../../src/OpenRails.Web/Content/BrowserPackageArchiveLimits.cs" Link="Content/BrowserPackageArchiveLimits.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteContentPathResolver.cs" Link="Parsing/RouteContentPathResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/CompositeContentStore.cs" Link="Content/CompositeContentStore.cs" />
