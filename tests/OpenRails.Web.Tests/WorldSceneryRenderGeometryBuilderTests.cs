@@ -53,6 +53,46 @@ public sealed class WorldSceneryRenderGeometryBuilderTests
         Assert.Equal(new[] { 0, 1 }, result.Batches.Select(batch => batch.TextureIndex).OrderBy(index => index));
     }
 
+    [Fact]
+    public void IntegratesForestBillboardsAndTheirDecodedTextureIntoWorldRenderBatches()
+    {
+        const uint forestUid = 77;
+        var forestObject = new StaticWorldObject(forestUid, null,
+            new WorldTilePosition(100, 12, 200), null, null, 0, 0,
+            "Forest", "trees.ace", new WorldFloatRange(1, 1),
+            new WorldFloatPair(20, 20), 2, new WorldFloatPair(8, 16));
+        var tileData = new WorldTileData("ROUTES/Test/WORLD/W+000000+000000.w", 0, 0,
+            new[] { forestObject }, Array.Empty<TrackWorldObject>(), Array.Empty<string>());
+        var placements = new WorldObjectPlacementBuilder().Build(tileData);
+        var textureData = new AceTextureData(1, 1, AceTexturePixelFormat.Rgba8, false,
+            false, 0, new[] { new byte[] { 255, 255, 255, 255 } }, Array.Empty<AceTextureChannel>());
+        var forestTexture = new LoadedTrackShapeTexture(
+            new TrackShapeTextureAssetReference(forestUid, "trees.ace", null, "ROUTES/Test/TEXTURES/trees.ace"),
+            textureData);
+        var emptyDiscovery = new TrackShapeTextureAssetDiscovery(
+            Array.Empty<TrackShapeTextureAssetReference>(), Array.Empty<TrackShapeTextureAssetIssue>());
+        var emptyLoad = new TrackShapeTextureAssetLoadResult(
+            Array.Empty<LoadedTrackShapeTexture>(), Array.Empty<TrackShapeTextureAssetIssue>(),
+            Array.Empty<TrackShapeTextureLoadIssue>());
+        var forestDiscovery = new TrackShapeTextureAssetDiscovery(
+            new[] { forestTexture.Reference }, Array.Empty<TrackShapeTextureAssetIssue>());
+        var forestLoad = new TrackShapeTextureAssetLoadResult(new[] { forestTexture },
+            Array.Empty<TrackShapeTextureAssetIssue>(), Array.Empty<TrackShapeTextureLoadIssue>());
+        var loadedTile = new LoadedWorldSceneryTile(tileData, placements,
+            new WorldShapeAssetDiscovery(Array.Empty<WorldShapeAssetReference>(), Array.Empty<WorldShapeAssetIssue>()),
+            Array.Empty<TrackShapeAssetMesh>(), Array.Empty<WorldShapeMeshIssue>(),
+            emptyDiscovery, emptyLoad, forestDiscovery, forestLoad);
+
+        var result = new WorldSceneryRenderGeometryBuilder().Build(new[] { loadedTile });
+
+        Assert.Single(result.Textures);
+        var batch = Assert.Single(result.Batches);
+        Assert.Equal(0, batch.TextureIndex);
+        Assert.True(batch.AlphaTest);
+        Assert.Equal(12, batch.Indices.Count);
+        Assert.Equal(8, batch.Vertices.Count / 5);
+    }
+
     private static LoadedWorldSceneryTile CreateLoadedTile(int tileX, int tileZ, string texturePath)
     {
         var worldObject = new StaticWorldObject(10, "building.s", new WorldTilePosition(0, 0, 0),
