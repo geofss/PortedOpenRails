@@ -91,11 +91,12 @@ export async function inspectArchive(id) {
     const eocd = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
     const diskNumber = eocd.getUint16(eocdOffset + 4, true);
     const centralDisk = eocd.getUint16(eocdOffset + 6, true);
+    let entriesOnDisk = eocd.getUint16(eocdOffset + 8, true);
     let entryCount = eocd.getUint16(eocdOffset + 10, true);
     let centralSize = eocd.getUint32(eocdOffset + 12, true);
     let centralOffset = eocd.getUint32(eocdOffset + 16, true);
 
-    if (diskNumber !== 0 || centralDisk !== 0) throw new Error("Multi-disk ZIP archives are not supported.");
+    if (diskNumber !== 0 || centralDisk !== 0 || entriesOnDisk !== entryCount) throw new Error("Multi-disk ZIP archives are not supported.");
     if (entryCount === UINT16_MAX || centralSize === UINT32_MAX || centralOffset === UINT32_MAX) {
         const locatorAbsolute = tailStart + eocdOffset - 20;
         if (locatorAbsolute < 0) throw new Error("ZIP64 locator is missing.");
@@ -122,7 +123,6 @@ export async function inspectArchive(id) {
     if (centralOffset + centralSize > archiveFile.size) throw new Error("ZIP central directory extends beyond the archive.");
     const centralBytes = new Uint8Array(await archiveFile.slice(centralOffset, centralOffset + centralSize).arrayBuffer());
     const central = new DataView(centralBytes.buffer, centralBytes.byteOffset, centralBytes.byteLength);
-    const decoder = new TextDecoder("utf-8", { fatal: true });
     const seen = new Set();
     const entries = [];
     let cursor = 0;
@@ -146,7 +146,13 @@ export async function inspectArchive(id) {
         if (end > central.byteLength) throw new Error("Truncated ZIP central-directory entry.");
         if ((flags & 1) !== 0) throw new Error("Encrypted ZIP entries are not supported.");
         if (method !== 0 && method !== 8) throw new Error("Unsupported ZIP compression method " + method + ".");
-        const rawName = decoder.decode(centralBytes.subarray(cursor + 46, cursor + 46 + nameLength));
+        const nameBytes = centralBytes.subarray(cursor + 46, cursor + 46 + nameLength);
+        let rawName;
+        try {
+            rawName = new TextDecoder((flags & 0x800) !== 0 ? "utf-8" : "windows-1252", { fatal: true }).decode(nameBytes);
+        } catch {
+            throw new Error("Archive contains a filename that cannot be decoded safely.");
+        }
         const isDirectory = rawName.endsWith("/") || rawName.endsWith("\\");
         const path = normalizeEntryPath(rawName);
         const extraView = new DataView(centralBytes.buffer, centralBytes.byteOffset + cursor + 46 + nameLength, extraLength);
@@ -171,11 +177,12 @@ export async function inspectArchive(id) {
             totalUncompressed += uncompressedSize;
             if (!Number.isSafeInteger(totalUncompressed)) throw new Error("Archive uncompressed size exceeds safe indexing limits.");
             const localHeader = new DataView(await archiveFile.slice(localOffset, localOffset + 30).arrayBuffer());
-            if (localHeader.byteLength !== 30 || localHeader.getUint32(0, true) !== LOCAL_SIGNATURE) {
+            if (localHeader.byteLength !== 30 || localHeader.getUint32(0, true) !== LOCAL_SIGNATURE ||
+                localHeader.getUint16(8, true) !== method) {
                 throw new Error("Invalid local ZIP header for " + path);
             }
             const dataOffset = localOffset + 30 + localHeader.getUint16(26, true) + localHeader.getUint16(28, true);
-            if (dataOffset + compressedSize > archiveFile.size) throw new Error("ZIP entry data extends beyond the archive: " + path);
+            if (dataOffset + compressedSize > centralOffset) throw new Error("ZIP entry data overlaps or extends beyond the central directory: " + path);
             entries.push({
                 path,
                 uncompressedSize,
@@ -195,7 +202,6 @@ export async function inspectArchive(id) {
         archiveSizeBytes: archiveFile.size,
         entryCount: entries.length,
         totalUncompressedBytes: totalUncompressed,
-        routeFiles: entries.filter(entry => entry.path.toLowerCase().endsWith(".trk")).map(entry => entry.path),
-        entries
+        routeFiles: entries.filter(entry => entry.path.toLowerCase().endsWith(".trk")).map(entry => entry.path)
     };
 }
