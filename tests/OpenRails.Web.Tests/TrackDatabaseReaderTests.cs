@@ -98,19 +98,25 @@ public sealed class TrackDatabaseReaderTests
                   TrPins ( 0 0 )
                 )
               )
-              TrItemTable ( 3
-                CrossoverItem (
+              TrItemTable ( 4
+                SignalItem (
                   TrItemId ( 0 )
+                  TrItemRData ( 1 2 3 4 5 )
+                  TrSignalType ( "00000001" 1 0.5 "main" )
+                  TrSignalDirs ( 1 TrSignalDir ( 27 1 0 1 ) )
+                )
+                CrossoverItem (
+                  TrItemId ( 1 )
                   TrItemRData ( 1 2 3 4 5 )
                   CrossoverTrItemData ( 27 6 )
                 )
                 SpeedPostItem (
-                  TrItemId ( 1 )
+                  TrItemId ( 2 )
                   TrItemRData ( 1 2 3 4 5 )
                   SpeedPostTrItemData ( 16 80 8 0.25 )
                 )
                 SoundRegionItem (
-                  TrItemId ( 2 )
+                  TrItemId ( 3 )
                   TrItemSRData ( 11 22 3.5 )
                 )
               )
