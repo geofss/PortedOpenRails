@@ -1,4 +1,5 @@
 using ORTS.IO;
+using Xunit;
 
 namespace OpenRails.Web.Tests;
 
