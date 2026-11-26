@@ -86,7 +86,7 @@ public sealed class TrackDatabaseReaderTests
     }
 
     [Fact]
-    public void ReadsUpstreamSpeedPostAndSoundRegionMetadata()
+    public void ReadsUpstreamCrossoverSpeedPostAndSoundRegionMetadata()
     {
         using var store = CreateStore(("ROUTES/Test/ITEMS.tdb", """
             SIMISA@@@@@@@@@@JINX0t1t
@@ -98,14 +98,19 @@ public sealed class TrackDatabaseReaderTests
                   TrPins ( 0 0 )
                 )
               )
-              TrItemTable ( 2
-                SpeedPostItem (
+              TrItemTable ( 3
+                CrossoverItem (
                   TrItemId ( 0 )
+                  TrItemRData ( 1 2 3 4 5 )
+                  CrossoverTrItemData ( 27 6 )
+                )
+                SpeedPostItem (
+                  TrItemId ( 1 )
                   TrItemRData ( 1 2 3 4 5 )
                   SpeedPostTrItemData ( 16 80 8 0.25 )
                 )
                 SoundRegionItem (
-                  TrItemId ( 1 )
+                  TrItemId ( 2 )
                   TrItemSRData ( 11 22 3.5 )
                 )
               )
@@ -114,14 +119,19 @@ public sealed class TrackDatabaseReaderTests
 
         var database = new TrackDatabaseReader().Read(store, "ROUTES/Test/ITEMS.tdb");
 
-        var speedPost = Assert.IsType<TrackItem>(database.TrackItems[0]);
+        var crossover = Assert.IsType<TrackItem>(database.TrackItems[0]);
+        Assert.Equal("crossover", crossover.Type);
+        Assert.Equal((uint)27, crossover.CrossoverTrackNode);
+        Assert.Equal((uint)6, crossover.CrossoverShapeId);
+
+        var speedPost = Assert.IsType<TrackItem>(database.TrackItems[1]);
         Assert.Equal("speedpost", speedPost.Type);
         Assert.Equal((uint)16, speedPost.SpeedPostFlags);
         Assert.Equal(80, speedPost.SpeedIndicator);
         Assert.Equal(8, speedPost.SpeedDisplayNumber);
         Assert.Equal(0.25f, speedPost.SpeedPostAngle);
 
-        var soundRegion = Assert.IsType<TrackItem>(database.TrackItems[1]);
+        var soundRegion = Assert.IsType<TrackItem>(database.TrackItems[2]);
         Assert.Equal("sound-region", soundRegion.Type);
         Assert.Equal((uint)11, soundRegion.SoundRegionData1);
         Assert.Equal((uint)22, soundRegion.SoundRegionData2);
