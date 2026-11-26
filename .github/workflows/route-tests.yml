@@ -3,7 +3,7 @@ name: Route pipeline regression tests
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "port/upstream-core-files"]
     paths:
       - "src/OpenRails.Web/Parsing/**"
       - "src/OpenRails.Web/Simulation/TrackNetwork*.cs"
