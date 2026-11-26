@@ -41,6 +41,8 @@ public sealed class WorldSceneryTileLoader
         var textureDiscovery = new TrackShapeTextureAssetLocator().Locate(store, routeRoot, shapeMeshes);
         var textures = new TrackShapeTextureAssetLoader().Load(store, textureDiscovery);
         var placements = new WorldObjectPlacementBuilder().Build(worldTile);
+        var forestTextureDiscovery = new ForestTextureAssetLocator().Locate(store, routeRoot, placements);
+        var forestTextures = new TrackShapeTextureAssetLoader().Load(store, forestTextureDiscovery);
 
         return new LoadedWorldSceneryTile(
             worldTile,
@@ -49,7 +51,9 @@ public sealed class WorldSceneryTileLoader
             shapeMeshes,
             failedShapes,
             textureDiscovery,
-            textures);
+            textures,
+            forestTextureDiscovery,
+            forestTextures);
     }
 }
 
@@ -62,4 +66,6 @@ public sealed record LoadedWorldSceneryTile(
     IReadOnlyList<TrackShapeAssetMesh> ShapeMeshes,
     IReadOnlyList<WorldShapeMeshIssue> FailedShapes,
     TrackShapeTextureAssetDiscovery TextureDiscovery,
-    TrackShapeTextureAssetLoadResult Textures);
+    TrackShapeTextureAssetLoadResult Textures,
+    TrackShapeTextureAssetDiscovery ForestTextureDiscovery,
+    TrackShapeTextureAssetLoadResult ForestTextures);
