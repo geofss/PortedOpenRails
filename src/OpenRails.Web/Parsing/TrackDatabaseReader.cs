@@ -189,7 +189,7 @@ public sealed class TrackDatabaseReader
 
     private static TrackVectorSection[] ReadVectorNode(STFReader reader, out int[] itemReferences)
     {
-        itemReferences = Array.Empty<int>();
+        var parsedItemReferences = Array.Empty<int>();
         reader.MustMatch("(");
         TrackVectorSection[]? sections = null;
         reader.ParseBlock(new[]
@@ -245,10 +245,11 @@ public sealed class TrackDatabaseReader
                 });
                 if (references.Count != count)
                     throw new InvalidDataException($"TrVectorNode declares {count} track item references but contains {references.Count}.");
-                itemReferences = references.ToArray();
+                parsedItemReferences = references.ToArray();
             })
         });
 
+        itemReferences = parsedItemReferences;
         return sections ?? throw new InvalidDataException("TrVectorNode is missing TrVectorSections.");
     }
 }
@@ -319,6 +320,11 @@ public sealed class TrackDatabase
     public int NodeCount => nodes.Length - 1;
     public int TrackItemCount { get; }
     public IReadOnlyList<string> Diagnostics { get; }
+
+    public TrackDatabase(TrackNode?[] nodes, IEnumerable<string> diagnostics)
+        : this(nodes, 0, diagnostics)
+    {
+    }
 
     public TrackDatabase(TrackNode?[] nodes, int trackItemCount, IEnumerable<string> diagnostics)
     {
