@@ -105,6 +105,39 @@ public sealed class WorldTileReaderTests
         Assert.Equal(new WorldTilePosition(8198, 7, -10232), placements[1].JunctionWorldPosition);
     }
 
+    [Fact]
+    public void ReadsOriginalOpenRailsWorldObjectFamiliesAsSceneryPlacements()
+    {
+        var objectTokens = new[]
+        {
+            TokenID.CarSpawner, TokenID.Siding, TokenID.Platform, TokenID.Forest,
+            TokenID.LevelCr, TokenID.Dyntrack, TokenID.Transfer, TokenID.Gantry,
+            TokenID.Pickup, TokenID.Hazard, TokenID.Signal, TokenID.Speedpost
+        };
+        var blocks = objectTokens.Select((token, index) => Block(token, Concat(
+            UIntPayload(TokenID.UiD, (uint)(100 + index)),
+            StringBlock(TokenID.FileName, $"object-{index}.s"),
+            FloatBlock(TokenID.Position, index, 2, 3),
+            FloatBlock(TokenID.QDirection, 0, 0, 0, 1)))).ToArray();
+        using var store = CreateStore(("ROUTES/Test/WORLD/W+000001-000002.w",
+            CreateSbrFile(Block(TokenID.Tr_Worldfile, Concat(blocks)))));
+
+        var tile = new WorldTileReader().Read(store, "ROUTES/Test/WORLD/W+000001-000002.w");
+
+        Assert.Equal(objectTokens.Length, tile.StaticObjects.Count);
+        Assert.Empty(tile.Diagnostics);
+        for (var i = 0; i < objectTokens.Length; i++)
+        {
+            Assert.Equal(objectTokens[i].ToString(), tile.StaticObjects[i].ObjectKind);
+            Assert.Equal($"object-{i}.s", tile.StaticObjects[i].FileName);
+            Assert.Equal((uint)(100 + i), tile.StaticObjects[i].Uid);
+        }
+
+        var placements = new WorldObjectPlacementBuilder().Build(tile);
+        Assert.Equal(objectTokens.Length, placements.Count);
+        Assert.Equal(objectTokens.Select(token => token.ToString()), placements.Select(item => item.ObjectKind));
+    }
+
     private static byte[] CreateSbrFile(byte[] rootBlock)
     {
         using var stream = new MemoryStream();
