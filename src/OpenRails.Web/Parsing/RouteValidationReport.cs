@@ -22,7 +22,8 @@ public sealed record RouteValidationReport(
     int FailedWorldShapes,
     int MissingTextures,
     int FailedTextures,
-    IReadOnlyList<RouteValidationIssue> Issues)
+    IReadOnlyList<RouteValidationIssue> Issues,
+    int TrackDatabaseDiagnosticsCount = 0)
 {
     public bool HasCriticalIssues => !TrackNetworkUsable;
     public int AssetIssueCount => MissingTerrainTiles + FailedTerrainTiles +
@@ -30,6 +31,7 @@ public sealed record RouteValidationReport(
         MissingWorldShapes + FailedWorldShapes + MissingTextures + FailedTextures;
 
     public static RouteValidationReport Build(
+        TrackDatabase trackDatabase,
         Simulation.TrackNetwork network,
         RouteTerrainTileDiscovery terrainDiscovery,
         RouteTerrainMeshLoadResult terrainMeshes,
@@ -39,6 +41,7 @@ public sealed record RouteValidationReport(
         RouteWorldSceneryLoadResult worldScenery,
         TerrainTextureAssetLoadResult terrainTextures)
     {
+        ArgumentNullException.ThrowIfNull(trackDatabase);
         ArgumentNullException.ThrowIfNull(network);
         ArgumentNullException.ThrowIfNull(terrainDiscovery);
         ArgumentNullException.ThrowIfNull(terrainMeshes);
@@ -59,6 +62,8 @@ public sealed record RouteValidationReport(
             issues.Add(new("Track network", "No usable vector track paths or finite positive total track length were produced."));
         if (criticalTopologyDiagnostics > 0)
             issues.Add(new("Track network", $"{criticalTopologyDiagnostics} vector track path(s) have critical topology problems (empty geometry or a pin-link count other than two)."));
+        foreach (var diagnostic in trackDatabase.Diagnostics)
+            issues.Add(new("Track database", diagnostic));
         foreach (var diagnostic in network.Diagnostics)
             issues.Add(new("Track network", diagnostic));
 
@@ -105,6 +110,7 @@ public sealed record RouteValidationReport(
                 worldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count),
             terrainTextures.Failed.Count + trackShapeMeshes.Textures.Failed.Count +
                 worldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count),
-            Array.AsReadOnly(issues.ToArray()));
+            Array.AsReadOnly(issues.ToArray()),
+            trackDatabase.Diagnostics.Count);
     }
 }
