@@ -86,6 +86,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/WorldObjectPlacementBuilder.cs" Link="Parsing/WorldObjectPlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/WorldSceneryRenderGeometryBuilder.cs" Link="Parsing/WorldSceneryRenderGeometryBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ForestMeshBuilder.cs" Link="Parsing/ForestMeshBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ForestTextureAssetLocator.cs" Link="Parsing/ForestTextureAssetLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteBuilder.cs" Link="Simulation/TrackNetworkRouteBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/RouteStartVectorSelector.cs" Link="Simulation/RouteStartVectorSelector.cs" />
