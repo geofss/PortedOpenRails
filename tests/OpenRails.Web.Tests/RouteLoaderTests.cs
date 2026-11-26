@@ -30,7 +30,7 @@ public sealed class RouteLoaderTests
                     RouteStart ( 0 0 0 0 )
                 )
                 """),
-            ("Demo Model 1/Demo Model 1/ROUTES/Test/TDB/TESTDB.tdb", """
+            ("Demo Model 1/ROUTES/Test/TDB/TESTDB.tdb", """
                 SIMISA@@@@@@@@@@JINX0t1t
                 TrackDB (
                     TrackNodes ( 3
@@ -81,10 +81,10 @@ public sealed class RouteLoaderTests
                     TrackShape ( 0 FileName ( "track.s" ) NumPaths ( 0 ) )
                 )
                 """),
-            ("Demo Model 1/Demo Model 1/GLOBAL/SHAPES/track.s", "shape placeholder"),
+            ("Demo Model 1/GLOBAL/SHAPES/track.s", "shape placeholder"),
             ("Demo Model 1/ROUTES/Test/TILES/-7FFFFFFC.t", "terrain tile placeholder"),
             ("Demo Model 1/ROUTES/Test/TILES/-7FFFFFFC_y.raw", "altitude samples"),
-            ("Demo Model 1/Demo Model 1/ROUTES/Test/WORLD/W+000000+000000.w", "world tile placeholder"));
+            ("Demo Model 1/ROUTES/Test/WORLD/W+000000+000000.w", "world tile placeholder"));
 
         var metadata = new RouteMetadataReader().Read(store, "Demo Model 1/ROUTES/Test/Test.trk");
         var route = new RouteLoader().Load(store, "Demo Model 1/ROUTES/Test/Test.trk", metadata);
@@ -98,7 +98,7 @@ public sealed class RouteLoaderTests
         Assert.Equal(1.435f, route.Metadata.TrackGaugeMeters);
         Assert.True(route.Metadata.MilepostUnitsMetric);
         Assert.Equal(1, route.Metadata.SuperElevationMode);
-        Assert.Equal("Demo Model 1/Demo Model 1/ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
+        Assert.Equal("Demo Model 1/ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
         Assert.Equal(3, route.TrackDatabase.NodeCount);
         Assert.Equal(2, route.TrackDatabase.TrackItemCount);
         Assert.Equal(new[] { 0 }, route.TrackDatabase.GetRequiredNode(2).TrackItemReferences);
@@ -117,9 +117,9 @@ public sealed class RouteLoaderTests
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
-        Assert.Equal("Demo Model 1/Demo Model 1/GLOBAL/SHAPES/track.s", Assert.Single(route.TrackShapeAssets.Found).Path);
+        Assert.Equal("Demo Model 1/GLOBAL/SHAPES/track.s", Assert.Single(route.TrackShapeAssets.Found).Path);
         Assert.Empty(route.TrackShapeAssets.Missing);
-        Assert.Equal("Demo Model 1/Demo Model 1/ROUTES/Test/WORLD/W+000000+000000.w", Assert.Single(route.WorldTiles.Found).Path);
+        Assert.Equal("Demo Model 1/ROUTES/Test/WORLD/W+000000+000000.w", Assert.Single(route.WorldTiles.Found).Path);
         Assert.Empty(route.WorldTiles.Missing);
         Assert.Single(route.TerrainTiles.Found);
         Assert.Empty(route.TerrainTiles.Missing);
