@@ -255,7 +255,7 @@ public sealed class TrackDatabaseReader
                 if (signalDirections.Count != count)
                     throw new InvalidDataException($"Signal item declares {count} junction directions but contains {signalDirections.Count}.");
             }),
-            new STFReader.TokenProcessor("crossovertritemdata", ()
+            new STFReader.TokenProcessor("crossovertritemdata", () =>
             {
                 reader.MustMatch("(");
                 crossoverTrackNode = reader.ReadUInt(null);
@@ -510,7 +510,11 @@ public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, flo
     string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting,
     uint? SpeedPostFlags = null, float? SpeedIndicator = null, int? SpeedDisplayNumber = null,
     float? SpeedPostAngle = null, uint? SoundRegionData1 = null, uint? SoundRegionData2 = null,
-    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null,\n    string? SignalFlags = null, uint? SignalDirection = null, float? SignalData = null, string? SignalType = null,\n    IReadOnlyList<TrackSignalDirection>? SignalDirections = null);\n\npublic sealed record TrackSignalDirection(uint TrackNode, uint Sd1, uint LinkLeftRightPath, uint Sd3);
+    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null,
+    string? SignalFlags = null, uint? SignalDirection = null, float? SignalData = null, string? SignalType = null,
+    IReadOnlyList<TrackSignalDirection>? SignalDirections = null);
+
+public sealed record TrackSignalDirection(uint TrackNode, uint Sd1, uint LinkLeftRightPath, uint Sd3);
 
 public sealed class TrackDatabase
 {
