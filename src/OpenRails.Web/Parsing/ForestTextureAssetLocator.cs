@@ -21,10 +21,6 @@ public sealed class ForestTextureAssetLocator
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(placements);
         var root = VirtualPath.Normalize(routeRoot);
-        var available = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in store.Paths)
-            available.TryAdd(path, path);
-
         var found = new List<TrackShapeTextureAssetReference>();
         var missing = new List<TrackShapeTextureAssetIssue>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -48,10 +44,10 @@ public sealed class ForestTextureAssetLocator
             var matches = new List<TrackShapeTextureAssetReference>();
             foreach (var season in SeasonFolders)
             {
-                var candidate = season is null
-                    ? $"{root}/TEXTURES/{normalizedName}"
-                    : $"{root}/TEXTURES/{season}/{normalizedName}";
-                if (available.TryGetValue(candidate, out var actual))
+                var seasonalName = season is null ? normalizedName : $"{season}/{normalizedName}";
+                var actual = RouteContentPathResolver.Resolve(
+                    store, root, "TEXTURES", "GLOBAL/TEXTURES", seasonalName);
+                if (actual is not null)
                     matches.Add(new TrackShapeTextureAssetReference(forest.Uid, imageName, season, actual));
             }
 
