@@ -154,6 +154,8 @@ public sealed class TrackDatabaseReader
         uint? soundRegionData1 = null;
         uint? soundRegionData2 = null;
         float? soundRegionData3 = null;
+        uint? crossoverTrackNode = null;
+        uint? crossoverShapeId = null;
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tritemid", () =>
@@ -214,6 +216,13 @@ public sealed class TrackDatabaseReader
                 speedPostAngle = reader.ReadFloat(STFReader.UNITS.None, null);
                 reader.SkipRestOfBlock();
             }),
+            new STFReader.TokenProcessor("crossovertritemdata", () =>
+            {
+                reader.MustMatch("(");
+                crossoverTrackNode = reader.ReadUInt(null);
+                crossoverShapeId = reader.ReadUInt(null);
+                reader.SkipRestOfBlock();
+            }),
             new STFReader.TokenProcessor("tritemsrdata", () =>
             {
                 reader.MustMatch("(");
@@ -243,7 +252,8 @@ public sealed class TrackDatabaseReader
         return new TrackItem(expectedIndex, type, tileX, tileZ, x, y, z,
             tilePX, tilePZ, px, pz, distance, data2, name, station, flags, linkedItemId,
             minimumWaitingTime, passengersWaiting, speedPostFlags, speedIndicator,
-            speedDisplayNumber, speedPostAngle, soundRegionData1, soundRegionData2, soundRegionData3);
+            speedDisplayNumber, speedPostAngle, soundRegionData1, soundRegionData2, soundRegionData3,
+            crossoverTrackNode, crossoverShapeId);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -461,7 +471,7 @@ public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, flo
     string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting,
     uint? SpeedPostFlags = null, float? SpeedIndicator = null, int? SpeedDisplayNumber = null,
     float? SpeedPostAngle = null, uint? SoundRegionData1 = null, uint? SoundRegionData2 = null,
-    float? SoundRegionData3 = null);
+    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null);
 
 public sealed class TrackDatabase
 {
