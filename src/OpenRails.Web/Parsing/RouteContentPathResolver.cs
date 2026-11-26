@@ -17,7 +17,7 @@ internal static class RouteContentPathResolver
     {
         ArgumentNullException.ThrowIfNull(store);
         var root = VirtualPath.Normalize(routeRoot);
-        var name = relativeFileName.Replace('\\\\', '/');
+        var name = relativeFileName.Replace('\\', '/');
         var packageRoot = GetPackageRoot(root);
         var globalRelative = name.StartsWith(globalFolder + "/", StringComparison.OrdinalIgnoreCase)
             ? name[(globalFolder.Length + 1)..]
