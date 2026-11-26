@@ -64,6 +64,7 @@ public sealed class TrackSectionGeometryReader
             STFReader.NextStreamReaderFactory = new VirtualContentStreamReaderFactory(store);
             using var reader = new STFReader(normalized, useTree: false);
             var sections = new Dictionary<uint, TrackSectionGeometry>();
+            var dynamicPaths = new Dictionary<uint, TrackPathDefinition>();
             uint maximum = 0;
             reader.ParseFile(new[]
             {
@@ -79,9 +80,35 @@ public sealed class TrackSectionGeometryReader
                             sections[section.Index] = section;
                         })
                     });
+                }),
+                new STFReader.TokenProcessor("sectionidx", () =>
+                {
+                    reader.MustMatch("(");
+                    var declaredCount = reader.ReadUInt(null);
+                    if (declaredCount > 100000)
+                        throw new InvalidDataException($"Route TSECTION declares too many dynamic paths: {declaredCount}.");
+                    reader.ParseBlock(new[]
+                    {
+                        new STFReader.TokenProcessor("trackpath", () =>
+                        {
+                            reader.MustMatch("(");
+                            var dynamicIndex = reader.ReadUInt(null);
+                            var count = reader.ReadUInt(null);
+                            if (count > 4096)
+                                throw new InvalidDataException($"Dynamic track path {dynamicIndex} has too many sections: {count}.");
+                            var indices = new uint[count];
+                            for (var i = 0; i < indices.Length; i++)
+                                indices[i] = reader.ReadUInt(null);
+                            reader.SkipRestOfBlock();
+                            if (!dynamicPaths.TryAdd(dynamicIndex, new TrackPathDefinition(dynamicIndex, indices)))
+                                throw new InvalidDataException($"Duplicate dynamic track path index {dynamicIndex}.");
+                        })
+                    });
+                    if (dynamicPaths.Count != declaredCount)
+                        throw new InvalidDataException($"Route TSECTION declares {declaredCount} dynamic paths but contains {dynamicPaths.Count}.");
                 })
             });
-            return new TrackSectionCatalog(maximum, sections);
+            return new TrackSectionCatalog(maximum, sections, dynamicPaths: dynamicPaths);
         }
     }
 
@@ -201,20 +228,28 @@ public sealed class TrackSectionCatalog
     public int Count => sections.Count;
 
     public TrackShapeCatalog Shapes { get; }
+    private readonly IReadOnlyDictionary<uint, TrackPathDefinition> dynamicPaths;
+    public IReadOnlyDictionary<uint, TrackPathDefinition> DynamicPaths => dynamicPaths;
 
     public TrackSectionCatalog(uint maximumSectionIndex, IReadOnlyDictionary<uint, TrackSectionGeometry> sections,
-        TrackShapeCatalog? shapes = null)
+        TrackShapeCatalog? shapes = null, IReadOnlyDictionary<uint, TrackPathDefinition>? dynamicPaths = null)
     {
         MaximumSectionIndex = maximumSectionIndex;
         this.sections = new Dictionary<uint, TrackSectionGeometry>(sections);
         Shapes = shapes ?? new TrackShapeCatalog(0, new Dictionary<uint, TrackShapeDefinition>());
+        this.dynamicPaths = new Dictionary<uint, TrackPathDefinition>(dynamicPaths ?? new Dictionary<uint, TrackPathDefinition>());
     }
+
+    public bool TryGetDynamicPath(uint index, out TrackPathDefinition path) => dynamicPaths.TryGetValue(index, out path!);
 
     public bool TryGet(uint index, out TrackSectionGeometry section) => sections.TryGetValue(index, out section!);
     public TrackSectionGeometry GetRequired(uint index) => sections.TryGetValue(index, out var section)
         ? section
         : throw new InvalidDataException($"Track section {index} was not found in the catalog.");
 }
+
+/// <summary>Original route TSECTION.DAT TrackPath mapping for a dynamic section index.</summary>
+public sealed record TrackPathDefinition(uint DynamicSectionIndex, IReadOnlyList<uint> TrackSectionIndices);
 
 public sealed record TrackShapePath(
     double OffsetX,
