@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/Orts.IO/Orts.IO.csproj" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AccelerationController.cs" Link="Upstream/AccelerationController.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/VirtualPath.cs" Link="Content/VirtualPath.cs" />
     <Compile Include="../../src/OpenRails.Web/Content/IZipContentStore.cs" Link="Content/IZipContentStore.cs" />
