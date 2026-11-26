@@ -54,7 +54,7 @@ public sealed class RouteLoaderTests
                             TrPins ( 1 0 TrPin ( 2 1 ) )
                         )
                     )
-                    TrItemTable ( 1 EmptyItem ( ) )
+                    TrItemTable ( 1 EmptyItem ( TrItemId ( 0 ) ) )
                 )
                 """),
             ("GLOBAL/TSECTION.DAT", """
@@ -89,6 +89,9 @@ public sealed class RouteLoaderTests
         Assert.Equal(3, route.TrackDatabase.NodeCount);
         Assert.Equal(1, route.TrackDatabase.TrackItemCount);
         Assert.Equal(new[] { 0 }, route.TrackDatabase.GetRequiredNode(2).TrackItemReferences);
+        var trackItem = Assert.IsType<TrackItem>(Assert.Single(route.TrackDatabase.TrackItems));
+        Assert.Equal("empty", trackItem.Type);
+        Assert.Equal(0, trackItem.Index);
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
         Assert.Equal(10, route.TrackNetwork.TotalTrackLengthMeters);
         Assert.Equal("track.s", route.TrackNetwork.VectorPaths[0].Sections[0].Shape?.FileName);
