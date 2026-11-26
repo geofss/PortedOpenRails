@@ -24,6 +24,10 @@ A byte-for-byte comparison at the audited revision found:
 
 This means the repository already contains upstream-derived MSTS parser code. In particular, the shorter STFReader is an intentional selection of the newer upstream implementation plus browser adaptations; its file-size difference alone is not evidence of missing parser features. The immediate task is to compare that selected implementation against the exact upstream NEW_READER branch, review local adaptations and omissions, and restore upstream behaviour where browser compatibility permits.
 
+## STFReader method-surface comparison
+
+A method-name inventory was run against the upstream `NEW_READER` conditional branch at the pinned revision, excluding the legacy reader. All 58 upstream method names are present in the browser copy. The browser copy has eight additional method names associated with its parser integration and diagnostics (`Processor`, `ParsingBreak`, `EOF`, `VerifyStartOfBlock`, `PeekPastWhitespace`, `GetStreamReader`, `TraceWarning`, and `TraceInformation`). This is a method-surface check, not a semantic-equivalence proof: method bodies, conditional compilation, include handling, numeric conversion, and stream lifetime still need targeted behavioural tests.
+
 ## Browser-specific layer
 
 Files such as `RouteMetadataReader.cs`, `TrackDatabaseReader.cs`, `TrackSectionGeometryReader.cs`, `TerrainTileReader.cs`, `WorldTileReader.cs`, `TrackShapeFileReader.cs`, and the route/terrain/scenery asset loaders are browser-port integration or adapter code in this repository; they do not have same-named source files in the upstream MSTS parser project at the audited revision.
