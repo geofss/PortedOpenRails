@@ -17,53 +17,28 @@ public enum TerrainTileZoom
 
 public static class TerrainTileName
 {
-    private const string Hex = "0123456789ABCDEF";
-
     public static string FromTileXZ(int tileX, int tileZ, TerrainTileZoom zoom)
     {
         var level = (int)zoom;
         if (level is < 1 or > 15)
             throw new ArgumentOutOfRangeException(nameof(zoom));
 
-        var rectX = -16384;
-        var rectZ = -16384;
-        var rectWidth = 16384;
-        var rectHeight = 16384;
-        var name = new System.Text.StringBuilder(level % 2 == 1 ? "-" : "_");
-        var partial = 0;
-
-        for (var depth = 0; depth < level; depth++)
-        {
-            var east = tileX >= rectX + rectWidth;
-            var north = tileZ >= rectZ + rectHeight;
-            partial <<= 2;
-            partial += (north ? 0 : 2) + (east ^ north ? 0 : 1);
-
-            if (depth % 2 == 1)
-            {
-                name.Append(Hex[partial]);
-                partial = 0;
-            }
-
-            if (east) rectX += rectWidth;
-            if (north) rectZ += rectHeight;
-            rectWidth /= 2;
-            rectHeight /= 2;
-        }
-
-        if (level % 2 == 1)
-            name.Append(Hex[partial << 2]);
-
-        return name.ToString();
+        return Orts.Formats.Msts.TileName.FromTileXZ(
+            tileX,
+            tileZ,
+            (Orts.Formats.Msts.TileName.Zoom)level);
     }
 
     public static void Snap(ref int tileX, ref int tileZ, TerrainTileZoom zoom)
     {
-        var shift = 15 - (int)zoom;
-        tileX >>= shift;
-        tileX <<= shift;
-        tileZ >>= shift;
-        tileZ <<= shift;
+        var level = (int)zoom;
+        if (level is < 1 or > 15)
+            throw new ArgumentOutOfRangeException(nameof(zoom));
+
+        Orts.Formats.Msts.TileName.Snap(
+            ref tileX,
+            ref tileZ,
+            (Orts.Formats.Msts.TileName.Zoom)level);
     }
 }
 
