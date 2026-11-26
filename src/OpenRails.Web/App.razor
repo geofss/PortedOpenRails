@@ -600,7 +600,7 @@
                 });
                 using var progressReference = DotNetObjectReference.Create(progress);
                 var stored = await BrowserPackageArchiveUploader.StoreAsync(JS, file, progressReference);
-                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to persistent browser storage. Large-archive ZIP indexing and route loading are the next integration step; this archive is safely staged, not yet playable.";
+                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to browser OPFS storage. Persistent-storage protection: {(stored.PersistentStorageGranted ? "granted" : "not granted")}. Large-archive ZIP indexing and route loading are the next integration step; this archive is staged, not yet playable.";
                 return;
             }
 
@@ -637,7 +637,7 @@
             if (routeChoices.Count == 1)
                 await SelectRoute(routeChoices[0]);
         }
-        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException)
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException || exception is JSException)
         {
             errorMessage = exception.Message;
         }
