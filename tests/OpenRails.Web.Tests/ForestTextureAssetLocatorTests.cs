@@ -47,8 +47,8 @@ public sealed class ForestTextureAssetLocatorTests
             new[] { unsafeForest, missingForest });
 
         Assert.Equal(2, result.Missing.Count);
-        Assert.Contains(result.Missing, item => item.Uid == 1 && item.Reason.Contains("safe"));
-        Assert.Contains(result.Missing, item => item.Uid == 2 && item.Reason.Contains("not found"));
+        Assert.Contains(result.Missing, item => item.ShapeIndex == 1 && item.Reason.Contains("safe"));
+        Assert.Contains(result.Missing, item => item.ShapeIndex == 2 && item.Reason.Contains("not found"));
     }
 
     private static ZipContentStore CreateStore(params string[] paths)
