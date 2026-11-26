@@ -15,10 +15,6 @@ public sealed class TrackShapeAssetLocator
         ArgumentNullException.ThrowIfNull(network);
 
         var root = VirtualPath.Normalize(routeRoot);
-        var available = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in store.Paths)
-            available.TryAdd(path, path);
-
         var found = new List<TrackShapeAssetReference>();
         var missing = new List<TrackShapeAssetIssue>();
         var shapes = network.VectorPaths
