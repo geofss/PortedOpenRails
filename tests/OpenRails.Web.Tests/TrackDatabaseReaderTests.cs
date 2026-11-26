@@ -85,6 +85,49 @@ public sealed class TrackDatabaseReaderTests
         Assert.Empty(database.EnumerateConnections());
     }
 
+    [Fact]
+    public void ReadsUpstreamSpeedPostAndSoundRegionMetadata()
+    {
+        using var store = CreateStore(("ROUTES/Test/ITEMS.tdb", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            TrackDB (
+              TrackNodes ( 1
+                TrackNode ( 1
+                  UiD ( 0 0 10 0 1000 1000 0 0 0 0 0 0 )
+                  TrEndNode ( )
+                  TrPins ( 0 0 )
+                )
+              )
+              TrItemTable ( 2
+                SpeedPostItem (
+                  TrItemId ( 0 )
+                  TrItemRData ( 1 2 3 4 5 )
+                  SpeedPostTrItemData ( 16 80 8 0.25 )
+                )
+                SoundRegionItem (
+                  TrItemId ( 1 )
+                  TrItemSRData ( 11 22 3.5 )
+                )
+              )
+            )
+            """));
+
+        var database = new TrackDatabaseReader().Read(store, "ROUTES/Test/ITEMS.tdb");
+
+        var speedPost = Assert.IsType<TrackItem>(database.TrackItems[0]);
+        Assert.Equal("speedpost", speedPost.Type);
+        Assert.Equal((uint)16, speedPost.SpeedPostFlags);
+        Assert.Equal(80, speedPost.SpeedIndicator);
+        Assert.Equal(8, speedPost.SpeedDisplayNumber);
+        Assert.Equal(0.25f, speedPost.SpeedPostAngle);
+
+        var soundRegion = Assert.IsType<TrackItem>(database.TrackItems[1]);
+        Assert.Equal("sound-region", soundRegion.Type);
+        Assert.Equal((uint)11, soundRegion.SoundRegionData1);
+        Assert.Equal((uint)22, soundRegion.SoundRegionData2);
+        Assert.Equal(3.5f, soundRegion.SoundRegionData3);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
