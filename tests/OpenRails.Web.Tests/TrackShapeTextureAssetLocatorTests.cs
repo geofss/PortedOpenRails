@@ -40,6 +40,19 @@ public sealed class TrackShapeTextureAssetLocatorTests
         Assert.Contains(result.Missing, item => item.ImageName == "../outside.ace" && item.Reason.Contains("safe"));
     }
 
+    [Fact]
+    public void ResolvesGlobalShapeTextureInsideDemoModelParentFolder()
+    {
+        var asset = CreateShapeAsset("rail.ace");
+        using var store = CreateStore(("Demo Model 1/GLOBAL/TEXTURES/rail.ace", "rail"));
+
+        var result = new TrackShapeTextureAssetLocator().Locate(store,
+            "Demo Model 1/ROUTES/SCE", new[] { asset });
+
+        Assert.Equal("Demo Model 1/GLOBAL/TEXTURES/rail.ace", Assert.Single(result.Found).Path);
+        Assert.Empty(result.Missing);
+    }
+
     private static TrackShapeAssetMesh CreateShapeAsset(params string[] imageNames)
     {
         var primitives = imageNames.Select(name => new TrackShapePrimitiveMesh(
