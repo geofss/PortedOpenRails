@@ -86,7 +86,8 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         var assets = new[]
         {
             CreateAsset(2, "Wagon", 30_000, 20, 60_000, null,
-                davisA: -1, davisB: float.NaN, davisC: 0.5f)
+                davisA: -1, davisB: float.NaN, davisC: 0.5f,
+                brakeSystemType: "air_single_pipe", brakeEquipmentType: "distributor")
         };
 
         var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
