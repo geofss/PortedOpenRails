@@ -63,7 +63,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         foreach (var car in cars)
         {
             var asset = carAssets.FirstOrDefault(candidate =>
-                candidate.ConsistName == consist.Name && candidate.Uid == car.Uid);
+                candidate.Uid == car.Uid && string.Equals(candidate.Name, car.Name, StringComparison.OrdinalIgnoreCase));
             var metadata = asset?.Metadata;
             var mass = metadata?.MassKg ?? 0;
             if (!float.IsFinite(mass) || mass <= 0)
@@ -113,7 +113,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         for (var i = 0; i < cars.Length - 1; i++)
         {
             var frontAsset = carAssets.FirstOrDefault(candidate =>
-                candidate.ConsistName == consist.Name && candidate.Uid == cars[i].Uid);
+                candidate.Uid == cars[i].Uid && string.Equals(candidate.Name, cars[i].Name, StringComparison.OrdinalIgnoreCase));
             var rearAsset = carAssets.FirstOrDefault(candidate =>
                 candidate.ConsistName == consist.Name && candidate.Uid == cars[i + 1].Uid);
             var ratedStrengths = new[]
