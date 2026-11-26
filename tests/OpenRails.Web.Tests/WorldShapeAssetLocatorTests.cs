@@ -67,6 +67,22 @@ public sealed class WorldShapeAssetLocatorTests
         Assert.Contains(result.Missing, item => item.ObjectUid == 2 && item.Reason.Contains("safe"));
     }
 
+    [Fact]
+    public void ResolvesGlobalWorldShapeInsideDemoModelParentFolder()
+    {
+        var tile = new WorldTileData(
+            "Demo Model 1/ROUTES/SCE/WORLD/W+000000+000000.w", 0, 0,
+            new[] { new StaticWorldObject(1, "building.s", null, null, null, 0, 0) },
+            Array.Empty<TrackWorldObject>(), Array.Empty<string>());
+        using var store = CreateStore(("Demo Model 1/GLOBAL/SHAPES/building.s", "global building"));
+
+        var result = new WorldShapeAssetLocator().Locate(store,
+            "Demo Model 1/ROUTES/SCE", new[] { tile });
+
+        Assert.Equal("Demo Model 1/GLOBAL/SHAPES/building.s", Assert.Single(result.Found).Path);
+        Assert.Empty(result.Missing);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
