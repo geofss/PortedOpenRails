@@ -119,19 +119,27 @@ public sealed class TrackDatabaseReaderTests
 
         var database = new TrackDatabaseReader().Read(store, "ROUTES/Test/ITEMS.tdb");
 
-        var signal = Assert.IsType<TrackItem>(database.TrackItems[0]);\n        Assert.Equal("signal", signal.Type);\n        Assert.Equal("00000001", signal.SignalFlags);\n        Assert.Equal((uint)1, signal.SignalDirection);\n        Assert.Equal(0.5f, signal.SignalData);\n        Assert.Equal("main", signal.SignalType);\n        Assert.Equal(new TrackSignalDirection(27, 1, 0, 1), Assert.Single(signal.SignalDirections!));\n\n        var crossover = Assert.IsType<TrackItem>(database.TrackItems[1]);
+        var signal = Assert.IsType<TrackItem>(database.TrackItems[0]);
+        Assert.Equal("signal", signal.Type);
+        Assert.Equal("00000001", signal.SignalFlags);
+        Assert.Equal((uint)1, signal.SignalDirection);
+        Assert.Equal(0.5f, signal.SignalData);
+        Assert.Equal("main", signal.SignalType);
+        Assert.Equal(new TrackSignalDirection(27, 1, 0, 1), Assert.Single(signal.SignalDirections!));
+
+        var crossover = Assert.IsType<TrackItem>(database.TrackItems[1]);
         Assert.Equal("crossover", crossover.Type);
         Assert.Equal((uint)27, crossover.CrossoverTrackNode);
         Assert.Equal((uint)6, crossover.CrossoverShapeId);
 
-        var speedPost = Assert.IsType<TrackItem>(database.TrackItems[1]);
+        var speedPost = Assert.IsType<TrackItem>(database.TrackItems[2]);
         Assert.Equal("speedpost", speedPost.Type);
         Assert.Equal((uint)16, speedPost.SpeedPostFlags);
         Assert.Equal(80, speedPost.SpeedIndicator);
         Assert.Equal(8, speedPost.SpeedDisplayNumber);
         Assert.Equal(0.25f, speedPost.SpeedPostAngle);
 
-        var soundRegion = Assert.IsType<TrackItem>(database.TrackItems[2]);
+        var soundRegion = Assert.IsType<TrackItem>(database.TrackItems[3]);
         Assert.Equal("sound-region", soundRegion.Type);
         Assert.Equal((uint)11, soundRegion.SoundRegionData1);
         Assert.Equal((uint)22, soundRegion.SoundRegionData2);
