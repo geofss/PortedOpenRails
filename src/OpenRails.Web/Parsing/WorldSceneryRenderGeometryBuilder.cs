@@ -124,7 +124,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
             }
             if (!truncated)
             {
-                var forestTextureIndexes = new Dictionary<uint, int>();
+                var forestTextureIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 foreach (var texture in tile.ForestTextures?.Loaded ?? Array.Empty<LoadedTrackShapeTexture>())
                 {
                     if (texture.Reference.SeasonFolder is not null ||
@@ -137,14 +137,15 @@ public sealed class WorldSceneryRenderGeometryBuilder
                         texturePathIndexes.Add(texture.Reference.Path, forestTextureIndex);
                         textureAssets.Add(texture);
                     }
-                    forestTextureIndexes.TryAdd(texture.Reference.ShapeIndex, forestTextureIndex);
+                    forestTextureIndexes.TryAdd(texture.Reference.ImageName, forestTextureIndex);
                 }
 
                 var forestBuilder = new ForestMeshBuilder();
                 foreach (var forest in tile.Placements.Where(item =>
                     StringComparer.OrdinalIgnoreCase.Equals(item.ObjectKind, "Forest")))
                 {
-                    if (!forestTextureIndexes.TryGetValue(forest.Uid, out var forestTextureIndex))
+                    if (string.IsNullOrWhiteSpace(forest.TreeTexture) ||
+                        !forestTextureIndexes.TryGetValue(forest.TreeTexture, out var forestTextureIndex))
                         continue;
                     var forestMesh = forestBuilder.Build(forest);
                     if (forestMesh.Indices.Length == 0)
