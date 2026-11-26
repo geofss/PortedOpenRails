@@ -108,7 +108,7 @@ public sealed class TrainBrakeDistributorModel
     private readonly double reservoirRechargeTimeConstantSeconds;
 
     public TrainBrakeDistributorModel(
-        double applicationTimeConstantSeconds = 0.7,
+        double applicationTimeConstantSeconds = 0.45,
         double releaseTimeConstantSeconds = 1.4,
         double reservoirRechargeTimeConstantSeconds = 8)
     {
