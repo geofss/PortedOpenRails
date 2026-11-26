@@ -80,31 +80,66 @@ public sealed class RouteTerrainTileLocator
         var availablePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in store.Paths)
             availablePaths.TryAdd(path, path);
-        var found = new List<TerrainTileReference>();
+        var foundByTile = new Dictionary<(TerrainTileZoom Zoom, int X, int Z), TerrainTileReference>();
         var missing = new List<(int X, int Z, string ExpectedPath)>();
+        var supportedZooms = new[]
+        {
+            TerrainTileZoom.Small,
+            TerrainTileZoom.Large,
+            TerrainTileZoom.DMSmall,
+            TerrainTileZoom.DMLarge
+        };
 
         foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
         {
-            var tileName = TerrainTileName.FromTileXZ(tile.X, tile.Z, TerrainTileZoom.Small);
-            var expectedPath = $"{root}/TILES/{tileName}.t";
-            var expectedAltitudePath = $"{root}/TILES/{tileName}_y.raw";
-            if (!availablePaths.TryGetValue(expectedPath, out var actualPath))
+            var located = false;
+            string? firstMissingPath = null;
+            foreach (var zoom in supportedZooms)
             {
-                missing.Add((tile.X, tile.Z, expectedPath));
-                continue;
+                var snappedX = tile.X;
+                var snappedZ = tile.Z;
+                TerrainTileName.Snap(ref snappedX, ref snappedZ, zoom);
+                var key = (zoom, snappedX, snappedZ);
+                if (foundByTile.ContainsKey(key))
+                {
+                    located = true;
+                    break;
+                }
+
+                var tileName = TerrainTileName.FromTileXZ(snappedX, snappedZ, zoom);
+                var expectedPath = $"{root}/TILES/{tileName}.t";
+                var expectedAltitudePath = $"{root}/TILES/{tileName}_y.raw";
+                if (!availablePaths.TryGetValue(expectedPath, out var actualPath))
+                {
+                    firstMissingPath ??= expectedPath;
+                    continue;
+                }
+
+                if (!availablePaths.TryGetValue(expectedAltitudePath, out var actualAltitudePath))
+                {
+                    firstMissingPath ??= expectedAltitudePath;
+                    continue;
+                }
+
+                var expectedFlagsPath = $"{root}/TILES/{tileName}_f.raw";
+                availablePaths.TryGetValue(expectedFlagsPath, out var actualFlagsPath);
+                foundByTile.Add(key, new TerrainTileReference(
+                    snappedX, snappedZ, actualPath, actualAltitudePath, actualFlagsPath));
+                located = true;
+                break;
             }
 
-            if (!availablePaths.TryGetValue(expectedAltitudePath, out var actualAltitudePath))
+            if (!located)
             {
-                missing.Add((tile.X, tile.Z, expectedAltitudePath));
-                continue;
+                var fallbackName = TerrainTileName.FromTileXZ(tile.X, tile.Z, TerrainTileZoom.Small);
+                missing.Add((tile.X, tile.Z, firstMissingPath ?? $"{root}/TILES/{fallbackName}.t"));
             }
-
-            var expectedFlagsPath = $"{root}/TILES/{tileName}_f.raw";
-            availablePaths.TryGetValue(expectedFlagsPath, out var actualFlagsPath);
-            found.Add(new TerrainTileReference(tile.X, tile.Z, actualPath, actualAltitudePath, actualFlagsPath));
         }
 
+        var found = foundByTile.Values
+            .OrderBy(tile => tile.TileZ)
+            .ThenBy(tile => tile.TileX)
+            .ToArray();
         return new RouteTerrainTileDiscovery(found, missing);
     }
 }
