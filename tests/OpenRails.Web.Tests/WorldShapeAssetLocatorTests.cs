@@ -29,6 +29,23 @@ public sealed class WorldShapeAssetLocatorTests
     }
 
     [Fact]
+    public void PreservesSpecializedWorldObjectKindDuringShapeDiscovery()
+    {
+        var tile = new WorldTileData(
+            "ROUTES/Test/WORLD/W+000000+000000.w", 0, 0,
+            new[] { new StaticWorldObject(7, "signal.s", null, null, null, 0, 0, "Signal") },
+            Array.Empty<TrackWorldObject>(),
+            Array.Empty<string>());
+        using var store = CreateStore(("GLOBAL/SHAPES/signal.s", "signal shape"));
+
+        var result = new WorldShapeAssetLocator().Locate(store, "ROUTES/Test", new[] { tile });
+
+        var asset = Assert.Single(result.Found);
+        Assert.Equal("Signal", asset.ObjectKind);
+        Assert.Equal((uint)7, asset.ObjectUid);
+    }
+
+    [Fact]
     public void ReportsMissingAndUnsafeWorldObjectShapeReferences()
     {
         var tile = new WorldTileData(
