@@ -19,6 +19,14 @@ public sealed class RouteLoaderTests
                     Name ( "Test Route" )
                     Description ( "End-to-end route fixture" )
                     FileName ( "TESTDB" )
+                    Electrified ( true )
+                    MaxLineVoltage ( 25000 )
+                    OverheadWireHeight ( 5.5m )
+                    SpeedLimit ( 80 )
+                    TempRestrictedSpeed ( 20 )
+                    TrackGauge ( 1.435m )
+                    MilepostUnitsKilometers
+                    ORTSForceSuperElevation ( true )
                     RouteStart ( 0 0 0 0 )
                 )
                 """),
@@ -69,6 +77,14 @@ public sealed class RouteLoaderTests
         var route = new RouteLoader().Load(store, "ROUTES/Test/Test.trk", metadata);
 
         Assert.Equal("Test Route", route.Metadata.Name);
+        Assert.True(route.Metadata.Electrified);
+        Assert.Equal(25000, route.Metadata.MaxLineVoltage);
+        Assert.Equal(5.5f, route.Metadata.OverheadWireHeightMeters);
+        Assert.Equal(80, route.Metadata.SpeedLimitMetersPerSecond);
+        Assert.Equal(20, route.Metadata.TempRestrictedSpeedMetersPerSecond);
+        Assert.Equal(1.435f, route.Metadata.TrackGaugeMeters);
+        Assert.True(route.Metadata.MilepostUnitsMetric);
+        Assert.Equal(1, route.Metadata.SuperElevationMode);
         Assert.Equal("ROUTES/Test/TDB/TESTDB.tdb", route.Assets.TrackDatabasePath);
         Assert.Equal(3, route.TrackDatabase.NodeCount);
         Assert.Equal(1, route.TrackNetwork.VectorPathCount);
