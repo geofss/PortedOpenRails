@@ -93,6 +93,36 @@ public sealed class RouteTerrainTileLocatorTests
         Assert.Equal(-4, z);
     }
 
+    [Theory]
+    [InlineData(TerrainTileZoom.DMSmall)]
+    [InlineData(TerrainTileZoom.DMLarge)]
+    public void DiscoversDemoModelTerrainTileZooms(TerrainTileZoom zoom)
+    {
+        var source = new TrackVectorSection(1, 0, 0, 0, 0, 0, 1, "00", 0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(1, null, 10, null, null, false);
+        var placement = new TrackSectionPlacement(source, geometry, new TrackWorldPosition(0, 0, 0), 10);
+        var path = new TrackVectorPath(1, new[] { 2, 3 }, new[] { placement }, 10);
+        var vector = new TrackNode(1, TrackNodeKind.Vector, null, null, new[] { source },
+            new[] { new TrackPin(2, 0), new TrackPin(3, 1) });
+        var nodeA = new TrackNode(2, TrackNodeKind.End, null, null,
+            Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var nodeB = new TrackNode(3, TrackNodeKind.End, null, null,
+            Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null, vector, nodeA, nodeB }, Array.Empty<string>()),
+            new[] { path }, Array.Empty<string>());
+        var tileName = TerrainTileName.FromTileXZ(0, 0, zoom);
+        using var store = CreateStore(
+            ($"ROUTES/Test/TILES/{tileName}.t", "terrain fixture"),
+            ($"ROUTES/Test/TILES/{tileName}_y.raw", "altitude fixture"));
+
+        var result = new RouteTerrainTileLocator().Locate(store, "ROUTES/Test", network);
+
+        var tile = Assert.Single(result.Found);
+        Assert.Equal(tileName, System.IO.Path.GetFileNameWithoutExtension(tile.Path));
+        Assert.Empty(result.Missing);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
