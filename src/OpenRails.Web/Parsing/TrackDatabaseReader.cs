@@ -143,6 +143,10 @@ public sealed class TrackDatabaseReader
         var data2 = string.Empty;
         var name = string.Empty;
         var station = string.Empty;
+        var flags = string.Empty;
+        uint? linkedItemId = null;
+        uint? minimumWaitingTime = null;
+        uint? passengersWaiting = null;
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tritemid", () =>
@@ -179,13 +183,30 @@ public sealed class TrackDatabaseReader
             }),
             new STFReader.TokenProcessor("platformname", () => name = reader.ReadStringBlock(string.Empty)),
             new STFReader.TokenProcessor("sidingname", () => name = reader.ReadStringBlock(string.Empty)),
-            new STFReader.TokenProcessor("station", () => station = reader.ReadStringBlock(string.Empty))
+            new STFReader.TokenProcessor("station", () => station = reader.ReadStringBlock(string.Empty)),
+            new STFReader.TokenProcessor("platformminwaitingtime", () => minimumWaitingTime = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("platformnumpassengerswaiting", () => passengersWaiting = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("platformtritemdata", () =>
+            {
+                reader.MustMatch("(");
+                flags = reader.ReadString();
+                linkedItemId = reader.ReadUInt(null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("sidingtritemdata", () =>
+            {
+                reader.MustMatch("(");
+                flags = reader.ReadString();
+                linkedItemId = reader.ReadUInt(null);
+                reader.SkipRestOfBlock();
+            })
         });
 
         if (id is null || id.Value != (uint)expectedIndex)
             throw new InvalidDataException($"Track item index mismatch: expected {expectedIndex}, found {(id.HasValue ? id.Value : uint.MaxValue)}.");
         return new TrackItem(expectedIndex, type, tileX, tileZ, x, y, z,
-            tilePX, tilePZ, px, pz, distance, data2, name, station);
+            tilePX, tilePZ, px, pz, distance, data2, name, station, flags, linkedItemId,
+            minimumWaitingTime, passengersWaiting);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -399,7 +420,8 @@ public sealed class TrackNode
 }
 
 public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, float X, float Y, float Z,
-    int TilePX, int TilePZ, float PX, float PZ, float DistanceAlongTrack, string Data2, string Name, string Station);
+    int TilePX, int TilePZ, float PX, float PZ, float DistanceAlongTrack, string Data2, string Name, string Station,
+    string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting);
 
 public sealed class TrackDatabase
 {
