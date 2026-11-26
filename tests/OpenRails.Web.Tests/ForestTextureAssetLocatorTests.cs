@@ -51,6 +51,21 @@ public sealed class ForestTextureAssetLocatorTests
         Assert.Contains(result.Missing, item => item.ShapeIndex == 2 && item.Reason.Contains("not found"));
     }
 
+    [Fact]
+    public void ResolvesGlobalForestTextureInsideDemoModelParentFolder()
+    {
+        using var store = CreateStore("Demo Model 1/GLOBAL/TEXTURES/trees.ace");
+        var forest = new WorldObjectPlacement(10, "Forest", null,
+            new WorldTilePosition(0, 0, 0), null, null, 0, 0, null, 0, 0, null,
+            "trees.ace");
+
+        var result = new ForestTextureAssetLocator().Locate(store,
+            "Demo Model 1/ROUTES/SCE", new[] { forest });
+
+        Assert.Equal("Demo Model 1/GLOBAL/TEXTURES/trees.ace", Assert.Single(result.Found).Path);
+        Assert.Empty(result.Missing);
+    }
+
     private static ZipContentStore CreateStore(params string[] paths)
     {
         var memory = new MemoryStream();
