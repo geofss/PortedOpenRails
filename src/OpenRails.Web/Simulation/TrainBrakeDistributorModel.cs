@@ -188,10 +188,10 @@ public sealed class TrainBrakeDistributorModel
             // A renewed pipe reduction takes priority over a distributor that
             // was previously releasing. Continue an in-progress application
             // while the pipe is below its reference and is not recharging.
-            if (pipeIsReducing ||
-                (!pipeIsRecharging &&
-                 state.Modes[i] == TrainBrakeDistributorMode.Apply &&
-                 pipePressure < control - MinimumApplicationDifferentialKPa))
+            var applicationDemand = pipePressure < control - MinimumApplicationDifferentialKPa;
+            if (applicationDemand &&
+                (pipeIsReducing ||
+                 (!pipeIsRecharging && state.Modes[i] == TrainBrakeDistributorMode.Apply)))
             {
                 var requestedCylinderPressure = Math.Clamp(
                     (control - pipePressure) * 0.76,
