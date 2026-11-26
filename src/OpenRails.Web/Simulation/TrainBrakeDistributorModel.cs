@@ -196,7 +196,10 @@ public sealed class TrainBrakeDistributorModel
                 modes[i] = Math.Abs(target - nextCylinder) <= 1
                     ? TrainBrakeDistributorMode.Lap
                     : TrainBrakeDistributorMode.Apply;
-                controls[i] = pipePressure;
+                // Keep the reference pressure while applying: comparing each
+                // new pipe sample with the previous sample would erase a slow
+                // service reduction into many tiny, never-completing demands.
+                controls[i] = control;
             }
             else if (pipePressure > state.LastPipePressuresKPa[i] + 0.5 ||
                      (state.Modes[i] == TrainBrakeDistributorMode.Release && cylinder > 0.5))
