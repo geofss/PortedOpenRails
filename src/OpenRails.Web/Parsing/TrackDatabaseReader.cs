@@ -156,6 +156,11 @@ public sealed class TrackDatabaseReader
         float? soundRegionData3 = null;
         uint? crossoverTrackNode = null;
         uint? crossoverShapeId = null;
+        string? signalFlags = null;
+        uint? signalDirection = null;
+        float? signalData = null;
+        string? signalType = null;
+        var signalDirections = new List<TrackSignalDirection>();
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tritemid", () =>
@@ -216,7 +221,41 @@ public sealed class TrackDatabaseReader
                 speedPostAngle = reader.ReadFloat(STFReader.UNITS.None, null);
                 reader.SkipRestOfBlock();
             }),
-            new STFReader.TokenProcessor("crossovertritemdata", () =>
+            new STFReader.TokenProcessor("trsignaltype", () =>
+            {
+                reader.MustMatch("(");
+                signalFlags = reader.ReadString();
+                signalDirection = reader.ReadUInt(null);
+                signalData = reader.ReadFloat(STFReader.UNITS.None, null);
+                signalType = reader.ReadString().ToLowerInvariant();
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("trsignaldirs", () =>
+            {
+                reader.MustMatch("(");
+                var count = reader.ReadUInt(null);
+                if (count > 4096)
+                    throw new InvalidDataException($"Signal item declares too many junction directions: {count}.");
+                signalDirections.Clear();
+                reader.ParseBlock(new[]
+                {
+                    new STFReader.TokenProcessor("trsignaldir", () =>
+                    {
+                        if (signalDirections.Count >= count)
+                            throw new InvalidDataException("Signal item contains more TrSignalDir records than declared.");
+                        reader.MustMatch("(");
+                        var node = reader.ReadUInt(null);
+                        var sd1 = reader.ReadUInt(null);
+                        var link = reader.ReadUInt(null);
+                        var sd3 = reader.ReadUInt(null);
+                        reader.SkipRestOfBlock();
+                        signalDirections.Add(new TrackSignalDirection(node, sd1, link, sd3));
+                    })
+                });
+                if (signalDirections.Count != count)
+                    throw new InvalidDataException($"Signal item declares {count} junction directions but contains {signalDirections.Count}.");
+            }),
+            new STFReader.TokenProcessor("crossovertritemdata", ()
             {
                 reader.MustMatch("(");
                 crossoverTrackNode = reader.ReadUInt(null);
@@ -253,7 +292,7 @@ public sealed class TrackDatabaseReader
             tilePX, tilePZ, px, pz, distance, data2, name, station, flags, linkedItemId,
             minimumWaitingTime, passengersWaiting, speedPostFlags, speedIndicator,
             speedDisplayNumber, speedPostAngle, soundRegionData1, soundRegionData2, soundRegionData3,
-            crossoverTrackNode, crossoverShapeId);
+            crossoverTrackNode, crossoverShapeId, signalFlags, signalDirection, signalData, signalType, signalDirections);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -471,7 +510,7 @@ public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, flo
     string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting,
     uint? SpeedPostFlags = null, float? SpeedIndicator = null, int? SpeedDisplayNumber = null,
     float? SpeedPostAngle = null, uint? SoundRegionData1 = null, uint? SoundRegionData2 = null,
-    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null);
+    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null,\n    string? SignalFlags = null, uint? SignalDirection = null, float? SignalData = null, string? SignalType = null,\n    IReadOnlyList<TrackSignalDirection>? SignalDirections = null);\n\npublic sealed record TrackSignalDirection(uint TrackNode, uint Sd1, uint LinkLeftRightPath, uint Sd3);
 
 public sealed class TrackDatabase
 {
