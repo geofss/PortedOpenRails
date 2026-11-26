@@ -152,6 +152,45 @@ public sealed class TrackDatabaseReaderTests
         Assert.Equal(3.5f, soundRegion.SoundRegionData3);
     }
 
+    [Fact]
+    public void ReportsMissingSignalDirectionCrossoverAndLinkedItemTargets()
+    {
+        using var store = CreateStore(("ROUTES/Test/REFERENCES.tdb", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            TrackDB (
+              TrackNodes ( 1
+                TrackNode ( 1
+                  UiD ( 0 0 10 0 1000 1000 0 0 0 0 0 0 )
+                  TrEndNode ( )
+                  TrPins ( 0 0 )
+                )
+              )
+              TrItemTable ( 3
+                SignalItem (
+                  TrItemId ( 0 )
+                  TrSignalType ( "00000001" 1 0.5 "main" )
+                  TrSignalDirs ( 1 TrSignalDir ( 77 1 0 1 ) )
+                )
+                CrossoverItem (
+                  TrItemId ( 1 )
+                  CrossoverTrItemData ( 88 6 )
+                )
+                PlatformItem (
+                  TrItemId ( 2 )
+                  PlatformTrItemData ( "00000001" 99 )
+                )
+              )
+            )
+            """));
+
+        var database = new TrackDatabaseReader().Read(store, "ROUTES/Test/REFERENCES.tdb");
+
+        Assert.Equal(3, database.Diagnostics.Count);
+        Assert.Contains(database.Diagnostics, issue => issue.Contains("Signal track item 0") && issue.Contains("TrackNode 77"));
+        Assert.Contains(database.Diagnostics, issue => issue.Contains("Crossover track item 1") && issue.Contains("TrackNode 88"));
+        Assert.Contains(database.Diagnostics, issue => issue.Contains("Track item 2 links to missing track item 99"));
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
