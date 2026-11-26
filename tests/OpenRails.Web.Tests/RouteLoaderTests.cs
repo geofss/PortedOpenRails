@@ -102,7 +102,7 @@ public sealed class RouteLoaderTests
         Assert.Equal(3, route.TrackDatabase.NodeCount);
         Assert.Equal(2, route.TrackDatabase.TrackItemCount);
         Assert.Equal(new[] { 0 }, route.TrackDatabase.GetRequiredNode(2).TrackItemReferences);
-        var trackItem = Assert.IsType<TrackItem>(Assert.Single(route.TrackDatabase.TrackItems));
+        var trackItem = Assert.IsType<TrackItem>(route.TrackDatabase.TrackItems[0]);
         Assert.Equal("empty", trackItem.Type);
         Assert.Equal(0, trackItem.Index);
         var platform = Assert.IsType<TrackItem>(route.TrackDatabase.TrackItems[1]);
