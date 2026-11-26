@@ -31,8 +31,33 @@ public sealed class WorldTileReader
             switch (objectBlock.ID)
             {
                 case TokenID.Static:
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, "Static"));
+                    break;
                 case TokenID.CollideObject:
-                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics));
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, "CollideObject"));
+                    break;
+                // Open Rails treats these WORLD records as object instances with
+                // the common filename/position/orientation fields. Preserve them
+                // as scenery placements instead of silently discarding them.
+                case TokenID.CarSpawner:
+                case (TokenID)357:
+                case TokenID.Siding:
+                case (TokenID)361:
+                case TokenID.Platform:
+                case TokenID.Forest:
+                case TokenID.LevelCr:
+                case TokenID.Dyntrack:
+                case (TokenID)306:
+                case TokenID.Transfer:
+                case (TokenID)363:
+                case TokenID.Gantry:
+                case (TokenID)356:
+                case TokenID.Pickup:
+                case (TokenID)359:
+                case TokenID.Hazard:
+                case TokenID.Signal:
+                case TokenID.Speedpost:
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, objectBlock.ID.ToString()));
                     break;
                 case TokenID.TrackObj:
                     trackObjects.Add(ReadTrackObject(objectBlock, diagnostics));
@@ -47,7 +72,7 @@ public sealed class WorldTileReader
         return new WorldTileData(normalized, tileX, tileZ, staticObjects, trackObjects, diagnostics);
     }
 
-    private static StaticWorldObject ReadStaticObject(SBR block, List<string> diagnostics)
+    private static StaticWorldObject ReadStaticObject(SBR block, List<string> diagnostics, string objectKind)
     {
         var uid = 0u;
         string? fileName = null;
@@ -73,7 +98,7 @@ public sealed class WorldTileReader
             }
         }
 
-        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags, worldDatabaseId);
+        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags, worldDatabaseId, objectKind);
     }
 
     private static TrackWorldObject ReadTrackObject(SBR block, List<string> diagnostics)
@@ -215,7 +240,8 @@ public sealed record StaticWorldObject(
     WorldQuaternion? Direction,
     WorldMatrix3x3? Matrix,
     uint StaticFlags,
-    uint WorldDatabaseId);
+    uint WorldDatabaseId,
+    string ObjectKind = "Static");
 
 public sealed record TrackWorldObject(
     uint Uid,
