@@ -2,7 +2,7 @@ const DIRECTORY_NAME = "portedopenrails-packages";
 const PROGRESS_INTERVAL_BYTES = 16 * 1024 * 1024;
 
 function safeDisplayName(value) {
-    const name = String(value ?? "route.zip").replace(/[\\/\\0-\\x1f]/g, "_").trim();
+    const name = String(value ?? "route.zip").replace(/[\/\0-\x1f]/g, "_").replace(/\\/g, "_").trim();
     return name.length > 180 ? name.slice(-180) : (name || "route.zip");
 }
 
