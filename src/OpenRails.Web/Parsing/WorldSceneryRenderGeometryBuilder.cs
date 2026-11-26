@@ -122,6 +122,55 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 }
                 if (truncated) break;
             }
+            if (!truncated)
+            {
+                var forestTextureIndexes = new Dictionary<uint, int>();
+                foreach (var texture in tile.ForestTextures.Loaded)
+                {
+                    if (texture.Reference.SeasonFolder is not null ||
+                        texture.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
+                        texture.Texture.MipLevels.Count == 0)
+                        continue;
+                    if (!texturePathIndexes.TryGetValue(texture.Reference.Path, out var forestTextureIndex))
+                    {
+                        forestTextureIndex = textureAssets.Count;
+                        texturePathIndexes.Add(texture.Reference.Path, forestTextureIndex);
+                        textureAssets.Add(texture);
+                    }
+                    forestTextureIndexes.TryAdd(texture.Reference.ShapeIndex, forestTextureIndex);
+                }
+
+                var forestBuilder = new ForestMeshBuilder();
+                foreach (var forest in tile.Placements.Where(item =>
+                    StringComparer.OrdinalIgnoreCase.Equals(item.ObjectKind, "Forest")))
+                {
+                    if (!forestTextureIndexes.TryGetValue(forest.Uid, out var forestTextureIndex))
+                        continue;
+                    var forestMesh = forestBuilder.Build(forest);
+                    if (forestMesh.Indices.Length == 0)
+                        continue;
+                    var vertexCount = forestMesh.Vertices.Length / 5;
+                    if (totalVertices + vertexCount > maximumVertices ||
+                        totalIndices + forestMesh.Indices.Length > maximumIndices)
+                    {
+                        truncated = true;
+                        break;
+                    }
+
+                    var key = new WorldBatchKey(forestTextureIndex, true, 0, 0);
+                    if (!batchBuilders.TryGetValue(key, out var forestBatch))
+                    {
+                        forestBatch = new WorldBatchBuilder(key);
+                        batchBuilders.Add(key, forestBatch);
+                    }
+                    var baseIndex = forestBatch.Vertices.Count / 5;
+                    forestBatch.Vertices.AddRange(forestMesh.Vertices);
+                    foreach (var index in forestMesh.Indices)
+                        forestBatch.Indices.Add(baseIndex + index);
+                    totalVertices += vertexCount;
+                    totalIndices += forestMesh.Indices.Length;
+                }
+            }
             if (truncated) break;
         }
 
