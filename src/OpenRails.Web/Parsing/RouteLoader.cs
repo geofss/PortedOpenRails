@@ -36,7 +36,7 @@ public sealed class RouteLoader
         var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
         var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
         var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
-        var validation = RouteValidationReport.Build(network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures);
+        var validation = RouteValidationReport.Build(database, network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures);
 
         return new RouteLoadResult(
             metadata,
