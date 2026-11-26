@@ -19,6 +19,37 @@ public sealed class RouteTerrainTileLocatorTests
         Assert.Equal("-7FFFFFFC", name);
     }
 
+    [Theory]
+    [InlineData(-16384, -16384, TerrainTileZoom.DMLarge)]
+    [InlineData(-8192, 8192, TerrainTileZoom.DMSmall)]
+    [InlineData(0, 0, TerrainTileZoom.Large)]
+    [InlineData(1234, -5678, TerrainTileZoom.Small)]
+    public void TileNamesMatchThePinnedUpstreamImplementation(int tileX, int tileZ, TerrainTileZoom zoom)
+    {
+        var upstream = Orts.Formats.Msts.TileName.FromTileXZ(
+            tileX, tileZ, (Orts.Formats.Msts.TileName.Zoom)(int)zoom);
+
+        Assert.Equal(upstream, TerrainTileName.FromTileXZ(tileX, tileZ, zoom));
+    }
+
+    [Theory]
+    [InlineData(-123, 456, TerrainTileZoom.DMLarge)]
+    [InlineData(123, -456, TerrainTileZoom.DMSmall)]
+    [InlineData(-123, -456, TerrainTileZoom.Large)]
+    [InlineData(123, 456, TerrainTileZoom.Small)]
+    public void TileSnappingMatchesThePinnedUpstreamImplementation(int tileX, int tileZ, TerrainTileZoom zoom)
+    {
+        var expectedX = tileX;
+        var expectedZ = tileZ;
+        Orts.Formats.Msts.TileName.Snap(
+            ref expectedX, ref expectedZ, (Orts.Formats.Msts.TileName.Zoom)(int)zoom);
+
+        TerrainTileName.Snap(ref tileX, ref tileZ, zoom);
+
+        Assert.Equal(expectedX, tileX);
+        Assert.Equal(expectedZ, tileZ);
+    }
+
     [Fact]
     public void LocatesTerrainTilesTouchedByTheTrackNetwork()
     {
