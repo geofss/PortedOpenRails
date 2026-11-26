@@ -77,19 +77,26 @@ public sealed class TrackDatabaseReader
                 if (count < 0 || count > 5_000_000)
                     throw new InvalidDataException($"Track item count {count} is outside the supported range.");
                 trackItems = new TrackItem?[count];
-                var nextIndex = -1;
-                reader.ParseBlock(() => ++nextIndex < count, new[]
+                var nextIndex = 0;
+                void ReadNextItem(string type)
                 {
-                    new STFReader.TokenProcessor("crossoveritem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "crossover")),
-                    new STFReader.TokenProcessor("signalitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "signal")),
-                    new STFReader.TokenProcessor("speedpostitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "speedpost")),
-                    new STFReader.TokenProcessor("platformitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "platform")),
-                    new STFReader.TokenProcessor("soundregionitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "sound-region")),
-                    new STFReader.TokenProcessor("emptyitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "empty")),
-                    new STFReader.TokenProcessor("levelcritem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "level-crossing")),
-                    new STFReader.TokenProcessor("sidingitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "siding")),
-                    new STFReader.TokenProcessor("hazzarditem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "hazard")),
-                    new STFReader.TokenProcessor("pickupitem", () => trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, "pickup"))
+                    if (nextIndex >= count)
+                        throw new InvalidDataException("Track item table contains more items than declared.");
+                    trackItems[nextIndex] = ReadTrackItem(reader, nextIndex, type);
+                    nextIndex++;
+                }
+                reader.ParseBlock(new[]
+                {
+                    new STFReader.TokenProcessor("crossoveritem", () => ReadNextItem("crossover")),
+                    new STFReader.TokenProcessor("signalitem", () => ReadNextItem("signal")),
+                    new STFReader.TokenProcessor("speedpostitem", () => ReadNextItem("speedpost")),
+                    new STFReader.TokenProcessor("platformitem", () => ReadNextItem("platform")),
+                    new STFReader.TokenProcessor("soundregionitem", () => ReadNextItem("sound-region")),
+                    new STFReader.TokenProcessor("emptyitem", () => ReadNextItem("empty")),
+                    new STFReader.TokenProcessor("levelcritem", () => ReadNextItem("level-crossing")),
+                    new STFReader.TokenProcessor("sidingitem", () => ReadNextItem("siding")),
+                    new STFReader.TokenProcessor("hazzarditem", () => ReadNextItem("hazard")),
+                    new STFReader.TokenProcessor("pickupitem", () => ReadNextItem("pickup"))
                 });
                 if (nextIndex != count)
                     throw new InvalidDataException($"Track item table declares {count} items but contains {nextIndex}.");
