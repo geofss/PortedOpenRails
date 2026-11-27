@@ -38,6 +38,41 @@ public sealed class LocomotiveAxleDriveSetTests
     }
 
     [Fact]
+    public void CapturesAndRestoresForceAndWheelSpeedHistory()
+    {
+        var drive = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        drive.SetAxleSpeeds(new[] { 8d, 9d });
+        drive.Advance(1, 20_000, 20_000, forceRampUpNewtonsPerSecond: 20_000);
+        drive.SetAxleSpeeds(new[] { 10d, 11d });
+        var snapshot = drive.CaptureState();
+
+        var restored = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        restored.RestoreState(snapshot);
+
+        Assert.Equal(drive.ForceByAxle, restored.ForceByAxle);
+        Assert.Equal(drive.TotalDriveForceNewtons, restored.TotalDriveForceNewtons);
+        var expected = drive.Advance(1, 20_000, 20_000, powerRampUpWattsPerSecond: 50_000);
+        var actual = restored.Advance(1, 20_000, 20_000, powerRampUpWattsPerSecond: 50_000);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void RejectsSnapshotFromDifferentAxleTopology()
+    {
+        var source = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        var target = new LocomotiveAxleDriveSet(new[] { 0.25f, 0.25f, 0.5f });
+        Assert.Throws<ArgumentException>(() => target.RestoreState(source.CaptureState()));
+    }
+
+    [Fact]
+    public void RejectsSnapshotWithDifferentForceAllocation()
+    {
+        var source = new LocomotiveAxleDriveSet(new[] { 0.25f, 0.75f });
+        var target = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        Assert.Throws<ArgumentException>(() => target.RestoreState(source.CaptureState()));
+    }
+
+    [Fact]
     public void RequiresForceFractionsToSumToOne()
     {
         Assert.Throws<ArgumentException>(() =>

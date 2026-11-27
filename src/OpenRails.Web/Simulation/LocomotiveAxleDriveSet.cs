@@ -1,5 +1,12 @@
 namespace OpenRails.Web.Simulation;
 
+/// <summary>Serializable fixed-step state for a locomotive's driven axles.</summary>
+public sealed record LocomotiveAxleDriveSnapshot(
+    IReadOnlyList<float> TractiveForceFractions,
+    IReadOnlyList<float> ForceByAxle,
+    IReadOnlyList<double> PreviousSpeedByAxle,
+    IReadOnlyList<double> SpeedByAxle);
+
 /// <summary>
 /// Maintains the per-axle drive state used by the native MSTSLocomotive
 /// UpdateDriveForce path. Axle speeds are supplied by the vehicle dynamics
@@ -98,6 +105,39 @@ public sealed class LocomotiveAxleDriveSet
         }
 
         return TotalDriveForceNewtons;
+    }
+
+    /// <summary>Captures force and wheel-speed history for deterministic save/restore.</summary>
+    public LocomotiveAxleDriveSnapshot CaptureState() => new(
+        tractiveForceFractions.ToArray(),
+        forceByAxle.ToArray(),
+        previousSpeedByAxle.ToArray(),
+        speedByAxle.ToArray());
+
+    /// <summary>Restores a snapshot only when it belongs to the same axle topology.</summary>
+    public void RestoreState(LocomotiveAxleDriveSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.TractiveForceFractions.Count != AxleCount ||
+            snapshot.ForceByAxle.Count != AxleCount ||
+            snapshot.PreviousSpeedByAxle.Count != AxleCount ||
+            snapshot.SpeedByAxle.Count != AxleCount)
+            throw new ArgumentException("Axle snapshot dimensions must match the configured driven-axle topology.", nameof(snapshot));
+        for (var i = 0; i < AxleCount; i++)
+        {
+            if (!float.IsFinite(snapshot.TractiveForceFractions[i]) ||
+                Math.Abs(snapshot.TractiveForceFractions[i] - tractiveForceFractions[i]) > 0.000001f ||
+                !float.IsFinite(snapshot.ForceByAxle[i]) ||
+                !double.IsFinite(snapshot.PreviousSpeedByAxle[i]) ||
+                !double.IsFinite(snapshot.SpeedByAxle[i]))
+                throw new ArgumentException("Axle snapshot contains invalid state or a different force allocation.", nameof(snapshot));
+        }
+        for (var i = 0; i < AxleCount; i++)
+        {
+            forceByAxle[i] = snapshot.ForceByAxle[i];
+            previousSpeedByAxle[i] = snapshot.PreviousSpeedByAxle[i];
+            speedByAxle[i] = snapshot.SpeedByAxle[i];
+        }
     }
 
     public void Reset()
