@@ -343,6 +343,45 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(RouteSignalAspect.Stop, disabled.Aspect);
     }
 
+    [Fact]
+    public void NativeRouteSetScriptFunctionUsesTheSelectedJunctionBranch()
+    {
+        var definition = new SignalTypeDefinition("main", "route-set-script", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("STOP_AND_PROCEED", "", 2, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var signal = new RouteSignalHead(14, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }, new uint[] { 100 }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>()),
+                new SignalTrackCircuit(4, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>> { [100] = new uint[] { 3, 4 } },
+            Array.Empty<string>());
+        var script = new SignalScriptDefinition("route-set-script",
+            new[] { "STATE = ROUTE_SET(3, 100);" },
+            Array.Empty<string>(), Array.Empty<string>(), 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["route-set-script"] = script },
+            Array.Empty<string>());
+
+        var selected = Assert.Single(network.Evaluate(new HashSet<uint>(),
+            new Dictionary<uint, uint> { [100] = 3 }, library));
+        var conflicting = Assert.Single(network.Evaluate(new HashSet<uint>(),
+            new Dictionary<uint, uint> { [100] = 4 }, library));
+
+        Assert.Equal("STOP_AND_PROCEED", selected.NativeAspect);
+        Assert.Equal("STOP", conflicting.NativeAspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
