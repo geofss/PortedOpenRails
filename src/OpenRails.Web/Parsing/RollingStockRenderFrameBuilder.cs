@@ -46,6 +46,27 @@ public sealed class RollingStockRenderFrameBuilder
 
         return new RollingStockRenderFrame(placements, geometry, simulationTimeSeconds);
     }
+
+    public RollingStockRenderFrame Build(
+        ConsistMetadata consist,
+        IReadOnlyList<ConsistCarAssetReference> carAssets,
+        IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
+        TrackVectorPath routePath,
+        TrainConsistSimulationSession simulation,
+        IReadOnlyList<LoadedTrackShapeTexture> textures,
+        int animationClipIndex = 0,
+        bool loopAnimations = true,
+        string? seasonFolder = null,
+        Vector3? cameraPosition = null,
+        double maximumSegmentLengthMeters = 2)
+    {
+        ArgumentNullException.ThrowIfNull(simulation);
+        return Build(
+            consist, carAssets, meshesByUid, routePath,
+            simulation.State, textures, simulation.SimulationTimeSeconds,
+            animationClipIndex, loopAnimations, seasonFolder, cameraPosition,
+            maximumSegmentLengthMeters);
+    }
 }
 
 public sealed record RollingStockRenderFrame(
