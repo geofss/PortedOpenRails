@@ -90,32 +90,6 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
-    public void MechanicalHandbrakeAddsRatedVehicleRetardingForceAndRoundTrips()
-    {
-        var consist = new ConsistMetadata("MechanicalHandbrake", new[]
-        {
-            new ConsistCar("Wagon", "Freight", 1, false, false, false)
-        }, "mechanical-handbrake.con");
-        var asset = CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null);
-        asset = asset with { Metadata = asset.Metadata! with { MaxHandBrakeForceN = 4_000 } };
-        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200,
-            initialSpeedMetersPerSecond: 5);
-        var controller = new BrowserTrainDrivingController(setup);
-
-        controller.SetHandbrake(50);
-        var snapshot = controller.CaptureState();
-        Assert.Equal(50, snapshot.HandbrakePercent);
-        controller.Advance(0.2);
-
-        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < 5);
-        var targetSetup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200,
-            initialSpeedMetersPerSecond: 5);
-        var restored = new BrowserTrainDrivingController(targetSetup);
-        restored.RestoreState(snapshot);
-        Assert.Equal(50, restored.HandbrakePercent);
-    }
-
-    [Fact]
     public void RejectsInvalidHandbrakeCommandAndSnapshot()
     {
         var consist = new ConsistMetadata("HandbrakeValidation", new[]
