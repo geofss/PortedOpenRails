@@ -39,6 +39,22 @@ public sealed class AiServiceInterlockingSession
         return dispatched;
     }
 
+    /// <summary>
+    /// Rebuilds occupied track circuits from every car body on the selected
+    /// connected TDB route, so trailing vehicles retain block and switch locks.
+    /// </summary>
+    public bool UpdateConsistOccupancy(
+        TrackNetworkRoute route,
+        IReadOnlyList<TrainCarRouteOccupancy> cars)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        ArgumentNullException.ThrowIfNull(cars);
+        if (!dispatched)
+            return false;
+        var occupied = SignalOccupancyResolver.Resolve(route, cars);
+        return interlocking.SetOccupiedCircuits(trainId, occupied);
+    }
+
     /// <summary>Mirrors the train's front/rear occupancy updates into native-style track circuits.</summary>
     public bool SetCircuitOccupancy(uint circuitId, bool occupied) =>
         dispatched && interlocking.SetOccupied(trainId, circuitId, occupied);
