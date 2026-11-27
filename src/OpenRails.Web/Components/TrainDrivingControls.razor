@@ -23,7 +23,7 @@
                     <input id="ai-service-target-speed" type="range" min="5" max="200" step="5"
                            value="@aiTargetSpeedKmh" disabled="@(!aiServiceEnabled)" @oninput="ChangeAiTargetSpeed" />
                 </div>
-                <p class="hint">Follows the selected .pat waypoint order and brakes for its final point. The target speed is operator-selected; native speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
+                <p class="hint">Follows the selected .pat waypoint order, stops for evaluated Stop signals, applies configured Approach speed limits and brakes for the final path point. The target speed is operator-selected; native route speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
             </div>
         }
         <table class="or-train-driving-status">
