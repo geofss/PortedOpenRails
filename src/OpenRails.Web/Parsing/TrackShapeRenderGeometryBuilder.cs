@@ -25,7 +25,10 @@ public sealed class TrackShapeRenderGeometryBuilder
         this.maximumIndices = maximumIndices;
     }
 
-    public TrackShapeRenderGeometry Build(IEnumerable<TrackShapePlacement> placements)
+    public TrackShapeRenderGeometry Build(
+        IEnumerable<TrackShapePlacement> placements,
+        int animationClipIndex = -1,
+        float animationFrame = 0)
     {
         ArgumentNullException.ThrowIfNull(placements);
         var vertices = new List<Vector3>();
@@ -34,6 +37,7 @@ public sealed class TrackShapeRenderGeometryBuilder
         foreach (var placement in placements)
         {
             var mesh = placement.Asset.Mesh;
+            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
             var lod = mesh.Lods.FirstOrDefault();
             if (lod is null) continue;
 
@@ -41,7 +45,8 @@ public sealed class TrackShapeRenderGeometryBuilder
             foreach (var primitive in subObject.Primitives)
             {
                 if (primitive.Indices.Count < 3) continue;
-                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
+                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                 var worldTransform = localTransform * placement.WorldTransform;
 
                 if (vertices.Count + subObject.Vertices.Count > maximumVertices ||
@@ -67,7 +72,9 @@ public sealed class TrackShapeRenderGeometryBuilder
     public TrackShapeTexturedRenderGeometry BuildTextured(
         IEnumerable<TrackShapePlacement> placements,
         IReadOnlyList<LoadedTrackShapeTexture> loadedTextures,
-        string? seasonFolder = null)
+        string? seasonFolder = null,
+        int animationClipIndex = -1,
+        float animationFrame = 0)
     {
         ArgumentNullException.ThrowIfNull(placements);
         ArgumentNullException.ThrowIfNull(loadedTextures);
@@ -111,7 +118,7 @@ public sealed class TrackShapeRenderGeometryBuilder
                     batchBuilders.Add(key, batch);
                 }
 
-                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                 var worldTransform = localTransform * placement.WorldTransform;
                 var baseIndex = batch.Vertices.Count / 5;
                 foreach (var vertex in subObject.Vertices)
@@ -168,7 +175,8 @@ public sealed class TrackShapeRenderGeometryBuilder
     private static Matrix4x4 BuildHierarchyTransform(
         IReadOnlyList<TrackShapeMatrix> matrices,
         int matrixIndex,
-        IReadOnlyList<int> hierarchy)
+        IReadOnlyList<int> hierarchy,
+        IReadOnlyDictionary<int, Matrix4x4>? animatedPose = null)
     {
         var transform = Matrix4x4.Identity;
         var node = matrixIndex;
@@ -186,7 +194,10 @@ public sealed class TrackShapeRenderGeometryBuilder
             if (!visited.Add(node))
                 throw new InvalidDataException("Track-shape matrix hierarchy contains a cycle.");
 
-            transform *= ToOpenRailsMatrix(matrices[node]);
+            var nodeTransform = ToOpenRailsMatrix(matrices[node]);
+            if (animatedPose is not null && animatedPose.TryGetValue(node, out var animationTransform))
+                nodeTransform *= animationTransform;
+            transform *= nodeTransform;
             node = hierarchy[node];
         }
         return transform;
