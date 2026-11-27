@@ -7,6 +7,17 @@ namespace OpenRails.Web.Tests;
 public sealed class TrackNetworkRouteProfileTests
 {
     [Fact]
+    public void RejectsEmptyOrNullRouteSegmentsBeforeBuildingProfile()
+    {
+        Assert.Throws<ArgumentException>(() => TrackNetworkRouteProfile.Build(
+            new TrackNetworkRoute(Array.Empty<TrackNetworkRouteSegment>(),
+                Array.Empty<string>(), 0)));
+        Assert.Throws<ArgumentException>(() => TrackNetworkRouteProfile.Build(
+            new TrackNetworkRoute(new TrackNetworkRouteSegment[] { null! },
+                Array.Empty<string>(), 0)));
+    }
+
+    [Fact]
     public void SamplesDownhillGradeFromElevationAlongRoute()
     {
         var path = CreateSlopePath(100, 10);

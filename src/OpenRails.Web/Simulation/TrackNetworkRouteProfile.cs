@@ -36,6 +36,9 @@ public sealed class TrackNetworkRouteProfile
         double maximumSegmentLengthMeters = 10)
     {
         ArgumentNullException.ThrowIfNull(route);
+        ArgumentNullException.ThrowIfNull(route.Segments);
+        if (route.Segments.Count == 0 || route.Segments.Any(segment => segment is null || segment.Path is null))
+            throw new ArgumentException("A route profile requires non-empty, valid track segments.", nameof(route));
         if (!double.IsFinite(maximumSegmentLengthMeters) || maximumSegmentLengthMeters <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumSegmentLengthMeters));
 
