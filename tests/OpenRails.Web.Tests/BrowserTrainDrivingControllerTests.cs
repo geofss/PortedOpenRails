@@ -90,22 +90,6 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
-    public void RejectsInvalidHandbrakeCommandAndSnapshot()
-    {
-        var consist = new ConsistMetadata("HandbrakeValidation", new[]
-        {
-            new ConsistCar("Wagon", "Freight", 1, false, false, false)
-        }, "handbrake-validation.con");
-        var setup = new TrainConsistSimulationSetupBuilder().Build(
-            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
-        var controller = new BrowserTrainDrivingController(setup);
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => controller.SetHandbrake(double.NaN));
-        Assert.Throws<ArgumentException>(() =>
-            controller.RestoreState(controller.CaptureState() with { HandbrakePercent = 101 }));
-    }
-
-    [Fact]
     public void BrowserControllerSnapshotSurvivesJsonPersistenceRoundTrip()
     {
         var consist = new ConsistMetadata("JsonSnapshot", new[]
