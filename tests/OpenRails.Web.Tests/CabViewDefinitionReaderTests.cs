@@ -9,7 +9,7 @@ namespace OpenRails.Web.Tests;
 public sealed class CabViewDefinitionReaderTests
 {
     [Fact]
-    public void ReadsCabPositionsDirectionsAndDayNightLightAssets()
+    public void ReadsCabPositionsDirectionsImagesAndFunctionalControlDefinitions()
     {
         using var store = CreateStore(
             ("TRAINS/TRAINSET/DEMO/CABVIEW.CVF", """
@@ -18,7 +18,15 @@ public sealed class CabViewDefinitionReaderTests
                     Position ( 0 2.4 0.5 )
                     Direction ( 0 0 0 )
                     CabViewFile ( cabview/Front.ace )
-                    CabViewControls ( )
+                    CabViewControls ( 1
+                        Gauge (
+                            Type ( SPEEDOMETER )
+                            Position ( 10 20 100 100 )
+                            ScaleRange ( 0 160 )
+                            Graphic ( cabview/Speed.ace )
+                            OrTSLabel ( Speed )
+                        )
+                    )
                     ORTSCabViewControls ( )
                 )
                 """),
@@ -33,6 +41,14 @@ public sealed class CabViewDefinitionReaderTests
         Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/NIGHT/Front1024.ace", cab.Views[0].NightImagePath);
         Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/CABLIGHT/Front1024.ace", cab.Views[0].CabLightImagePath);
         Assert.Equal(2, cab.ControlBlockCount);
+        var speedometer = Assert.Single(cab.Controls);
+        Assert.Equal("gauge", speedometer.Kind);
+        Assert.Equal("SPEEDOMETER", speedometer.ControlType);
+        Assert.Equal("Speed", speedometer.Label);
+        Assert.Equal(10, speedometer.X);
+        Assert.Equal(20, speedometer.Y);
+        Assert.Equal(160, speedometer.Maximum);
+        Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/Speed.ace", speedometer.GraphicPath);
     }
 
     [Fact]
