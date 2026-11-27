@@ -28,6 +28,18 @@ public sealed class SignalOccupancyResolverTests
         Assert.Contains((uint)3, occupied);
     }
 
+    [Fact]
+    public void ReturnsAnImmutableOccupiedCircuitSet()
+    {
+        var occupied = SignalOccupancyResolver.Resolve(CreateRoute(), new[]
+        {
+            new TrainCarRouteOccupancy(5, 12)
+        });
+
+        Assert.False(occupied is ISet<uint>);
+        Assert.Equal(new uint[] { 2 }, occupied.OrderBy(value => value));
+    }
+
     [Theory]
     [InlineData(double.NaN, 10)]
     [InlineData(0, 0)]

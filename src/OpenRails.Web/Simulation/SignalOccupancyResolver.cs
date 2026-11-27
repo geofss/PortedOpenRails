@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace OpenRails.Web.Simulation;
 
 /// <summary>Longitudinal occupied interval for one vehicle body, measured from the selected route origin.</summary>
@@ -17,7 +19,7 @@ public static class SignalOccupancyResolver
         ArgumentNullException.ThrowIfNull(route);
         ArgumentNullException.ThrowIfNull(cars);
         if (route.Segments.Count == 0)
-            return new HashSet<uint>();
+            return Array.Empty<uint>().ToFrozenSet();
         if (cars.Any(car => car is null ||
             !double.IsFinite(car.CenterDistanceMeters) ||
             !double.IsFinite(car.LengthMeters) || car.LengthMeters <= 0))
@@ -40,6 +42,6 @@ public static class SignalOccupancyResolver
             segmentStart = segmentEnd;
         }
 
-        return occupied;
+        return occupied.ToFrozenSet();
     }
 }
