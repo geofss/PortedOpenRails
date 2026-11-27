@@ -109,6 +109,24 @@ public sealed class SignalInterlockingControllerTests
     }
 
     [Fact]
+    public void DetectsTwoTrainWaitForCycleWithoutReleasingEitherRoute()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.SetOccupied("AI-1", 10, true));
+        Assert.True(interlocking.SetOccupied("AI-2", 11, true));
+
+        Assert.False(interlocking.TryReserveRoute("AI-1", new uint[] { 11 },
+            new Dictionary<uint, uint>()));
+        Assert.Empty(interlocking.GetDeadlockedTrainIds());
+
+        Assert.False(interlocking.TryReserveRoute("AI-2", new uint[] { 10 },
+            new Dictionary<uint, uint>()));
+        Assert.Equal(new HashSet<string> { "AI-1", "AI-2" }, interlocking.GetDeadlockedTrainIds());
+        Assert.Equal("AI-1", interlocking.Snapshot().OccupiedCircuits[10]);
+        Assert.Equal("AI-2", interlocking.Snapshot().OccupiedCircuits[11]);
+    }
+
+    [Fact]
     public void RejectsInvalidCircuitTopology()
     {
         Assert.Throws<ArgumentException>(() => new SignalInterlockingController(
