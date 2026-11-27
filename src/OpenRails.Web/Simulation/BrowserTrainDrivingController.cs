@@ -18,6 +18,7 @@ public sealed record BrowserTrainDrivingControllerSnapshot(
     TrainConsistSimulationSnapshot SessionState,
     float ThrottlePercent,
     double BrakePercent,
+    double HandbrakePercent,
     TrainReverserPosition ReverserPosition,
     bool IsEmergencyStopApplied,
     bool LeftDoorsOpen,
@@ -40,6 +41,7 @@ public sealed class BrowserTrainDrivingController
     private readonly IReadOnlyList<double> couplerMaximumTensionForces;
     private readonly float[] throttleCommandBuffer;
     private readonly double[] zeroCouplerForceBuffer;
+    private readonly double[] additionalBrakeForceBuffer;
 
     public TrainConsistMotionState State => setup.Session.State;
     public double SimulationTimeSeconds => setup.Session.SimulationTimeSeconds;
@@ -52,6 +54,7 @@ public sealed class BrowserTrainDrivingController
         State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
     public float ThrottlePercent { get; private set; }
     public double BrakePercent { get; private set; }
+    public double HandbrakePercent { get; private set; }
     public TrainReverserPosition ReverserPosition { get; private set; } = TrainReverserPosition.Forward;
     public bool CanChangeReverser => ThrottlePercent <= 0.01f &&
         State.Cars.All(car => Math.Abs(car.SpeedMetersPerSecond) <= 0.1);
@@ -79,6 +82,7 @@ public sealed class BrowserTrainDrivingController
             throw new ArgumentOutOfRangeException(nameof(aerodynamicDragAreaSquareMeters));
         if (setup.PoweredCars.Count != setup.InitialState.Cars.Count ||
             setup.MaximumBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count ||
+            setup.MaximumHandBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count ||
             setup.ResistanceParametersByCar.Count != setup.InitialState.Cars.Count ||
             setup.CouplerSlackMetersByBoundary.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
             setup.CouplerStiffnessByBoundary.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
@@ -99,6 +103,7 @@ public sealed class BrowserTrainDrivingController
         var initialCars = setup.InitialState.Cars;
         throttleCommandBuffer = new float[initialCars.Count];
         zeroCouplerForceBuffer = new double[initialCars.Count];
+        additionalBrakeForceBuffer = new double[initialCars.Count];
         couplerRestGapsMeters = Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, initialCars.Count - 1))
             .Select(i => initialCars[i + 1].DistanceMeters - initialCars[i].DistanceMeters).ToArray());
         couplerSlackMeters = setup.CouplerSlackMetersByBoundary;
@@ -154,6 +159,14 @@ public sealed class BrowserTrainDrivingController
             BrakePercent = Math.Clamp(percent, 0, 100);
     }
 
+    /// <summary>Applies each vehicle's independently rated mechanical handbrake.</summary>
+    public void SetHandbrake(double percent)
+    {
+        if (!double.IsFinite(percent))
+            throw new ArgumentOutOfRangeException(nameof(percent));
+        HandbrakePercent = Math.Clamp(percent, 0, 100);
+    }
+
     /// <summary>Immediately cuts traction, latches the stop, and commands emergency brake-pipe venting.</summary>
     public void ApplyEmergencyStop()
     {
@@ -179,7 +192,10 @@ public sealed class BrowserTrainDrivingController
             return 0;
 
         for (var i = 0; i < throttleCommandBuffer.Length; i++)
+        {
             throttleCommandBuffer[i] = setup.PoweredCars[i] ? ThrottlePercent : 0f;
+            additionalBrakeForceBuffer[i] = setup.MaximumHandBrakeForceNewtonsByCar[i] * HandbrakePercent / 100d;
+        }
 
         return setup.Session.AdvanceWithPneumaticBrakes(
             elapsedFrameSeconds,
@@ -203,7 +219,8 @@ public sealed class BrowserTrainDrivingController
                     couplerMaximumCompressionForces, couplerMaximumTensionForces);
                 return forces;
             },
-            tractionDirection: (int)ReverserPosition);
+            tractionDirection: (int)ReverserPosition,
+            additionalBrakeForceNewtonsByCar: additionalBrakeForceBuffer);
     }
 
     /// <summary>Captures simulation and driver-command state as one restorable snapshot.</summary>
@@ -212,6 +229,7 @@ public sealed class BrowserTrainDrivingController
             setup.Session.CaptureState(),
             ThrottlePercent,
             BrakePercent,
+            HandbrakePercent,
             ReverserPosition,
             IsEmergencyStopApplied,
             LeftDoorsOpen,
@@ -232,6 +250,8 @@ public sealed class BrowserTrainDrivingController
         if (!double.IsFinite(snapshot.BrakePercent) ||
             snapshot.BrakePercent < 0 || snapshot.BrakePercent > 100)
             throw new ArgumentException("Snapshot brake command must be finite and between 0 and 100.", nameof(snapshot));
+        if (!double.IsFinite(snapshot.HandbrakePercent) || snapshot.HandbrakePercent < 0 || snapshot.HandbrakePercent > 100)
+            throw new ArgumentException("Snapshot handbrake command must be finite and between 0 and 100 percent.", nameof(snapshot));
         if (!Enum.IsDefined(snapshot.ReverserPosition))
             throw new ArgumentException("Snapshot reverser position is invalid.", nameof(snapshot));
         if (snapshot.IsEmergencyStopApplied &&
@@ -250,6 +270,7 @@ public sealed class BrowserTrainDrivingController
         setup.Session.RestoreState(snapshot.SessionState);
         ThrottlePercent = snapshot.ThrottlePercent;
         BrakePercent = snapshot.BrakePercent;
+        HandbrakePercent = snapshot.HandbrakePercent;
         ReverserPosition = snapshot.ReverserPosition;
         IsEmergencyStopApplied = snapshot.IsEmergencyStopApplied;
         LeftDoorsOpen = snapshot.LeftDoorsOpen;
@@ -264,6 +285,7 @@ public sealed class BrowserTrainDrivingController
         setup.Session.Reset(setup.InitialState);
         ThrottlePercent = 0;
         BrakePercent = 0;
+        HandbrakePercent = 0;
         ReverserPosition = TrainReverserPosition.Forward;
         IsEmergencyStopApplied = false;
         LeftDoorsOpen = false;
