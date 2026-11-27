@@ -795,7 +795,10 @@
                 return;
             }
 
-            var store = await BrowserZipPackageLoader.LoadAsync(file);
+            var store = await BrowserZipPackageLoader.LoadAsync(
+                file,
+                maxEntryBytes: BrowserPackageVirtualContentStore.MaximumEntryBytes,
+                maxTotalBytes: BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes);
             var packageName = GetUniquePackageName(file.Name);
             var layer = new PackageLayer(packageName, store);
             layers.Insert(0, layer);
