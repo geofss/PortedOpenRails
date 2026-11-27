@@ -43,6 +43,28 @@ public sealed class TrackShapeAnimationSamplerTests
     }
 
     [Fact]
+    public void TcbRotationUsesNeighborTangentsInsteadOfPlainSlerp()
+    {
+        var controller = new TrackShapeAnimationController(
+            TrackShapeAnimationControllerKind.Rotation,
+            "tcb_rot",
+            new[]
+            {
+                new TrackShapeAnimationKey(0, null, Quaternion.Identity, 0, 0, 0, 0, 0),
+                new TrackShapeAnimationKey(10, null, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.4f), 0.7f, 0.3f, -0.2f, 0, 0),
+                new TrackShapeAnimationKey(20, null, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 1.6f), 0, 0, 0, 0, 0)
+            });
+
+        var sampled = TrackShapeAnimationSampler.SampleRotation(controller, 5);
+        var linear = Quaternion.Slerp(Quaternion.Identity,
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.4f), 0.5f);
+
+        Assert.True(float.IsFinite(sampled.LengthSquared()));
+        Assert.InRange(sampled.LengthSquared(), 0.999f, 1.001f);
+        Assert.True(MathF.Abs(Quaternion.Dot(sampled, linear)) < 0.99999f);
+    }
+
+    [Fact]
     public void RejectsSamplingWithWrongControllerKind()
     {
         var controller = new TrackShapeAnimationController(
