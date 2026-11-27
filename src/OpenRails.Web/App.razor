@@ -120,6 +120,10 @@
                     <dt>Metadata file</dt><dd><code>@selectedRoute.MetadataFile</code></dd>
                 </dl>
                 <p class="success">Route metadata loaded successfully 💚</p>
+                @if (string.Equals(selectedRoute.Metadata.RouteId, "SCE", StringComparison.OrdinalIgnoreCase))
+                {
+                    <p class="hint">Demo Model 1 © Making Tracks Ltd. Used and distributed with permission from the Open Rails Management Team.</p>
+                }
                 @if (isBuildingRoute)
                 {
                     <p class="status">Building route track network from the imported Open Rails data…</p>
