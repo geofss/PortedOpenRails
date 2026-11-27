@@ -395,6 +395,14 @@
                             {
                                 <p class="@(indication.Aspect == RouteSignalAspect.Stop ? "error" : indication.Aspect == RouteSignalAspect.Approach ? "hint" : "success")">
                                     Signal item @indication.Signal.TrackItemIndex · @indication.Signal.SignalType · @indication.Aspect
+                                    @if (!string.IsNullOrWhiteSpace(indication.NativeAspect))
+                                    {
+                                        <span> · native @indication.NativeAspect · draw state @indication.DrawState</span>
+                                    }
+                                    @if (indication.SpeedLimitMetersPerSecond is { } speedLimit)
+                                    {
+                                        <span> · @((speedLimit * 3.6f).ToString("N1")) km/h</span>
+                                    }
                                     — @indication.Reason
                                 </p>
                             }
