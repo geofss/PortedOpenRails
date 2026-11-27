@@ -4,7 +4,7 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest recorded commit: 78a364b7707952b7e9557025f9c1f570b56b4b25
+Latest recorded commit: 323db0caaeeebf6cb1f5799b68140a61ba58f6fe
 
 ## Project rules
 
@@ -59,14 +59,15 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Track-shape and WORLD geometry builders accept elapsed simulation time.
 - Rolling-stock render-frame builder connects consist motion state, route placement, simulation time, shape animation, season selection and camera-distance LOD.
 - Distance-based LOD selector integrated into track-shape and WORLD scenery geometry builders.
-- Track-shape and WORLD render batches carry full UV-channel arrays and primitive material descriptors; material-state differences are split into separate batches.
+- Track-shape and WORLD render batches carry full UV-channel arrays, per-slot texture indexes and primitive material descriptors; material-state differences are split into separate batches.
+- The WebGL2 renderer consumes up to four UV channels and four texture slots per batch, supports copy/uniform-scale/nonuniform-scale UV operations, per-stage addressing/filter settings, alpha test and the available Z-buffer write state.
 - Rolling-stock render-frame builder has an overload that accepts the live TrainConsistSimulationSession and reads its simulation time/state directly.
 
 ### Shape material and UV preservation
 - Every source vertex UV channel is retained in portable mesh data.
 - All primitive texture slots and texture filter/LOD-bias/border metadata are retained.
 - UV operation descriptors, light-material values, primitive flags, Z-buffer mode, light-configuration flags, vertex-state flags and secondary matrix index are retained.
-- Not complete: the browser render batch now carries secondary UV arrays and material descriptors, but the browser GPU renderer still needs to consume them. Multiple texture slots, UV-operation evaluation, shader variants, lighting and complete alpha/Z-buffer state are not yet rendered end-to-end.
+- Not complete: reflection-map UV operations, native shader variants, lighting/light-material evaluation, border-color behavior, mip-bias handling, full Z-buffer modes and GPU reference-image parity remain outstanding.
 
 ### Route and terrain foundations
 - RouteLoader orchestrates route metadata, TDB, global/route TSECTION, track network, signal configuration/scripts/network, terrain discovery/mesh, track-shape discovery/loading/placement, WORLD discovery/loading/scenery, texture loading and validation.
