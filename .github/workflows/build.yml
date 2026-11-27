@@ -3,7 +3,7 @@ name: Build and deploy WebAssembly app
 on:
   workflow_dispatch:
   push:
-    branches: [main, "port/upstream-core-files"]
+    branches: [main, "port/*"]
   pull_request:
     branches: [main]
 
