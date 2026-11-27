@@ -143,6 +143,18 @@
                             <h3>Original service definitions</h3>
                             <p class="hint">@loadedServices.Count service definitions parsed from TRAINS/SERVICES</p>
                             <p class="hint">@loadedRoutePaths.Count route paths parsed · @loadedRoutePaths.Sum(path => path.Nodes.Count) linked path nodes</p>
+                            <label for="selected-service">Service consist profile</label>
+                            <select id="selected-service" value="@selectedServicePath" @onchange="SelectService">
+                                <option value="">Use manually selected consist</option>
+                                @foreach (var binding in serviceRouteBindings.Where(binding => binding.IsRunnable))
+                                {
+                                    <option value="@binding.Service.SourcePath">@binding.Service.Name · @binding.Consist!.Name · @binding.Service.InitialSpeedMetersPerSecond.ToString("N1") m/s</option>
+                                }
+                            </select>
+                            @if (SelectedServiceBinding is { } activeService)
+                            {
+                                <p class="hint">Driving service profile: @activeService.Service.Name · @activeService.Service.PathId · initial speed @((activeService.Service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h. The service path is validated and displayed above; movement currently follows the selected connected TDB route.</p>
+                            }
                             @foreach (var path in loadedRoutePaths)
                             {
                                 <p><strong>@path.Name</strong> · @path.Start → @path.End · @path.Nodes.Count nodes · @(path.IsPlayerPath ? "Player path" : "AI-only path")</p>
@@ -590,6 +602,7 @@
     private bool reverseRouteStart;
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
+    private string? selectedServicePath;
     private string? selectedActivityPath;
     private double? activityStartingSpeedMetersPerSecond;
     private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
@@ -619,6 +632,9 @@
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
+    private ServiceRouteBinding? SelectedServiceBinding => serviceRouteBindings.FirstOrDefault(binding =>
+        string.Equals(binding.Service.SourcePath, selectedServicePath, StringComparison.OrdinalIgnoreCase) &&
+        binding.IsRunnable);
 
     private CabViewDefinition? SelectedCabView => SelectedConsist is null
         ? null
@@ -683,6 +699,7 @@
         selectedDefault = true;
         selectedRoute = null;
         selectedActivityPath = null;
+        selectedServicePath = null;
         serviceChoices = Array.Empty<string>();
         loadedServices = Array.Empty<ServiceMetadata>();
         availableRoutePathIds = Array.Empty<string>();
@@ -703,6 +720,7 @@
     private async Task SelectRoute(RouteChoice route)
     {
         selectedRoute = route;
+        selectedServicePath = null;
         selectedActivityPath = null;
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
@@ -1212,14 +1230,17 @@
         simulationSetup = null;
         drivingController = null;
         currentMotionState = null;
-        var consist = SelectedConsist;
+        var serviceBinding = SelectedServiceBinding;
+        var consist = serviceBinding?.Consist ?? SelectedConsist;
         if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
             return;
         try
         {
+            var initialSpeed = activityStartingSpeedMetersPerSecond ??
+                serviceBinding?.Service.InitialSpeedMetersPerSecond ?? 0;
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
-                initialSpeedMetersPerSecond: activityStartingSpeedMetersPerSecond ?? 0);
+                initialSpeedMetersPerSecond: initialSpeed);
             drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;
         }
@@ -1231,12 +1252,22 @@
 
     private void SelectConsist(ChangeEventArgs args)
     {
+        selectedServicePath = null;
         selectedConsistName = args.Value?.ToString();
+        InitializeSimulationSetup();
+    }
+
+    private void SelectService(ChangeEventArgs args)
+    {
+        selectedServicePath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        if (SelectedServiceBinding?.Consist is { } consist)
+            selectedConsistName = consist.Name;
         InitializeSimulationSetup();
     }
 
     private void SelectActivity(ChangeEventArgs args)
     {
+        selectedServicePath = null;
         selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
