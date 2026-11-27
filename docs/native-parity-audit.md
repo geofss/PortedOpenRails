@@ -41,3 +41,11 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 4. Import Demo Model 1, verify full route discovery and asset diagnostics, inspect distant tiles and route features, then exercise rolling-stock/cab/simulation integration.
 5. Do not call any subsystem complete until runtime integration and acceptance evidence exist.
 
+
+## Additional source-audit findings (verified by file inspection)
+
+- `TrackShapeMeshBuilder.BuildVertices` currently takes only the first UV entry for each vertex (or defaults to UV 0,0 when none exists). Confirm upstream multi-UV semantics and port all required channels where the rendering/material pipeline needs them.
+- `TrackShapeMeshBuilder.BuildPrimitive` currently resolves the first texture index from primitive state. Audit multiple-texture and material/shader combinations, texture address modes, light configurations, and alpha/render states against upstream before claiming shape parity.
+- Rolling-stock metadata reader retains a focused subset of wagon/engine fields (dimensions, mass, axles/wheels, brakes, coupler and Davis resistance, shape reference). Expand upstream field coverage and runtime consumers, including locomotive-specific controls/forces and animation/cab/audio data.
+- `RollingStockShapeAssetLoader` reuses the track-shape parsing and mesh builder; this is a good shared foundation, but shared parser reuse alone does not demonstrate rolling-stock-specific hierarchy/animation/material behavior.
+
