@@ -172,7 +172,7 @@ public sealed class SignalConfigurationReader
         });
         foreach (var aspect in aspects)
             if (!drawStates.ContainsKey(aspect.DrawState))
-                diagnostics.Add($"SignalType '{name}' aspect '{aspect.Aspect}' references missing draw state '{aspect.DrawStateName}'.");
+                diagnostics.Add($"SignalType '{name}' aspect '{aspect.Aspect}' references missing draw state '{aspect.DrawState}'.");
         foreach (var state in drawStates.Values)
             foreach (var light in state.Lights)
                 if (light.LightIndex >= lights.Count)
