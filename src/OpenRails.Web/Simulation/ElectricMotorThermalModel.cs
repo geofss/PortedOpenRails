@@ -56,11 +56,24 @@ public sealed class ElectricMotorThermalModel
         var steadyTemperature = (transmissionLossesWatts - coolingPowerWatts) / heatTransferArea;
         var thermalTimeConstant = specificHeatCapacityJoulesPerKilogramKelvin * motorMassKilograms;
 
+        if (!double.IsFinite(mechanicalPowerWatts) ||
+            !double.IsFinite(transmissionLossesWatts) ||
+            !double.IsFinite(heatTransferArea) || heatTransferArea <= 0 ||
+            !double.IsFinite(steadyTemperature) ||
+            !double.IsFinite(thermalTimeConstant) || thermalTimeConstant <= 0)
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Calculated motor power or thermal constants exceeded the finite simulation range.");
+
         // Exact integration of the first-order ODE used by the upstream base motor.
         // This avoids frame-rate-dependent Euler error while retaining its physical equation.
         var decay = Math.Exp(-elapsedSeconds / thermalTimeConstant);
-        TemperatureKelvin = steadyTemperature +
+        var nextTemperature = steadyTemperature +
             (TemperatureKelvin - steadyTemperature) * decay;
+        if (!double.IsFinite(nextTemperature) || nextTemperature <= 0)
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Calculated motor temperature must remain finite and above absolute zero.");
+
+        TemperatureKelvin = nextTemperature;
         return TemperatureKelvin;
     }
 }
