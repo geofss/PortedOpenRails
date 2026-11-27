@@ -9,6 +9,24 @@ namespace OpenRails.Web.Tests;
 public sealed class ActivityEventReaderTests
 {
     [Fact]
+    public void AllStopsActionWaitsForEveryNativePathWaitingPoint()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(4, "All stations", ActivityEventKind.Action,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "AllStops", "", "", ActivityEventOutcomes.Empty)
+        });
+        var session = new ActivityExecutionSession(definition);
+
+        Assert.Empty(session.UnsupportedEvents);
+        Assert.Null(session.Advance(1, new ActivityPlayerState(0, AllStopsCompleted: false)));
+        var triggered = session.Advance(1, new ActivityPlayerState(0, AllStopsCompleted: true));
+
+        Assert.NotNull(triggered);
+        Assert.Equal(4, triggered.EventId);
+    }
+
+    [Fact]
     public void ReadsNativeTimeEventsAndActivationOutcomes()
     {
         using var store = CreateStore();

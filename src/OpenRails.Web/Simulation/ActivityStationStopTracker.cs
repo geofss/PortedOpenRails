@@ -12,7 +12,7 @@ public sealed class ActivityStationStopTracker
 
     public int TotalStops => stops.Length;
     public int VisitedStops => visited.Count;
-    public bool AllStopsCompleted => visited.Count == stops.Length;
+    public bool AllStopsCompleted => stops.Length > 0 && visited.Count == stops.Length;
     public double StopRadiusMeters { get; }
 
     public ActivityStationStopTracker(RoutePathDefinition path, double stopRadiusMeters = DefaultStopRadiusMeters)
