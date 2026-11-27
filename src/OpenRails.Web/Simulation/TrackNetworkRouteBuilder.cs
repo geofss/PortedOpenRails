@@ -21,7 +21,17 @@ public sealed record TrackNetworkRoute(
     IReadOnlyList<TrackNetworkRouteSegment> Segments,
     IReadOnlyList<string> Diagnostics,
     double LengthMeters,
-    int? PendingJunctionNodeIndex = null);
+    int? PendingJunctionNodeIndex = null)
+{
+    /// <summary>
+    /// True only when the selected traversal has a usable extent and no unresolved
+    /// junction, geometry gap, or traversal safety-limit diagnostic. A previewable
+    /// partial route is not automatically safe to expose as a drivable route.
+    /// </summary>
+    public bool IsDriveReady => Segments.Count > 0 &&
+        double.IsFinite(LengthMeters) && LengthMeters > 0 &&
+        PendingJunctionNodeIndex is null && Diagnostics.Count == 0;
+}
 
 /// <summary>
 /// Follows connected vector nodes through TDB pins instead of treating each
