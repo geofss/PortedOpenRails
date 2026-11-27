@@ -22,6 +22,20 @@ public sealed class SignalNetworkBuilderTests
     }
 
     [Fact]
+    public void InterlockingRuntimeUsesTheBuiltTdbJunctionTopology()
+    {
+        var (database, network) = CreateFixture();
+        var signalNetwork = new SignalNetworkBuilder().Build(database, network);
+        var interlocking = signalNetwork.CreateInterlockingController();
+
+        Assert.True(interlocking.TryReserveRoute("AI-1", new uint[] { 2, 3 },
+            new Dictionary<uint, uint> { [5] = 3 }));
+        Assert.False(interlocking.TryReserveRoute("AI-2", new uint[] { 2, 4 },
+            new Dictionary<uint, uint> { [5] = 4 }));
+        Assert.Equal("AI-1", interlocking.Snapshot().JunctionLocks[5]);
+    }
+
+    [Fact]
     public void OccupancyProducesStopAndApproachIndications()
     {
         var (database, network) = CreateFixture();

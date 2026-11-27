@@ -164,6 +164,19 @@ public sealed class SignalNetwork
     public IReadOnlyList<SignalTrackCircuit> TrackCircuits { get; }
     public IReadOnlyList<string> Diagnostics { get; }
 
+    /// <summary>
+    /// Creates the reservation/locking runtime from this network's actual TDB
+    /// track-circuit and junction topology.
+    /// </summary>
+    public SignalInterlockingController CreateInterlockingController()
+    {
+        var branchOptions = junctionLinks
+            .Where(pair => pair.Value.Count >= 2)
+            .ToDictionary(pair => pair.Key,
+                pair => (IReadOnlyCollection<uint>)pair.Value);
+        return new SignalInterlockingController(blocks.Keys, branchOptions);
+    }
+
     internal SignalNetwork(IEnumerable<SignalTrackCircuit> circuits,
         IReadOnlyDictionary<uint, IReadOnlyList<uint>> junctionLinks, IEnumerable<string> diagnostics)
     {
