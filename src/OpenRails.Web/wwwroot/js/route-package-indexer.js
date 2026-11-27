@@ -125,6 +125,7 @@ export async function inspectArchive(id) {
     const central = new DataView(centralBytes.buffer, centralBytes.byteOffset, centralBytes.byteLength);
     const seen = new Set();
     const entries = [];
+    const localRecordRanges = [];
     let cursor = 0;
     let totalUncompressed = 0;
 
@@ -202,6 +203,11 @@ export async function inspectArchive(id) {
             if (dataOffset > centralOffset || dataOffset + compressedSize > centralOffset) {
                 throw new Error("ZIP entry data overlaps or extends beyond the central directory: " + path);
             }
+            localRecordRanges.push({
+                start: localOffset,
+                end: dataOffset + compressedSize,
+                path
+            });
             entries.push({
                 path,
                 uncompressedSize,
@@ -214,6 +220,13 @@ export async function inspectArchive(id) {
         cursor = end;
     }
     if (cursor !== central.byteLength) throw new Error("Unexpected trailing bytes in the ZIP central directory.");
+    localRecordRanges.sort((a, b) => a.start - b.start);
+    for (let index = 1; index < localRecordRanges.length; index++) {
+        if (localRecordRanges[index].start < localRecordRanges[index - 1].end) {
+            throw new Error("ZIP local records overlap: " +
+                localRecordRanges[index - 1].path + " and " + localRecordRanges[index].path);
+        }
+    }
     entries.sort((a, b) => a.path.localeCompare(b.path, "en"));
     const indexHandle = await directory.getFileHandle(id + ".index.json", { create: true });
     const indexWriter = await indexHandle.createWritable();
