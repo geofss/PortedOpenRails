@@ -12,7 +12,7 @@ public sealed class CabViewDefinitionReaderTests
     public void ReadsCabPositionsDirectionsAndDayNightLightAssets()
     {
         using var store = CreateStore(
-            ("TRAINS/ TRAINSET/DEMO/CABVIEW.CVF", """
+            ("TRAINS/TRAINSET/DEMO/CABVIEW.CVF", """
                 SIMISA@@@@@@@@@@JINX0t1t______
                 Tr_CabViewFile (
                     Position ( 0 2.4 0.5 )
@@ -22,16 +22,16 @@ public sealed class CabViewDefinitionReaderTests
                     ORTSCabViewControls ( )
                 )
                 """),
-            ("TRAINS/ TRAINSET/DEMO/cabview/Front1024.ace", "texture"));
+            ("TRAINS/TRAINSET/DEMO/cabview/Front1024.ace", "texture"));
 
-        var cab = new CabViewDefinitionReader().Read(store, "TRAINS/ TRAINSET/DEMO/CABVIEW.CVF");
+        var cab = new CabViewDefinitionReader().Read(store, "TRAINS/TRAINSET/DEMO/CABVIEW.CVF");
 
         Assert.Single(cab.Locations);
         Assert.Equal(2.4f, cab.Locations[0].Y);
         Assert.Single(cab.Directions);
-        Assert.Equal("TRAINS/ TRAINSET/DEMO/cabview/Front1024.ace", cab.Views[0].DayImagePath);
-        Assert.Equal("TRAINS/ TRAINSET/DEMO/cabview/NIGHT/Front1024.ace", cab.Views[0].NightImagePath);
-        Assert.Equal("TRAINS/ TRAINSET/DEMO/cabview/CABLIGHT/Front1024.ace", cab.Views[0].CabLightImagePath);
+        Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/Front1024.ace", cab.Views[0].DayImagePath);
+        Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/NIGHT/Front1024.ace", cab.Views[0].NightImagePath);
+        Assert.Equal("TRAINS/TRAINSET/DEMO/cabview/CABLIGHT/Front1024.ace", cab.Views[0].CabLightImagePath);
         Assert.Equal(2, cab.ControlBlockCount);
     }
 
