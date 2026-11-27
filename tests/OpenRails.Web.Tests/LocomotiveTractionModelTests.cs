@@ -113,8 +113,8 @@ public sealed class LocomotiveTractionModelTests
             Engine (
                 MaxForce ( 200000 )
                 ORTSTractiveForceRampUpRate ( 10000 )
-                ORTSTractiveForceRampDownRate ( 20 kN/s )
-                ORTSTractiveForceRampDownToZeroRate ( 1000 lbf/s )
+                ORTSTractiveForceRampDownRate ( 20kN/s )
+                ORTSTractiveForceRampDownToZeroRate ( 1000lbf/s )
             )
             """));
 
