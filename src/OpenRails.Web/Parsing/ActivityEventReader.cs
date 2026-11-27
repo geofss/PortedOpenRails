@@ -278,7 +278,7 @@ public sealed class ActivityExecutionSession
         UnsupportedEvents = Array.AsReadOnly(events
             .Where(item => item.Definition.Kind == ActivityEventKind.Action &&
                 item.Definition.ActionType is not ("ReachSpeed" or "AllStops" or "AssembleTrain" or
-                    "AssembleTrainAtLocation" or "DropOffWagonsAtLocation" or "PickUpWagons"))
+                    "AssembleTrainAtLocation" or "DropOffWagonsAtLocation" or "PickUpPassengers" or "PickUpWagons"))
             .Select(item => $"Event {item.Definition.Id} ({item.Definition.ActionType}): station or service action integration is required.")
             .ToArray());
     }
