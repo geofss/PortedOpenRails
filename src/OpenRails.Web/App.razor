@@ -670,6 +670,13 @@
         largePackageMessage = $"Loading {package.FileName} entry-by-entry from OPFS. The current synchronous Open Rails readers require a bounded expanded-content compatibility store (maximum 2 GiB).";
         try
         {
+            if (indexedPackages.TryGetValue(package.Id, out var packageIndex) &&
+                packageIndex.TotalUncompressedBytes > BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes)
+                throw new InvalidDataException(
+                    $"Expanded archive size is {(packageIndex.TotalUncompressedBytes / (1024d * 1024 * 1024)):N2} GiB; " +
+                    $"the current route-reader compatibility bridge is limited to " +
+                    $"{BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes / (1024d * 1024 * 1024):N0} GiB.");
+
             var progress = new Progress<(int Completed, int Total)>(value =>
             {
                 _ = InvokeAsync(() =>
@@ -764,7 +771,7 @@
                 var stored = await BrowserPackageArchiveUploader.StoreAsync(JS, file, progressReference);
                 storedPackages.RemoveAll(item => item.Id == stored.Id);
                 storedPackages.Insert(0, stored);
-                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to browser OPFS storage. Persistent-storage protection: {(stored.PersistentStorageGranted ? "granted" : "not granted")}. Large-archive ZIP indexing and route loading are the next integration step; this archive is staged, not yet playable.";
+                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to browser OPFS storage. Persistent-storage protection: {(stored.PersistentStorageGranted ? "granted" : "not granted")}. Select Index ZIP contents, then Load route into simulator for supported packages.";
                 return;
             }
 
