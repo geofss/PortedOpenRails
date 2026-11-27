@@ -28,6 +28,47 @@ public sealed class ServiceRouteBindingResolverTests
     }
 
     [Fact]
+    public void RejectsAmbiguousPathIdInsteadOfSilentlySelectingFirstMatch()
+    {
+        var service = new ServiceMetadata("service.srv", 1, "Ambiguous",
+            "ExpressSet", "MainLine", 0, 0.9f, 0);
+        var first = new RoutePathDefinition("ROUTES/R/PATHS/MainLine.pat", "MainLine", "First",
+            "A", "B", 0, Array.Empty<RoutePathPoint>(), Array.Empty<RoutePathNode>(), Array.Empty<string>());
+        var second = first with { SourcePath = "ROUTES/Other/PATHS/MainLine.pat", Name = "Second" };
+        var consist = new ConsistMetadata("ExpressSet", Array.Empty<ConsistCar>(),
+            "TRAINS/CONSISTS/ExpressSet.con");
+
+        var binding = Assert.Single(ServiceRouteBindingResolver.Resolve(
+            new[] { service }, new[] { first, second }, new[] { consist }));
+
+        Assert.Null(binding.Path);
+        Assert.Same(consist, binding.Consist);
+        Assert.False(binding.IsRunnable);
+        Assert.Contains("ambiguous route path ID", binding.Diagnostic);
+    }
+
+    [Fact]
+    public void RejectsAmbiguousConsistReferenceInsteadOfSelectingFirstMatch()
+    {
+        var service = new ServiceMetadata("service.srv", 1, "Ambiguous",
+            "ExpressSet", "MainLine", 0, 0.9f, 0);
+        var path = new RoutePathDefinition("ROUTES/R/PATHS/MainLine.pat", "MainLine", "Main",
+            "A", "B", 0, Array.Empty<RoutePathPoint>(), Array.Empty<RoutePathNode>(), Array.Empty<string>());
+        var first = new ConsistMetadata("First", Array.Empty<ConsistCar>(),
+            "TRAINS/CONSISTS/ExpressSet.con");
+        var second = new ConsistMetadata("Second", Array.Empty<ConsistCar>(),
+            "TRAINS/OTHER/ExpressSet.con");
+
+        var binding = Assert.Single(ServiceRouteBindingResolver.Resolve(
+            new[] { service }, new[] { path }, new[] { first, second }));
+
+        Assert.Same(path, binding.Path);
+        Assert.Null(binding.Consist);
+        Assert.False(binding.IsRunnable);
+        Assert.Contains("ambiguous consist", binding.Diagnostic);
+    }
+
+    [Fact]
     public void ReportsMissingConsistAndPathReferences()
     {
         var service = new ServiceMetadata("service.srv", 1, "Broken",

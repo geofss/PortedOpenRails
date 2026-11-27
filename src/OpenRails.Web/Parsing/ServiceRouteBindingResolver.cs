@@ -12,7 +12,7 @@ public static class ServiceRouteBindingResolver
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(consists);
         var pathIndex = paths.GroupBy(path => path.PathId, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
         var consistIndex = consists.SelectMany(consist => new[]
             {
                 (Key: Path.GetFileNameWithoutExtension(consist.SourcePath), Consist: consist),
@@ -20,17 +20,28 @@ public static class ServiceRouteBindingResolver
             })
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().Consist, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(group => group.Key,
+                group => group.Select(item => item.Consist).Distinct().ToArray(),
+                StringComparer.OrdinalIgnoreCase);
 
         return Array.AsReadOnly(services.Select(service =>
         {
-            pathIndex.TryGetValue(service.PathId, out var path);
-            consistIndex.TryGetValue(service.TrainConfig, out var consist);
             var diagnostics = new List<string>();
-            if (path is null)
+            RoutePathDefinition? path = null;
+            if (!pathIndex.TryGetValue(service.PathId, out var matchingPaths))
                 diagnostics.Add($"Service '{service.Name}' references missing route path '{service.PathId}'.");
-            if (consist is null)
+            else if (matchingPaths.Length != 1)
+                diagnostics.Add($"Service '{service.Name}' references ambiguous route path ID '{service.PathId}' ({matchingPaths.Length} matches).");
+            else
+                path = matchingPaths[0];
+
+            ConsistMetadata? consist = null;
+            if (!consistIndex.TryGetValue(service.TrainConfig, out var matchingConsists))
                 diagnostics.Add($"Service '{service.Name}' references missing consist '{service.TrainConfig}'.");
+            else if (matchingConsists.Length != 1)
+                diagnostics.Add($"Service '{service.Name}' references ambiguous consist '{service.TrainConfig}' ({matchingConsists.Length} matches).");
+            else
+                consist = matchingConsists[0];
             var trace = path?.TraceMainRoute();
             if (trace is not null) diagnostics.AddRange(trace.Diagnostics);
             return new ServiceRouteBinding(service, path, trace, consist,
