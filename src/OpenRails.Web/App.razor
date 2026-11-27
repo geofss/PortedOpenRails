@@ -371,12 +371,16 @@
                     {
                         <div class="route-details">
                             <h3>Route signal configuration</h3>
-                            <p>@signalConfiguration.SignalTypes.Count signal types · @signalConfiguration.ScriptFiles.Count declared script files · @signalConfiguration.NormalSubtypes.Count normal subtypes</p>
+                            <p>@signalConfiguration.SignalTypes.Count signal types · @signalConfiguration.ScriptFiles.Count declared script files · @loadedRoute.SignalScripts?.Scripts.Count indexed scripts · @signalConfiguration.NormalSubtypes.Count normal subtypes</p>
                             @foreach (var signalType in signalConfiguration.SignalTypes.Values)
                             {
                                 <p>@signalType.Name · @signalType.Function · @signalType.Aspects.Count aspects · @signalType.Script</p>
                             }
                             @foreach (var diagnostic in signalConfiguration.Diagnostics)
+                            {
+                                <p class="hint">@diagnostic</p>
+                            }
+                            @foreach (var diagnostic in loadedRoute.SignalScripts?.Diagnostics ?? Array.Empty<string>())
                             {
                                 <p class="hint">@diagnostic</p>
                             }

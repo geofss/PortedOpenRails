@@ -31,6 +31,7 @@ public sealed class RouteLoader
         var signalConfiguration = store.Contains(signalConfigurationPath)
             ? new SignalConfigurationReader().Read(store, signalConfigurationPath)
             : null;
+        var signalScripts = signalConfiguration is null ? null : new SignalScriptLibraryReader().Read(store, assets.RouteRoot, signalConfiguration);
         var signalling = new SignalNetworkBuilder().Build(database, network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
@@ -52,6 +53,7 @@ public sealed class RouteLoader
             network,
             signalling,
             signalConfiguration,
+            signalScripts,
             terrainTiles,
             trackShapeAssets,
             trackShapeMeshes,
@@ -74,6 +76,7 @@ public sealed record RouteLoadResult(
     TrackNetwork TrackNetwork,
     SignalNetwork Signalling,
     SignalConfigurationDefinition? SignalConfiguration,
+    SignalScriptLibrary? SignalScripts,
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
     RouteTrackShapeMeshLoadResult TrackShapeMeshes,
