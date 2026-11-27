@@ -35,9 +35,13 @@ public sealed class WorldSceneryRenderGeometryBuilder
         string? seasonFolder = null,
         int animationClipIndex = -1,
         float animationFrame = 0,
-        Vector3? cameraPosition = null)
+        Vector3? cameraPosition = null,
+        double? elapsedSeconds = null,
+        bool loopAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(tiles);
+        if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
         var textureAssets = new List<LoadedTrackShapeTexture>();
         var texturePathIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var batchBuilders = new Dictionary<WorldBatchKey, WorldBatchBuilder>();
@@ -70,7 +74,11 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
                 var worldTransform = BuildWorldTransform(placement);
                 var mesh = asset.Mesh;
-                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
+                var frame = elapsedSeconds is { } elapsed && mesh.Animations is not null &&
+                    animationClipIndex >= 0 && animationClipIndex < mesh.Animations.Count
+                    ? TrackShapeAnimationClock.GetFrame(mesh.Animations[animationClipIndex], elapsed, loopAnimation)
+                    : animationFrame;
+                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
                 var lodDistance = cameraPosition is { } camera
                     ? Vector3.Distance(camera, worldTransform.Translation) : 0;
                 var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
