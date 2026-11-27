@@ -1,4 +1,5 @@
 using OpenRails.Web.Content;
+using OpenRails.Web.Simulation;
 using Orts.Parsers.Msts;
 
 namespace OpenRails.Web.Parsing;
