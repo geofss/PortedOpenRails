@@ -776,7 +776,7 @@
         <h2 id="import-heading">Content packages</h2>
         <p class="note">Import additional ZIP packages to create a layered virtual content namespace. Earlier packages have higher priority.</p>
         <InputFile OnChange="HandleFilesSelected" accept=".zip,application/zip" multiple disabled="@isLoading" />
-        <p class="hint">ZIP only · Maximum @(ZipContentStore.DefaultMaxBrowserArchiveBytes / (1024 * 1024)) MiB per package · First selected package gets highest priority</p>
+        <p class="hint">ZIP only · Up to @(ZipContentStore.DefaultMaxBrowserArchiveBytes / (1024 * 1024)) MiB uses in-memory import; larger packages stream to browser disk (30 GB maximum) · First selected package gets highest priority</p>
 
         @if (layers.Count > 0)
         {
