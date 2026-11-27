@@ -30,7 +30,11 @@ public sealed class WorldSceneryRenderGeometryBuilder
         this.maximumIndices = maximumIndices;
     }
 
-    public WorldSceneryRenderGeometry Build(IEnumerable<LoadedWorldSceneryTile> tiles, string? seasonFolder = null)
+    public WorldSceneryRenderGeometry Build(
+        IEnumerable<LoadedWorldSceneryTile> tiles,
+        string? seasonFolder = null,
+        int animationClipIndex = -1,
+        float animationFrame = 0)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         var textureAssets = new List<LoadedTrackShapeTexture>();
@@ -65,6 +69,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
                 var worldTransform = BuildWorldTransform(placement);
                 var mesh = asset.Mesh;
+                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
                 var lod = mesh.Lods.FirstOrDefault();
                 if (lod is null) continue;
 
@@ -91,7 +96,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
                             batchBuilders.Add(key, batch);
                         }
 
-                        var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
+                        var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                         var transform = localTransform * worldTransform;
                         var baseIndex = batch.Vertices.Count / 5;
                         foreach (var vertex in subObject.Vertices)
@@ -205,7 +210,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
     private static Matrix4x4 BuildHierarchyTransform(
         IReadOnlyList<TrackShapeMatrix> matrices,
         int matrixIndex,
-        IReadOnlyList<int> hierarchy)
+        IReadOnlyList<int> hierarchy,
+        IReadOnlyDictionary<int, Matrix4x4>? animatedPose = null)
     {
         var transform = Matrix4x4.Identity;
         var node = matrixIndex;
@@ -216,7 +222,10 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 throw new InvalidDataException("WORLD shape matrix hierarchy contains a cycle.");
             if ((uint)node >= (uint)matrices.Count)
                 throw new InvalidDataException($"WORLD shape hierarchy references missing matrix {node}.");
-            transform *= ToOpenRailsMatrix(matrices[node]);
+            var nodeTransform = ToOpenRailsMatrix(matrices[node]);
+            if (animatedPose is not null && animatedPose.TryGetValue(node, out var animationTransform))
+                nodeTransform *= animationTransform;
+            transform *= nodeTransform;
             node = hierarchy[node];
         }
         return transform;
