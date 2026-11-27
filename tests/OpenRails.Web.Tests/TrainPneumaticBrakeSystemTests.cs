@@ -48,6 +48,13 @@ public sealed class TrainPneumaticBrakeSystemTests
     }
 
     [Fact]
+    public void ExplicitNullDistributorControlPressuresAreRejected()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TrainBrakeDistributorState(
+            new[] { 500d }, new[] { TrainBrakeDistributorMode.Lap }, null!));
+    }
+
+    [Fact]
     public void ServiceApplicationPropagatesThroughPipeBeforeBuildingEachCylinder()
     {
         var brakes = new TrainPneumaticBrakeSystem(4);
