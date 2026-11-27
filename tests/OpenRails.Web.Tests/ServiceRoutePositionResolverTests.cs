@@ -53,6 +53,44 @@ public sealed class ServiceRoutePositionResolverTests
     }
 
     [Fact]
+    public void ReturnsOrderedWaypointDistancesForAiPathFollowing()
+    {
+        var profile = BuildProfile(CreatePath(100));
+        var trace = new RoutePathTrace(new[] { 0, 1, 2 },
+            new[]
+            {
+                new RoutePathPoint(0, 0, 0, 0, 10, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 50, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 90, 1, 1)
+            },
+            Array.Empty<string>());
+
+        var result = ServiceRoutePositionResolver.Resolve(trace, profile);
+
+        Assert.Equal(new[] { 10d, 50d, 90d }, result.RouteWaypointDistancesMeters);
+        Assert.Equal(1, result.Direction);
+    }
+
+    [Fact]
+    public void RejectsServicePathThatReversesWithoutNativeReversalTransition()
+    {
+        var profile = BuildProfile(CreatePath(100));
+        var trace = new RoutePathTrace(new[] { 0, 1, 2 },
+            new[]
+            {
+                new RoutePathPoint(0, 0, 0, 0, 10, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 80, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 20, 1, 1)
+            },
+            Array.Empty<string>());
+
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            ServiceRoutePositionResolver.Resolve(trace, profile));
+
+        Assert.Contains("reverses direction", exception.Message);
+    }
+
+    [Fact]
     public void RejectsBrokenServicePathTrace()
     {
         var profile = BuildProfile(CreatePath(100));

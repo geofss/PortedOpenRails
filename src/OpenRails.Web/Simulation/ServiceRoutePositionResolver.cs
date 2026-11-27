@@ -21,9 +21,10 @@ public static class ServiceRoutePositionResolver
         if (validPoints.Length == 0)
             throw new InvalidDataException("Service path has no valid positioned starting point.");
 
-        double startDistance = 0;
+        var routeDistances = new double[validPoints.Length];
         double startOffset = 0;
         TrackWorldPosition? startPosition = null;
+        var direction = 0;
         for (var index = 0; index < validPoints.Length; index++)
         {
             var point = validPoints[index];
@@ -36,19 +37,33 @@ public static class ServiceRoutePositionResolver
                 throw new InvalidDataException(
                     $"Service path point {index} is {offset:N1} m from the selected connected route; maximum allowed offset is {maximumOffsetMeters:N1} m.");
 
+            routeDistances[index] = distance;
             if (index == 0)
             {
-                startDistance = distance;
                 startOffset = offset;
                 startPosition = worldPosition;
+                continue;
             }
+
+            var delta = distance - routeDistances[index - 1];
+            if (Math.Abs(delta) <= 0.5)
+                continue;
+            var step = Math.Sign(delta);
+            if (direction == 0)
+                direction = step;
+            else if (step != direction)
+                throw new InvalidDataException(
+                    $"Service path reverses direction at waypoint {index}; this route profile cannot represent a reversal without a native reversal-point transition.");
         }
 
-        return new ServiceRouteStartPosition(startDistance, startOffset, startPosition!);
+        return new ServiceRouteStartPosition(routeDistances[0], startOffset, startPosition!,
+            Array.AsReadOnly(routeDistances), direction == 0 ? 1 : direction);
     }
 }
 
 public sealed record ServiceRouteStartPosition(
     double DistanceMeters,
     double OffsetMeters,
-    TrackWorldPosition WorldPosition);
+    TrackWorldPosition WorldPosition,
+    IReadOnlyList<double>? RouteWaypointDistancesMeters = null,
+    int Direction = 1);
