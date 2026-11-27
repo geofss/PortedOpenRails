@@ -233,6 +233,14 @@
                                                 </table>
                                             </div>
                                         }
+                                        @if (selectedActivityPassengerPlatformBinding is { } platformBinding)
+                                        {
+                                            <p class="hint">Passenger platforms resolved against route TDB: @platformBinding.Stops.Count / @platformBinding.Service.Stops.Count</p>
+                                            @foreach (var diagnostic in platformBinding.Diagnostics)
+                                            {
+                                                <p class="error">@diagnostic</p>
+                                            }
+                                        }
                                         <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
                                         @if (!string.IsNullOrWhiteSpace(activityPathWarning))
                                         {
@@ -634,6 +642,7 @@
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
     private ActivityPassengerServiceDefinition? selectedActivityPassengerService;
+    private ActivityPassengerPlatformBindingResult? selectedActivityPassengerPlatformBinding;
     private ActivityExecutionSession? activityExecution;
     private ActivityStationStopTracker? activityStationStopTracker;
     private ActivityStationStopProgress? activityStationStopProgress;
@@ -758,6 +767,7 @@
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
         selectedActivityPassengerService = null;
+        selectedActivityPassengerPlatformBinding = null;
         activityExecution = null;
         activityStationStopTracker = null;
         activityStationStopProgress = null;
@@ -1314,6 +1324,8 @@
         selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
+        selectedActivityPassengerService = null;
+        selectedActivityPassengerPlatformBinding = null;
         activityExecution = null;
         activityStationStopTracker = null;
         activityStationStopProgress = null;
@@ -1331,6 +1343,9 @@
             selectedActivityEvents = new ActivityEventReader().Read(composite, selectedActivityPath);
             selectedActivityPassengerService =
                 new ActivityPassengerServiceReader().Read(composite, selectedActivityPath);
+            if (selectedActivityPassengerService is not null && loadedRoute is not null)
+                selectedActivityPassengerPlatformBinding = ActivityPassengerPlatformBinding.Bind(
+                    selectedActivityPassengerService, loadedRoute.TrackDatabase);
             if (!string.Equals(selectedActivityMetadata.RouteId, selectedRoute?.Metadata.RouteId,
                     StringComparison.OrdinalIgnoreCase))
                 activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
