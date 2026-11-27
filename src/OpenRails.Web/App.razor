@@ -557,6 +557,7 @@
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
+    private readonly List<string> routeDiagnostics = [];
     private RouteLoadResult? loadedRoute;
     private TrackNetworkRoute? traversedRoute;
     private TrackNetworkRouteProfile? activityRouteProfile;
