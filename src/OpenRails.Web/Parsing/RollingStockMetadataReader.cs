@@ -51,6 +51,9 @@ public sealed class RollingStockMetadataReader
             float? davisAForceN = null;
             float? davisBResistance = null;
             float? davisCResistance = null;
+            var couplerStiffnessValues = new List<float>();
+            var couplerDampingValues = new List<float>();
+            var couplerSlackValues = new List<float>();
             string? shapeFileName = null;
             var wagonFound = false;
             reader.ParseFile(new[]

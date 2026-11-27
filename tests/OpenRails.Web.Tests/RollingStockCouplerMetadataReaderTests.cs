@@ -39,10 +39,10 @@ public sealed class RollingStockCouplerMetadataReaderTests
 
         var metadata = new RollingStockMetadataReader().Read(store, "TRAINS/TRAINSET/TEST/car.wag");
 
-        Assert.Equal(800_000, metadata.MinCouplerStrengthN);
-        Assert.Equal(3_500_000, metadata.CouplerStiffnessNPerM);
-        Assert.Equal(2_250_000, metadata.CouplerDampingNsPerM);
-        Assert.Equal(0.13f, metadata.CouplerSlackMeters, 5);
+        Assert.Equal(800_000f, metadata.MinCouplerStrengthN.GetValueOrDefault());
+        Assert.Equal(3_500_000f, metadata.CouplerStiffnessNPerM.GetValueOrDefault());
+        Assert.Equal(2_250_000f, metadata.CouplerDampingNsPerM.GetValueOrDefault());
+        Assert.Equal(0.13f, metadata.CouplerSlackMeters.GetValueOrDefault(), 5);
     }
 
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
