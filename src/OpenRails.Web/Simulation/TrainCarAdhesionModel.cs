@@ -17,6 +17,9 @@ public sealed class TrainCarAdhesionModel
         if (adhesionCoefficient < 0 || adhesionCoefficient > 1)
             throw new ArgumentOutOfRangeException(nameof(adhesionCoefficient));
         var maximumForce = adhesionCoefficient * massKg * StandardGravityMetersPerSecondSquared;
+        if (!double.IsFinite(maximumForce))
+            throw new ArgumentOutOfRangeException(nameof(massKg),
+                "Calculated wheel-rail adhesion limit exceeded the finite simulation range.");
         return Math.Clamp(requestedForceNewtons, -maximumForce, maximumForce);
     }
 }
