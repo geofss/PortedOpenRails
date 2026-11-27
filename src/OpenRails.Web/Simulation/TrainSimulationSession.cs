@@ -126,7 +126,7 @@ public sealed class TrainSimulationSession
         var count = state.Cars.Count;
         if (frame.CarForces is null || frame.CouplerForcesNewtons is null ||
             frame.CarForces.Count != count ||
-            frame.CouplerForcesNewtons.Count != count)
+            frame.CouplerForcesNewtons.Count != Math.Max(0, count - 1))
             throw new ArgumentException("Force frame must contain one force set per car and one force per coupler.",
                 nameof(frame));
 
