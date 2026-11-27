@@ -201,6 +201,25 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void RejectsSnapshotWithMissingSessionComponentsBeforeReadingMotion()
+    {
+        var consist = new ConsistMetadata("NullSessionSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "null-session-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        var captured = controller.CaptureState();
+        var invalid = captured with
+        {
+            SessionState = captured.SessionState with { MotionState = null! }
+        };
+
+        Assert.Throws<ArgumentNullException>(() => controller.RestoreState(invalid));
+    }
+
+    [Fact]
     public void RejectsSnapshotForDifferentConsistSizeWithoutChangingLiveState()
     {
         var consist = new ConsistMetadata("ConsistSizeSnapshot", new[]

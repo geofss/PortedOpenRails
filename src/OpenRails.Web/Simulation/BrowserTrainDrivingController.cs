@@ -241,6 +241,8 @@ public sealed class BrowserTrainDrivingController
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(snapshot.SessionState);
+        ArgumentNullException.ThrowIfNull(snapshot.SessionState.MotionState);
+        ArgumentNullException.ThrowIfNull(snapshot.SessionState.ClockState);
         ArgumentNullException.ThrowIfNull(snapshot.CouplerForceTelemetryNewtons);
         if (snapshot.SessionState.MotionState.Cars.Count != setup.InitialState.Cars.Count)
             throw new ArgumentException("Snapshot consist size must match the active simulation setup.", nameof(snapshot));
