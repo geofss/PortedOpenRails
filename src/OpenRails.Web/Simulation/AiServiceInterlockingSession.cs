@@ -77,6 +77,41 @@ public sealed class AiServiceInterlockingSession
         return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints);
     }
 
+    /// <summary>
+    /// Evaluates the route's native SIGCFG/SIGSCR signal network against live
+    /// interlocking occupancy and switch state, then maps signal heads onto
+    /// the active .pat route distances for the AI speed governor.
+    /// </summary>
+    public IReadOnlyList<AiServiceSignalConstraint> ResolveSignalConstraints(
+        SignalNetwork signalNetwork,
+        IReadOnlyDictionary<int, double> signalRouteDistancesMeters,
+        SignalScriptLibrary? scripts = null)
+    {
+        ArgumentNullException.ThrowIfNull(signalNetwork);
+        ArgumentNullException.ThrowIfNull(signalRouteDistancesMeters);
+        var state = interlocking.Snapshot();
+        return signalNetwork.Evaluate(state, scripts)
+            .Where(indication => signalRouteDistancesMeters.ContainsKey(indication.Signal.TrackItemIndex))
+            .Select(indication => new AiServiceSignalConstraint(
+                signalRouteDistancesMeters[indication.Signal.TrackItemIndex],
+                indication.Aspect,
+                indication.SpeedLimitMetersPerSecond))
+            .ToArray();
+    }
+
+    /// <summary>Drives an AI service using signal aspects evaluated from live route occupancy.</summary>
+    public AiServiceControlDecision Drive(
+        BrowserTrainDrivingController train,
+        ServiceRouteStartPosition route,
+        double targetSpeedMetersPerSecond,
+        SignalNetwork signalNetwork,
+        IReadOnlyDictionary<int, double> signalRouteDistancesMeters,
+        SignalScriptLibrary? scripts = null)
+    {
+        var constraints = ResolveSignalConstraints(signalNetwork, signalRouteDistancesMeters, scripts);
+        return Drive(train, route, targetSpeedMetersPerSecond, constraints);
+    }
+
     /// <summary>Completes dispatch only after all occupied circuits have cleared.</summary>
     public bool TryComplete()
     {
