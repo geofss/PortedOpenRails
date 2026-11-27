@@ -40,6 +40,32 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void FailedFixedStepRollsBackPneumaticAndTractionAuxiliaryState()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "Transactional", 10_000, 10_000, 1_000_000, 100, 0, null, "transactional.eng",
+            TractionForceRampUpNewtonsPerSecond: 1_000);
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        var pipeBefore = session.BrakePipeState.PressuresKPa.ToArray();
+        var cylinderBefore = session.BrakeCylinderState.PressuresKPa.ToArray();
+        var distributorBefore = session.BrakeDistributorState.AuxiliaryReservoirPressuresKPa.ToArray();
+
+        Assert.Throws<InvalidOperationException>(() => session.AdvanceWithPneumaticBrakes(
+            0.1, new[] { 100f }, 100, new[] { 5_000d },
+            (_, _) => throw new InvalidOperationException("fixture failure"),
+            new[] { 0d }));
+
+        Assert.Equal(0, session.SimulationTimeSeconds);
+        Assert.Equal(pipeBefore, session.BrakePipeState.PressuresKPa);
+        Assert.Equal(cylinderBefore, session.BrakeCylinderState.PressuresKPa);
+        Assert.Equal(distributorBefore, session.BrakeDistributorState.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(0, session.CaptureState().AppliedTractionForceNewtonsByCar![0]);
+    }
+
+    [Fact]
     public void BrakeCommandConsistScenarioRetardsTrainAcrossFixedSteps()
     {
         var initial = new TrainConsistMotionState(new[]

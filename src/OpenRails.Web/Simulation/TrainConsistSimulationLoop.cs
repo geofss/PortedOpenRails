@@ -38,18 +38,37 @@ public sealed class TrainConsistSimulationLoop
     public int Advance(
         double elapsedFrameSeconds,
         Func<TrainConsistMotionState, TrainConsistForceFrame> forceProvider,
-        Action<double>? beforeStep = null)
+        Action<double>? beforeStep = null,
+        Action? onStepFailure = null)
     {
         ArgumentNullException.ThrowIfNull(forceProvider);
         return scheduler.Advance(elapsedFrameSeconds, stepSeconds =>
         {
-            beforeStep?.Invoke(stepSeconds);
-            var frame = forceProvider(State);
-            ArgumentNullException.ThrowIfNull(frame);
-            State = integrator.Step(
-                State, frame.CarForces, frame.CouplerForcesNewtons, stepSeconds);
-            if (routeLengthMeters is not null)
-                State = ClampCarsToRoute(State, routeLengthMeters.Value);
+            try
+            {
+                beforeStep?.Invoke(stepSeconds);
+                var frame = forceProvider(State);
+                ArgumentNullException.ThrowIfNull(frame);
+                var nextState = integrator.Step(
+                    State, frame.CarForces, frame.CouplerForcesNewtons, stepSeconds);
+                if (routeLengthMeters is not null)
+                    nextState = ClampCarsToRoute(nextState, routeLengthMeters.Value);
+                State = nextState;
+            }
+            catch (Exception stepException)
+            {
+                try
+                {
+                    onStepFailure?.Invoke();
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new AggregateException(
+                        "A consist fixed step failed and its auxiliary state rollback also failed.",
+                        stepException, rollbackException);
+                }
+                throw;
+            }
         });
     }
 

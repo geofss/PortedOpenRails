@@ -164,6 +164,26 @@ public sealed class TrainConsistSimulationSession
                 "Brake, rating, throttle, power, average-force, and coupler inputs must be finite; brake ratings must be non-negative.");
 
         var brakeModel = new TrainCarBrakeModel();
+        TrainBrakePipeState? previousPipeState = null;
+        TrainBrakeCylinderState? previousCylinderState = null;
+        TrainBrakeDistributorState? previousDistributorState = null;
+        var previousTractionForces = new float[carCount];
+
+        void CaptureAuxiliaryState()
+        {
+            previousPipeState = pneumaticBrakes.PipeState;
+            previousCylinderState = pneumaticBrakes.CylinderState;
+            previousDistributorState = pneumaticBrakes.DistributorState;
+            Array.Copy(appliedTractionForceByCar, previousTractionForces, carCount);
+        }
+
+        void RollBackAuxiliaryState()
+        {
+            if (previousPipeState is not null && previousCylinderState is not null)
+                pneumaticBrakes.RestoreState(previousPipeState, previousCylinderState, previousDistributorState);
+            Array.Copy(previousTractionForces, appliedTractionForceByCar, carCount);
+        }
+
         return loop.Advance(elapsedFrameSeconds, state =>
         {
             var forces = new TrainCarForceBreakdown[carCount];
@@ -199,6 +219,7 @@ public sealed class TrainConsistSimulationSession
             return new TrainConsistForceFrame(forces, activeCouplerForces);
         }, stepSeconds =>
         {
+            CaptureAuxiliaryState();
             beforeSimulationStep?.Invoke(stepSeconds);
             var currentState = State;
             for (var i = 0; i < carCount; i++)
@@ -216,7 +237,7 @@ public sealed class TrainConsistSimulationSession
                     : LocomotiveTractionRamp.Advance(
                         appliedTractionForceByCar[i], targetForce, stepSeconds, metadata);
             }
-        });
+        }, RollBackAuxiliaryState);
     }
 
     /// <summary>
