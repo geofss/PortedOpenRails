@@ -126,14 +126,18 @@ public sealed class TrackShapeRenderGeometryBuilder
                 var textureIndex = primitive.ImageName is not null &&
                     textureIndexes.TryGetValue((placement.Asset.ShapeIndex, primitive.ImageName), out var foundTexture)
                     ? foundTexture : -1;
+                var textureSlotIndexes = primitive.TextureBindings?.Select(binding =>
+                    textureIndexes.TryGetValue((placement.Asset.ShapeIndex, binding.ImageName), out var slot)
+                        ? slot : -1).ToArray() ?? (textureIndex >= 0 ? new[] { textureIndex } : Array.Empty<int>());
                 var key = new TrackShapeBatchKey(
                     placement.Asset.ShapeIndex, primitive.PrimitiveStateIndex, textureIndex,
-                    primitive.ShaderName, primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
+                    string.Join(",", textureSlotIndexes), primitive.ShaderName,
+                    primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
                     primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.AlphaTest,
                     primitive.TextureAddressMode, primitive.ZBias, primitive.ZBufferMode);
                 if (!batchBuilders.TryGetValue(key, out var batch))
                 {
-                    batch = new TrackShapeBatchBuilder(key, primitive);
+                    batch = new TrackShapeBatchBuilder(key, primitive, textureSlotIndexes);
                     batchBuilders.Add(key, batch);
                 }
 
@@ -181,7 +185,8 @@ public sealed class TrackShapeRenderGeometryBuilder
                 batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias,
                 Array.AsReadOnly(batch.TextureCoordinateChannels
                     .Select(channel => (IReadOnlyList<Vector2>)Array.AsReadOnly(channel.ToArray())).ToArray()),
-                batch.Material))
+                batch.Material,
+                Array.AsReadOnly(batch.TextureIndexes)))
             .ToArray();
         return new TrackShapeTexturedRenderGeometry(Array.AsReadOnly(batches), truncated);
     }
@@ -200,20 +205,22 @@ public sealed class TrackShapeRenderGeometryBuilder
     }
 
     private sealed record TrackShapeBatchKey(
-        uint ShapeIndex, int PrimitiveStateIndex, int TextureIndex, string ShaderName,
+        uint ShapeIndex, int PrimitiveStateIndex, int TextureIndex, string TextureSlotKey, string ShaderName,
         int LightMaterialIndex, int LightConfigurationIndex, int TextureFilterMode,
         float MipMapLodBias, bool AlphaTest, int TextureAddressMode, float ZBias, int ZBufferMode);
     private sealed class TrackShapeBatchBuilder
     {
         public TrackShapeBatchKey Key { get; }
         public TrackShapePrimitiveMesh Material { get; }
+        public int[] TextureIndexes { get; }
         public List<float> Vertices { get; } = new();
         public List<int> Indices { get; } = new();
         public List<List<Vector2>> TextureCoordinateChannels { get; } = new();
-        public TrackShapeBatchBuilder(TrackShapeBatchKey key, TrackShapePrimitiveMesh material)
+        public TrackShapeBatchBuilder(TrackShapeBatchKey key, TrackShapePrimitiveMesh material, int[] textureIndexes)
         {
             Key = key;
             Material = material;
+            TextureIndexes = textureIndexes;
         }
     }
 
@@ -277,7 +284,8 @@ public sealed record TrackShapeTexturedRenderBatch(
     int TextureAddressMode,
     float ZBias,
     IReadOnlyList<IReadOnlyList<Vector2>>? TextureCoordinateChannels = null,
-    TrackShapePrimitiveMesh? Material = null);
+    TrackShapePrimitiveMesh? Material = null,
+    IReadOnlyList<int>? TextureIndexes = null);
 
 public sealed record TrackShapeTexturedRenderGeometry(
     IReadOnlyList<TrackShapeTexturedRenderBatch> Batches,
