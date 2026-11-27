@@ -197,6 +197,43 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void WaitingPointReleasesCanBeResetWhenSwitchingServices()
+    {
+        var consist = new ConsistMetadata("AiWaitingReset", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "ai-waiting-reset.con");
+        var traction = new LocomotiveTractionMetadata(
+            "AiTestLoco", 1_500, 1_500, 100_000, 100, 0, null, "ai-test.eng");
+        var asset = new ConsistCarAssetReference("AiTest", 1, "Engine", "Diesel", true,
+            false, "ai-test.eng", true, null,
+            new RollingStockMetadata("Engine", "Diesel", 40_000, 3, 4, 20, 4, 8,
+                "air_single_pipe", "distributor", 100_000, "ai-test.eng"),
+            "ai-test.s", true, null, traction);
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { asset }, 200, startDistanceMeters: 38);
+        var live = new BrowserTrainDrivingController(setup);
+        var route = new ServiceRouteStartPosition(0, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { 0d, 48d, 100d }, 1,
+            new[]
+            {
+                new ServiceRouteWaypoint(0, false, false),
+                new ServiceRouteWaypoint(48, true, false),
+                new ServiceRouteWaypoint(100, false, false)
+            });
+        var ai = new AiServiceDrivingController();
+
+        ai.ReleaseWaitingPoint(1);
+        var released = ai.Apply(live, route, 10);
+        Assert.True(released.ThrottlePercent > 0);
+
+        ai.ResetWaitingPoints();
+        var stopped = ai.Apply(live, route, 10);
+        Assert.Equal(100, stopped.BrakePercent);
+        Assert.True(stopped.IsWaitingAtWaypoint);
+    }
+
+    [Fact]
     public void AppliesPathFollowerCommandsToTheLiveBrowserTrainController()
     {
         var consist = new ConsistMetadata("AiService", new[]

@@ -214,6 +214,13 @@ public sealed class AiServiceDrivingController
             releasedWaitingPoints.Add(waypointIndex);
     }
 
+    /// <summary>Clears stop releases when a different service or activity is selected.</summary>
+    public void ResetWaitingPoints()
+    {
+        lock (waitingPointLock)
+            releasedWaitingPoints.Clear();
+    }
+
     private static int FindNextWaypoint(IReadOnlyList<double> waypoints, double currentDistance, int direction)
     {
         for (var index = 1; index < waypoints.Count; index++)
