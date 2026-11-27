@@ -28,6 +28,39 @@ public sealed class AiServiceInterlockingSession
 
     public bool IsDispatched => dispatched;
 
+    public NativeDeadlockPathSelection? SelectedDeadlockPath { get; private set; }
+
+    /// <summary>
+    /// Selects a passing path with Open Rails' native deadlock preference rules,
+    /// then commits its route and junction reservations atomically.
+    /// </summary>
+    public bool TryDispatchWithDeadlockPath(
+        IReadOnlyList<AiDeadlockRouteOption> availableRoutes,
+        AiDeadlockRouteOption ownRoute,
+        bool deadlockActive)
+    {
+        ArgumentNullException.ThrowIfNull(availableRoutes);
+        ArgumentNullException.ThrowIfNull(ownRoute);
+        if (dispatched)
+            return false;
+
+        var selector = new NativeDeadlockPathSelector();
+        var selection = selector.SelectPath(
+            availableRoutes.Select(route => route.Path).ToArray(),
+            ownRoute.Path,
+            deadlockActive);
+        var selectedRoute = availableRoutes.FirstOrDefault(route =>
+            route.Path.PathIndex == selection.PathIndex);
+        if (selectedRoute is null && ownRoute.Path.PathIndex == selection.PathIndex)
+            selectedRoute = ownRoute;
+        if (selectedRoute is null ||
+            !TryDispatch(selectedRoute.RouteCircuitIds, selectedRoute.RequiredJunctionBranches))
+            return false;
+
+        SelectedDeadlockPath = selection;
+        return true;
+    }
+
     /// <summary>Atomically claims every route circuit and required junction branch before movement.</summary>
     public bool TryDispatch(
         IReadOnlyList<uint> routeCircuitIds,
@@ -124,3 +157,8 @@ public sealed class AiServiceInterlockingSession
         return true;
     }
 }
+
+public sealed record AiDeadlockRouteOption(
+    NativeDeadlockPathCandidate Path,
+    IReadOnlyList<uint> RouteCircuitIds,
+    IReadOnlyDictionary<uint, uint> RequiredJunctionBranches);
