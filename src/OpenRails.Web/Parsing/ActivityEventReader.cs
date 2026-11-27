@@ -309,8 +309,11 @@ public sealed class ActivityExecutionSession
 
             item.TimesTriggered++;
             item.IsDisabled = item.Definition.Reversible;
+            var activityEnded = ApplyNativeOutcomes(item);
+            var outcomes = item.Definition.Outcomes;
             pending = new ActivityEventExecutionResult(item.Definition.Id, item.Definition.Name,
-                true, item.Definition.Outcomes.DisplayMessage ?? item.Definition.SuccessMessage, false, false);
+                true, outcomes.ActivityFailure ?? outcomes.DisplayMessage ?? item.Definition.SuccessMessage,
+                activityEnded, outcomes.ActivitySuccess && item.TimesTriggered == 1);
             return pending;
         }
         return null;
@@ -318,41 +321,36 @@ public sealed class ActivityExecutionSession
 
     public ActivityEventExecutionResult? Acknowledge()
     {
-        if (pending is null || ended)
-            return pending;
-        var current = events.First(item => item.Definition.Id == pending.EventId);
-        var outcomes = current.Definition.Outcomes;
-        // Native EventWrapper.IsActivityEnded disables every non-reversible event
-        // immediately. Reversible events remain active but are disabled until their
-        // trigger condition clears. Native outcomes are applied only on the first
-        // trigger; later reversible activations are notification-only.
-        if (current.Definition.Reversible)
-            current.IsDisabled = true;
-        else
-            current.ActivationLevel = 0;
-
-        if (current.TimesTriggered <= 1)
-        {
-            foreach (var id in outcomes.ActivateEventIds) Find(id).ActivationLevel = 1;
-            foreach (var id in outcomes.RestoreActivationLevelEventIds)
-            {
-                var target = Find(id);
-                target.ActivationLevel = target.Definition.InitialActivationLevel;
-            }
-            foreach (var id in outcomes.DecrementActivationLevelEventIds) Find(id).ActivationLevel--;
-            foreach (var id in outcomes.IncrementActivationLevelEventIds) Find(id).ActivationLevel++;
-        }
-
-        ended = outcomes.ActivitySuccess || !string.IsNullOrWhiteSpace(outcomes.ActivityFailure);
-        var acknowledged = pending with
-        {
-            Message = outcomes.ActivityFailure ?? pending.Message,
-            ActivityEnded = ended,
-            ActivitySucceeded = outcomes.ActivitySuccess
-        };
-        LastAcknowledgedEvent = acknowledged;
+        if (pending is null)
+            return LastAcknowledgedEvent;
+        LastAcknowledgedEvent = pending;
         pending = null;
-        return acknowledged;
+        return LastAcknowledgedEvent;
+    }
+
+    private bool ApplyNativeOutcomes(RuntimeEvent current)
+    {
+        var outcomes = current.Definition.Outcomes;
+        // EventWrapper.IsActivityEnded returns before applying outcomes after a
+        // reversible event has fired more than once.
+        if (current.TimesTriggered > 1)
+            return false;
+
+        foreach (var id in outcomes.ActivateEventIds) Find(id).ActivationLevel = 1;
+        foreach (var id in outcomes.RestoreActivationLevelEventIds)
+        {
+            var target = Find(id);
+            target.ActivationLevel = target.Definition.InitialActivationLevel;
+        }
+        foreach (var id in outcomes.DecrementActivationLevelEventIds) Find(id).ActivationLevel--;
+        foreach (var id in outcomes.IncrementActivationLevelEventIds) Find(id).ActivationLevel++;
+
+        if (outcomes.ActivitySuccess || !string.IsNullOrWhiteSpace(outcomes.ActivityFailure))
+        {
+            ended = true;
+            return true;
+        }
+        return false;
     }
 
     private RuntimeEvent Find(int id) => events.FirstOrDefault(item => item.Definition.Id == id) ??

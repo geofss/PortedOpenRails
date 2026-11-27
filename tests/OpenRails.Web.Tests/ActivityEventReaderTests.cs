@@ -168,6 +168,29 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void NativeActivityCompletionTakesEffectWhenEventTriggersNotWhenWindowIsAcknowledged()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(9, "Finish", ActivityEventKind.Time,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "", "", "",
+                new ActivityEventOutcomes(Array.Empty<int>(), Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<int>(), true, null, "Completed"))
+        });
+        var session = new ActivityExecutionSession(definition);
+
+        var pending = session.Advance(0, new ActivityPlayerState(0));
+
+        Assert.True(session.IsEnded);
+        Assert.True(pending?.ActivityEnded);
+        Assert.True(pending?.ActivitySucceeded);
+        Assert.Equal("Completed", pending?.Message);
+        Assert.NotNull(session.PendingEvent);
+        Assert.Equal(pending, session.Acknowledge());
+        Assert.Null(session.PendingEvent);
+    }
+
+    [Fact]
     public void ExecutesTimeEventsAndAppliesActivationGraph()
     {
         using var store = CreateStore();
