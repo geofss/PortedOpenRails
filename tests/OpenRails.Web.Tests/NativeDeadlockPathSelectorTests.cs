@@ -68,6 +68,32 @@ public sealed class NativeDeadlockPathSelectorTests
     }
 
     [Fact]
+    public void AIInterlockingDispatchUsesTheNativeSelectedPassingPath()
+    {
+        var interlocking = new SignalInterlockingController(new uint[] { 10, 11, 12 },
+            new Dictionary<uint, IReadOnlyCollection<uint>>());
+        var session = new AiServiceInterlockingSession("AI-DEADLOCK", interlocking);
+        var own = new AiDeadlockRouteOption(
+            new NativeDeadlockPathCandidate(1, "PASS01", false, 101),
+            new uint[] { 10 }, new Dictionary<uint, uint>());
+        var main = new AiDeadlockRouteOption(
+            new NativeDeadlockPathCandidate(0, "MAIN", false, 100),
+            new uint[] { 11 }, new Dictionary<uint, uint>());
+        var alternative = new AiDeadlockRouteOption(
+            new NativeDeadlockPathCandidate(2, "PASS02", false, 102),
+            new uint[] { 12 }, new Dictionary<uint, uint>());
+
+        Assert.True(session.TryDispatchWithDeadlockPath(
+            new[] { own, main, alternative }, own, deadlockActive: false));
+
+        Assert.Equal(0, session.SelectedDeadlockPath?.PathIndex);
+        Assert.Equal("AI-DEADLOCK", interlocking.Snapshot().ReservedCircuits[11]);
+        Assert.DoesNotContain(10, interlocking.Snapshot().ReservedCircuits.Keys);
+        Assert.True(session.TryComplete());
+        Assert.Null(session.SelectedDeadlockPath);
+    }
+
+    [Fact]
     public void RejectsDuplicateAvailablePathIndexes()
     {
         var own = new NativeDeadlockPathCandidate(1, "OWN", true, 10);
