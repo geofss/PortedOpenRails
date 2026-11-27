@@ -178,11 +178,30 @@ export async function inspectArchive(id) {
             if (!Number.isSafeInteger(totalUncompressed)) throw new Error("Archive uncompressed size exceeds safe indexing limits.");
             const localHeader = new DataView(await archiveFile.slice(localOffset, localOffset + 30).arrayBuffer());
             if (localHeader.byteLength !== 30 || localHeader.getUint32(0, true) !== LOCAL_SIGNATURE ||
+                localHeader.getUint16(6, true) !== flags ||
                 localHeader.getUint16(8, true) !== method) {
-                throw new Error("Invalid local ZIP header for " + path);
+                throw new Error("Invalid or inconsistent local ZIP header for " + path);
             }
-            const dataOffset = localOffset + 30 + localHeader.getUint16(26, true) + localHeader.getUint16(28, true);
-            if (dataOffset + compressedSize > centralOffset) throw new Error("ZIP entry data overlaps or extends beyond the central directory: " + path);
+            const localNameLength = localHeader.getUint16(26, true);
+            const localExtraLength = localHeader.getUint16(28, true);
+            const localNameBytes = new Uint8Array(await archiveFile.slice(
+                localOffset + 30, localOffset + 30 + localNameLength).arrayBuffer());
+            if (localNameBytes.byteLength !== localNameLength) {
+                throw new Error("Truncated local ZIP filename for " + path);
+            }
+            let localName;
+            try {
+                localName = new TextDecoder((flags & 0x800) !== 0 ? "utf-8" : "windows-1252", { fatal: true }).decode(localNameBytes);
+            } catch {
+                throw new Error("Local ZIP filename cannot be decoded safely: " + path);
+            }
+            if (localName !== rawName) {
+                throw new Error("Local and central ZIP filenames do not match: " + path);
+            }
+            const dataOffset = localOffset + 30 + localNameLength + localExtraLength;
+            if (dataOffset > centralOffset || dataOffset + compressedSize > centralOffset) {
+                throw new Error("ZIP entry data overlaps or extends beyond the central directory: " + path);
+            }
             entries.push({
                 path,
                 uncompressedSize,
