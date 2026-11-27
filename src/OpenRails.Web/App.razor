@@ -702,7 +702,7 @@
 
     private bool CanDriveLoadedRoute =>
         loadedRoute?.Validation.TrackNetworkUsable == true &&
-        traversedRoute is { Segments.Count: > 0, LengthMeters: > 0 } &&
+        traversedRoute is { IsDriveReady: true } &&
         SelectedConsist is not null &&
         simulationSetup is not null &&
         drivingController is not null;
