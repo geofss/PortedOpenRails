@@ -149,6 +149,7 @@ public sealed class ActivityEventReaderTests
               Tr_Activity_File (
                 Events (
                   EventCategoryTime (
+                    EventTypeTime ( )
                     ID ( 10 ) Name ( "Start announcement" ) Activation_Level ( 1 )
                     Time ( 300 )
                     Outcomes ( ActivateEvent ( 20 ) DisplayMessage ( "Next event enabled" ) )
@@ -157,6 +158,12 @@ public sealed class ActivityEventReaderTests
                     ID ( 20 ) Name ( "Station call" ) Activation_Level ( 0 )
                     Time ( 600 )
                     Outcomes ( ActivitySuccess ( ) DisplayMessage ( "Activity complete" ) )
+                  )
+                  EventCategoryLocation (
+                    EventTypeLocation ( )
+                    ID ( 60 ) Name ( "Location event" ) Activation_Level ( 0 )
+                    TriggerOnStop ( 1 ) Location ( 1 2 100 200 25 )
+                    Outcomes ( )
                   )
                   EventCategoryAction (
                     ID ( 30 ) Name ( "Reach speed" ) Activation_Level ( 1 )

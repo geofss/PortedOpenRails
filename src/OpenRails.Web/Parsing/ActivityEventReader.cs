@@ -55,6 +55,7 @@ public sealed class ActivityEventReader
         reader.MustMatch("(");
         reader.ParseBlock(new[]
         {
+            new STFReader.TokenProcessor("eventtypetime", () => { reader.MustMatch("("); reader.MustMatch(")"); }),
             new STFReader.TokenProcessor("id", () => value.Id = reader.ReadIntBlock(-1)),
             new STFReader.TokenProcessor("name", () => value.Name = reader.ReadStringBlock("")),
             new STFReader.TokenProcessor("activation_level", () => value.ActivationLevel = reader.ReadIntBlock(0)),
@@ -72,6 +73,7 @@ public sealed class ActivityEventReader
         reader.MustMatch("(");
         reader.ParseBlock(new[]
         {
+            new STFReader.TokenProcessor("eventtypelocation", () => { reader.MustMatch("("); reader.MustMatch(")"); }),
             new STFReader.TokenProcessor("id", () => value.Id = reader.ReadIntBlock(-1)),
             new STFReader.TokenProcessor("name", () => value.Name = reader.ReadStringBlock("")),
             new STFReader.TokenProcessor("activation_level", () => value.ActivationLevel = reader.ReadIntBlock(0)),
