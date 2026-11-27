@@ -170,8 +170,9 @@ public sealed class TrainConsistSimulationSetupBuilder
             couplerDamping.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerDampingNsPerM, rearAsset?.Metadata?.CouplerDampingNsPerM, 20_000, "damping", cars[i].Name, cars[i + 1].Name, diagnostics));
         }
 
-        if (cursor > routeLengthMeters)
-            diagnostics.Add($"Initial consist length extends to {cursor:N1} m, beyond the {routeLengthMeters:N1} m connected route.");
+        if (cursor > routeLengthMeters + 1e-6)
+            throw new ArgumentOutOfRangeException(nameof(startDistanceMeters),
+                $"The consist requires {cursor - startDistanceMeters:N1} m from its start position, but only {routeLengthMeters - startDistanceMeters:N1} m remains on the connected route.");
 
         var initialState = new TrainConsistMotionState(states);
         var session = new TrainConsistSimulationSession(

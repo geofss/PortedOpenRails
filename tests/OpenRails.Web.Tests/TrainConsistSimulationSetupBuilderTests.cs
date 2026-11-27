@@ -34,6 +34,27 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void RejectsConsistThatWouldBeClampedBeyondConnectedRouteEnd()
+    {
+        var consist = new ConsistMetadata("TooLong", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "too-long.con");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", 20_000, 15, 50_000, null),
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null)
+        };
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrainConsistSimulationSetupBuilder().Build(
+                consist, assets, routeLengthMeters: 40, startDistanceMeters: 10));
+
+        Assert.Contains("only 30.0 m remains", exception.Message);
+    }
+
+    [Fact]
     public void CarriesPerVehicleHandbrakeRatingsIntoSimulationSetup()
     {
         var consist = new ConsistMetadata("Handbrake", new[]
