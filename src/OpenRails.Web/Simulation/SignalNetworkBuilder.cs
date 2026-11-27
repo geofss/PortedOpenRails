@@ -269,7 +269,8 @@ public sealed class SignalNetwork
             }
 
             var enabled = enabledTrackNodeIndices?.Contains(block.TrackNodeIndex) == true;
-            result.Add(ApplyNativeScript(signal, baseline, blockState, scripts, selectedJunctionBranches, enabled));
+            result.Add(ApplyNativeScript(signal, baseline, blockState, scripts,
+                selectedJunctionBranches, enabled, enabledTrackNodeIndices));
         }
 
         return Array.AsReadOnly(result.ToArray());
@@ -281,7 +282,8 @@ public sealed class SignalNetwork
         int blockState,
         SignalScriptLibrary? scripts,
         IReadOnlyDictionary<uint, uint>? selectedBranches,
-        bool enabled)
+        bool enabled,
+        IReadOnlySet<uint>? enabledRouteCircuits)
     {
         var scriptName = signal.Definition?.Script;
         if (string.IsNullOrWhiteSpace(scriptName) || scripts is null ||
@@ -307,6 +309,25 @@ public sealed class SignalNetwork
                     ? draw.Index : null;
         }
 
+        int? ResolveNativeFunction(string name, IReadOnlyList<int> arguments)
+        {
+            if (!name.Equals("ROUTE_SET", StringComparison.OrdinalIgnoreCase) ||
+                arguments.Count != 2 || arguments[0] < 0 || arguments[1] < 0)
+                return null;
+
+            var requiredMainNode = (uint)arguments[0];
+            var requiredJunctionNode = (uint)arguments[1];
+
+            // Native SignalHead.route_set first checks the enabled train's route,
+            // then follows the selected junction route. The browser adapter maps
+            // those two sources to the train's reserved route and selected branch.
+            if (enabled && enabledRouteCircuits?.Contains(requiredMainNode) == true)
+                return 1;
+            return selectedBranches is not null &&
+                selectedBranches.TryGetValue(requiredJunctionNode, out var selectedBranch) &&
+                selectedBranch == requiredMainNode ? 1 : 0;
+        }
+
         var execution = new SignalScriptInterpreter().Execute(script,
             new SignalScriptExecutionContext(
                 initialState,
@@ -315,7 +336,8 @@ public sealed class SignalNetwork
                 Enabled: enabled,
                 BlockState: blockState,
                 RouteSet: baseline.NextTrackNodeIndex.HasValue,
-                DrawStateResolver: ResolveDrawState));
+                DrawStateResolver: ResolveDrawState,
+                FunctionResolver: ResolveNativeFunction));
         if (!execution.Success)
             return CreateIndication(signal, RouteSignalAspect.Stop, baseline.NextTrackNodeIndex,
                 $"Native SIGSCR '{scriptName}' failed safely: {execution.Diagnostic} Defaulting to Stop.");
