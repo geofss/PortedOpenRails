@@ -273,4 +273,17 @@ public sealed class AiServiceDrivingControllerTests
 
         Assert.Equal(6, decision.TargetSpeedMetersPerSecond, 3);
 }
+
+    [Fact]
+    public void TrainFollowingGovernorReducesSpeedForShortGapAndStoppedLeader()
+    {
+        var route = Plan(0, 500);
+        var free = controller.Calculate(route, 10, 15, 25);
+        var following = controller.Calculate(route, 10, 15, 25,
+            trainAhead: new AiTrainFollowingConstraint(25, 0));
+
+        Assert.True(following.TargetSpeedMetersPerSecond < free.TargetSpeedMetersPerSecond);
+        Assert.Equal(0, following.ThrottlePercent);
+        Assert.True(following.BrakePercent > 0);
+    }
 }
