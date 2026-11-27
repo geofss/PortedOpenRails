@@ -4,6 +4,16 @@
 @if (Definition is not null)
 {
     <div class="or-cab-panel" aria-label="Original Open Rails cab view">
+        @if (Definition.Views.Count > 1)
+        {
+            <label for="or-cab-view-select">Cab view</label>
+            <select id="or-cab-view-select" value="@viewIndex" @onchange="SelectView">
+                @for (var index = 0; index < Definition.Views.Count; index++)
+                {
+                    <option value="@index">@System.IO.Path.GetFileName(Definition.Views[index].DayImagePath)</option>
+                }
+            </select>
+        }
         @if (HasNightImage)
         {
             <button type="button" @onclick="ToggleLighting">@(showNight ? "Show day cab" : "Show night cab")</button>
@@ -29,7 +39,12 @@
 
     private string? imageDataUri;
     private bool showNight;
-    private bool HasNightImage => Store is not null && Definition?.Views.FirstOrDefault() is { } view && Store.Contains(view.NightImagePath);
+    private int viewIndex;
+    private CabViewImage? SelectedView => Definition is not null && viewIndex >= 0 && viewIndex < Definition.Views.Count
+        ? Definition.Views[viewIndex]
+        : null;
+    private bool HasNightImage => Store is not null && SelectedView is { } view &&
+        !string.IsNullOrWhiteSpace(view.NightImagePath) && Store.Contains(view.NightImagePath);
     private string? loadError;
     private string? loadedPath;
 
@@ -38,6 +53,18 @@
         showNight = !showNight;
         loadedPath = null;
         OnParametersSet();
+    }
+
+    private void SelectView(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var selected) &&
+            Definition is not null && selected >= 0 && selected < Definition.Views.Count)
+        {
+            viewIndex = selected;
+            showNight = false;
+            loadedPath = null;
+            OnParametersSet();
+        }
     }
 
     protected override void OnParametersSet()
