@@ -30,6 +30,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/LocomotiveTractionMetadataReader.cs" Link="Parsing/LocomotiveTractionMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionModel.cs" Link="Simulation/LocomotiveTractionModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionRamp.cs" Link="Simulation/LocomotiveTractionRamp.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveAxleDriveRamp.cs" Link="Simulation/LocomotiveAxleDriveRamp.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveSimulationSession.cs" Link="Simulation/LocomotiveSimulationSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationSession.cs" Link="Simulation/TrainConsistSimulationSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationSetupBuilder.cs" Link="Simulation/TrainConsistSimulationSetupBuilder.cs" />
