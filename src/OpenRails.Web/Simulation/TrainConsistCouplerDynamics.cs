@@ -74,6 +74,13 @@ public sealed class TrainConsistCouplerDynamics
             maximumTensionNewtons.Count != boundaryCount)
             throw new ArgumentException("Coupler parameter arrays must have one entry per adjacent-car boundary.");
 
+        for (var i = 0; i < boundaryCount; i++)
+        {
+            if (!double.IsFinite(restGapsMeters[i]) || restGapsMeters[i] < 0)
+                throw new ArgumentOutOfRangeException(nameof(restGapsMeters),
+                    "Coupler rest gaps must be finite and non-negative.");
+        }
+
         var forces = new double[boundaryCount];
         for (var i = 0; i < boundaryCount; i++)
         {
