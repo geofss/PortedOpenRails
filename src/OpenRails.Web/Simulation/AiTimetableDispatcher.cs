@@ -1,3 +1,5 @@
+using OpenRails.Web.Parsing;
+
 namespace OpenRails.Web.Simulation;
 
 /// <summary>
@@ -37,6 +39,23 @@ public sealed class AiTimetableDispatcher
                 routeCircuitIds.ToArray(), new Dictionary<uint, uint>(requiredJunctionBranches)));
             services.Sort((left, right) => left.DepartureSeconds.CompareTo(right.DepartureSeconds));
         }
+    }
+
+    /// <summary>
+    /// Registers a service directly from native timetable header metadata.
+    /// Route/path resolution remains a separate input, as in Open Rails' path preprocessing.
+    /// </summary>
+    public void AddService(
+        NativeTimetableTrainDefinition definition,
+        AiServiceInterlockingSession session,
+        IReadOnlyList<uint> routeCircuitIds,
+        IReadOnlyDictionary<uint, uint> requiredJunctionBranches)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (!definition.TryGetDepartureSeconds(out var departureSeconds))
+            throw new InvalidDataException(
+                $"Native timetable service '{definition.Train}' has an invalid or missing #start time '{definition.StartTime}'.");
+        AddService(definition.Train, departureSeconds, session, routeCircuitIds, requiredJunctionBranches);
     }
 
     /// <summary>Advances simulation time and dispatches all due services whose paths can be reserved.</summary>
