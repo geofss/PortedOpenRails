@@ -33,6 +33,231 @@
         <small>Browser storage replaces direct access to a local simulator installation folder.</small>
     </div>
 
+    <section class="or-mainform-workspace" aria-label="Open Rails main menu">
+        <aside class="or-mainform-selection">
+            <div class="or-mainform-group">
+                <h2>Installation profile</h2>
+                <label for="or-profile">Profile</label>
+                <select id="or-profile" disabled>
+                    <option>Browser content profile</option>
+                </select>
+                <p class="hint">Browser storage is the active content root. Imported packages are managed below.</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Route</h2>
+                <label for="or-main-route">Selected route</label>
+                <select id="or-main-route" value="@SelectedRouteIndex" @onchange="SelectRouteFromMenu" disabled="@(isLoading || routeChoices.Count == 0)">
+                    <option value="-1">Select a route…</option>
+                    @for (var routeIndex = 0; routeIndex < routeChoices.Count; routeIndex++)
+                    {
+                        var routeOption = routeChoices[routeIndex];
+                        <option value="@routeIndex">@routeOption.Metadata.Name</option>
+                    }
+                </select>
+                <p class="hint">@((selectedRoute is null) ? "Import a route package to populate this list." : selectedRoute.Metadata.RouteId + " · " + selectedRoute.Metadata.Name)</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Mode</h2>
+                <div class="or-mode-switch" role="radiogroup" aria-label="Game mode">
+                    <label><input type="radio" name="or-mode" value="activity" checked="@isActivityMode" @onchange="() => SetMode(true)" /> Activity</label>
+                    <label><input type="radio" name="or-mode" value="timetable" checked="@(!isActivityMode)" @onchange="() => SetMode(false)" /> Timetable</label>
+                </div>
+                @if (isActivityMode)
+                {
+                    <div class="or-mode-panel">
+                        <label for="or-main-activity">Activity</label>
+                        <select id="or-main-activity" value="@selectedActivityPath" @onchange="SelectActivity" disabled="@(selectedRoute is null || isLoading)">
+                            <option value="">Select an activity…</option>
+                            @foreach (var activityPath in ActivityChoices)
+                            {
+                                <option value="@activityPath">@System.IO.Path.GetFileNameWithoutExtension(activityPath)</option>
+                            }
+                        </select>
+                        @if (selectedActivityMetadata is { } activity)
+                        {
+                            <dl class="or-compact-details">
+                                <dt>Time</dt><dd>@activity.StartTime</dd>
+                                <dt>Duration</dt><dd>@(activity.DurationMinutes / 60) h @(activity.DurationMinutes % 60) min</dd>
+                                <dt>Season</dt><dd>@activity.SeasonName</dd>
+                                <dt>Weather</dt><dd>@activity.WeatherName</dd>
+                                <dt>Difficulty</dt><dd>@activity.DifficultyName</dd>
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="hint">Select a route and activity. Activity-specific locomotive, consist, start location and environment values are resolved from its native definition.</p>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="or-mode-panel">
+                        <label for="or-timetable-set">Timetable set</label>
+                        <select id="or-timetable-set" value="@selectedTimetablePath" @onchange="SelectTimetable" disabled="@(composite is null || isLoading)">
+                            <option value="">Select a timetable…</option>
+                            @foreach (var timetablePath in TimetableChoices)
+                            {
+                                <option value="@timetablePath">@System.IO.Path.GetFileName(timetablePath)</option>
+                            }
+                        </select>
+                        <label for="or-timetable-train">Train</label>
+                        <select id="or-timetable-train" value="@selectedTimetableTrain" @onchange="SelectTimetableTrain" disabled="@(selectedTimetable is null)">
+                            <option value="">Select a train…</option>
+                            @foreach (var train in selectedTimetable?.Trains ?? Array.Empty<NativeTimetableTrainDefinition>())
+                            {
+                                <option value="@train.Train">@train.Train</option>
+                            }
+                        </select>
+                        @if (selectedTimetable is { } timetable)
+                        {
+                            <p class="hint">@timetable.Description</p>
+                            @if (!string.IsNullOrWhiteSpace(selectedTimetableTrainDefinition?.Briefing))
+                            {
+                                <p>@selectedTimetableTrainDefinition.Briefing</p>
+                            }
+                            <p class="hint">@timetable.Trains.Count train column(s) found · native timetable selection only; timetable dispatch is not yet wired to Start.</p>
+                        }
+                        else
+                        {
+                            <p class="hint">Timetable files are discovered from imported route and content packages.</p>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="or-mainform-group">
+                <h2>Singleplayer</h2>
+                <div class="or-action-row">
+                    <a class="or-menu-command primary @(CanDriveLoadedRoute ? "" : "disabled")" href="@(CanDriveLoadedRoute ? "#driving-controls" : "#route-heading")" aria-disabled="@(!CanDriveLoadedRoute)">Start</a>
+                    <button type="button" disabled title="Resume and replay save-state selection is not yet ported">Resume / Replay…</button>
+                </div>
+                <p class="hint">Start is enabled only when the selected route, connected track, consist and simulation session are ready.</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Multiplayer</h2>
+                <fieldset disabled class="or-multiplayer-disabled">
+                    <label><input type="radio" name="or-mp-mode" checked /> Client</label>
+                    <label><input type="radio" name="or-mp-mode" /> Server</label>
+                    <label>User name <input type="text" /></label>
+                    <label>Host/port <input type="text" /></label>
+                    <div class="or-action-row"><button type="button">Start MP</button><button type="button">Resume MP</button></div>
+                </fieldset>
+                <p class="hint">Unavailable: the browser-compatible multiplayer transport and session lifecycle have not been ported.</p>
+            </div>
+        </aside>
+        <section class="or-mainform-details" aria-label="Main menu commands and details">
+            <div class="or-mainform-command-groups">
+                <div class="or-mainform-group">
+                    <h2>Open Rails</h2>
+                    <div class="or-action-row">
+                        <button type="button" @onclick="() => showOptionsDialog = true">Options</button>
+                        <a class="or-menu-command" href="#content-packages">Content</a>
+                        <details class="or-menu-dropdown">
+                            <summary>Tools ▼</summary>
+                            <div class="or-dropdown-content">
+                                <a href="#content-packages">Content packages</a>
+                                <a href="#route-heading">Route diagnostics</a>
+                                <button type="button" disabled title="The upstream TestingForm is not yet ported">Testing</button>
+                            </div>
+                        </details>
+                        <details class="or-menu-dropdown">
+                            <summary>Documents ▼</summary>
+                            <div class="or-dropdown-content">
+                                <a href="https://open-rails.readthedocs.io/" target="_blank" rel="noopener noreferrer">User guide</a>
+                                <a href="https://open-rails.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">Documentation</a>
+                                <a href="https://github.com/openrails/openrails" target="_blank" rel="noopener noreferrer">Source repository</a>
+                            </div>
+                        </details>
+                    </div>
+                    <label class="or-logging-toggle"><input type="checkbox" @bind="loggingEnabled" /> Logging</label>
+                    <p class="hint">Logging preference is currently a UI preference; native log-file routing is not yet ported to the browser.</p>
+                </div>
+                <div class="or-mainform-group or-notifications">
+                    <h2>Notifications</h2>
+                    <span class="or-notification-indicator" aria-label="Notifications unavailable">—</span>
+                    <p class="hint">Open Rails notification feed is not yet connected in this browser build.</p>
+                </div>
+            </div>
+            @if (showOptionsDialog)
+            {
+                <section class="or-options-dialog" role="dialog" aria-modal="false" aria-labelledby="or-options-title">
+                    <header class="or-options-header">
+                        <h2 id="or-options-title">Options</h2>
+                        <button type="button" @onclick="() => showOptionsDialog = false" aria-label="Close Options">Close</button>
+                    </header>
+                    <nav class="or-options-tabs" role="tablist" aria-label="Options pages">
+                        @foreach (var tab in OptionTabs)
+                        {
+                            <button type="button" role="tab" aria-selected="@(selectedOptionsTab == tab)" @onclick="() => SelectOptionsTab(tab)">@tab</button>
+                        }
+                    </nav>
+                    <div class="or-options-page" role="tabpanel">
+                        @switch (selectedOptionsTab)
+                        {
+                            case "General":
+                                <h3>General</h3>
+                                <p>Autosave, language, units, update mode, telemetry and general simulator preferences.</p>
+                                <label><input type="checkbox" @bind="browserAutosaveEnabled" /> Browser session autosave preference</label>
+                                <label>Autosave interval <select @bind="browserAutosaveMinutes"><option value="15">15 mins</option><option value="30">30 mins</option><option value="60">60 mins</option></select></label>
+                                <p class="hint">These browser preference controls are local UI state only; native save-game autosave is not yet connected.</p>
+                                break;
+                            case "Audio":
+                                <h3>Audio</h3>
+                                <p>Upstream controls: sound volume, external sound heard internally, sound detail level.</p>
+                                <label>Browser audio output <input type="range" min="0" max="100" @bind="browserAudioVolume" /> @browserAudioVolume%</label>
+                                <p class="hint">Volume preference is not yet wired to the simulator audio mixer.</p>
+                                break;
+                            case "Video":
+                                <h3>Video</h3>
+                                <p>Upstream controls: viewing distance, vertical FOV, object density, LOD bias, anti-aliasing, shadows, signal glow, overhead wires, distant mountains and VSync.</p>
+                                <p class="hint">The browser renderer currently exposes its own camera and quality controls in the route viewer. Native Open Rails video settings are not yet mapped to the WebGL renderer.</p>
+                                break;
+                            case "Simulation":
+                                <h3>Simulation</h3>
+                                <p>Upstream controls: locomotive start state, activity options, simple controls and physics, curve speed limits, coupler breakage, advanced adhesion, TCS scripts, alerter and air-brake options.</p>
+                                <p class="hint">The native option model and persistence have not yet been ported. Do not treat these as active simulator settings.</p>
+                                break;
+                            case "Keyboard":
+                                <h3>Keyboard</h3>
+                                <p>Native keyboard command mapping, export, defaults and conflict checking.</p>
+                                <p class="hint">Browser driving controls currently use the implemented keyboard bindings shown with the cab/driving panel. Full native command-map editing is pending.</p>
+                                break;
+                            case "RailDriver":
+                                <h3>RailDriver</h3>
+                                <p>Lever mapping, reverse directions, full-range throttle, export, defaults and calibration.</p>
+                                <p class="hint">Hardware integration is unavailable in this browser port.</p>
+                                break;
+                            case "Data logger":
+                                <h3>Data logger</h3>
+                                <p>Physics, performance, steam, station-stop and train-speed logging; separators and logging intervals.</p>
+                                <p class="hint">Native data logger output is not yet ported.</p>
+                                break;
+                            case "Evaluation":
+                                <h3>Evaluation</h3>
+                                <p>Evaluation logging intervals and event categories.</p>
+                                <p class="hint">Native evaluation logging is not yet ported.</p>
+                                break;
+                            case "System":
+                                <h3>System</h3>
+                                <p>Window size, windowed mode, language, update mode, performance tuner, web-server port and system confirmations.</p>
+                                <p class="hint">Browser viewport and runtime diagnostics are browser-managed; native system controls are not applicable or not yet ported.</p>
+                                break;
+                            case "Experimental":
+                                <h3>Experimental</h3>
+                                <p>Adhesion randomization, activity randomization, questionable braking parameter correction, shape warnings, MSTS environments and legacy superelevation.</p>
+                                <p class="hint">Experimental simulation flags are not yet connected to the native simulation model.</p>
+                                break;
+                        }
+                    </div>
+                    <footer class="or-options-footer">
+                        <span class="hint">Original Open Rails Options tab inventory; unsupported settings remain clearly identified.</span>
+                        <button type="button" @onclick="() => showOptionsDialog = false">OK</button>
+                        <button type="button" @onclick="() => showOptionsDialog = false">Cancel</button>
+                    </footer>
+                </section>
+            }
+        </section>
+    </section>
+
     <section class="route-choice" aria-labelledby="route-heading">
         <h2 id="route-heading">Route</h2>
         <div class="route-options">
@@ -621,6 +846,80 @@
 </main>
 
 @code {
+    private bool isActivityMode = true;
+    private bool showOptionsDialog;
+    private bool loggingEnabled = true;
+    private bool browserAutosaveEnabled;
+    private int browserAutosaveMinutes = 30;
+    private int browserAudioVolume = 80;
+    private string selectedOptionsTab = "General";
+    private string? selectedTimetablePath;
+    private string? selectedTimetableTrain;
+    private NativeTimetableDefinition? selectedTimetable;
+    private NativeTimetableTrainDefinition? selectedTimetableTrainDefinition;
+    private static readonly string[] OptionTabs =
+        ["General", "Audio", "Video", "Simulation", "Keyboard", "RailDriver", "Data logger", "Evaluation", "System", "Experimental"];
+    private IReadOnlyList<string> TimetableChoices => composite?.Paths
+        .Where(path => path.EndsWith(".timetable", StringComparison.OrdinalIgnoreCase) ||
+                       path.EndsWith(".tt", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
+
+    private void SetMode(bool activityMode)
+    {
+        isActivityMode = activityMode;
+        if (activityMode)
+        {
+            selectedTimetablePath = null;
+            selectedTimetable = null;
+            selectedTimetableTrain = null;
+            selectedTimetableTrainDefinition = null;
+        }
+        else
+        {
+            selectedActivityPath = null;
+            selectedActivityMetadata = null;
+            selectedActivityEvents = null;
+            selectedActivityPassengerService = null;
+            selectedActivityPassengerPlatformBinding = null;
+            activityExecution = null;
+            activityStationStopTracker = null;
+            activityStationStopProgress = null;
+            activityStartingSpeedMetersPerSecond = null;
+            InitializeSimulationSetup();
+        }
+    }
+
+    private void SelectOptionsTab(string tab)
+    {
+        if (OptionTabs.Contains(tab, StringComparer.Ordinal))
+            selectedOptionsTab = tab;
+    }
+
+    private void SelectTimetable(ChangeEventArgs args)
+    {
+        selectedTimetablePath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetable = null;
+        selectedTimetableTrain = null;
+        selectedTimetableTrainDefinition = null;
+        if (selectedTimetablePath is null || composite is null)
+            return;
+        try
+        {
+            selectedTimetable = new NativeTimetableDefinitionReader().Read(composite, selectedTimetablePath);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException)
+        {
+            errorMessage = $"Could not read timetable '{selectedTimetablePath}': {exception.Message}";
+        }
+    }
+
+    private void SelectTimetableTrain(ChangeEventArgs args)
+    {
+        selectedTimetableTrain = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetableTrainDefinition = selectedTimetable?.Trains.FirstOrDefault(train =>
+            string.Equals(train.Train, selectedTimetableTrain, StringComparison.Ordinal));
+    }
+
     private readonly List<PackageLayer> layers = [];
     private readonly List<RouteChoice> routeChoices = [];
     private CompositeContentStore? composite;
