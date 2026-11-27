@@ -27,7 +27,7 @@ public sealed class TrackShapeAnimationSamplerTests
     public void SamplesRotationUsingQuaternionSlerp()
     {
         var start = Quaternion.Identity;
-        var finish = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI);
+        var finish = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2);
         var controller = new TrackShapeAnimationController(
             TrackShapeAnimationControllerKind.Rotation,
             "tcb_rot",
@@ -38,7 +38,7 @@ public sealed class TrackShapeAnimationSamplerTests
             });
 
         var sampled = TrackShapeAnimationSampler.SampleRotation(controller, 5);
-        var expected = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2);
+        var expected = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 4);
         Assert.True(MathF.Abs(Quaternion.Dot(sampled, expected)) > 0.999f);
     }
 
