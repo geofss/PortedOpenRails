@@ -30,7 +30,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
         this.maximumIndices = maximumIndices;
     }
 
-    public WorldSceneryRenderGeometry Build(IEnumerable<LoadedWorldSceneryTile> tiles)
+    public WorldSceneryRenderGeometry Build(IEnumerable<LoadedWorldSceneryTile> tiles, string? seasonFolder = null)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         var textureAssets = new List<LoadedTrackShapeTexture>();
@@ -43,12 +43,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
         foreach (var tile in tiles)
         {
             var shapeTextureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
-            foreach (var texture in tile.Textures.Loaded)
+            foreach (var texture in TrackShapeSeasonTextureSelector.Select(tile.Textures.Loaded, seasonFolder))
             {
-                if (texture.Reference.SeasonFolder is not null ||
-                    texture.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
-                    texture.Texture.MipLevels.Count == 0)
-                    continue;
 
                 if (!texturePathIndexes.TryGetValue(texture.Reference.Path, out var textureIndex))
                 {
@@ -125,12 +121,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
             if (!truncated)
             {
                 var forestTextureIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                foreach (var texture in tile.ForestTextures?.Loaded ?? Array.Empty<LoadedTrackShapeTexture>())
+                foreach (var texture in TrackShapeSeasonTextureSelector.Select(tile.ForestTextures?.Loaded ?? Array.Empty<LoadedTrackShapeTexture>(), seasonFolder))
                 {
-                    if (texture.Reference.SeasonFolder is not null ||
-                        texture.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
-                        texture.Texture.MipLevels.Count == 0)
-                        continue;
                     if (!texturePathIndexes.TryGetValue(texture.Reference.Path, out var forestTextureIndex))
                     {
                         forestTextureIndex = textureAssets.Count;
