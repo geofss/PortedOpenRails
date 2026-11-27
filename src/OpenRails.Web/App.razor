@@ -1336,7 +1336,7 @@
             var occupiedNodes = SignalOccupancyResolver.Resolve(traversedRoute, carOccupancies);
             var selectedBranches = selectedBranchTrackNodeIndices.ToDictionary(
                 pair => checked((uint)pair.Key), pair => pair.Value);
-            currentSignalIndications = loadedRoute.Signalling.Evaluate(occupiedNodes, selectedBranches);
+            currentSignalIndications = loadedRoute.Signalling.Evaluate(occupiedNodes, selectedBranches, loadedRoute.SignalScripts);
         }
         else
         {

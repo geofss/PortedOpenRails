@@ -175,7 +175,8 @@ public sealed class SignalNetwork
 
     public IReadOnlyList<RouteSignalIndication> Evaluate(
         IReadOnlySet<uint> occupiedTrackNodeIndices,
-        IReadOnlyDictionary<uint, uint>? selectedJunctionBranches = null)
+        IReadOnlyDictionary<uint, uint>? selectedJunctionBranches = null,
+        SignalScriptLibrary? scripts = null)
     {
         ArgumentNullException.ThrowIfNull(occupiedTrackNodeIndices);
         var result = new List<RouteSignalIndication>();
@@ -183,55 +184,146 @@ public sealed class SignalNetwork
         foreach (var block in TrackCircuits)
         foreach (var signal in block.Signals)
         {
+            RouteSignalIndication baseline;
+            var blockState = 0; // Native MSTS MstsBlockState.Clear.
             if (occupiedTrackNodeIndices.Contains(block.TrackNodeIndex))
             {
-                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, null, "The signal's own track circuit is occupied."));
-                continue;
+                blockState = 1; // Occupied.
+                baseline = CreateIndication(signal, RouteSignalAspect.Stop, null, "The signal's own track circuit is occupied.");
             }
-
-            var requiredClearAhead = signal.Definition?.NumberClearAhead is >= 0 and <= 32
-                ? Math.Max(1, signal.Definition.NumberClearAhead)
-                : 2;
-            var current = block.TrackNodeIndex;
-            uint? previous = null;
-            uint? firstNext = null;
-            var clearBlocks = 0;
-            var blocked = false;
-            var unresolved = false;
-            for (var clearIndex = 0; clearIndex < requiredClearAhead; clearIndex++)
-            {
-                var next = ResolveNextBlock(current, clearIndex == 0 ? signal : null,
-                    selectedJunctionBranches, previous);
-                if (next is null)
-                {
-                    unresolved = true;
-                    break;
-                }
-                firstNext ??= next;
-                if (occupiedTrackNodeIndices.Contains(next.Value))
-                {
-                    blocked = true;
-                    break;
-                }
-                clearBlocks++;
-                previous = current;
-                current = next.Value;
-            }
-
-            if (clearBlocks == 0 && (blocked || unresolved))
-                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
-                    blocked ? "The next track circuit is occupied." : "No unique, selected route is available beyond this signal."));
-            else if (blocked || unresolved)
-                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
-                    blocked ? "A required track circuit ahead is occupied." : "The required clear-ahead route is not uniquely established."));
             else
-                result.Add(CreateIndication(signal,
-                    requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
-                    firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied."));
+            {
+                var requiredClearAhead = signal.Definition?.NumberClearAhead is >= 0 and <= 32
+                    ? Math.Max(1, signal.Definition.NumberClearAhead)
+                    : 2;
+                var current = block.TrackNodeIndex;
+                uint? previous = null;
+                uint? firstNext = null;
+                var clearBlocks = 0;
+                var blocked = false;
+                var unresolved = false;
+                for (var clearIndex = 0; clearIndex < requiredClearAhead; clearIndex++)
+                {
+                    var next = ResolveNextBlock(current, clearIndex == 0 ? signal : null,
+                        selectedJunctionBranches, previous);
+                    if (next is null)
+                    {
+                        unresolved = true;
+                        break;
+                    }
+                    firstNext ??= next;
+                    if (occupiedTrackNodeIndices.Contains(next.Value))
+                    {
+                        blocked = true;
+                        break;
+                    }
+                    clearBlocks++;
+                    previous = current;
+                    current = next.Value;
+                }
+
+                if (blocked) blockState = 1;
+                else if (unresolved) blockState = 2; // Obstructed / route not established.
+
+                if (clearBlocks == 0 && (blocked || unresolved))
+                    baseline = CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
+                        blocked ? "The next track circuit is occupied." : "No unique, selected route is available beyond this signal.");
+                else if (blocked || unresolved)
+                    baseline = CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
+                        blocked ? "A required track circuit ahead is occupied." : "The required clear-ahead route is not uniquely established.");
+                else
+                    baseline = CreateIndication(signal,
+                        requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
+                        firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied.");
+            }
+
+            result.Add(ApplyNativeScript(signal, baseline, blockState, scripts, selectedJunctionBranches));
         }
 
         return Array.AsReadOnly(result.ToArray());
     }
+
+    private static RouteSignalIndication ApplyNativeScript(
+        RouteSignalHead signal,
+        RouteSignalIndication baseline,
+        int blockState,
+        SignalScriptLibrary? scripts,
+        IReadOnlyDictionary<uint, uint>? selectedBranches)
+    {
+        var scriptName = signal.Definition?.Script;
+        if (string.IsNullOrWhiteSpace(scriptName) || scripts is null ||
+            !scripts.Scripts.TryGetValue(scriptName, out var script))
+            return baseline;
+
+        var initialState = NativeAspectValue(baseline.NativeAspect) ??
+            baseline.Aspect switch
+            {
+                RouteSignalAspect.Stop => 0,
+                RouteSignalAspect.Approach => 3,
+                RouteSignalAspect.Clear1 => 6,
+                RouteSignalAspect.Clear2 => 7,
+                _ => 0
+            };
+        int? ResolveDrawState(int nativeAspect)
+        {
+            var aspectName = NativeAspectName(nativeAspect);
+            return aspectName is null ? null : signal.Definition?.Aspects
+                .FirstOrDefault(aspect => aspect.Aspect.Equals(aspectName, StringComparison.OrdinalIgnoreCase))
+                ?.DrawState is { Length: > 0 } drawName &&
+                signal.Definition.DrawStates.TryGetValue(drawName, out var draw)
+                    ? draw.Index : null;
+        }
+
+        var execution = new SignalScriptInterpreter().Execute(script,
+            new SignalScriptExecutionContext(
+                initialState,
+                signal.Definition?.DrawStates.Values.FirstOrDefault(draw =>
+                    draw.Name.Equals(baseline.DrawState, StringComparison.OrdinalIgnoreCase))?.Index ?? 0,
+                Enabled: false,
+                BlockState: blockState,
+                RouteSet: baseline.NextTrackNodeIndex.HasValue,
+                DrawStateResolver: ResolveDrawState));
+        if (!execution.Success)
+            return CreateIndication(signal, RouteSignalAspect.Stop, baseline.NextTrackNodeIndex,
+                $"Native SIGSCR '{scriptName}' failed safely: {execution.Diagnostic} Defaulting to Stop.");
+
+        var nativeName = NativeAspectName(execution.State);
+        var configured = nativeName is null ? null : signal.Definition?.Aspects
+            .FirstOrDefault(aspect => aspect.Aspect.Equals(nativeName, StringComparison.OrdinalIgnoreCase));
+        if (configured is null)
+            return CreateIndication(signal, RouteSignalAspect.Stop, baseline.NextTrackNodeIndex,
+                $"Native SIGSCR '{scriptName}' requested unsupported aspect value {execution.State}; defaulting to Stop.");
+
+        var routeAspect = execution.State switch
+        {
+            0 or 1 or 2 => RouteSignalAspect.Stop,
+            3 or 4 or 5 => RouteSignalAspect.Approach,
+            6 => RouteSignalAspect.Clear1,
+            7 => RouteSignalAspect.Clear2,
+            _ => RouteSignalAspect.Stop
+        };
+        return new RouteSignalIndication(signal, routeAspect, baseline.NextTrackNodeIndex,
+            $"{baseline.Reason} Native SIGSCR '{scriptName}' executed.",
+            configured.Aspect,
+            execution.DrawState != 0 && signal.Definition!.DrawStates.Values
+                .FirstOrDefault(draw => draw.Index == execution.DrawState)?.Name is { } drawName
+                    ? drawName : configured.DrawState,
+            configured.SpeedMetersPerSecond >= 0 ? configured.SpeedMetersPerSecond : null);
+    }
+
+    private static int? NativeAspectValue(string? name) => name?.ToUpperInvariant() switch
+    {
+        "STOP" => 0, "STOP_AND_PROCEED" => 1, "RESTRICTING" => 2,
+        "APPROACH_1" => 3, "APPROACH_2" => 4, "APPROACH_3" => 5,
+        "CLEAR_1" => 6, "CLEAR_2" => 7, _ => null
+    };
+
+    private static string? NativeAspectName(int value) => value switch
+    {
+        0 => "STOP", 1 => "STOP_AND_PROCEED", 2 => "RESTRICTING",
+        3 => "APPROACH_1", 4 => "APPROACH_2", 5 => "APPROACH_3",
+        6 => "CLEAR_1", 7 => "CLEAR_2", _ => null
+    };
 
     private static RouteSignalIndication CreateIndication(
         RouteSignalHead signal, RouteSignalAspect aspect, uint? next, string reason)
