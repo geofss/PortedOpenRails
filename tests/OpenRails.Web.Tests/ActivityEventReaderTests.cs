@@ -155,6 +155,18 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void ReadsNativePickUpPassengersActionAndKeepsItsIntentionalNoOpSemantics()
+    {
+        using var store = CreateStore();
+        var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
+        var action = Assert.Single(events.Events, item => item.Id == 52);
+
+        Assert.Equal("PickUpPassengers", action.ActionType);
+        Assert.DoesNotContain(new ActivityExecutionSession(events).UnsupportedEvents,
+            item => item.Contains("52", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ReadsNativeTimeEventsAndActivationOutcomes()
     {
         using var store = CreateStore();
@@ -376,6 +388,11 @@ public sealed class ActivityEventReaderTests
                   EventCategoryAction (
                     ID ( 51 ) Name ( "Reversible spelling" ) Activation_Level ( 1 )
                     EventTypeReachSpeed ( ) Speed ( 10 ) Reversible_Event ( )
+                    Outcomes ( )
+                  )
+                  EventCategoryAction (
+                    ID ( 52 ) Name ( "Pick up passengers" ) Activation_Level ( 1 )
+                    EventTypePickUpPassengers ( )
                     Outcomes ( )
                   )
                 )
