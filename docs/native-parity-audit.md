@@ -55,5 +55,8 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 - Added portable native animation clip/node/controller/keyframe data extraction for the upstream shape model.
 - Preserved linear-position keyframes and rotation keyframes (slerp and TCB key records) in the portable mesh model.
 - Added position interpolation and quaternion slerp sampling utility, with unit tests for interpolation, clamping, and invalid controller-kind usage.
-- **Still incomplete:** sampled animation data is not yet applied to the rendered shape matrix hierarchy, and runtime train/wheel/cab animation integration is not complete. TCB interpolation currently uses keyframe quaternion slerp; full TCB rotational interpolation is still required for parity.
+- Added a pose evaluator that maps named animation nodes to shape-matrix indices and samples per-node position/rotation transforms for a selected clip/frame.
+- Wired sampled poses into both untextured and textured track-shape render geometry hierarchy transforms. The builder accepts an animation clip index and frame; omitted/default values preserve static geometry.
+- Added regression tests for named-node mapping, sampled translation, unmatched helper nodes, missing clips, and non-finite frame rejection.
+- **Still incomplete:** WORLD scenery geometry does not yet consume animation poses; runtime clock/frame advancement, train/wheel/cab animation binding, TCB rotational interpolation, and material/UV parity remain outstanding. The render builder currently selects the first LOD and does not yet implement dynamic LOD selection.
 - Test source has been added but cannot be executed in this environment; no build/test pass is asserted.
