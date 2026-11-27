@@ -153,6 +153,7 @@ public sealed class AiServiceInterlockingSession
         if (!dispatched || !interlocking.TryReleaseRoute(trainId))
             return false;
         dispatched = false;
+        SelectedDeadlockPath = null;
         driver.ResetWaitingPoints();
         return true;
     }
