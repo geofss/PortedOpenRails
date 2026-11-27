@@ -184,7 +184,7 @@
                                                 }
                                                 @if (activityExecution.IsEnded)
                                                 {
-                                                    <p class="success">Activity ended · @(activityExecution.PendingEvent?.ActivitySucceeded == true ? "Success" : "Failed")</p>
+                                                    <p class="success">Activity ended · @(activityExecution.LastAcknowledgedEvent?.ActivitySucceeded == true ? "Success" : "Failed")</p>
                                                 }
                                                 @foreach (var unsupported in activityExecution.UnsupportedEvents.Take(8))
                                                 {

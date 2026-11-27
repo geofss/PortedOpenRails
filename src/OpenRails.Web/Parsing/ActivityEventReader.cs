@@ -198,6 +198,7 @@ public sealed class ActivityExecutionSession
     public double ElapsedSeconds { get; private set; }
     public bool IsEnded => ended;
     public ActivityEventExecutionResult? PendingEvent => pending;
+    public ActivityEventExecutionResult? LastAcknowledgedEvent { get; private set; }
     public IReadOnlyList<string> UnsupportedEvents { get; }
 
     public ActivityExecutionSession(ActivityEventSet definition)
@@ -254,13 +255,15 @@ public sealed class ActivityExecutionSession
         foreach (var id in outcomes.IncrementActivationLevelEventIds) Find(id).ActivationLevel++;
 
         ended = outcomes.ActivitySuccess || !string.IsNullOrWhiteSpace(outcomes.ActivityFailure);
-        pending = pending with
+        var acknowledged = pending with
         {
             Message = outcomes.ActivityFailure ?? pending.Message,
             ActivityEnded = ended,
             ActivitySucceeded = outcomes.ActivitySuccess
         };
-        return pending;
+        LastAcknowledgedEvent = acknowledged;
+        pending = null;
+        return acknowledged;
     }
 
     private RuntimeEvent Find(int id) => events.FirstOrDefault(item => item.Definition.Id == id) ??
