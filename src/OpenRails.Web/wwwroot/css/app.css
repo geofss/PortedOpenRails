@@ -628,3 +628,125 @@ input[type="range"] { accent-color: #4776a8; }
 @media (max-width: 560px) {
     .or-menu-logging { margin-left: 0; }
 }
+
+
+/* MainForm visual baseline: preserve the original Windows Forms character. */
+:root {
+    color-scheme: light;
+    font-family: Arial, "Segoe UI", sans-serif;
+    background: #e5e5e5;
+    color: #202020;
+}
+body {
+    display: block;
+    min-height: 100vh;
+    padding: 16px;
+    background: #e5e5e5;
+    color: #202020;
+}
+.shell {
+    width: min(900px, 100%);
+    min-height: 560px;
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px solid #8f8f8f;
+    border-radius: 0;
+    background: #f4f4f4;
+    box-shadow: 0 2px 8px #0002;
+    color: #202020;
+}
+.or-mainform-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 2px 8px 7px;
+    border-bottom: 1px solid #b7b7b7;
+    color: #333;
+}
+.or-mainform-heading h1 {
+    margin: 0;
+    color: #555;
+    font-size: 22px;
+    font-weight: 700;
+}
+.or-mainform-heading span {
+    color: #555;
+    font-size: 11px;
+}
+.route-choice,
+.import-panel {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fff;
+    color: #202020;
+}
+.route-card,
+.route-row,
+.route-details,
+.activity-summary,
+.driving-settings {
+    border: 1px solid #b5b5b5;
+    border-radius: 0;
+    background: #f8f8f8;
+    color: #202020;
+    box-shadow: none;
+}
+.route-card:hover,
+.route-card.selected,
+.route-row.selected {
+    border-color: #4776a8;
+    box-shadow: inset 0 0 0 1px #4776a8;
+}
+.route-card-tag,
+.route-row span,
+.route-details dt,
+.keyboard-control-pad strong {
+    color: #333;
+}
+.route-card-description,
+.route-row small,
+.note,
+.hint {
+    color: #555;
+}
+input[type="file"],
+select,
+input:not([type="checkbox"]):not([type="range"]),
+textarea {
+    border: 1px solid #888;
+    border-radius: 0;
+    background: #fff;
+    color: #202020;
+}
+button,
+.package-actions button,
+.route-camera-presets button {
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #202020;
+    box-shadow: inset 0 1px 0 #fff;
+}
+button:hover:not(:disabled),
+.package-actions button:hover:not(:disabled),
+.route-camera-presets button:hover {
+    border-color: #4776a8;
+    background: #eaf2fb;
+}
+.or-mainform-footer {
+    border-top-color: #aaa;
+}
+@media (max-width: 720px) {
+    body { padding: 0; }
+    .shell {
+        width: 100%;
+        min-height: 100vh;
+        padding: 10px;
+        border-left: 0;
+        border-right: 0;
+        box-shadow: none;
+    }
+}
