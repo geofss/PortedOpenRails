@@ -107,17 +107,25 @@ public sealed class LocomotiveAxleDriveSet
         return TotalDriveForceNewtons;
     }
 
-    /// <summary>Captures force and wheel-speed history for deterministic save/restore.</summary>
+    /// <summary>
+    /// Captures force and wheel-speed history. Read-only wrappers prevent a
+    /// caller from mutating the live snapshot arrays through an interface cast.
+    /// </summary>
     public LocomotiveAxleDriveSnapshot CaptureState() => new(
-        tractiveForceFractions.ToArray(),
-        forceByAxle.ToArray(),
-        previousSpeedByAxle.ToArray(),
-        speedByAxle.ToArray());
+        Array.AsReadOnly(tractiveForceFractions.ToArray()),
+        Array.AsReadOnly(forceByAxle.ToArray()),
+        Array.AsReadOnly(previousSpeedByAxle.ToArray()),
+        Array.AsReadOnly(speedByAxle.ToArray()));
 
     /// <summary>Restores a snapshot only when it belongs to the same axle topology.</summary>
     public void RestoreState(LocomotiveAxleDriveSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.TractiveForceFractions is null ||
+            snapshot.ForceByAxle is null ||
+            snapshot.PreviousSpeedByAxle is null ||
+            snapshot.SpeedByAxle is null)
+            throw new ArgumentException("Axle snapshot collections cannot be null.", nameof(snapshot));
         if (snapshot.TractiveForceFractions.Count != AxleCount ||
             snapshot.ForceByAxle.Count != AxleCount ||
             snapshot.PreviousSpeedByAxle.Count != AxleCount ||
