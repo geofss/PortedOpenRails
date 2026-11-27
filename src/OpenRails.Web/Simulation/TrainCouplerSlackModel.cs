@@ -50,6 +50,9 @@ public sealed class TrainCouplerSlackModel
 
         var force = stiffnessNewtonsPerMeter * extensionBeyondSlack +
             dampingNewtonSecondsPerMeter * relativeVelocityMetersPerSecond;
+        if (double.IsNaN(force))
+            throw new ArgumentOutOfRangeException(nameof(relativeDisplacementMeters),
+                "Coupler spring and damping forces produced an indeterminate result.");
         return Math.Clamp(force, -maximumCompressionNewtons, maximumTensionNewtons);
     }
 }

@@ -32,6 +32,14 @@ public sealed class TrainCouplerSlackModelTests
         Assert.Equal(5000, force);
     }
 
+    [Fact]
+    public void RejectsIndeterminateForceFromOpposingOverflowedSpringAndDampingTerms()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            model.CalculateForceOnRearCar(
+                2, -2, 0, double.MaxValue, double.MaxValue, 10_000));
+    }
+
     [Theory]
     [InlineData(0, 0, -1, 100, 100)]
     [InlineData(0, 0, 1, double.NaN, 100)]
