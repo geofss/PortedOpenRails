@@ -43,14 +43,17 @@ public sealed class ActivityStationStopTracker
         var reached = false;
         if (Math.Abs(speedMetersPerSecond) <= StoppedSpeedMetersPerSecond)
         {
-            foreach (var stop in stops)
+            // AllStops is a path-order condition, not a set of stations visited
+            // in any order. A train cannot satisfy a skipped earlier stop by
+            // stopping at a later waiting point first.
+            var nextStop = stops.FirstOrDefault(stop => !visited.Contains(stop.NodeIndex));
+            if (nextStop != default && nextStop.TileX == tileX && nextStop.TileZ == tileZ)
             {
-                if (visited.Contains(stop.NodeIndex) || stop.TileX != tileX || stop.TileZ != tileZ) continue;
-                var dx = x - stop.X;
-                var dz = z - stop.Z;
+                var dx = x - nextStop.X;
+                var dz = z - nextStop.Z;
                 if (dx * dx + dz * dz <= StopRadiusMeters * StopRadiusMeters)
                 {
-                    visited.Add(stop.NodeIndex);
+                    visited.Add(nextStop.NodeIndex);
                     reached = true;
                 }
             }

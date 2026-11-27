@@ -52,6 +52,32 @@ public sealed class ActivityStationStopTrackerTests
     }
 
     [Fact]
+    public void CannotCreditLaterWaitingPointBeforeEarlierPathStop()
+    {
+        var path = new RoutePathDefinition("route/path.pat", "Main", "Main", "A", "C", 0,
+            new[]
+            {
+                new RoutePathPoint(1, 2, 100, 0, 200, 1, 1),
+                new RoutePathPoint(1, 2, 300, 0, 400, 1, 1),
+                new RoutePathPoint(1, 2, 500, 0, 600, 1, 1)
+            },
+            new[]
+            {
+                new RoutePathNode(0, 1, uint.MaxValue, 0),
+                new RoutePathNode(2, 2, uint.MaxValue, 1),
+                new RoutePathNode(2, uint.MaxValue, uint.MaxValue, 2)
+            },
+            Array.Empty<string>());
+        var tracker = new ActivityStationStopTracker(path, 15);
+
+        var laterStopFirst = tracker.Advance(1, 2, 500, 600, 0);
+
+        Assert.False(laterStopFirst.StationStopReached);
+        Assert.Equal(0, laterStopFirst.VisitedStops);
+        Assert.False(laterStopFirst.AllStopsCompleted);
+    }
+
+    [Fact]
     public void BrokenPathTraceCannotCompleteAllStops()
     {
         var path = new RoutePathDefinition("route/path.pat", "Broken", "Broken", "A", "B", 0,
