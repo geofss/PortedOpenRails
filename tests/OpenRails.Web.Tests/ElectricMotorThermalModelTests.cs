@@ -18,7 +18,7 @@ public sealed class ElectricMotorThermalModelTests
     public void TransmissionLossHeatsMotorAboveItsInitialTemperature()
     {
         var model = new ElectricMotorThermalModel(273);
-        var result = model.Advance(10, 20_000, 10, 0.5, 4, 0.9, 0, 50, 2, 40, 5);
+        var result = model.Advance(10, 500_000, 10, 0.5, 4, 0.9, 0, 50, 2, 40, 5);
         Assert.True(result > 273);
     }
 
