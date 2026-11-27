@@ -39,6 +39,23 @@ public sealed class AiServiceDrivingController
             throw new ArgumentOutOfRangeException(nameof(serviceDecelerationMetersPerSecondSquared));
         if (!double.IsFinite(stoppingBufferMeters) || stoppingBufferMeters < 0)
             throw new ArgumentOutOfRangeException(nameof(stoppingBufferMeters));
+        if (route.Direction is not (-1 or 1))
+            throw new ArgumentOutOfRangeException(nameof(route), "Service route direction must be forward (1) or reverse (-1).");
+        if (route.RouteWaypointDistancesMeters?.Any(distance => !double.IsFinite(distance)) == true ||
+            route.RouteWaypoints?.Any(waypoint => waypoint is null || !double.IsFinite(waypoint.DistanceMeters)) == true)
+            throw new ArgumentException("Service route waypoint distances must be finite.", nameof(route));
+        if (route.RouteWaypointDistancesMeters is { Count: > 0 } routeDistances &&
+            route.RouteWaypoints is { Count: > 0 } routeWaypointsForValidation &&
+            routeDistances.Count != routeWaypointsForValidation.Count)
+            throw new ArgumentException("Service route distance and waypoint collections must have matching lengths.", nameof(route));
+
+        var signals = signalConstraints ?? Array.Empty<AiServiceSignalConstraint>();
+        if (signals.Any(signal => signal is null ||
+            !double.IsFinite(signal.RouteDistanceMeters) ||
+            !Enum.IsDefined(signal.Aspect) ||
+            (signal.SpeedLimitMetersPerSecond.HasValue &&
+                (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value < 0))))
+            throw new ArgumentException("Signal constraints must contain finite route positions and valid non-negative speed limits.", nameof(signalConstraints));
 
         IReadOnlyList<double> waypoints = route.RouteWaypointDistancesMeters is { Count: > 0 } distances
             ? distances : new[] { route.DistanceMeters };
@@ -46,7 +63,7 @@ public sealed class AiServiceDrivingController
         var endDistance = waypoints[^1];
         var remaining = direction > 0 ? endDistance - currentDistanceMeters : currentDistanceMeters - endDistance;
         var pathEndIsNearestLimit = true;
-        var stopSignalAhead = (signalConstraints ?? Array.Empty<AiServiceSignalConstraint>())
+        var stopSignalAhead = signals
             .Where(signal => signal.Aspect == RouteSignalAspect.Stop &&
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters + 0.5
@@ -88,9 +105,9 @@ public sealed class AiServiceDrivingController
             pathEndIsNearestLimit = false;
         }
 
-        var approachSpeedLimit = (signalConstraints ?? Array.Empty<AiServiceSignalConstraint>())
+        var approachSpeedLimit = signals
             .Where(signal => signal.Aspect == RouteSignalAspect.Approach &&
-                signal.SpeedLimitMetersPerSecond is > 0 &&
+                signal.SpeedLimitMetersPerSecond is >= 0 &&
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))

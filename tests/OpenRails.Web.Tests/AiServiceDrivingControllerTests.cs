@@ -121,6 +121,40 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void AppliesZeroSpeedLimitForAnApproachSignal()
+    {
+        var decision = controller.Calculate(Plan(0, 100), 10, 0, 20,
+            signalConstraints: new[]
+            {
+                new AiServiceSignalConstraint(50, RouteSignalAspect.Approach, 0)
+            });
+
+        Assert.Equal(0, decision.TargetSpeedMetersPerSecond);
+        Assert.Equal(0, decision.ThrottlePercent);
+    }
+
+    [Fact]
+    public void RejectsInvalidSignalAndRouteWaypointData()
+    {
+        var route = Plan(0, 100);
+        Assert.Throws<ArgumentException>(() => controller.Calculate(route, 0, 0, 10,
+            signalConstraints: new[]
+            {
+                new AiServiceSignalConstraint(double.NaN, RouteSignalAspect.Stop, null)
+            }));
+        Assert.Throws<ArgumentException>(() => controller.Calculate(route, 0, 0, 10,
+            signalConstraints: new[]
+            {
+                new AiServiceSignalConstraint(10, RouteSignalAspect.Approach, -1)
+            }));
+        Assert.Throws<ArgumentException>(() => controller.Calculate(
+            route with { RouteWaypointDistancesMeters = new[] { 0d, double.PositiveInfinity } },
+            0, 0, 10));
+        Assert.Throws<ArgumentOutOfRangeException>(() => controller.Calculate(
+            route with { Direction = 0 }, 0, 0, 10));
+    }
+
+    [Fact]
     public void AppliesPathFollowerCommandsToTheLiveBrowserTrainController()
     {
         var consist = new ConsistMetadata("AiService", new[]
