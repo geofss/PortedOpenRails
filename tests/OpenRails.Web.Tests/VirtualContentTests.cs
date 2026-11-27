@@ -26,6 +26,9 @@ public sealed class VirtualContentTests
     }
 
     [Theory]
+    [InlineData(".", "ROUTES/Test/route.trk")]
+    [InlineData("./", "ROUTES/Test/route.trk")]
+    [InlineData("../", "ROUTES/Test/route.trk")]
     [InlineData("../../../../outside.dat", "ROUTES/Test/route.trk")]
     [InlineData("/outside.dat", "ROUTES/Test/route.trk")]
     [InlineData("C:\\outside.dat", "ROUTES/Test/route.trk")]
