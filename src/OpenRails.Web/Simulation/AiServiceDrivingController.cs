@@ -16,6 +16,7 @@ public sealed record AiServiceSignalConstraint(
 
 public sealed class AiServiceDrivingController
 {
+    private readonly HashSet<int> releasedWaitingPoints = [];
     public AiServiceControlDecision Calculate(
         ServiceRouteStartPosition route,
         double currentDistanceMeters,
@@ -23,7 +24,8 @@ public sealed class AiServiceDrivingController
         double targetSpeedMetersPerSecond,
         double serviceDecelerationMetersPerSecondSquared = 0.65,
         double stoppingBufferMeters = 2,
-        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null)
+        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
+        IReadOnlySet<int>? releasedWaitingPointIndices = null)
     {
         ArgumentNullException.ThrowIfNull(route);
         if (!double.IsFinite(currentDistanceMeters))
@@ -59,6 +61,31 @@ public sealed class AiServiceDrivingController
             remaining = stopSignalAhead;
             pathEndIsNearestLimit = false;
         }
+        int? waitingWaypointIndex = null;
+        var waitingDistance = double.PositiveInfinity;
+        if (route.RouteWaypoints is { Count: > 0 } routeWaypoints)
+        {
+            for (var index = 0; index < routeWaypoints.Count; index++)
+            {
+                if (!routeWaypoints[index].IsWaitingPoint ||
+                    (releasedWaitingPointIndices?.Contains(index) ?? false))
+                    continue;
+                var waypointDistance = routeWaypoints[index].DistanceMeters;
+                var distanceAhead = direction > 0
+                    ? waypointDistance - currentDistanceMeters
+                    : currentDistanceMeters - waypointDistance;
+                if (distanceAhead >= -0.5 && distanceAhead < waitingDistance)
+                {
+                    waitingDistance = Math.Max(0, distanceAhead);
+                    waitingWaypointIndex = index;
+                }
+            }
+        }
+        if (waitingWaypointIndex is not null && waitingDistance <= remaining)
+        {
+            remaining = waitingDistance;
+            pathEndIsNearestLimit = false;
+        }
 
         var approachSpeedLimit = (signalConstraints ?? Array.Empty<AiServiceSignalConstraint>())
             .Where(signal => signal.Aspect == RouteSignalAspect.Approach &&
@@ -74,7 +101,7 @@ public sealed class AiServiceDrivingController
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
         if (remaining <= stoppingBufferMeters)
             return new AiServiceControlDecision(0, 100, 0, nextWaypoint,
-                pathEndIsNearestLimit, Math.Max(0, remaining));
+                pathEndIsNearestLimit, Math.Max(0, remaining), waitingWaypointIndex);
 
         var availableBrakingDistance = Math.Max(0, remaining - stoppingBufferMeters);
         var brakingLimitedSpeed = Math.Sqrt(2 * serviceDecelerationMetersPerSecondSquared * availableBrakingDistance);
@@ -119,10 +146,18 @@ public sealed class AiServiceDrivingController
         }
 
         var decision = Calculate(route, lead.DistanceMeters, lead.SpeedMetersPerSecond,
-            targetSpeedMetersPerSecond, signalConstraints: signalConstraints);
+            targetSpeedMetersPerSecond, signalConstraints: signalConstraints,
+            releasedWaitingPointIndices: releasedWaitingPoints);
         controller.SetThrottle((float)decision.ThrottlePercent);
         controller.SetBrake(decision.BrakePercent);
         return decision;
+    }
+
+    public void ReleaseWaitingPoint(int waypointIndex)
+    {
+        if (waypointIndex < 0)
+            throw new ArgumentOutOfRangeException(nameof(waypointIndex));
+        releasedWaitingPoints.Add(waypointIndex);
     }
 
     private static int FindNextWaypoint(IReadOnlyList<double> waypoints, double currentDistance, int direction)
@@ -141,4 +176,5 @@ public sealed record AiServiceControlDecision(
     double TargetSpeedMetersPerSecond,
     int NextWaypointIndex,
     bool IsPathComplete,
-    double RemainingDistanceMeters);
+    double RemainingDistanceMeters,
+    int? WaitingWaypointIndex = null);

@@ -75,6 +75,33 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void StopsAtNativeWaitingPointUntilReleased()
+    {
+        var route = new ServiceRouteStartPosition(0, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { 0d, 40d, 100d }, 1,
+            new[]
+            {
+                new ServiceRouteWaypoint(0, false, false),
+                new ServiceRouteWaypoint(40, true, false),
+                new ServiceRouteWaypoint(100, false, false)
+            });
+
+        var approach = controller.Calculate(route, 10, 12, 15);
+        Assert.True(approach.BrakePercent > 0);
+        Assert.Equal(30, approach.RemainingDistanceMeters, 3);
+        Assert.Equal(1, approach.WaitingWaypointIndex);
+
+        var stopped = controller.Calculate(route, 39, 0, 15);
+        Assert.Equal(100, stopped.BrakePercent);
+        Assert.Equal(1, stopped.WaitingWaypointIndex);
+
+        var released = controller.Calculate(route, 39, 0, 15,
+            releasedWaitingPointIndices: new HashSet<int> { 1 });
+        Assert.Null(released.WaitingWaypointIndex);
+        Assert.True(released.ThrottlePercent > 0);
+    }
+
+    [Fact]
     public void AppliesFullBrakeAtPathEnd()
     {
         var decision = controller.Calculate(Plan(0, 100), 99, 4, 10);

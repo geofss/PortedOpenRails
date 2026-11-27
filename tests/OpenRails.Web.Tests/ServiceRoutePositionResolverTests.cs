@@ -91,6 +91,33 @@ public sealed class ServiceRoutePositionResolverTests
     }
 
     [Fact]
+    public void PreservesNativeWaitingPointFlagsFromPathNodes()
+    {
+        var profile = BuildProfile(CreatePath(100));
+        var trace = new RoutePathTrace(new[] { 0, 1, 2 },
+            new[]
+            {
+                new RoutePathPoint(0, 0, 0, 0, 10, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 50, 1, 1),
+                new RoutePathPoint(0, 0, 0, 0, 90, 1, 1)
+            }, Array.Empty<string>());
+        var path = new RoutePathDefinition("test.pat", "test", "test", "", "", 0,
+            Array.Empty<RoutePathPoint>(),
+            new[]
+            {
+                new RoutePathNode(0, 1, uint.MaxValue, 0),
+                new RoutePathNode(2, 2, uint.MaxValue, 1),
+                new RoutePathNode(0, uint.MaxValue, uint.MaxValue, 2)
+            }, Array.Empty<string>());
+
+        var result = ServiceRoutePositionResolver.Resolve(trace, profile, path: path);
+
+        Assert.False(result.RouteWaypoints![0].IsWaitingPoint);
+        Assert.True(result.RouteWaypoints[1].IsWaitingPoint);
+        Assert.False(result.RouteWaypoints[2].IsWaitingPoint);
+    }
+
+    [Fact]
     public void RejectsBrokenServicePathTrace()
     {
         var profile = BuildProfile(CreatePath(100));
