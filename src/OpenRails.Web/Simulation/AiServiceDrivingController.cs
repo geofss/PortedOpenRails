@@ -50,6 +50,9 @@ public sealed class AiServiceDrivingController
                 !double.IsFinite(waypoint.DistanceMeters) ||
                 !double.IsFinite(waypoint.DistanceMeters - currentDistanceMeters)) == true)
             throw new ArgumentException("Service route waypoint distances must be finite.", nameof(route));
+        if (route.RouteWaypoints is { Count: > 0 } &&
+            route.RouteWaypointDistancesMeters is not { Count: > 0 })
+            throw new ArgumentException("Waiting-point metadata requires the matching route distance sequence.", nameof(route));
         if (route.RouteWaypointDistancesMeters is { Count: > 0 } routeDistances &&
             route.RouteWaypoints is { Count: > 0 } routeWaypointsForValidation &&
             routeDistances.Count != routeWaypointsForValidation.Count)
@@ -62,7 +65,7 @@ public sealed class AiServiceDrivingController
             !Enum.IsDefined(signal.Aspect) ||
             (signal.SpeedLimitMetersPerSecond.HasValue &&
                 (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value <= 0))))
-            throw new ArgumentException("Signal constraints must contain finite route positions and valid non-negative speed limits.", nameof(signalConstraints));
+            throw new ArgumentException("Signal constraints must contain finite route positions and valid positive speed limits.", nameof(signalConstraints));
 
         IReadOnlyList<double> waypoints = route.RouteWaypointDistancesMeters is { Count: > 0 } distances
             ? distances : new[] { route.DistanceMeters };
