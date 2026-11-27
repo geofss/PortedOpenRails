@@ -88,7 +88,7 @@ public sealed class NativeDeadlockPathSelectorTests
 
         Assert.Equal(0, session.SelectedDeadlockPath?.PathIndex);
         Assert.Equal("AI-DEADLOCK", interlocking.Snapshot().ReservedCircuits[11]);
-        Assert.DoesNotContain(10, interlocking.Snapshot().ReservedCircuits.Keys);
+        Assert.DoesNotContain(10u, interlocking.Snapshot().ReservedCircuits.Keys);
         Assert.True(session.TryComplete());
         Assert.Null(session.SelectedDeadlockPath);
     }
