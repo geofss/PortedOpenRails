@@ -23,7 +23,7 @@ This matrix describes the experimental browser port's current implementation sur
 
 | Content | Prototype status | Limitations |
 |---|---|---|
-| Route ZIP packages | Small ZIP import; large OPFS ZIP indexing; staged `.trk` metadata parsed with upstream STFReader; staged route can be loaded through the existing route pipeline | Staged-route compatibility currently materializes expanded entries into memory with a 2 GiB aggregate ceiling; archives above that ceiling remain indexed but cannot yet enter the synchronous route readers |
+| Route ZIP packages | Small ZIP import; large OPFS ZIP indexing; staged `.trk` metadata parsed with upstream STFReader; staged route can be loaded through the existing route pipeline | Staged-route compatibility currently materializes expanded entries into memory with a 2 GiB aggregate ceiling; archives above that ceiling remain indexed but cannot yet enter the synchronous route readers. Full browser picker/import and real-route visual validation remain outstanding |
 | `.trk` route metadata | Parsed and route selection displayed | Full route/activity metadata parity is incomplete |
 | TDB/TSECTION track data | Track topology, geometry, signal heads and junction adjacency parsed | Track circuits remain vector-node approximations; full switch interlocking and signal-position segmentation are not implemented |
 | SIMISA/SBR terrain streams | Stream-based reader; compressed/uncompressed fixtures covered by regression tests | Not every SBR variant or route package is validated |
@@ -55,7 +55,7 @@ A browser that disables WebGL 2, blocks required WASM execution, or runs under r
 
 - Automated tests: see GitHub Actions workflow for controller and parsing regression suites.
 - Publish validation: WebAssembly build/publish is part of CI.
-- Real route-package validation: still pending; use [real-route validation checklist](REAL_ROUTE_VALIDATION.md).
+- Real route-package CI acceptance: passed for authorized Demo Model 1 on 2026-11-27 for route metadata, TDB connectivity, terrain mesh generation, track-shape mesh loading, WORLD scenery loading, and signal-circuit topology. Browser picker/import and visual review remain pending; use [real-route validation checklist](REAL_ROUTE_VALIDATION.md).
 - Browser/device runtime matrix: intentionally marked unverified above; no manual browser testing is claimed.
 
 ## Compatibility policy
