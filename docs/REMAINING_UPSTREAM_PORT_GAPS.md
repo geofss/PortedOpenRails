@@ -6,7 +6,9 @@ This is a source-and-feature inventory for the browser port at branch `port/axle
 
 See [ORIGINAL_UI_PORT_AUDIT.md](ORIGINAL_UI_PORT_AUDIT.md) for the control-by-control comparison with upstream `Source/Menu/MainForm.Designer.cs` and `MainForm.cs`.
 
-Remaining: installation profile behavior; Activity/Timetable mode switch; full activity setup selectors and defaults; timetable set/day/train/weather selection; true Start/Resume/Replay lifecycle; Options pages; Tools/Documents menus; notifications; multiplayer panel (kept unavailable until transport exists); native two-pane layout and state-dependent enablement.
+Ported: MainForm two-column shell, Activity/Timetable mode switch, Explore path selectors, locomotive/consist selectors, native timetable-set grouping and train-column selection, ten Options tab surfaces, Tools/Documents dropdowns, Logging preference, and an explicit disabled Multiplayer panel. Browser preference persistence and Start eligibility checks are wired.
+
+Remaining: multiple isolated installation profiles; exact upstream activity selection dependencies and environment overrides; Explore path-to-TDB traversal binding; timetable day/season/weather/weather-file selection and runnable train resolution; true Start/Resume/Replay save lifecycle; actual native Options settings model and application to renderer/simulation/audio/keyboard; TestingForm; live notification feed; localization; full keyboard/accessibility parity; and screenshot/interaction regression tests. See [ORIGINAL_UI_PORT_AUDIT.md](ORIGINAL_UI_PORT_AUDIT.md).
 
 ## 2. Route and content pipeline
 
