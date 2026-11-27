@@ -176,6 +176,7 @@
     private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
     [Parameter] public ServiceRouteStartPosition? AiServiceRoutePlan { get; set; }
+    [Parameter] public IReadOnlyList<AiServiceSignalConstraint> AiServiceSignalConstraints { get; set; } = Array.Empty<AiServiceSignalConstraint>();
     private readonly AiServiceDrivingController aiServiceDriver = new();
     private bool aiServiceEnabled;
     private double aiTargetSpeedKmh = 40;
@@ -556,7 +557,7 @@
                     (double)System.Diagnostics.Stopwatch.Frequency;
                 previousTimestamp = currentTimestamp;
                 if (aiServiceEnabled && AiServiceRoutePlan is { } servicePlan)
-                    aiServiceDriver.Apply(Controller, servicePlan, aiTargetSpeedKmh / 3.6);
+                    aiServiceDriver.Apply(Controller, servicePlan, aiTargetSpeedKmh / 3.6, AiServiceSignalConstraints);
                 else
                     await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));

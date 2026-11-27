@@ -431,6 +431,7 @@
                             Consist="SelectedConsist"
                             StorageKey="@SimulationSnapshotKey"
                             AiServiceRoutePlan="selectedServiceRoutePlan"
+                            AiServiceSignalConstraints="AiServiceSignalConstraints"
                             MotionChanged="OnTrainMotionChanged" />
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
@@ -633,6 +634,18 @@
     private ServiceRouteBinding? SelectedServiceBinding => serviceRouteBindings.FirstOrDefault(binding =>
         string.Equals(binding.Service.SourcePath, selectedServicePath, StringComparison.OrdinalIgnoreCase) &&
         binding.IsRunnable);
+
+    private IReadOnlyList<AiServiceSignalConstraint> AiServiceSignalConstraints =>
+        activityRouteProfile is null
+            ? Array.Empty<AiServiceSignalConstraint>()
+            : currentSignalIndications.Select(indication =>
+            {
+                if (!activityRouteProfile.TryGetRouteDistanceForTrackNode(
+                        indication.Signal.TrackNodeIndex, indication.Signal.DistanceMeters, out var distance))
+                    return null;
+                return new AiServiceSignalConstraint(distance, indication.Aspect,
+                    indication.SpeedLimitMetersPerSecond);
+            }).Where(constraint => constraint is not null).Cast<AiServiceSignalConstraint>().ToArray();
 
     private CabViewDefinition? SelectedCabView => SelectedConsist is null
         ? null
