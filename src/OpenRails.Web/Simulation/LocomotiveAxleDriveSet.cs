@@ -26,18 +26,19 @@ public sealed class LocomotiveAxleDriveSet
     public LocomotiveAxleDriveSet(IReadOnlyList<float> tractiveForceFractions)
     {
         ArgumentNullException.ThrowIfNull(tractiveForceFractions);
-        if (tractiveForceFractions.Count == 0 ||
-            tractiveForceFractions.Any(value => !float.IsFinite(value) || value <= 0))
+        var fractions = tractiveForceFractions.ToArray();
+        if (fractions.Length == 0 ||
+            fractions.Any(value => !float.IsFinite(value) || value <= 0))
             throw new ArgumentOutOfRangeException(nameof(tractiveForceFractions),
                 "A locomotive must have at least one axle with a positive finite force fraction.");
-        var total = tractiveForceFractions.Sum();
+        var total = fractions.Sum();
         if (Math.Abs(total - 1) > 0.001f)
             throw new ArgumentException("Driven axle force fractions must sum to one.", nameof(tractiveForceFractions));
 
-        this.tractiveForceFractions = tractiveForceFractions.ToArray();
-        forceByAxle = new float[tractiveForceFractions.Count];
-        previousSpeedByAxle = new double[tractiveForceFractions.Count];
-        speedByAxle = new double[tractiveForceFractions.Count];
+        this.tractiveForceFractions = fractions;
+        forceByAxle = new float[fractions.Length];
+        previousSpeedByAxle = new double[fractions.Length];
+        speedByAxle = new double[fractions.Length];
     }
 
     /// <summary>
@@ -47,13 +48,12 @@ public sealed class LocomotiveAxleDriveSet
     public void SetAxleSpeeds(IReadOnlyList<double> axleSpeedsMetersPerSecond)
     {
         ArgumentNullException.ThrowIfNull(axleSpeedsMetersPerSecond);
-        if (axleSpeedsMetersPerSecond.Count != AxleCount ||
-            axleSpeedsMetersPerSecond.Any(value => !double.IsFinite(value)))
+        var speeds = axleSpeedsMetersPerSecond.ToArray();
+        if (speeds.Length != AxleCount || speeds.Any(value => !double.IsFinite(value)))
             throw new ArgumentException("One finite wheel speed is required per driven axle.", nameof(axleSpeedsMetersPerSecond));
 
         Array.Copy(speedByAxle, previousSpeedByAxle, AxleCount);
-        for (var i = 0; i < AxleCount; i++)
-            speedByAxle[i] = axleSpeedsMetersPerSecond[i];
+        Array.Copy(speeds, speedByAxle, AxleCount);
     }
 
     /// <summary>
