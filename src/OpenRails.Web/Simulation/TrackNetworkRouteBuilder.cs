@@ -43,6 +43,9 @@ public sealed class TrackNetworkRouteBuilder
         ArgumentNullException.ThrowIfNull(network);
         if (maximumSegments <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumSegments));
+        if (network.VectorPaths.Any(path => path is null ||
+            !double.IsFinite(path.LengthMeters) || path.LengthMeters <= 0))
+            throw new InvalidDataException("Track network contains a vector path with invalid length metadata.");
 
         var byNode = network.VectorPaths.ToDictionary(path => path.TrackNodeIndex);
         if (!byNode.TryGetValue(startingTrackNodeIndex, out var first))

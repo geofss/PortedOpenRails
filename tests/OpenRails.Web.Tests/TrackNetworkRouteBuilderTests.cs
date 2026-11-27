@@ -254,6 +254,18 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void RejectsVectorPathsWithInvalidLengthMetadata()
+    {
+        var invalid = new TrackVectorPath(10, new[] { 1, 2 },
+            Array.Empty<TrackSectionPlacement>(), double.NaN, null);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { invalid }, Array.Empty<string>());
+
+        Assert.Throws<InvalidDataException>(() => new TrackNetworkRouteBuilder().Build(network, 10));
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(
