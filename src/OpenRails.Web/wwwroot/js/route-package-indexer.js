@@ -240,8 +240,28 @@ export async function inspectArchive(id) {
 async function readStoredIndex(directory, id) {
     const handle = await directory.getFileHandle(id + ".index.json");
     const index = JSON.parse(await (await handle.getFile()).text());
-    if (index.version !== 1 || validateId(index.id) !== id || !Array.isArray(index.entries)) {
+    if (index.version !== 1 || validateId(index.id) !== id ||
+        !Array.isArray(index.entries) || index.entries.length > MAX_ENTRIES) {
         throw new Error("Stored ZIP index is invalid or belongs to another archive.");
+    }
+
+    const seen = new Set();
+    for (const entry of index.entries) {
+        if (!entry || typeof entry.path !== "string" ||
+            normalizeEntryPath(entry.path) !== entry.path ||
+            !Number.isSafeInteger(entry.uncompressedSize) || entry.uncompressedSize < 0 ||
+            entry.uncompressedSize > 30_000_000_000 ||
+            !Number.isSafeInteger(entry.compressedSize) || entry.compressedSize < 0 ||
+            entry.compressedSize > 30_000_000_000 ||
+            !Number.isSafeInteger(entry.dataOffset) || entry.dataOffset < 0 ||
+            !Number.isInteger(entry.compressionMethod) ||
+            (entry.compressionMethod !== 0 && entry.compressionMethod !== 8) ||
+            !Number.isInteger(entry.crc32) || entry.crc32 < 0 || entry.crc32 > UINT32_MAX) {
+            throw new Error("Stored ZIP index contains an invalid entry descriptor.");
+        }
+        const key = entry.path.toLocaleLowerCase("en-US");
+        if (seen.has(key)) throw new Error("Stored ZIP index contains duplicate virtual paths.");
+        seen.add(key);
     }
     return index;
 }
@@ -276,8 +296,10 @@ export async function openEntry(id, requestedPath) {
 
     const metadata = JSON.parse(await (await directory.getFileHandle(id + ".json")).getFile().then(file => file.text()));
     const archive = await (await directory.getFileHandle(id + ".zip")).getFile();
-    if (archive.size !== metadata.sizeBytes ||
-        entry.dataOffset < 0 || entry.compressedSize < 0 ||
+    if (validateId(metadata.id) !== id ||
+        !Number.isSafeInteger(metadata.sizeBytes) || metadata.sizeBytes <= 0 ||
+        archive.size !== metadata.sizeBytes ||
+        !Number.isSafeInteger(entry.dataOffset + entry.compressedSize) ||
         entry.dataOffset + entry.compressedSize > archive.size) {
         throw new Error("Staged archive or indexed entry boundaries are invalid.");
     }
