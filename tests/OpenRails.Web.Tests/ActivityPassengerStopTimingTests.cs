@@ -69,6 +69,14 @@ public sealed class ActivityPassengerStopTimingTests
     }
 
     [Fact]
+    public void RejectsRemainingTimeOutsideIntegerClockRange()
+    {
+        var result = ActivityPassengerStopTiming.Calculate(0, 1e20, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => result.RemainingSeconds(-1e20));
+    }
+
+    [Fact]
     public void RejectsNonFiniteTimesAndNegativePlatformMinimum()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>

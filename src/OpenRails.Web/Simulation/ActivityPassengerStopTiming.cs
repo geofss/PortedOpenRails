@@ -63,7 +63,12 @@ public sealed record ActivityPassengerStopTimingResult(
     {
         if (!double.IsFinite(clockTimeSeconds))
             throw new ArgumentOutOfRangeException(nameof(clockTimeSeconds));
-        return checked((int)Math.Ceiling(BoardingEndClockSeconds - clockTimeSeconds));
+        var remaining = BoardingEndClockSeconds - clockTimeSeconds;
+        var rounded = Math.Ceiling(remaining);
+        if (!double.IsFinite(remaining) || rounded > int.MaxValue || rounded < int.MinValue)
+            throw new ArgumentOutOfRangeException(nameof(clockTimeSeconds),
+                "Remaining passenger-stop time is outside the supported activity clock range.");
+        return (int)rounded;
     }
 
     public bool MayDepart(double clockTimeSeconds) => RemainingSeconds(clockTimeSeconds) <= 0;
