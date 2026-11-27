@@ -34,6 +34,30 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void ConfiguredSetupAdvancesTractionPneumaticsHandbrakeAndDynamicCouplersTogether()
+    {
+        var consist = new ConsistMetadata("Freight", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "freight.con");
+        var engine = CreateAsset(1, "Engine", 20_000, 15, 50_000,
+            new LocomotiveTractionMetadata("Engine", 100_000, 100_000, 500_000, 100, 0, null, "engine.eng"),
+            100_000);
+        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null, 100_000);
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { engine, wagon }, 1_000);
+        var steps = setup.Advance(0.1, new[] { 50f, 0f }, 0,
+            handBrakePercentByCar: new[] { 0d, 25d });
+
+        Assert.Equal(6, steps);
+        Assert.True(setup.Session.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.True(setup.Session.State.Cars[1].SpeedMetersPerSecond > 0);
+        Assert.True(setup.Session.State.Cars[0].DistanceMeters > setup.InitialState.Cars[0].DistanceMeters);
+        Assert.Equal(0, Assert.Single(setup.CouplerRestGapsMetersByBoundary) - 17.5, 8);
+        Assert.Equal(1, setup.Session.BrakePipeState.PressuresKPa.Count);
+    }
+
+    [Fact]
     public void RejectsConsistThatWouldBeClampedBeyondConnectedRouteEnd()
     {
         var consist = new ConsistMetadata("TooLong", new[]
