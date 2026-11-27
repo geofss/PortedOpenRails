@@ -77,6 +77,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/ServiceRouteBindingResolver.cs" Link="Parsing/ServiceRouteBindingResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityMetadataReader.cs" Link="Parsing/ActivityMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityEventReader.cs" Link="Parsing/ActivityEventReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/ActivityPassengerServiceReader.cs" Link="Parsing/ActivityPassengerServiceReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/CabViewDefinitionReader.cs" Link="Parsing/CabViewDefinitionReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/CabViewAssetLocator.cs" Link="Parsing/CabViewAssetLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SignalNetworkBuilder.cs" Link="Simulation/SignalNetworkBuilder.cs" />
