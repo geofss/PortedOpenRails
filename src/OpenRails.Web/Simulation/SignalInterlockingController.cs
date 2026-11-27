@@ -152,6 +152,36 @@ public sealed class SignalInterlockingController
     }
 
     /// <summary>Compatibility wrapper; a release is deferred while the train occupies track.</summary>
+    /// <summary>
+    /// Atomically replaces one train's occupied circuit set using the current
+    /// positions of all consist vehicles, including trailing vehicles.
+    /// </summary>
+    public bool SetOccupiedCircuits(string trainId, IReadOnlySet<uint> occupiedCircuitIds)
+    {
+        ValidateTrainId(trainId);
+        ArgumentNullException.ThrowIfNull(occupiedCircuitIds);
+        if (occupiedCircuitIds.Any(id => !circuits.Contains(id)))
+            return false;
+
+        lock (gate)
+        {
+            foreach (var circuit in occupiedCircuitIds)
+            {
+                if (occupancy.TryGetValue(circuit, out var owner) && owner != trainId)
+                    return false;
+                if (reservations.TryGetValue(circuit, out var reservationOwner) && reservationOwner != trainId)
+                    return false;
+            }
+
+            foreach (var circuit in occupancy.Where(pair => pair.Value == trainId)
+                .Select(pair => pair.Key).ToArray())
+                occupancy.Remove(circuit);
+            foreach (var circuit in occupiedCircuitIds)
+                occupancy[circuit] = trainId;
+            return true;
+        }
+    }
+
     public void ReleaseRoute(string trainId) => TryReleaseRoute(trainId);
 
     public SignalInterlockingSnapshot Snapshot()
