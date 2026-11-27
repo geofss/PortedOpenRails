@@ -23,7 +23,7 @@ public sealed class TrackShapeSeasonTextureSelectorTests
         var selected = TrackShapeSeasonTextureSelector.Select(assets, "Winter");
         var item = Assert.Single(selected);
         Assert.Equal("Winter", item.Reference.SeasonFolder);
-        Assert.Equal((byte)20, item.Texture.MipLevels[0][0];
+        Assert.Equal((byte)20, item.Texture.MipLevels[0][0]);
     }
 
     [Fact]
