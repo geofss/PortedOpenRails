@@ -100,16 +100,23 @@ public sealed class WorldSceneryRenderGeometryBuilder
                             shapeTextureIndexes.TryGetValue((placement.Uid, primitive.ImageName), out var foundTexture)
                             ? foundTexture : -1;
                         var key = new WorldBatchKey(textureIndex, primitive.AlphaTest,
-                            primitive.TextureAddressMode, primitive.ZBias);
+                            primitive.TextureAddressMode, primitive.ZBias, placement.Uid,
+                            primitive.PrimitiveStateIndex, primitive.ShaderName,
+                            primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
+                            primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.ZBufferMode);
                         if (!batchBuilders.TryGetValue(key, out var batch))
                         {
-                            batch = new WorldBatchBuilder(key);
+                            batch = new WorldBatchBuilder(key, primitive);
                             batchBuilders.Add(key, batch);
                         }
 
                         var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                         var transform = localTransform * worldTransform;
                         var baseIndex = batch.Vertices.Count / 5;
+                        var channelCount = subObject.Vertices.Count == 0 ? 0 :
+                            subObject.Vertices.Max(vertex => 1 + (vertex.AdditionalTextureCoordinates?.Count ?? 0));
+                        while (batch.TextureCoordinateChannels.Count < channelCount)
+                            batch.TextureCoordinateChannels.Add(Enumerable.Repeat(Vector2.Zero, baseIndex).ToList());
                         foreach (var vertex in subObject.Vertices)
                         {
                             var position = Vector3.Transform(vertex.Position, transform);
@@ -118,6 +125,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
                             batch.Vertices.Add(-position.Z);
                             batch.Vertices.Add(vertex.TextureCoordinate.X);
                             batch.Vertices.Add(vertex.TextureCoordinate.Y);
+                            for (var channel = 0; channel < batch.TextureCoordinateChannels.Count; channel++)
+                                batch.TextureCoordinateChannels[channel].Add(vertex.GetTextureCoordinate(channel));
                         }
 
                         foreach (var index in primitive.Indices)
@@ -187,7 +196,10 @@ public sealed class WorldSceneryRenderGeometryBuilder
             .Where(batch => batch.Indices.Count > 0)
             .Select(batch => new TrackShapeTexturedRenderBatch(
                 batch.Vertices.ToArray(), batch.Indices.ToArray(), batch.Key.TextureIndex,
-                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias))
+                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias,
+                Array.AsReadOnly(batch.TextureCoordinateChannels
+                    .Select(channel => (IReadOnlyList<Vector2>)Array.AsReadOnly(channel.ToArray())).ToArray()),
+                batch.Material))
             .ToArray();
         return new WorldSceneryRenderGeometry(
             Array.AsReadOnly(textureAssets.ToArray()), Array.AsReadOnly(batches), truncated);
@@ -248,13 +260,23 @@ public sealed class WorldSceneryRenderGeometryBuilder
         -m.CX, -m.CY, m.CZ, 0,
         m.DX, m.DY, -m.DZ, 1);
 
-    private sealed record WorldBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
+    private sealed record WorldBatchKey(
+        int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias,
+        uint ShapeIndex = 0, int PrimitiveStateIndex = -1, string ShaderName = "",
+        int LightMaterialIndex = -1, int LightConfigurationIndex = -1,
+        int TextureFilterMode = 0, float MipMapLodBias = 0, int ZBufferMode = 1);
     private sealed class WorldBatchBuilder
     {
         public WorldBatchKey Key { get; }
+        public TrackShapePrimitiveMesh? Material { get; }
         public List<float> Vertices { get; } = new();
         public List<int> Indices { get; } = new();
-        public WorldBatchBuilder(WorldBatchKey key) => Key = key;
+        public List<List<Vector2>> TextureCoordinateChannels { get; } = new();
+        public WorldBatchBuilder(WorldBatchKey key, TrackShapePrimitiveMesh? material = null)
+        {
+            Key = key;
+            Material = material;
+        }
     }
 
     private sealed class ShapeImageKeyComparer : IEqualityComparer<(uint ShapeIndex, string ImageName)>
