@@ -45,6 +45,24 @@ jobs:
 
       - name: Set GitHub Pages base path
         run: sed -i 's|<base href="/" />|<base href="/PortedOpenRails/" />|' artifacts/publish/wwwroot/index.html
+      - name: Set relative base path for downloadable preview
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: sed -i 's|<base href="/PortedOpenRails/" />|<base href="./" />|' artifacts/publish/wwwroot/index.html
+
+      - name: Include local preview instructions
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: |
+          cat > artifacts/publish/wwwroot/PREVIEW-README.txt <<'EOF'
+          PortedOpenRails browser preview
+
+          Do not open index.html directly as a file:// URL.
+          Extract this artifact, open a terminal in this folder, and run:
+              python -m http.server 8000
+          Then browse to:
+              http://localhost:8000/
+
+          This preview is for local testing only. It is not a production deployment.
+          EOF
 
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
