@@ -112,7 +112,7 @@ public sealed class AiServiceDrivingController
         var throttle = error > 0.35 ? Math.Clamp(error * 22, 0, 100) : 0;
         var brake = error < -0.35 ? Math.Clamp(-error * 35, 0, 100) : 0;
         return new AiServiceControlDecision(throttle, brake, commandedSpeed,
-            nextWaypoint, false, remaining);
+            nextWaypoint, false, remaining, waitingWaypointIndex, false);
     }
 
     public AiServiceControlDecision Apply(
