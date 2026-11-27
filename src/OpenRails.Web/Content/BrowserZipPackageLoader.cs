@@ -14,12 +14,14 @@ public static class BrowserZipPackageLoader
     public static async Task<ZipContentStore> LoadAsync(
         IBrowserFile file,
         long maxArchiveBytes = DefaultMaxArchiveBytes,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        long maxEntryBytes = ZipContentStore.DefaultMaxEntryBytes,
+        long maxTotalBytes = ZipContentStore.DefaultMaxTotalBytes)
     {
         ArgumentNullException.ThrowIfNull(file);
 
-        if (maxArchiveBytes <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxArchiveBytes));
+        if (maxArchiveBytes <= 0 || maxEntryBytes <= 0 || maxTotalBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxArchiveBytes), "ZIP safety limits must be positive.");
 
         if (file.Size <= 0)
             throw new InvalidDataException("The selected package is empty.");
@@ -51,7 +53,7 @@ public static class BrowserZipPackageLoader
                 throw new InvalidDataException("The selected package is empty.");
 
             memory.Position = 0;
-            return new ZipContentStore(memory);
+            return new ZipContentStore(memory, maxEntryBytes, maxTotalBytes);
         }
         catch
         {
