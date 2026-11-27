@@ -72,8 +72,8 @@ public sealed class AiServiceDrivingController
         for (var index = 1; index < waypoints.Count; index++)
         {
             var progress = (waypoints[index] - waypoints[index - 1]) * direction;
-            if (progress < -0.5)
-                throw new ArgumentException("Service route waypoints must follow the declared route direction.", nameof(route));
+            if (!double.IsFinite(progress) || progress < -0.5)
+                throw new ArgumentException("Service route waypoints must follow the declared route direction with finite spacing.", nameof(route));
         }
         if (route.RouteWaypoints is { Count: > 0 } alignedWaypoints)
             for (var index = 0; index < waypoints.Count; index++)

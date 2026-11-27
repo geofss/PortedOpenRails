@@ -127,6 +127,10 @@ public sealed class AiServiceDrivingControllerTests
             new TrackWorldPosition(0, 0, 0), new[] { 0d, 40d, 20d }, 1);
         Assert.Throws<ArgumentException>(() => controller.Calculate(reversed, 0, 0, 10));
 
+        var overflowing = new ServiceRouteStartPosition(-1e308, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { -1e308, 1e308 }, 1);
+        Assert.Throws<ArgumentException>(() => controller.Calculate(overflowing, 0, 0, 10));
+
         var mismatched = new ServiceRouteStartPosition(0, 0,
             new TrackWorldPosition(0, 0, 0), new[] { 0d, 40d, 100d }, 1,
             new[]
