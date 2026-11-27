@@ -77,7 +77,8 @@ public sealed class RouteTrackItemPlacementBuilder
             if (item is not null && !mappedItems.Contains(item.Index) && item.Type != "empty")
                 diagnostics.Add($"Track item {item.Index} ({item.Type}) is not hosted by a vector TrackNode.");
 
-        var byIndex = placements.ToDictionary(item => item.Item.Index);
+        var byIndex = placements.GroupBy(item => item.Item.Index)
+            .ToDictionary(group => group.Key, group => group.First());
         var resolved = placements.Select(item => item with
         {
             LinkedItemResolved = item.LinkedItemIndex is { } linked && byIndex.ContainsKey(linked)
