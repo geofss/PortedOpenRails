@@ -1244,9 +1244,10 @@
         activityStationStopTracker = null;
         activityStationStopProgress = null;
         activityPathWarning = null;
-        lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         activityParseError = null;
         activityStartingSpeedMetersPerSecond = null;
+        InitializeSimulationSetup();
+        lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         if (selectedActivityPath is null || composite is null)
             return;
 
