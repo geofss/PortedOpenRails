@@ -78,6 +78,37 @@ public sealed class SignalNetworkBuilderTests
         Assert.Contains("No unique", indication.Reason);
     }
 
+    [Fact]
+    public void MapsEvaluatedBlockStateToConfiguredNativeAspectAndDrawState()
+    {
+        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 2,
+            new HashSet<string>(),
+            Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>
+            {
+                ["clear"] = new(0, "clear", Array.Empty<SignalDrawLightDefinition>(), 0)
+            },
+            new[] { new SignalAspectDefinition("CLEAR_2", "clear", 22.2f, false, false, false) });
+        var signal = new RouteSignalHead(7, "main", "", 0, 0, 2, 10,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2, 4 }, Array.Empty<RouteSignalHead>()),
+                new SignalTrackCircuit(4, 100, new uint[] { 3 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(new HashSet<uint>()));
+
+        Assert.Equal(RouteSignalAspect.Clear2, indication.Aspect);
+        Assert.Equal("CLEAR_2", indication.NativeAspect);
+        Assert.Equal("clear", indication.DrawState);
+        Assert.Equal(22.2f, indication.SpeedLimitMetersPerSecond);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]

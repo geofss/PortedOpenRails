@@ -10,7 +10,7 @@ namespace OpenRails.Web.Simulation;
 /// </summary>
 public sealed class SignalNetworkBuilder
 {
-    public SignalNetwork Build(TrackDatabase database, TrackNetwork network)
+    public SignalNetwork Build(TrackDatabase database, TrackNetwork network, SignalConfigurationDefinition? configuration = null)
     {
         ArgumentNullException.ThrowIfNull(database);
         ArgumentNullException.ThrowIfNull(network);
@@ -84,7 +84,10 @@ public sealed class SignalNetworkBuilder
                     item.SignalData ?? 0,
                     host.Index,
                     Math.Clamp(item.DistanceAlongTrack, 0, (float)path.LengthMeters),
-                    Array.AsReadOnly(directions.ToArray())));
+                    Array.AsReadOnly(directions.ToArray()),
+                    configuration is not null && configuration.SignalTypes.TryGetValue(item.SignalType ?? string.Empty, out var configuredType)
+                        ? configuredType
+                        : null));
             }
         }
 
@@ -118,7 +121,8 @@ public sealed record RouteSignalHead(
     float SignalData,
     uint TrackNodeIndex,
     double DistanceMeters,
-    IReadOnlyList<TrackSignalDirection> Directions);
+    IReadOnlyList<TrackSignalDirection> Directions,
+    SignalTypeDefinition? Definition = null);
 
 public enum RouteSignalAspect
 {
@@ -132,7 +136,10 @@ public sealed record RouteSignalIndication(
     RouteSignalHead Signal,
     RouteSignalAspect Aspect,
     uint? NextTrackNodeIndex,
-    string Reason);
+    string Reason,
+    string? NativeAspect = null,
+    string? DrawState = null,
+    float? SpeedLimitMetersPerSecond = null);
 
 /// <summary>
 /// Route-level occupancy and conservative fixed-block aspect evaluation. Ambiguous
@@ -168,30 +175,52 @@ public sealed class SignalNetwork
             var next = ResolveNextBlock(block.TrackNodeIndex, signal, selectedJunctionBranches);
             if (occupiedTrackNodeIndices.Contains(block.TrackNodeIndex))
             {
-                result.Add(new(signal, RouteSignalAspect.Stop, next, "The signal's own track circuit is occupied."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, next, "The signal's own track circuit is occupied."));
                 continue;
             }
             if (next is null)
             {
-                result.Add(new(signal, RouteSignalAspect.Stop, null, "No unique, selected route is available beyond this signal."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, null, "No unique, selected route is available beyond this signal."));
                 continue;
             }
             if (occupiedTrackNodeIndices.Contains(next.Value))
             {
-                result.Add(new(signal, RouteSignalAspect.Stop, next, "The next track circuit is occupied."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, next, "The next track circuit is occupied."));
                 continue;
             }
 
             var beyond = ResolveNextBlock(next.Value, null, selectedJunctionBranches, block.TrackNodeIndex);
             if (beyond is null)
-                result.Add(new(signal, RouteSignalAspect.Approach, next, "The route beyond the next block is not uniquely established."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, next, "The route beyond the next block is not uniquely established."));
             else if (occupiedTrackNodeIndices.Contains(beyond.Value))
-                result.Add(new(signal, RouteSignalAspect.Approach, next, "The second track circuit ahead is occupied."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, next, "The second track circuit ahead is occupied."));
             else
-                result.Add(new(signal, RouteSignalAspect.Clear2, next, "Two consecutive track circuits ahead are clear."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Clear2, next, "Two consecutive track circuits ahead are clear."));
         }
 
         return Array.AsReadOnly(result.ToArray());
+    }
+
+    private static RouteSignalIndication CreateIndication(
+        RouteSignalHead signal, RouteSignalAspect aspect, uint? next, string reason)
+    {
+        var candidates = aspect switch
+        {
+            RouteSignalAspect.Stop => new[] { "STOP", "STOP_AND_PROCEED", "RESTRICTING" },
+            RouteSignalAspect.Approach => new[] { "APPROACH_1", "APPROACH_2", "APPROACH_3" },
+            RouteSignalAspect.Clear1 => new[] { "CLEAR_1", "CLEAR_2" },
+            RouteSignalAspect.Clear2 => new[] { "CLEAR_2", "CLEAR_1" },
+            _ => Array.Empty<string>()
+        };
+        var configured = signal.Definition?.Aspects
+            .Where(candidate => candidates.Contains(candidate.Aspect, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(candidate => Array.IndexOf(candidates, candidate.Aspect.ToUpperInvariant()))
+            .FirstOrDefault();
+        if (signal.Definition is not null && configured is null)
+            reason += $" Configured signal type '{signal.Definition.Name}' has no matching {aspect} aspect.";
+        return new RouteSignalIndication(signal, aspect, next, reason,
+            configured?.Aspect, configured?.DrawState,
+            configured is { SpeedMetersPerSecond: >= 0 } ? configured.SpeedMetersPerSecond : null);
     }
 
     private uint? ResolveNextBlock(
