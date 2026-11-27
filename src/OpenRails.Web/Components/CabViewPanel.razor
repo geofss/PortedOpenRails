@@ -4,6 +4,10 @@
 @if (Definition is not null)
 {
     <div class="or-cab-panel" aria-label="Original Open Rails cab view">
+        @if (HasNightImage)
+        {
+            <button type="button" @onclick="ToggleLighting">@(showNight ? "Show day cab" : "Show night cab")</button>
+        }
         @if (!string.IsNullOrWhiteSpace(imageDataUri))
         {
             <img src="@imageDataUri" alt="Original locomotive cab view" />
@@ -24,12 +28,22 @@
     [Parameter, EditorRequired] public CabViewDefinition? Definition { get; set; }
 
     private string? imageDataUri;
+    private bool showNight;
+    private bool HasNightImage => Store is not null && Definition?.Views.FirstOrDefault() is { } view && Store.Contains(view.NightImagePath);
     private string? loadError;
     private string? loadedPath;
 
+    private void ToggleLighting()
+    {
+        showNight = !showNight;
+        loadedPath = null;
+        OnParametersSet();
+    }
+
     protected override void OnParametersSet()
     {
-        var path = Definition?.Views.FirstOrDefault()?.DayImagePath;
+        var view = Definition?.Views.FirstOrDefault();
+        var path = view is null ? null : showNight && HasNightImage ? view.NightImagePath : view.DayImagePath;
         if (string.Equals(path, loadedPath, StringComparison.OrdinalIgnoreCase))
             return;
         loadedPath = path;

@@ -17,7 +17,7 @@ public sealed class AceTexturePngEncoderTests
         Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, png[..8]);
         Assert.Equal("IHDR", System.Text.Encoding.ASCII.GetString(png, 12, 4));
         Assert.Equal("IDAT", System.Text.Encoding.ASCII.GetString(png, 37, 4));
-        Assert.EndsWith("data:image/png;base64,", AceTexturePngEncoder.EncodeDataUri(
+        Assert.StartsWith("data:image/png;base64,", AceTexturePngEncoder.EncodeDataUri(
             new AceTextureData(1, 1, AceTexturePixelFormat.Rgba8, false, false, 8,
                 new[] { new byte[] { 0, 0, 0, 255 } }, Array.Empty<AceTextureChannel>()))
             .Split("base64,")[0] + "base64,");

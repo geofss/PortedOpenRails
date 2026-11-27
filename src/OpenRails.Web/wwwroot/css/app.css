@@ -498,3 +498,21 @@ input[type="range"] { accent-color: #4776a8; }
 .activity-summary dl { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 0.2rem 0.8rem; }
 .activity-summary dt { font-weight: 600; }
 .activity-summary dd { margin: 0; }
+
+.or-cab-panel {
+    background: #151515;
+    border: 1px solid #777;
+    padding: 6px;
+    margin: 8px 0;
+    max-height: 520px;
+    overflow: auto;
+}
+.or-cab-panel img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 480px;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+}
