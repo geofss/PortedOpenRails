@@ -9,6 +9,10 @@ const LOCAL_SIGNATURE = 0x04034b50;
 const UINT16_MAX = 0xffff;
 const UINT32_MAX = 0xffffffff;
 
+// A route import opens thousands of entries. Cache the validated directory index,
+// lookup map, metadata, and immutable OPFS File so each entry is O(1) to locate.
+const archiveContextCache = new Map();
+
 function validateId(id) {
     if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) {
         throw new Error("Invalid staged archive identifier.");
@@ -256,6 +260,9 @@ export async function inspectArchive(id) {
 // Entry descriptors are persisted separately from the ZIP so later reads do not
 // need to rescan a potentially multi-gigabyte archive.
 async function readStoredIndex(directory, id) {
+    const cached = archiveContextCache.get(id);
+    if (cached) return cached;
+
     const handle = await directory.getFileHandle(id + ".index.json");
     const index = JSON.parse(await (await handle.getFile()).text());
     if (index.version !== 1 || validateId(index.id) !== id ||
@@ -263,7 +270,7 @@ async function readStoredIndex(directory, id) {
         throw new Error("Stored ZIP index is invalid or belongs to another archive.");
     }
 
-    const seen = new Set();
+    const entriesByPath = new Map();
     for (const entry of index.entries) {
         if (!entry || typeof entry.path !== "string" ||
             normalizeEntryPath(entry.path) !== entry.path ||
@@ -278,10 +285,21 @@ async function readStoredIndex(directory, id) {
             throw new Error("Stored ZIP index contains an invalid entry descriptor.");
         }
         const key = entry.path.toLocaleLowerCase("en-US");
-        if (seen.has(key)) throw new Error("Stored ZIP index contains duplicate virtual paths.");
-        seen.add(key);
+        if (entriesByPath.has(key)) throw new Error("Stored ZIP index contains duplicate virtual paths.");
+        entriesByPath.set(key, entry);
     }
-    return index;
+
+    const metadata = JSON.parse(await (await directory.getFileHandle(id + ".json")).getFile().then(file => file.text()));
+    const archiveFile = await (await directory.getFileHandle(id + ".zip")).getFile();
+    if (validateId(metadata.id) !== id ||
+        !Number.isSafeInteger(metadata.sizeBytes) || metadata.sizeBytes <= 0 ||
+        archiveFile.size !== metadata.sizeBytes) {
+        throw new Error("Staged archive or metadata does not match the stored index.");
+    }
+
+    const context = { index, entriesByPath, archiveFile };
+    archiveContextCache.set(id, context);
+    return context;
 }
 
 export async function listEntries(id) {
@@ -289,7 +307,7 @@ export async function listEntries(id) {
     const root = await navigator.storage.getDirectory();
     const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
     const index = await readStoredIndex(directory, id);
-    return index.entries.map(entry => entry.path);
+    return index.index.entries.map(entry => entry.path);
 }
 
 const crcTable = (() => {
@@ -307,17 +325,13 @@ export async function openEntry(id, requestedPath) {
     const normalized = normalizeEntryPath(requestedPath);
     const root = await navigator.storage.getDirectory();
     const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
-    const index = await readStoredIndex(directory, id);
+    const context = await readStoredIndex(directory, id);
     const key = normalized.toLocaleLowerCase("en-US");
-    const entry = index.entries.find(candidate => candidate.path.toLocaleLowerCase("en-US") === key);
+    const entry = context.entriesByPath.get(key);
     if (!entry) throw new Error("Archive entry was not found: " + normalized);
 
-    const metadata = JSON.parse(await (await directory.getFileHandle(id + ".json")).getFile().then(file => file.text()));
-    const archive = await (await directory.getFileHandle(id + ".zip")).getFile();
-    if (validateId(metadata.id) !== id ||
-        !Number.isSafeInteger(metadata.sizeBytes) || metadata.sizeBytes <= 0 ||
-        archive.size !== metadata.sizeBytes ||
-        !Number.isSafeInteger(entry.dataOffset + entry.compressedSize) ||
+    const archive = context.archiveFile;
+    if (!Number.isSafeInteger(entry.dataOffset + entry.compressedSize) ||
         entry.dataOffset + entry.compressedSize > archive.size) {
         throw new Error("Staged archive or indexed entry boundaries are invalid.");
     }
