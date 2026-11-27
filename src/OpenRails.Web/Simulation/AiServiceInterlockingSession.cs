@@ -92,7 +92,7 @@ public sealed class AiServiceInterlockingSession
         ArgumentNullException.ThrowIfNull(signalNetwork);
         ArgumentNullException.ThrowIfNull(signalRouteDistancesMeters);
         var state = interlocking.Snapshot();
-        return signalNetwork.Evaluate(state, scripts)
+        return signalNetwork.Evaluate(state, scripts, trainId)
             .Where(indication => signalRouteDistancesMeters.ContainsKey(indication.Signal.TrackItemIndex))
             .Select(indication => new AiServiceSignalConstraint(
                 signalRouteDistancesMeters[indication.Signal.TrackItemIndex],
