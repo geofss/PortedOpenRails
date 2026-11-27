@@ -113,8 +113,8 @@ public sealed class LocomotiveTractionModelTests
             Engine (
                 MaxForce ( 200000 )
                 ORTSTractiveForceRampUpRate ( 10000 )
-                ORTSTractiveForceRampDownRate ( 20000 )
-                ORTSTractiveForceRampDownToZeroRate ( 50000 )
+                ORTSTractiveForceRampDownRate ( 20 kN/s )
+                ORTSTractiveForceRampDownToZeroRate ( 1000 lbf/s )
             )
             """));
 
@@ -123,7 +123,7 @@ public sealed class LocomotiveTractionModelTests
 
         Assert.Equal(10_000, metadata.TractionForceRampUpNewtonsPerSecond);
         Assert.Equal(20_000, metadata.TractionForceRampDownNewtonsPerSecond);
-        Assert.Equal(50_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+        Assert.Equal(4_448.2217f, metadata.TractionForceRampDownToZeroNewtonsPerSecond, 2);
     }
 
     [Fact]
