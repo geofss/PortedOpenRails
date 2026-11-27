@@ -229,6 +229,44 @@
                         <dt>Scenery tiles assembled</dt><dd>@loadedRoute.WorldScenery.Loaded.Count</dd>
                         <dt>Scenery shape meshes</dt><dd>@loadedRoute.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
                     </dl>
+
+                    <div class="route-details">
+                        <h3>Route validation</h3>
+                        <p class="@(loadedRoute.Validation.TrackNetworkUsable ? "success" : "error")">
+                            @(loadedRoute.Validation.TrackNetworkUsable
+                                ? "Track topology passed structural validation."
+                                : "Track topology has critical issues; this route is not ready for a driving test.")
+                        </p>
+                        <dl>
+                            <dt>Track network</dt><dd>@(loadedRoute.Validation.TrackNetworkUsable ? "Usable" : "Not usable")</dd>
+                            <dt>Track diagnostics</dt><dd>@loadedRoute.Validation.TrackDiagnosticsCount</dd>
+                            <dt>Missing terrain</dt><dd>@loadedRoute.Validation.MissingTerrainTiles</dd>
+                            <dt>Failed terrain</dt><dd>@loadedRoute.Validation.FailedTerrainTiles</dd>
+                            <dt>Missing track shapes</dt><dd>@loadedRoute.Validation.MissingTrackShapes</dd>
+                            <dt>Failed track shapes</dt><dd>@loadedRoute.Validation.FailedTrackShapes</dd>
+                            <dt>Missing world tiles</dt><dd>@loadedRoute.Validation.MissingWorldTiles</dd>
+                            <dt>Failed world tiles</dt><dd>@loadedRoute.Validation.FailedWorldTiles</dd>
+                            <dt>Missing world shapes</dt><dd>@loadedRoute.Validation.MissingWorldShapes</dd>
+                            <dt>Failed world shapes</dt><dd>@loadedRoute.Validation.FailedWorldShapes</dd>
+                            <dt>Missing textures</dt><dd>@loadedRoute.Validation.MissingTextures</dd>
+                            <dt>Failed textures</dt><dd>@loadedRoute.Validation.FailedTextures</dd>
+                            <dt>Total diagnostics</dt><dd>@loadedRoute.Validation.Issues.Count</dd>
+                        </dl>
+                        @if (loadedRoute.Validation.Issues.Count > 0)
+                        {
+                            <h4>First 50 route diagnostics</h4>
+                            <ul class="path-list">
+                                @foreach (var issue in loadedRoute.Validation.Issues.Take(50))
+                                {
+                                    <li><strong>@issue.Category:</strong> @issue.Message</li>
+                                }
+                            </ul>
+                            @if (loadedRoute.Validation.Issues.Count > 50)
+                            {
+                                <p class="hint">Showing 50 of @loadedRoute.Validation.Issues.Count diagnostics.</p>
+                            }
+                        }
+                    </div>
                     @if (simulationSetup is not null)
                     {
                         <div class="route-details">
