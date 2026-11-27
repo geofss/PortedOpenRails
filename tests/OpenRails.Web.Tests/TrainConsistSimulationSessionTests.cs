@@ -136,6 +136,32 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void PneumaticBrakeTicksAlsoIntegrateDynamicSlackCouplerForces()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(1_000, 0, 2.2)
+        });
+        var session = new TrainConsistSimulationSession(initial,
+            new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        var steps = session.AdvanceWithPneumaticBrakesAndDynamicCouplers(
+            0.1, new[] { 0f, 0f }, 0, new[] { 0d, 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 2d }, new[] { 0.1d }, new[] { 1_000d },
+            new[] { 0d }, new[] { 5_000d }, new[] { 5_000d });
+
+        Assert.Equal(1, steps);
+        Assert.True(session.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.True(session.State.Cars[1].SpeedMetersPerSecond < 0);
+        Assert.Equal(0,
+            session.State.Cars[0].SpeedMetersPerSecond + session.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.All(session.BrakeCylinderState.PressuresKPa, pressure => Assert.Equal(0, pressure));
+    }
+
+    [Fact]
     public void BrakeCommandSimulationCapsLocomotiveTractionByPerCarAdhesion()
     {
         var locomotive = new LocomotiveTractionMetadata(

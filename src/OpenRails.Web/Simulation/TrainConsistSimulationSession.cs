@@ -391,6 +391,54 @@ public sealed class TrainConsistSimulationSession
         });
     }
 
+    /// <summary>
+    /// Advances pneumatic braking and computes spring/damper coupler forces from
+    /// current car positions and velocities on every accepted fixed simulation tick.
+    /// Coupler parameters are supplied once per adjacent-car boundary.
+    /// </summary>
+    public int AdvanceWithPneumaticBrakesAndDynamicCouplers(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        double brakeCommandPercent,
+        IReadOnlyList<double> maximumBrakeForceNewtonsByCar,
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistanceProvider,
+        IReadOnlyList<double> restGapsMeters,
+        IReadOnlyList<double> slackMetersByBoundary,
+        IReadOnlyList<double> stiffnessNewtonsPerMeter,
+        IReadOnlyList<double> dampingNewtonSecondsPerMeter,
+        IReadOnlyList<double> maximumCompressionNewtons,
+        IReadOnlyList<double> maximumTensionNewtons,
+        bool emergency = false,
+        float powerReduction = 0,
+        IReadOnlyList<float>? averageForceByCar = null,
+        int tractionDirection = 1,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null,
+        IReadOnlyList<double>? additionalBrakeForceNewtonsByCar = null)
+    {
+        ArgumentNullException.ThrowIfNull(restGapsMeters);
+        ArgumentNullException.ThrowIfNull(slackMetersByBoundary);
+        ArgumentNullException.ThrowIfNull(stiffnessNewtonsPerMeter);
+        ArgumentNullException.ThrowIfNull(dampingNewtonSecondsPerMeter);
+        ArgumentNullException.ThrowIfNull(maximumCompressionNewtons);
+        ArgumentNullException.ThrowIfNull(maximumTensionNewtons);
+
+        var couplerDynamics = new TrainConsistCouplerDynamics();
+        IReadOnlyList<double> CalculateCouplerForces(TrainConsistMotionState state) =>
+            couplerDynamics.CalculatePerCarForces(
+                state, restGapsMeters, slackMetersByBoundary,
+                stiffnessNewtonsPerMeter, dampingNewtonSecondsPerMeter,
+                maximumCompressionNewtons, maximumTensionNewtons);
+
+        // Validate all boundary arrays even when the scheduler accepts no ticks.
+        _ = CalculateCouplerForces(State);
+        return AdvanceWithPneumaticBrakes(
+            elapsedFrameSeconds, throttlePercentByCar, brakeCommandPercent,
+            maximumBrakeForceNewtonsByCar, resistanceProvider,
+            new double[State.Cars.Count], emergency, powerReduction,
+            averageForceByCar, CalculateCouplerForces, tractionDirection,
+            adhesionCoefficientByCar, additionalBrakeForceNewtonsByCar);
+    }
+
     private static void ValidateAdhesionCoefficients(IReadOnlyList<double>? coefficients, int carCount)
     {
         if (coefficients is not null &&
