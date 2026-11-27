@@ -74,9 +74,9 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
                 var worldTransform = BuildWorldTransform(placement);
                 var mesh = asset.Mesh;
-                var frame = elapsedSeconds is { } elapsed && mesh.Animations is not null &&
+                var frame = elapsedSeconds is { } animationElapsed && mesh.Animations is not null &&
                     animationClipIndex >= 0 && animationClipIndex < mesh.Animations.Count
-                    ? TrackShapeAnimationClock.GetFrame(mesh.Animations[animationClipIndex], elapsed, loopAnimation)
+                    ? TrackShapeAnimationClock.GetFrame(mesh.Animations[animationClipIndex], animationElapsed, loopAnimation)
                     : animationFrame;
                 var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
                 var lodDistance = cameraPosition is { } camera
