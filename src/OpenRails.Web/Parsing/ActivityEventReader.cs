@@ -282,7 +282,8 @@ public sealed class ActivityExecutionSession
             return pending;
         var current = events.First(item => item.Definition.Id == pending.EventId);
         var outcomes = current.Definition.Outcomes;
-        if (!outcomes.ActivitySuccess && string.IsNullOrWhiteSpace(outcomes.ActivityFailure))
+        if (!outcomes.ActivitySuccess && string.IsNullOrWhiteSpace(outcomes.ActivityFailure) &&
+            !current.Definition.Reversible)
             current.ActivationLevel = 0;
 
         foreach (var id in outcomes.ActivateEventIds) Find(id).ActivationLevel = 1;
