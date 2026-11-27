@@ -34,4 +34,4 @@ public sealed class SignalNetworkBuilderTests
         var approach = Assert.Single(signals.Evaluate(new HashSet<uint> { 4 }, selected));
         Assert.Equal(RouteSignalAspect.Approach, approach.Aspect);
     }
-
+}
