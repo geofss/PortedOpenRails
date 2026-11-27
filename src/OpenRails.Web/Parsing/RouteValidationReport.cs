@@ -24,7 +24,9 @@ public sealed record RouteValidationReport(
     int FailedTextures,
     IReadOnlyList<RouteValidationIssue> Issues,
     int TrackDatabaseDiagnosticsCount = 0,
-    int WorldParseDiagnosticsCount = 0)
+    int WorldParseDiagnosticsCount = 0,
+    int TrackItemPlacementCount = 0,
+    int TrackItemPlacementDiagnosticsCount = 0)
 {
     public bool HasCriticalIssues => !TrackNetworkUsable;
     public int AssetIssueCount => MissingTerrainTiles + FailedTerrainTiles +
@@ -40,7 +42,8 @@ public sealed record RouteValidationReport(
         RouteTrackShapeMeshLoadResult trackShapeMeshes,
         RouteWorldTileDiscovery worldDiscovery,
         RouteWorldSceneryLoadResult worldScenery,
-        TerrainTextureAssetLoadResult terrainTextures)
+        TerrainTextureAssetLoadResult terrainTextures,
+        RouteTrackItemPlacementResult? trackItemPlacements = null)
     {
         ArgumentNullException.ThrowIfNull(trackDatabase);
         ArgumentNullException.ThrowIfNull(network);
@@ -67,6 +70,8 @@ public sealed record RouteValidationReport(
             issues.Add(new("Track database", diagnostic));
         foreach (var diagnostic in network.Diagnostics)
             issues.Add(new("Track network", diagnostic));
+        foreach (var diagnostic in trackItemPlacements?.Diagnostics ?? Array.Empty<string>())
+            issues.Add(new("Track item placement", diagnostic));
 
         foreach (var missing in terrainDiscovery.Missing)
             issues.Add(new("Terrain", $"Missing terrain tile {missing.TileX},{missing.TileZ}: {missing.ExpectedPath}"));
@@ -119,6 +124,8 @@ public sealed record RouteValidationReport(
                 worldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count + (tile.ForestTextures?.Failed.Count ?? 0)),
             Array.AsReadOnly(issues.ToArray()),
             trackDatabase.Diagnostics.Count,
-            worldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count));
+            worldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count),
+            trackItemPlacements?.Placements.Count ?? 0,
+            trackItemPlacements?.Diagnostics.Count ?? 0);
     }
 }
