@@ -145,7 +145,7 @@ public sealed class AiServiceDrivingControllerTests
     [Fact]
     public void RejectsServiceDistancesWhoseDifferencesOverflow()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentException>(() =>
             controller.Calculate(Plan(0, double.MaxValue), -double.MaxValue, 0, 10));
     }
 
