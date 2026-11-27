@@ -41,3 +41,5 @@ Regression tests cover traction metadata parsing, force-curve interpolation, thr
 - Added `ElectricMotorThermalModel` using the upstream base `ElectricMotor.Update` transmission-loss expression and thermal first-order differential equation. The browser implementation integrates that ODE analytically to avoid frame-rate-dependent Euler error.
 - Both components have dedicated regression tests and are included in the test project.
 - These are reusable submodels, not a complete locomotive powertrain. The browser session still needs native axle topology and per-axle state wiring, motor-specific torque curves, electrical supply limits, diesel engine state/fuel/governor/temperature systems, and transmission-specific control.
+
+- Added `LocomotiveAxleDriveSet` to retain previous/current wheel speeds and per-axle force state, allocate total locomotive force by native tractive-force fractions, apply individual axle slip-control targets when supplied, and sum the resulting axle forces. It is ready for connection to parsed axle topology; the current consist setup does not yet supply native axle definitions or slip-control targets.
