@@ -5,9 +5,29 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<section class="route-details driving-controls">
-    <h3>Train driving controls</h3>
-    <p class="hint">Prototype controls · fixed-step traction, pneumatic braking, and dynamic coupler forces</p>
+<section class="or-train-driving-window" aria-label="Train Driving Info">
+    <div class="or-window-titlebar">
+        <strong>Train Driving Info</strong>
+        <span>Open Rails</span>
+    </div>
+    <div class="or-driving-window-body">
+        <p class="hint">Browser-connected controls · traction, pneumatic braking, and consist dynamics</p>
+        <table class="or-train-driving-status">
+            <tbody>
+                <tr>
+                    <th>Speed</th><td>@speedKmh.ToString("N1") km/h</td>
+                    <th>Throttle</th><td>@Controller.ThrottlePercent.ToString("N0")%</td>
+                </tr>
+                <tr>
+                    <th>Direction</th><td>@Controller.ReverserPosition</td>
+                    <th>Train brake</th><td>@Controller.BrakePercent.ToString("N0")%</td>
+                </tr>
+                <tr>
+                    <th>Brake pipe</th><td>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") kPa</td>
+                    <th>Brake cylinder</th><td>@Controller.BrakeCylinderState.PressuresKPa[0].ToString("N0") kPa</td>
+                </tr>
+            </tbody>
+        </table>
     <div class="driving-control-row">
         <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
         <input id="train-throttle" type="range" min="0" max="100" step="1"
@@ -126,6 +146,7 @@
         <dt>Dropped frame time</dt><dd>@Controller.DroppedTimeSeconds.ToString("N2") s</dd>
         <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
     </dl>
+    </div>
 </section>
 
 @code {
