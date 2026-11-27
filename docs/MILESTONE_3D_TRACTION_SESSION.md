@@ -25,3 +25,11 @@ This is a traction/simulation integration slice, not the Open Rails locomotive s
 ## Validation
 
 Regression tests cover traction metadata parsing, force-curve interpolation, throttle response, power caps, continuous-force limit, basic-force fallback, brake-command clamping and direction, brake-force integration through the motion loop and single-/multi-car sessions, front-to-rear pneumatic pipe propagation, delayed per-car cylinder response, emergency venting, and validated pneumatic snapshot round-tripping through both direct consist sessions and the browser driving controller, full controller JSON serialization/deserialization and persistent snapshot restoration, invalid/incompatible snapshot rejection, fixed-step session advancement, pause/reset, supplied coupler force on a trailer, automatic common-acceleration session integration, coupler-force distribution, equal/opposite action-reaction, infeasible acceleration rejection, force-rating enforcement, brake input-array and rating validation, optional brake-input pairing/size checks for common-acceleration mode, and invalid input rejection. GitHub Actions is the validation authority for WebAssembly publish and Pages deploy.
+
+
+## Native axle drive-force ramp port (incremental)
+
+- Added `LocomotiveAxleDriveRamp`, a browser-safe port of the force/power slew calculation in upstream `PowerTransmissions/Axle.UpdateForceWithRamp`.
+- It preserves the upstream order of operations: clamp current/target force to the axle maximum, apply power slew using previous and current axle speed, then apply force slew; locomotive-level rates are scaled by each axle's tractive-force fraction.
+- Positive and negative force direction, sign-crossing-to-zero selection, and separate power ramp-up/down/to-zero rates are covered by regression tests.
+- This helper is not yet wired to real parsed axle instances. The session still lacks native axle drive fractions, previous axle speed, per-axle slip-control force, and the upstream locomotive's complete `UpdateSlipControl` / `UpdateDriveForce` lifecycle. Do not treat this helper as full axle adhesion or locomotive parity.
