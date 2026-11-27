@@ -65,11 +65,123 @@ public static class AceTexturePngEncoder
             case AceTexturePixelFormat.Bgra4444:
                 DecodePacked16(texture, source, rgba);
                 return rgba;
+            case AceTexturePixelFormat.Dxt1:
+            case AceTexturePixelFormat.Dxt3:
+            case AceTexturePixelFormat.Dxt5:
+                DecodeDxt(texture, source, rgba);
+                return rgba;
             default:
-                throw new NotSupportedException(
-                    $"ACE pixel format {texture.PixelFormat} must be decoded by a browser GPU path before PNG export.");
+                throw new NotSupportedException($"ACE pixel format {texture.PixelFormat} is not supported for PNG export.");
         }
     }
+
+    private static void DecodeDxt(AceTextureData texture, byte[] source, byte[] destination)
+    {
+        var isDxt1 = texture.PixelFormat == AceTexturePixelFormat.Dxt1;
+        var blockBytes = isDxt1 ? 8 : 16;
+        var blocksWide = (texture.Width + 3) / 4;
+        var blocksHigh = (texture.Height + 3) / 4;
+        if (source.Length < blocksWide * blocksHigh * blockBytes)
+            throw new InvalidDataException("ACE DXT base mip is shorter than its declared block dimensions.");
+
+        for (var blockY = 0; blockY < blocksHigh; blockY++)
+        for (var blockX = 0; blockX < blocksWide; blockX++)
+        {
+            var offset = (blockY * blocksWide + blockX) * blockBytes;
+            var alphaOffset = offset;
+            var colourOffset = isDxt1 ? offset : offset + 8;
+            var alphaValues = texture.PixelFormat switch
+            {
+                AceTexturePixelFormat.Dxt3 => DecodeDxt3Alpha(source.AsSpan(alphaOffset, 8)),
+                AceTexturePixelFormat.Dxt5 => DecodeDxt5Alpha(source.AsSpan(alphaOffset, 8)),
+                _ => null
+            };
+            var colours = DecodeDxtColours(source.AsSpan(colourOffset, 8), forceFourColours: !isDxt1);
+            var indices = BinaryPrimitives.ReadUInt32LittleEndian(source.AsSpan(colourOffset + 4, 4));
+            for (var pixel = 0; pixel < 16; pixel++)
+            {
+                var x = blockX * 4 + pixel % 4;
+                var y = blockY * 4 + pixel / 4;
+                if (x >= texture.Width || y >= texture.Height)
+                    continue;
+                var colourIndex = (int)((indices >> (pixel * 2)) & 3);
+                var colour = colours[colourIndex];
+                var target = (y * texture.Width + x) * 4;
+                destination[target] = colour.R;
+                destination[target + 1] = colour.G;
+                destination[target + 2] = colour.B;
+                destination[target + 3] = alphaValues is null ? colour.A : alphaValues[pixel];
+            }
+        }
+    }
+
+    private static (byte R, byte G, byte B, byte A)[] DecodeDxtColours(ReadOnlySpan<byte> block, bool forceFourColours)
+    {
+        var colour0 = BinaryPrimitives.ReadUInt16LittleEndian(block[..2]);
+        var colour1 = BinaryPrimitives.ReadUInt16LittleEndian(block.Slice(2, 2));
+        var first = DecodeRgb565(colour0);
+        var second = DecodeRgb565(colour1);
+        var palette = new (byte R, byte G, byte B, byte A)[4];
+        palette[0] = (first.R, first.G, first.B, 255);
+        palette[1] = (second.R, second.G, second.B, 255);
+        if (colour0 > colour1 || forceFourColours)
+        {
+            palette[2] = (Average(first.R, second.R, 2, 1), Average(first.G, second.G, 2, 1),
+                Average(first.B, second.B, 2, 1), 255);
+            palette[3] = (Average(first.R, second.R, 1, 2), Average(first.G, second.G, 1, 2),
+                Average(first.B, second.B, 1, 2), 255);
+        }
+        else
+        {
+            palette[2] = (Average(first.R, second.R, 1, 1), Average(first.G, second.G, 1, 1),
+                Average(first.B, second.B, 1, 1), 255);
+            palette[3] = (0, 0, 0, 0);
+        }
+        return palette;
+    }
+
+    private static (byte R, byte G, byte B) DecodeRgb565(ushort value) =>
+        (Expand5((value >> 11) & 0x1F), Expand6((value >> 5) & 0x3F), Expand5(value & 0x1F));
+
+    private static byte[] DecodeDxt3Alpha(ReadOnlySpan<byte> block)
+    {
+        var packed = BinaryPrimitives.ReadUInt64LittleEndian(block);
+        var alpha = new byte[16];
+        for (var i = 0; i < alpha.Length; i++)
+            alpha[i] = Expand4((int)((packed >> (i * 4)) & 0x0F));
+        return alpha;
+    }
+
+    private static byte[] DecodeDxt5Alpha(ReadOnlySpan<byte> block)
+    {
+        var first = block[0];
+        var second = block[1];
+        var table = new byte[8];
+        table[0] = first;
+        table[1] = second;
+        if (first > second)
+        {
+            for (var i = 1; i <= 6; i++)
+                table[i + 1] = (byte)(((7 - i) * first + i * second) / 7);
+        }
+        else
+        {
+            for (var i = 1; i <= 4; i++)
+                table[i + 1] = (byte)(((5 - i) * first + i * second) / 5);
+            table[6] = 0;
+            table[7] = 255;
+        }
+        ulong indices = 0;
+        for (var i = 0; i < 6; i++)
+            indices |= (ulong)block[i + 2] << (8 * i);
+        var alpha = new byte[16];
+        for (var i = 0; i < alpha.Length; i++)
+            alpha[i] = table[(int)((indices >> (i * 3)) & 7)];
+        return alpha;
+    }
+
+    private static byte Average(byte first, byte second, int firstWeight, int secondWeight) =>
+        (byte)((first * firstWeight + second * secondWeight) / (firstWeight + secondWeight));
 
     private static void DecodePacked16(AceTextureData texture, byte[] source, byte[] destination)
     {

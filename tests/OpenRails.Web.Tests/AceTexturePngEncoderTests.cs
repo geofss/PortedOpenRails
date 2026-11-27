@@ -36,6 +36,20 @@ public sealed class AceTexturePngEncoderTests
     }
 
     [Fact]
+    public void DecodesSolidRedDxt1BlockBeforePngEncoding()
+    {
+        var texture = new AceTextureData(4, 4, AceTexturePixelFormat.Dxt1,
+            false, true, 0,
+            new[] { new byte[] { 0x00, 0xF8, 0x00, 0xF8, 0, 0, 0, 0 } },
+            Array.Empty<AceTextureChannel>());
+
+        var png = AceTexturePngEncoder.Encode(texture);
+
+        Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, png[..8]);
+        Assert.True(png.Length > 60);
+    }
+
+    [Fact]
     public void RejectsDxtFormatsThatNeedGpuDecoding()
     {
         var texture = new AceTextureData(4, 4, AceTexturePixelFormat.Dxt1,
