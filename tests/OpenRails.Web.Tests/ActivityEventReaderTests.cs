@@ -31,7 +31,7 @@ public sealed class ActivityEventReaderTests
     {
         using var store = CreateStore();
         var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
-        Assert.Equal(3, events.Events.Count);
+        Assert.Equal(4, events.Events.Count);
         var start = events.Events.Single(item => item.Id == 10);
         Assert.Equal(ActivityEventKind.Time, start.Kind);
         Assert.Equal(300, start.TriggerSeconds);
@@ -51,6 +51,19 @@ public sealed class ActivityEventReaderTests
         Assert.Null(session.Advance(299, new ActivityPlayerState(0)));
         Assert.Equal(20, session.Advance(1, new ActivityPlayerState(0))?.EventId);
         Assert.True(session.Acknowledge()?.ActivityEnded);
+    }
+
+    [Fact]
+    public void ReadsAndExecutesNativeAllStopsActionEvent()
+    {
+        using var store = CreateStore();
+        var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
+        var allStops = Assert.Single(events.Events.Where(item => item.Id == 40));
+        Assert.Equal("AllStops", allStops.ActionType);
+        var session = new ActivityExecutionSession(events);
+
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0, AllStopsCompleted: false)));
+        Assert.Equal(40, session.Advance(0, new ActivityPlayerState(0, AllStopsCompleted: true))?.EventId);
     }
 
     [Fact]
@@ -83,6 +96,11 @@ public sealed class ActivityEventReaderTests
                   EventCategoryAction (
                     ID ( 30 ) Name ( "Reach speed" ) Activation_Level ( 1 )
                     EventTypeReachSpeed ( ) Speed ( 15 )
+                    Outcomes ( )
+                  )
+                  EventCategoryAction (
+                    ID ( 40 ) Name ( "All stops" ) Activation_Level ( 1 )
+                    EventTypeAllStops ( )
                     Outcomes ( )
                   )
                 )
