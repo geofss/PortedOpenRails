@@ -229,7 +229,9 @@ public sealed record ActivityPlayerState(double SpeedMetersPerSecond, int? TileX
     bool StationStopReached = false, bool AllStopsCompleted = false,
     IReadOnlyList<string>? PlayerConsistCarIds = null,
     IReadOnlyList<ActivityTrainState>? OtherTrains = null,
-    bool PlayerTrainAtSiding = false);
+    bool PlayerTrainAtSiding = false,
+    int PassengerTaskCount = 0,
+    bool? LastPassengerTaskCompleted = null);
 
 public sealed record ActivityEventExecutionResult(int EventId, string EventName,
     bool Triggered, string Message, bool ActivityEnded, bool ActivitySucceeded);
@@ -380,7 +382,12 @@ public sealed class ActivityExecutionSession
             Math.Sqrt(Math.Pow(player.X.Value - item.X, 2) + Math.Pow(player.Z.Value - item.Z, 2)) <= item.RadiusMeters,
         ActivityEventKind.Action when item.ActionType == "ReachSpeed" =>
             Math.Abs(player.SpeedMetersPerSecond) >= item.TriggerSpeedMetersPerSecond,
-        ActivityEventKind.Action when item.ActionType == "AllStops" => player.AllStopsCompleted,
+        // Native Activity.EventCategoryActionWrapper checks Tasks.Count > 0 and
+        // Last.IsCompleted != null; false is still a completed task result.
+        ActivityEventKind.Action when item.ActionType == "AllStops" =>
+            player.PassengerTaskCount > 0
+                ? player.LastPassengerTaskCompleted.HasValue
+                : player.AllStopsCompleted,
         ActivityEventKind.Action when item.ActionType == "AssembleTrain" =>
             MatchesAnyConsist(item, player),
         ActivityEventKind.Action when item.ActionType == "AssembleTrainAtLocation" =>

@@ -168,6 +168,23 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void NativeAllStopsUsesLastPassengerTaskCompletionPresence()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(84, "All passenger stops", ActivityEventKind.Action,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "AllStops", "", "",
+                ActivityEventOutcomes.Empty)
+        }));
+
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0,
+            AllStopsCompleted: true, PassengerTaskCount: 2,
+            LastPassengerTaskCompleted: null)));
+        Assert.Equal(84, session.Advance(0, new ActivityPlayerState(0,
+            PassengerTaskCount: 2, LastPassengerTaskCompleted: false))?.EventId);
+    }
+
+    [Fact]
     public void NativeAssembleTrainMatchesExactConsistInEitherDirection()
     {
         var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
