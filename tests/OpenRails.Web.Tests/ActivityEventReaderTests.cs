@@ -64,6 +64,53 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void NativeNonReversibleEventsRemainOneShotAfterAnotherOutcomeReactivatesThem()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(1, "First", ActivityEventKind.Time,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "", "", "",
+                new ActivityEventOutcomes(new[] { 2 }, Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<int>(), false, null, null)),
+            new ActivityEventDefinition(2, "Second", ActivityEventKind.Time,
+                0, 0, true, 0, 0, 0, 0, 0, 0, "", "", "",
+                new ActivityEventOutcomes(new[] { 1 }, Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<int>(), false, null, null))
+        });
+        var session = new ActivityExecutionSession(definition);
+
+        Assert.Equal(1, session.Advance(0, new ActivityPlayerState(0))?.EventId);
+        session.Acknowledge();
+        Assert.Equal(2, session.Advance(0, new ActivityPlayerState(0))?.EventId);
+        session.Acknowledge();
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0)));
+    }
+
+    [Fact]
+    public void NativeReversibleEventsApplyOutcomesOnlyOnFirstTrigger()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(1, "Reversible", ActivityEventKind.Action,
+                1, 0, true, 0, 0, 0, 0, 0, 10, "ReachSpeed", "", "",
+                new ActivityEventOutcomes(new[] { 2 }, Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<int>(), false, null, null), Reversible: true),
+            new ActivityEventDefinition(2, "Activated once", ActivityEventKind.Time,
+                0, 0, true, 0, 0, 0, 0, 0, 0, "", "", "", ActivityEventOutcomes.Empty)
+        });
+        var session = new ActivityExecutionSession(definition);
+
+        Assert.Equal(1, session.Advance(0, new ActivityPlayerState(12))?.EventId);
+        session.Acknowledge();
+        Assert.Equal(2, session.Advance(0, new ActivityPlayerState(12))?.EventId);
+        session.Acknowledge();
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0)));
+        Assert.Equal(1, session.Advance(0, new ActivityPlayerState(12))?.EventId);
+        session.Acknowledge();
+        Assert.Null(session.Advance(0, new ActivityPlayerState(12)));
+    }
+
+    [Fact]
     public void ReadsBothNativeSpellingsOfReversibleActionFlag()
     {
         using var store = CreateStore();
@@ -96,7 +143,7 @@ public sealed class ActivityEventReaderTests
     {
         using var store = CreateStore();
         var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
-        Assert.Equal(6, events.Events.Count);
+        Assert.Equal(7, events.Events.Count);
         var start = events.Events.Single(item => item.Id == 10);
         Assert.Equal(ActivityEventKind.Time, start.Kind);
         Assert.Equal(300, start.TriggerSeconds);

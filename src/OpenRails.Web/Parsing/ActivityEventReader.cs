@@ -257,20 +257,24 @@ public sealed class ActivityExecutionSession
                 continue;
 
             var conditionIsTrue = IsTriggered(item.Definition, player);
-            if (item.Triggered)
-            {
-                // Native reversible action events are edge-triggered: after firing,
-                // they become eligible again only once their trigger condition clears.
-                if (item.Definition.Reversible && !conditionIsTrue)
-                    item.Triggered = false;
-                else
-                    continue;
-            }
-
-            if (!conditionIsTrue)
+            // Native Activity.Update only considers a previously fired event again
+            // when it is reversible. A reversible event is re-armed only after its
+            // trigger condition has become false (EventWrapper.IsDisabled).
+            if (item.TimesTriggered > 0 && !item.Definition.Reversible)
                 continue;
 
-            item.Triggered = true;
+            if (!conditionIsTrue)
+            {
+                if (item.Definition.Reversible)
+                    item.IsDisabled = false;
+                continue;
+            }
+
+            if (item.IsDisabled)
+                continue;
+
+            item.TimesTriggered++;
+            item.IsDisabled = item.Definition.Reversible;
             pending = new ActivityEventExecutionResult(item.Definition.Id, item.Definition.Name,
                 true, item.Definition.Outcomes.DisplayMessage ?? item.Definition.SuccessMessage, false, false);
             return pending;
@@ -284,18 +288,26 @@ public sealed class ActivityExecutionSession
             return pending;
         var current = events.First(item => item.Definition.Id == pending.EventId);
         var outcomes = current.Definition.Outcomes;
-        if (!outcomes.ActivitySuccess && string.IsNullOrWhiteSpace(outcomes.ActivityFailure) &&
-            !current.Definition.Reversible)
+        // Native EventWrapper.IsActivityEnded disables every non-reversible event
+        // immediately. Reversible events remain active but are disabled until their
+        // trigger condition clears. Native outcomes are applied only on the first
+        // trigger; later reversible activations are notification-only.
+        if (current.Definition.Reversible)
+            current.IsDisabled = true;
+        else
             current.ActivationLevel = 0;
 
-        foreach (var id in outcomes.ActivateEventIds) Find(id).ActivationLevel = 1;
-        foreach (var id in outcomes.RestoreActivationLevelEventIds)
+        if (current.TimesTriggered <= 1)
         {
-            var target = Find(id);
-            target.ActivationLevel = target.Definition.InitialActivationLevel;
+            foreach (var id in outcomes.ActivateEventIds) Find(id).ActivationLevel = 1;
+            foreach (var id in outcomes.RestoreActivationLevelEventIds)
+            {
+                var target = Find(id);
+                target.ActivationLevel = target.Definition.InitialActivationLevel;
+            }
+            foreach (var id in outcomes.DecrementActivationLevelEventIds) Find(id).ActivationLevel--;
+            foreach (var id in outcomes.IncrementActivationLevelEventIds) Find(id).ActivationLevel++;
         }
-        foreach (var id in outcomes.DecrementActivationLevelEventIds) Find(id).ActivationLevel--;
-        foreach (var id in outcomes.IncrementActivationLevelEventIds) Find(id).ActivationLevel++;
 
         ended = outcomes.ActivitySuccess || !string.IsNullOrWhiteSpace(outcomes.ActivityFailure);
         var acknowledged = pending with
@@ -329,6 +341,7 @@ public sealed class ActivityExecutionSession
     {
         public ActivityEventDefinition Definition { get; } = definition;
         public int ActivationLevel { get; set; } = definition.InitialActivationLevel;
-        public bool Triggered { get; set; }
+        public int TimesTriggered { get; set; }
+        public bool IsDisabled { get; set; }
     }
 }
