@@ -40,7 +40,8 @@ public static class LocomotiveAxleDriveRamp
         if (elapsedSeconds == 0)
             return currentForceNewtons;
 
-        var toZero = Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons);
+        var toZero = currentForceNewtons != 0 &&
+            (targetForceNewtons == 0 || Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons));
         if (axleSpeedMetersPerSecond != 0)
         {
             var power = (double)currentForceNewtons * previousAxleSpeedMetersPerSecond;
@@ -48,9 +49,11 @@ public static class LocomotiveAxleDriveRamp
             if (!double.IsFinite(power) || !double.IsFinite(targetPower))
                 throw new ArgumentOutOfRangeException(nameof(axleSpeedMetersPerSecond),
                     "Axle power calculation exceeded the finite simulation range.");
-            var powerUp = (targetPower > power) ^ (power < 0);
-            var powerRate = powerUp ? powerRampUpWattsPerSecond :
-                toZero ? powerRampDownToZeroWattsPerSecond : powerRampDownWattsPerSecond;
+            var powerToZero = power != 0 &&
+                (targetPower == 0 || Math.Sign(power) != Math.Sign(targetPower));
+            var powerUp = Math.Abs(targetPower) > Math.Abs(power);
+            var powerRate = powerToZero ? powerRampDownToZeroWattsPerSecond :
+                powerUp ? powerRampUpWattsPerSecond : powerRampDownWattsPerSecond;
             if (powerRate > 0)
             {
                 var maximumPowerChange = (double)powerRate * elapsedSeconds * tractiveForceFraction;
@@ -67,9 +70,9 @@ public static class LocomotiveAxleDriveRamp
             }
         }
 
-        var rampUp = (targetForceNewtons > currentForceNewtons) ^ (currentForceNewtons < 0);
-        var forceRate = rampUp ? forceRampUpNewtonsPerSecond :
-            toZero ? forceRampDownToZeroNewtonsPerSecond : forceRampDownNewtonsPerSecond;
+        var rampUp = Math.Abs(targetForceNewtons) > Math.Abs(currentForceNewtons);
+        var forceRate = toZero ? forceRampDownToZeroNewtonsPerSecond :
+            rampUp ? forceRampUpNewtonsPerSecond : forceRampDownNewtonsPerSecond;
         if (forceRate <= 0)
             return targetForceNewtons;
 

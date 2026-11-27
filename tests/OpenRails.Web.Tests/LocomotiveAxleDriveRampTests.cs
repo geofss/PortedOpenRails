@@ -39,6 +39,30 @@ public sealed class LocomotiveAxleDriveRampTests
     }
 
     [Fact]
+    public void NegativeForceStartingFromZeroUsesRampUpRate()
+    {
+        var result = LocomotiveAxleDriveRamp.Advance(
+            0, 0, 0, -100_000, 100_000, 0.5f, 1,
+            forceRampUpNewtonsPerSecond: 20_000,
+            forceRampDownNewtonsPerSecond: 5_000,
+            forceRampDownToZeroNewtonsPerSecond: 2_000);
+
+        Assert.Equal(-10_000, result);
+    }
+
+    [Fact]
+    public void NegativePowerStartingFromZeroUsesPowerRampUpRate()
+    {
+        var result = LocomotiveAxleDriveRamp.Advance(
+            0, 0, 10, -10_000, 20_000, 0.5f, 1,
+            powerRampUpWattsPerSecond: 100_000,
+            powerRampDownWattsPerSecond: 0,
+            powerRampDownToZeroWattsPerSecond: 20_000);
+
+        Assert.Equal(-5_000, result);
+    }
+
+    [Fact]
     public void PowerRampUsesPreviousAndCurrentAxleSpeed()
     {
         var result = LocomotiveAxleDriveRamp.Advance(
