@@ -41,8 +41,14 @@ public sealed class AiServiceDrivingController
             throw new ArgumentOutOfRangeException(nameof(stoppingBufferMeters));
         if (route.Direction is not (-1 or 1))
             throw new ArgumentOutOfRangeException(nameof(route), "Service route direction must be forward (1) or reverse (-1).");
-        if (route.RouteWaypointDistancesMeters?.Any(distance => !double.IsFinite(distance)) == true ||
-            route.RouteWaypoints?.Any(waypoint => waypoint is null || !double.IsFinite(waypoint.DistanceMeters)) == true)
+        if (!double.IsFinite(route.DistanceMeters) ||
+            !double.IsFinite(route.DistanceMeters - currentDistanceMeters))
+            throw new ArgumentOutOfRangeException(nameof(route), "Service route start distance must be finite and representable relative to the train.");
+        if (route.RouteWaypointDistancesMeters?.Any(distance =>
+                !double.IsFinite(distance) || !double.IsFinite(distance - currentDistanceMeters)) == true ||
+            route.RouteWaypoints?.Any(waypoint => waypoint is null ||
+                !double.IsFinite(waypoint.DistanceMeters) ||
+                !double.IsFinite(waypoint.DistanceMeters - currentDistanceMeters)) == true)
             throw new ArgumentException("Service route waypoint distances must be finite.", nameof(route));
         if (route.RouteWaypointDistancesMeters is { Count: > 0 } routeDistances &&
             route.RouteWaypoints is { Count: > 0 } routeWaypointsForValidation &&
@@ -52,6 +58,7 @@ public sealed class AiServiceDrivingController
         var signals = signalConstraints ?? Array.Empty<AiServiceSignalConstraint>();
         if (signals.Any(signal => signal is null ||
             !double.IsFinite(signal.RouteDistanceMeters) ||
+            !double.IsFinite(signal.RouteDistanceMeters - currentDistanceMeters) ||
             !Enum.IsDefined(signal.Aspect) ||
             (signal.SpeedLimitMetersPerSecond.HasValue &&
                 (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value <= 0))))
@@ -62,6 +69,9 @@ public sealed class AiServiceDrivingController
         var direction = route.Direction < 0 ? -1 : 1;
         var endDistance = waypoints[^1];
         var remaining = direction > 0 ? endDistance - currentDistanceMeters : currentDistanceMeters - endDistance;
+        if (!double.IsFinite(remaining))
+            throw new ArgumentOutOfRangeException(nameof(currentDistanceMeters),
+                "Remaining service route distance exceeded the finite simulation range.");
         var pathEndIsNearestLimit = true;
         var stopSignalAhead = signals
             .Where(signal => signal.Aspect == RouteSignalAspect.Stop &&
