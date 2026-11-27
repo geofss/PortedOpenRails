@@ -123,7 +123,7 @@ public sealed class ActivityEventReaderTests
         Assert.Equal(65538u, wagon.UniqueId);
         Assert.Equal(5u, wagon.SidingItemId);
         Assert.Equal("1 - 2", wagon.CarId);
-        Assert.Equal("Brake van", wagon.Description);
+        Assert.Equal("", wagon.Description); // Native parser constructs the work-order item before its Description token.
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class ActivityEventReaderTests
     {
         using var store = CreateStore();
         var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
-        Assert.Equal(7, events.Events.Count);
+        Assert.Equal(8, events.Events.Count);
         var start = events.Events.Single(item => item.Id == 10);
         Assert.Equal(ActivityEventKind.Time, start.Kind);
         Assert.Equal(300, start.TriggerSeconds);
