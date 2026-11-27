@@ -31,6 +31,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionModel.cs" Link="Simulation/LocomotiveTractionModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveTractionRamp.cs" Link="Simulation/LocomotiveTractionRamp.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveAxleDriveRamp.cs" Link="Simulation/LocomotiveAxleDriveRamp.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveAxleDriveSet.cs" Link="Simulation/LocomotiveAxleDriveSet.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ElectricMotorThermalModel.cs" Link="Simulation/ElectricMotorThermalModel.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/LocomotiveSimulationSession.cs" Link="Simulation/LocomotiveSimulationSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainConsistSimulationSession.cs" Link="Simulation/TrainConsistSimulationSession.cs" />
