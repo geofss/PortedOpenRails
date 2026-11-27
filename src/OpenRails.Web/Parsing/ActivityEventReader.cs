@@ -105,6 +105,8 @@ public sealed class ActivityEventReader
             new STFReader.TokenProcessor("speed", () => value.TriggerSpeedMetersPerSecond = reader.ReadFloatBlock(STFReader.UNITS.Speed, 0)),
             new STFReader.TokenProcessor("eventtypereachspeed", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "ReachSpeed"; }),
             new STFReader.TokenProcessor("eventtypeallstops", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "AllStops"; }),
+            new STFReader.TokenProcessor("reversable_event", () => { reader.MustMatch("("); reader.MustMatch(")"); value.Reversible = true; }),
+            new STFReader.TokenProcessor("reversible_event", () => { reader.MustMatch("("); reader.MustMatch(")"); value.Reversible = true; }),
             new STFReader.TokenProcessor("eventtypeassembletrain", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "AssembleTrain"; }),
             new STFReader.TokenProcessor("eventtypeassembletrainatlocation", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "AssembleTrainAtLocation"; }),
             new STFReader.TokenProcessor("eventtypedropoffwagonsatlocation", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "DropOffWagonsAtLocation"; }),
@@ -151,13 +153,14 @@ public sealed class ActivityEventReader
         public float X, Z, RadiusMeters;
         public float TriggerSpeedMetersPerSecond;
         public string ActionType = "";
+        public bool Reversible;
         public string SuccessMessage = "";
         public string FailureMessage = "";
         public ActivityEventOutcomes Outcomes = ActivityEventOutcomes.Empty;
         public ActivityEventDefinition ToDefinition() => new(
             Id, Name, kind, ActivationLevel, TriggerSeconds, TriggerOnStop,
             TileX, TileZ, X, Z, RadiusMeters, TriggerSpeedMetersPerSecond,
-            ActionType, SuccessMessage, FailureMessage, Outcomes);
+            ActionType, SuccessMessage, FailureMessage, Outcomes, Reversible);
     }
 }
 
@@ -180,7 +183,7 @@ public sealed record ActivityEventDefinition(
     int Id, string Name, ActivityEventKind Kind, int InitialActivationLevel,
     double TriggerSeconds, bool TriggerOnStop, int TileX, int TileZ, float X, float Z,
     float RadiusMeters, float TriggerSpeedMetersPerSecond, string ActionType,
-    string SuccessMessage, string FailureMessage, ActivityEventOutcomes Outcomes);
+    string SuccessMessage, string FailureMessage, ActivityEventOutcomes Outcomes, bool Reversible = false);
 
 public sealed record ActivityEventSet(string SourcePath, IReadOnlyList<ActivityEventDefinition> Events);
 public sealed record ActivityPlayerState(double SpeedMetersPerSecond, int? TileX = null,
@@ -248,8 +251,23 @@ public sealed class ActivityExecutionSession
 
         foreach (var item in events)
         {
-            if (item.ActivationLevel <= 0 || item.Triggered || !IsTriggered(item.Definition, player))
+            if (item.ActivationLevel <= 0)
                 continue;
+
+            var conditionIsTrue = IsTriggered(item.Definition, player);
+            if (item.Triggered)
+            {
+                // Native reversible action events are edge-triggered: after firing,
+                // they become eligible again only once their trigger condition clears.
+                if (item.Definition.Reversible && !conditionIsTrue)
+                    item.Triggered = false;
+                else
+                    continue;
+            }
+
+            if (!conditionIsTrue)
+                continue;
+
             item.Triggered = true;
             pending = new ActivityEventExecutionResult(item.Definition.Id, item.Definition.Name,
                 true, item.Definition.Outcomes.DisplayMessage ?? item.Definition.SuccessMessage, false, false);
