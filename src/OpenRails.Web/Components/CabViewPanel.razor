@@ -1,5 +1,6 @@
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
+@using OpenRails.Web.Simulation
 
 @if (Definition is not null)
 {
@@ -22,6 +23,42 @@
         {
             <img src="@imageDataUri" alt="Original locomotive cab view" />
         }
+        @if (Controller is not null && Definition.Controls.Count > 0)
+        {
+            <div class="or-cab-live-controls" aria-label="Cab controls and live instruments">
+                @foreach (var control in Definition.Controls)
+                {
+                    var binding = CabViewControlBindingResolver.Resolve(control);
+                    <div class="or-cab-live-control">
+                        <strong>@(string.IsNullOrWhiteSpace(control.Label) ? control.ControlType : control.Label)</strong>
+                        @if (binding == CabViewControlBinding.ThrottleLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
+                            <input type="range" min="0" max="100" step="1" value="@Controller.ThrottlePercent"
+                                   disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
+                        }
+                        else if (binding == CabViewControlBinding.TrainBrakeLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Train brake · @Controller.BrakePercent.ToString("N0")%</label>
+                            <input type="range" min="0" max="100" step="1" value="@Controller.BrakePercent" @oninput="ChangeBrake" />
+                        }
+                        else if (binding == CabViewControlBinding.DirectionLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Direction</label>
+                            <select value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
+                                <option value="1">Forward</option>
+                                <option value="0">Neutral</option>
+                                <option value="-1">Reverse</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <output>@GetLiveValue(binding)</output>
+                        }
+                    </div>
+                }
+            </div>
+        }
         else if (!string.IsNullOrWhiteSpace(loadError))
         {
             <p class="hint">@loadError</p>
@@ -36,6 +73,7 @@
 @code {
     [Parameter, EditorRequired] public IVirtualContentStore? Store { get; set; }
     [Parameter, EditorRequired] public CabViewDefinition? Definition { get; set; }
+    [Parameter] public BrowserTrainDrivingController? Controller { get; set; }
 
     private string? imageDataUri;
     private bool showNight;
@@ -49,6 +87,47 @@
     private string? loadedPath;
     private string? loadedDefinitionPath;
     private IVirtualContentStore? loadedStore;
+
+    private void ChangeThrottle(ChangeEventArgs args)
+    {
+        if (Controller is not null && float.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetThrottle(value);
+    }
+
+    private void ChangeBrake(ChangeEventArgs args)
+    {
+        if (Controller is not null && double.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetBrake(value);
+    }
+
+    private void ChangeReverser(ChangeEventArgs args)
+    {
+        if (Controller is not null && int.TryParse(args.Value?.ToString(), out var value) &&
+            Enum.IsDefined(typeof(TrainReverserPosition), value))
+            Controller.SetReverser((TrainReverserPosition)value);
+    }
+
+    private string GetLiveValue(CabViewControlBinding binding)
+    {
+        if (Controller is null) return "No active train";
+        var lead = Controller.State.Cars.FirstOrDefault();
+        return binding switch
+        {
+            CabViewControlBinding.Speedometer => lead is null ? "—" : $"{lead.SpeedMetersPerSecond * 3.6:N1} km/h",
+            CabViewControlBinding.ThrottleLever or CabViewControlBinding.ThrottleDisplay => $"{Controller.ThrottlePercent:N0}%",
+            CabViewControlBinding.TrainBrakeLever => $"{Controller.BrakePercent:N0}%",
+            CabViewControlBinding.DirectionLever => Controller.ReverserPosition.ToString(),
+            CabViewControlBinding.BrakePipe => Controller.BrakePipeState.PressuresKPa.Count > 0
+                ? $"{Controller.BrakePipeState.PressuresKPa[0]:N0} kPa" : "—",
+            CabViewControlBinding.BrakeCylinder => Controller.BrakeCylinderState.PressuresKPa.Count > 0
+                ? $"{Controller.BrakeCylinderState.PressuresKPa[0]:N0} kPa" : "—",
+            CabViewControlBinding.Doors => $"Left {(Controller.LeftDoorsOpen ? "open" : "closed")} · Right {(Controller.RightDoorsOpen ? "open" : "closed")}",
+            CabViewControlBinding.EmergencyBrake => Controller.IsEmergencyStopApplied ? "Applied" : "Released",
+            _ => "Not connected"
+        };
+    }
 
     private void ToggleLighting()
     {

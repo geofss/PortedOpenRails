@@ -380,11 +380,7 @@
                         <div class="route-details">
                             <h3>Original locomotive cab</h3>
                             <p class="hint">Loaded from @cabView.SourcePath · @cabView.Controls.Count original controls</p>
-                            <CabViewPanel Store="composite" Definition="cabView" />
-                            @foreach (var control in cabView.Controls.Take(24))
-                            {
-                                <p>@(string.IsNullOrWhiteSpace(control.Label) ? control.ControlType : control.Label) · @control.Kind · control ID @control.ControlId · @control.X,@control.Y (@control.Width×@control.Height)</p>
-                            }
+                            <CabViewPanel Store="composite" Definition="cabView" Controller="drivingController" />
                         </div>
                     }
                     @if (loadedRoute?.SignalConfiguration is { } signalConfiguration)
