@@ -140,6 +140,31 @@ public sealed class SignalNetworkBuilderTests
     }
 
     [Fact]
+    public void MissingConfiguredClearAspectFailsRestrictiveInsteadOfShowingGreen()
+    {
+        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[] { new SignalAspectDefinition("STOP", "", -1, false, false, false) });
+        var signal = new RouteSignalHead(10, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(new HashSet<uint>()));
+
+        Assert.Equal(RouteSignalAspect.Stop, indication.Aspect);
+        Assert.Contains("defaulting to Stop", indication.Reason);
+        Assert.Equal("STOP", indication.NativeAspect);
+    }
+
+    [Fact]
     public void RequiresSelectedBranchAtEveryJunctionEvenWithoutSignalDirectionOverride()
     {
         var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,

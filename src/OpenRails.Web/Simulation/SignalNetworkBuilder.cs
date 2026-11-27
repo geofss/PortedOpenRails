@@ -248,8 +248,18 @@ public sealed class SignalNetwork
             .Where(candidate => candidates.Contains(candidate.Aspect, StringComparer.OrdinalIgnoreCase))
             .OrderBy(candidate => Array.IndexOf(candidates, candidate.Aspect.ToUpperInvariant()))
             .FirstOrDefault();
-        if (signal.Definition is not null && configured is null)
-            reason += $" Configured signal type '{signal.Definition.Name}' has no matching {aspect} aspect.";
+        if (signal.Definition is not null && configured is null && aspect != RouteSignalAspect.Stop)
+        {
+            // Never display a permissive aspect that the route's actual SIGCFG
+            // does not define. A missing native aspect is a restrictive failure.
+            reason += $" Configured signal type '{signal.Definition.Name}' has no matching {aspect} aspect; defaulting to Stop.";
+            aspect = RouteSignalAspect.Stop;
+            var stopCandidates = new[] { "STOP", "STOP_AND_PROCEED", "RESTRICTING" };
+            configured = signal.Definition.Aspects
+                .Where(candidate => stopCandidates.Contains(candidate.Aspect, StringComparer.OrdinalIgnoreCase))
+                .OrderBy(candidate => Array.IndexOf(stopCandidates, candidate.Aspect.ToUpperInvariant()))
+                .FirstOrDefault();
+        }
         return new RouteSignalIndication(signal, aspect, next, reason,
             configured?.Aspect, configured?.DrawState,
             configured is { SpeedMetersPerSecond: >= 0 } ? configured.SpeedMetersPerSecond : null);
