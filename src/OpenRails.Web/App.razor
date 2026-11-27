@@ -201,6 +201,10 @@
                                             <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
                                         </dl>
                                         <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
+                                        @if (!string.IsNullOrWhiteSpace(activityPathWarning))
+                                        {
+                                            <p class="hint">@activityPathWarning</p>
+                                        }
                                         @if (activityStationStopProgress is { } stopProgress)
                                         {
                                             <p class="hint">Activity station stops: @stopProgress.VisitedStops / @stopProgress.TotalStops visited</p>
@@ -598,6 +602,7 @@
     private ActivityExecutionSession? activityExecution;
     private ActivityStationStopTracker? activityStationStopTracker;
     private ActivityStationStopProgress? activityStationStopProgress;
+    private string? activityPathWarning;
     private double lastActivitySimulationTime;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
@@ -1229,6 +1234,7 @@
         activityExecution = null;
         activityStationStopTracker = null;
         activityStationStopProgress = null;
+        activityPathWarning = null;
         lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         activityParseError = null;
         if (selectedActivityPath is null || composite is null)
@@ -1248,6 +1254,8 @@
                     string.Equals(path.PathId, selectedActivityMetadata.PathId, StringComparison.OrdinalIgnoreCase));
                 if (activityPath is not null)
                     activityStationStopTracker = new ActivityStationStopTracker(activityPath);
+                else
+                    activityPathWarning = $"Activity PathID '{selectedActivityMetadata.PathId}' was not found in the selected route; AllStops actions cannot be evaluated.";
             }
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
