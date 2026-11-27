@@ -45,7 +45,6 @@ public sealed class TrackShapeRenderGeometryBuilder
             foreach (var primitive in subObject.Primitives)
             {
                 if (primitive.Indices.Count < 3) continue;
-                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
                 var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                 var worldTransform = localTransform * placement.WorldTransform;
 
@@ -92,6 +91,7 @@ public sealed class TrackShapeRenderGeometryBuilder
         foreach (var placement in placements)
         {
             var mesh = placement.Asset.Mesh;
+            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
             var lod = mesh.Lods.FirstOrDefault();
             if (lod is null) continue;
 
