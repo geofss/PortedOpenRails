@@ -33,3 +33,11 @@ Regression tests cover traction metadata parsing, force-curve interpolation, thr
 - It preserves the upstream order of operations: clamp current/target force to the axle maximum, apply power slew using previous and current axle speed, then apply force slew; locomotive-level rates are scaled by each axle's tractive-force fraction.
 - Positive and negative force direction, sign-crossing-to-zero selection, and separate power ramp-up/down/to-zero rates are covered by regression tests.
 - This helper is not yet wired to real parsed axle instances. The session still lacks native axle drive fractions, previous axle speed, per-axle slip-control force, and the upstream locomotive's complete `UpdateSlipControl` / `UpdateDriveForce` lifecycle. Do not treat this helper as full axle adhesion or locomotive parity.
+
+
+## Native electric transmission submodels (incremental)
+
+- Added a browser-safe axle drive ramp helper porting the upstream `Axle.UpdateForceWithRamp` ordering: force limits, speed-dependent power ramp, then force ramp, with axle tractive-force-fraction scaling.
+- Added `ElectricMotorThermalModel` using the upstream base `ElectricMotor.Update` transmission-loss expression and thermal first-order differential equation. The browser implementation integrates that ODE analytically to avoid frame-rate-dependent Euler error.
+- Both components have dedicated regression tests and are included in the test project.
+- These are reusable submodels, not a complete locomotive powertrain. The browser session still needs native axle topology and per-axle state wiring, motor-specific torque curves, electrical supply limits, diesel engine state/fuel/governor/temperature systems, and transmission-specific control.
