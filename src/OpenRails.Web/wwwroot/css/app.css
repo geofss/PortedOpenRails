@@ -240,6 +240,37 @@ input[type="file"] {
     background: #101d26;
 }
 .driving-settings h4 { margin-top: 0; }
+
+.or-options-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 8px 0 10px;
+    border-bottom: 1px solid #888;
+}
+.or-options-tabs button {
+    min-height: 25px;
+    margin: 0 2px -1px 0;
+    padding: 3px 9px;
+    border: 1px solid #888;
+    border-bottom-color: #888;
+    border-radius: 2px 2px 0 0;
+    background: #e8e8e8;
+    color: #555;
+    box-shadow: none;
+}
+.or-options-tabs button[aria-selected="true"] {
+    position: relative;
+    border-bottom-color: #fff;
+    background: #fff;
+    color: #111;
+    font-weight: 600;
+}
+.or-options-tabs button:disabled {
+    color: #888;
+    opacity: .65;
+}
+
 .driving-control-row { display: grid; gap: 6px; margin: 12px 0; }
 .driving-control-row label { color: #bdcbd4; font-weight: 650; }
 .driving-control-row input[type="range"] { width: 100%; accent-color: #8ee0ad; }
