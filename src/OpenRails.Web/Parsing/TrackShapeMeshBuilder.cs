@@ -62,7 +62,11 @@ public sealed class TrackShapeMeshBuilder
                 subObjects));
         }
 
-        return new TrackShapeMesh(source.shape_header.flags1, source.shape_header.flags2, matrices, lods, TrackShapeAnimationBuilder.Build(source));
+        var lightMaterials = source.light_materials.Select(material => new TrackShapeLightMaterial(
+            material.flags, material.DiffColIdx, material.AmbColIdx, material.SpecColIdx,
+            material.EmissiveColIdx, material.SpecPower)).ToArray();
+        return new TrackShapeMesh(source.shape_header.flags1, source.shape_header.flags2,
+            matrices, lods, TrackShapeAnimationBuilder.Build(source), Array.AsReadOnly(lightMaterials));
     }
 
     private static IReadOnlyList<TrackShapeMeshVertex> BuildVertices(shape source, sub_object subObject)
@@ -73,17 +77,20 @@ public sealed class TrackShapeMeshBuilder
             var vertex = subObject.vertices[i];
             var point = GetRequired(source.points, vertex.ipoint, "point");
             var normal = GetRequired(source.normals, vertex.inormal, "normal");
-            var uv = vertex.vertex_uvs.Length == 0
-                ? new uv_point(0, 0)
-                : GetRequired(source.uv_points, vertex.vertex_uvs[0], "UV point");
+            var uvCoordinates = vertex.vertex_uvs
+                .Select(index => GetRequired(source.uv_points, index, "UV point"))
+                .Select(uv => new Vector2(uv.U, uv.V))
+                .ToArray();
+            var primaryUv = uvCoordinates.Length == 0 ? Vector2.Zero : uvCoordinates[0];
 
             result[i] = new TrackShapeMeshVertex(
                 new Vector3(point.X, point.Y, -point.Z),
                 new Vector3(normal.X, normal.Y, -normal.Z),
-                new Vector2(uv.U, uv.V),
+                primaryUv,
                 vertex.flags,
                 vertex.Color1,
-                vertex.Color2);
+                vertex.Color2,
+                Array.AsReadOnly(uvCoordinates.Skip(1).ToArray()));
         }
 
         return Array.AsReadOnly(result);
@@ -100,16 +107,17 @@ public sealed class TrackShapeMeshBuilder
         var lightConfiguration = GetRequired(source.light_model_cfgs, vertexState.LightCfgIdx, "light configuration");
         var shaderName = GetRequired(source.shader_names, primitiveState.ishader, "shader name");
 
-        string? imageName = null;
-        int textureFilterMode = 0;
-        float mipMapLodBias = 0;
-        if (primitiveState.tex_idxs.Length > 0)
+        var textureBindings = primitiveState.tex_idxs.Select(textureIndex =>
         {
-            var texture = GetRequired(source.textures, primitiveState.tex_idxs[0], "texture");
-            imageName = GetRequired(source.images, texture.iImage, "image name");
-            textureFilterMode = texture.FilterMode;
-            mipMapLodBias = texture.MipMapLODBias;
-        }
+            var texture = GetRequired(source.textures, textureIndex, "texture");
+            var image = GetRequired(source.images, texture.iImage, "image name");
+            return new TrackShapeTextureBinding(image, texture.FilterMode,
+                texture.MipMapLODBias, texture.BorderColor);
+        }).ToArray();
+        var imageName = textureBindings.FirstOrDefault()?.ImageName;
+        var textureFilterMode = textureBindings.FirstOrDefault()?.FilterMode ?? 0;
+        var mipMapLodBias = textureBindings.FirstOrDefault()?.MipMapLodBias ?? 0;
+        var uvOperations = lightConfiguration.uv_ops.Select(BuildUvOperation).ToArray();
 
         var indices = new List<int>(primitive.indexed_trilist.vertex_idxs.Count * 3);
         foreach (var triangle in primitive.indexed_trilist.vertex_idxs)
@@ -122,9 +130,7 @@ public sealed class TrackShapeMeshBuilder
             indices.Add(triangle.c);
         }
 
-        var textureAddressMode = lightConfiguration.uv_ops.Count == 0
-            ? 0
-            : lightConfiguration.uv_ops[0].TexAddrMode;
+        var textureAddressMode = uvOperations.FirstOrDefault()?.TextureAddressMode ?? 0;
 
         return new TrackShapePrimitiveMesh(
             primitive.prim_state_idx,
@@ -139,8 +145,31 @@ public sealed class TrackShapeMeshBuilder
             mipMapLodBias,
             textureAddressMode,
             primitiveState.alphatestmode == 1,
-            primitiveState.ZBias);
+            primitiveState.ZBias,
+            Array.AsReadOnly(textureBindings),
+            Array.AsReadOnly(uvOperations),
+            primitiveState.flags,
+            primitiveState.ZBufMode,
+            lightConfiguration.flags,
+            vertexState.flags,
+            vertexState.LightFlags,
+            vertexState.Matrix2);
     }
+
+    private static TrackShapeUvOperation BuildUvOperation(uv_op operation) => operation switch
+    {
+        uv_op_copy copy => new TrackShapeUvOperation(nameof(uv_op_copy),
+            copy.TexAddrMode, copy.SrcUVIdx, 0, 0),
+        uv_op_uniformscale scale => new TrackShapeUvOperation(nameof(uv_op_uniformscale),
+            scale.TexAddrMode, scale.SrcUVIdx, scale.UnknownParameter3, scale.UnknownParameter4),
+        uv_op_nonuniformscale scale => new TrackShapeUvOperation(nameof(uv_op_nonuniformscale),
+            scale.TexAddrMode, scale.SrcUVIdx, scale.UnknownParameter3, scale.UnknownParameter4),
+        uv_op_reflectmapfull reflect => new TrackShapeUvOperation(nameof(uv_op_reflectmapfull),
+            reflect.TexAddrMode, -1, 0, 0),
+        uv_op_reflectmap reflect => new TrackShapeUvOperation(nameof(uv_op_reflectmap),
+            reflect.TexAddrMode, -1, 0, 0),
+        _ => new TrackShapeUvOperation(operation.GetType().Name, operation.TexAddrMode, -1, 0, 0)
+    };
 
     private static T GetRequired<T>(IReadOnlyList<T> values, int index, string kind)
     {
@@ -169,7 +198,39 @@ public sealed record TrackShapeMeshVertex(
     Vector2 TextureCoordinate,
     uint Flags,
     uint Color1,
-    uint Color2);
+    uint Color2,
+    IReadOnlyList<Vector2>? AdditionalTextureCoordinates = null)
+{
+    public Vector2 GetTextureCoordinate(int channel)
+    {
+        if (channel < 0) throw new ArgumentOutOfRangeException(nameof(channel));
+        if (channel == 0) return TextureCoordinate;
+        return AdditionalTextureCoordinates is not null && channel - 1 < AdditionalTextureCoordinates.Count
+            ? AdditionalTextureCoordinates[channel - 1]
+            : Vector2.Zero;
+    }
+}
+
+public sealed record TrackShapeTextureBinding(
+    string ImageName,
+    int FilterMode,
+    float MipMapLodBias,
+    uint BorderColor);
+
+public sealed record TrackShapeUvOperation(
+    string Kind,
+    int TextureAddressMode,
+    int SourceUvIndex,
+    float Parameter3,
+    float Parameter4);
+
+public sealed record TrackShapeLightMaterial(
+    uint Flags,
+    int DiffuseColorIndex,
+    int AmbientColorIndex,
+    int SpecularColorIndex,
+    int EmissiveColorIndex,
+    float SpecularPower);
 
 public sealed record TrackShapePrimitiveMesh(
     int PrimitiveStateIndex,
@@ -184,7 +245,15 @@ public sealed record TrackShapePrimitiveMesh(
     float MipMapLodBias,
     int TextureAddressMode,
     bool AlphaTest,
-    float ZBias);
+    float ZBias,
+    IReadOnlyList<TrackShapeTextureBinding>? TextureBindings = null,
+    IReadOnlyList<TrackShapeUvOperation>? UvOperations = null,
+    uint PrimitiveFlags = 0,
+    int ZBufferMode = 1,
+    uint LightConfigurationFlags = 0,
+    uint VertexStateFlags = 0,
+    uint LightFlags = 0,
+    int SecondaryMatrixIndex = -1);
 
 public sealed record TrackShapeSubObjectMesh(
     IReadOnlyList<TrackShapeMeshVertex> Vertices,
@@ -201,4 +270,5 @@ public sealed record TrackShapeMesh(
     uint Flags2,
     IReadOnlyList<TrackShapeMatrix> Matrices,
     IReadOnlyList<TrackShapeLodMesh> Lods,
-    IReadOnlyList<TrackShapeAnimationClip>? Animations = null);
+    IReadOnlyList<TrackShapeAnimationClip>? Animations = null,
+    IReadOnlyList<TrackShapeLightMaterial>? LightMaterials = null);
