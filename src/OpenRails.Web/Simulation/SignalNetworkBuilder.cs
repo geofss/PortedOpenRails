@@ -17,7 +17,7 @@ public sealed class SignalNetworkBuilder
 
         var vectorNodes = network.VectorPaths.ToDictionary(path => path.TrackNodeIndex);
         var adjacency = vectorNodes.Keys.ToDictionary(id => id, _ => new HashSet<uint>());
-        var junctionLinks = new Dictionary<uint, IReadOnlyList<uint>>();
+        var junctionLinks = new Dictionary<uint, HashSet<uint>>();
 
         foreach (var path in network.VectorPaths)
         foreach (var endpoint in path.ConnectedNodeIndices.Distinct())
@@ -34,7 +34,11 @@ public sealed class SignalNetworkBuilder
                     : Array.Empty<uint>();
 
             if (endpointNode.Kind == TrackNodeKind.Junction)
-                junctionLinks[(uint)endpoint] = Array.AsReadOnly(connectedVectors);
+            {
+                if (!junctionLinks.TryGetValue((uint)endpoint, out var links))
+                    junctionLinks[(uint)endpoint] = links = new HashSet<uint>();
+                links.UnionWith(connectedVectors);
+            }
 
             foreach (var other in connectedVectors)
             {
@@ -91,7 +95,10 @@ public sealed class SignalNetworkBuilder
             Array.AsReadOnly(signals.Where(signal => signal.TrackNodeIndex == path.TrackNodeIndex)
                 .OrderBy(signal => signal.DistanceMeters).ToArray()))).ToArray();
 
-        return new SignalNetwork(blocks, junctionLinks, diagnostics);
+        var immutableJunctionLinks = junctionLinks.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.OrderBy(id => id).ToArray()));
+        return new SignalNetwork(blocks, immutableJunctionLinks, diagnostics);
     }
 }
 
