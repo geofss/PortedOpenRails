@@ -306,6 +306,33 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         Assert.Equal(expected, RollingStockBrakeProfile.FromMetadata(metadata).Support);
     }
 
+    [Fact]
+    public void ConfiguredSetupCanApplyReverseTractionDirection()
+    {
+        var consist = new ConsistMetadata("Reverse", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "reverse.con");
+        var traction = new LocomotiveTractionMetadata(
+            "Engine", 100_000, 100_000, 500_000, 100, 0, null, "engine.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist,
+            new[] { CreateAsset(1, "Engine", 20_000, 15, 50_000, traction) },
+            routeLengthMeters: 500,
+            startDistanceMeters: 100,
+            initialSpeedMetersPerSecond: 0);
+
+        var steps = setup.Advance(
+            0.1,
+            new[] { 50f },
+            brakeCommandPercent: 0,
+            tractionDirection: -1);
+
+        Assert.Equal(6, steps);
+        Assert.True(setup.Session.State.Cars[0].SpeedMetersPerSecond < 0);
+        Assert.True(setup.Session.State.Cars[0].DistanceMeters < setup.InitialState.Cars[0].DistanceMeters);
+    }
+
     private static ConsistCarAssetReference CreateAsset(
         int uid, string name, float mass, float length, float brake,
         LocomotiveTractionMetadata? traction, float? couplerStrength = null,

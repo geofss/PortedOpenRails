@@ -29,7 +29,8 @@ public sealed record TrainConsistSimulationSetup(
         bool emergency = false,
         IReadOnlyList<double>? handBrakePercentByCar = null,
         float powerReduction = 0,
-        IReadOnlyList<double>? adhesionCoefficientByCar = null)
+        IReadOnlyList<double>? adhesionCoefficientByCar = null,
+        int tractionDirection = 1)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         var carCount = InitialState.Cars.Count;
@@ -68,6 +69,7 @@ public sealed record TrainConsistSimulationSetup(
             CouplerForceLimits.Select(limit => limit.MaximumTensionNewtons).ToArray(),
             emergency,
             powerReduction,
+            tractionDirection: tractionDirection,
             adhesionCoefficientByCar: adhesionCoefficientByCar,
             additionalBrakeForceNewtonsByCar: handBrakeForces);
     }
