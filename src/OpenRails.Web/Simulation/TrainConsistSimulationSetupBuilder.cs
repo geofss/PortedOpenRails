@@ -9,6 +9,9 @@ public sealed record TrainConsistSimulationSetup(
     IReadOnlyList<TrainCarResistanceParameters> ResistanceParametersByCar,
     IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
+    IReadOnlyList<double> CouplerSlackMetersByBoundary,
+    IReadOnlyList<double> CouplerStiffnessByBoundary,
+    IReadOnlyList<double> CouplerDampingByBoundary,
     IReadOnlyList<RollingStockBrakeProfile> BrakeProfilesByCar,
     IReadOnlyList<string> Diagnostics);
 
@@ -30,6 +33,21 @@ public sealed class TrainConsistSimulationSetupBuilder
             return 0;
         }
         return value.Value;
+    }
+
+    private static double AverageOrFallback(float? first, float? second, double fallback,
+        string parameter, string frontCar, string rearCar, List<string> diagnostics)
+    {
+        var values = new[] { first, second }
+            .Where(value => value is > 0 && float.IsFinite(value.Value))
+            .Select(value => (double)value!.Value)
+            .ToArray();
+        if (values.Length == 0)
+        {
+            diagnostics.Add($"Coupler between {frontCar} and {rearCar}: {parameter} metadata unavailable; using browser fallback {fallback:N0}.");
+            return fallback;
+        }
+        return values.Average();
     }
 
     public TrainConsistSimulationSetup Build(
@@ -110,6 +128,9 @@ public sealed class TrainConsistSimulationSetupBuilder
         }
 
         var couplerLimits = new List<TrainCouplerForceLimit>(Math.Max(0, cars.Length - 1));
+        var couplerSlack = new List<double>(Math.Max(0, cars.Length - 1));
+        var couplerStiffness = new List<double>(Math.Max(0, cars.Length - 1));
+        var couplerDamping = new List<double>(Math.Max(0, cars.Length - 1));
         for (var i = 0; i < cars.Length - 1; i++)
         {
             var frontAsset = carAssets.FirstOrDefault(candidate =>
@@ -128,6 +149,9 @@ public sealed class TrainConsistSimulationSetupBuilder
             if (ratedStrengths.Length == 0)
                 diagnostics.Add($"Coupler between {cars[i].Name} and {cars[i + 1].Name}: strength metadata unavailable; no finite force limit applied.");
             couplerLimits.Add(new TrainCouplerForceLimit(strength, strength));
+            couplerSlack.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerSlackMeters, rearAsset?.Metadata?.CouplerSlackMeters, 0.08, "slack", cars[i].Name, cars[i + 1].Name, diagnostics));
+            couplerStiffness.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerStiffnessNPerM, rearAsset?.Metadata?.CouplerStiffnessNPerM, 60_000, "stiffness", cars[i].Name, cars[i + 1].Name, diagnostics));
+            couplerDamping.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerDampingNsPerM, rearAsset?.Metadata?.CouplerDampingNsPerM, 20_000, "damping", cars[i].Name, cars[i + 1].Name, diagnostics));
         }
 
         if (cursor > routeLengthMeters)
@@ -147,6 +171,9 @@ public sealed class TrainConsistSimulationSetupBuilder
             Array.AsReadOnly(resistanceParameters.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(couplerLimits.ToArray()),
+            Array.AsReadOnly(couplerSlack.ToArray()),
+            Array.AsReadOnly(couplerStiffness.ToArray()),
+            Array.AsReadOnly(couplerDamping.ToArray()),
             Array.AsReadOnly(brakeProfiles.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
     }

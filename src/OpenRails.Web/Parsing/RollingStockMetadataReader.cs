@@ -20,7 +20,10 @@ public sealed record RollingStockMetadata(
     float? MinCouplerStrengthN = null,
     float? DavisAForceN = null,
     float? DavisBResistance = null,
-    float? DavisCResistance = null);
+    float? DavisCResistance = null,
+    float? CouplerStiffnessNPerM = null,
+    float? CouplerDampingNsPerM = null,
+    float? CouplerSlackMeters = null);
 
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
@@ -68,7 +71,7 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("brakeequipmenttype", () => brakeEquipmentType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
-                        new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCouplerStrength(reader, minCouplerStrengthN)),
+                        new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCoupling(reader, minCouplerStrengthN, couplerStiffnessValues, couplerDampingValues, couplerSlackValues)),
                         new STFReader.TokenProcessor("ortsdavis_a", () => davisAForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, 0f)),
                         new STFReader.TokenProcessor("ortsdavis_b", () => davisBResistance = reader.ReadFloatBlock(STFReader.UNITS.Resistance, 0f)),
                         new STFReader.TokenProcessor("ortsdavis_c", () => davisCResistance = reader.ReadFloatBlock(STFReader.UNITS.ResistanceDavisC, 0f))
@@ -77,11 +80,19 @@ public sealed class RollingStockMetadataReader
             });
             if (!wagonFound)
                 throw new InvalidDataException($"Rolling-stock file '{virtualPath}' contains no Wagon block.");
-            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels, brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName, minCouplerStrengthN, davisAForceN, davisBResistance, davisCResistance);
+            return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels,
+                brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName,
+                minCouplerStrengthN, davisAForceN, davisBResistance, davisCResistance,
+                Average(couplerStiffnessValues), Average(couplerDampingValues), Average(couplerSlackValues));
         }
     }
 
-    private static float? ReadCouplerStrength(STFReader reader, float? currentMinimum)
+    private static float? ReadCoupling(
+        STFReader reader,
+        float? currentMinimum,
+        List<float> stiffnessValues,
+        List<float> dampingValues,
+        List<float> slackValues)
     {
         float? legacyBreak = null;
         float? openRailsBreak = null;
@@ -93,6 +104,9 @@ public sealed class RollingStockMetadataReader
                 reader.MustMatch("(");
                 reader.ParseBlock(new[]
                 {
+                    new STFReader.TokenProcessor("stiffness", () => AddPair(reader, STFReader.UNITS.Stiffness, stiffnessValues)),
+                    new STFReader.TokenProcessor("damping", () => AddPair(reader, STFReader.UNITS.Resistance, dampingValues)),
+                    new STFReader.TokenProcessor("r0", () => AddPair(reader, STFReader.UNITS.Distance, slackValues)),
                     new STFReader.TokenProcessor("break", () => legacyBreak = ReadBreakPair(reader)),
                     new STFReader.TokenProcessor("ortsbreak", () => openRailsBreak = ReadBreakPair(reader))
                 });
@@ -102,10 +116,21 @@ public sealed class RollingStockMetadataReader
         var strength = openRailsBreak ?? legacyBreak;
         if (strength is null)
             return currentMinimum;
-        return currentMinimum is null
-            ? strength
-            : Math.Min(currentMinimum.Value, strength.Value);
+        return currentMinimum is null ? strength : Math.Min(currentMinimum.Value, strength.Value);
     }
+
+    private static void AddPair(STFReader reader, STFReader.UNITS units, List<float> values)
+    {
+        reader.MustMatch("(");
+        var first = reader.ReadFloat(units, null);
+        var second = reader.ReadFloat(units, null);
+        reader.SkipRestOfBlock();
+        if (float.IsFinite(first) && first >= 0) values.Add(first);
+        if (float.IsFinite(second) && second >= 0) values.Add(second);
+    }
+
+    private static float? Average(IReadOnlyList<float> values) =>
+        values.Count == 0 ? null : values.Average();
 
     private static float? ReadBreakPair(STFReader reader)
     {

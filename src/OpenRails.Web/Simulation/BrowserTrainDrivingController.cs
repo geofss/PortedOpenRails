@@ -79,7 +79,10 @@ public sealed class BrowserTrainDrivingController
             throw new ArgumentOutOfRangeException(nameof(aerodynamicDragAreaSquareMeters));
         if (setup.PoweredCars.Count != setup.InitialState.Cars.Count ||
             setup.MaximumBrakeForceNewtonsByCar.Count != setup.InitialState.Cars.Count ||
-            setup.ResistanceParametersByCar.Count != setup.InitialState.Cars.Count)
+            setup.ResistanceParametersByCar.Count != setup.InitialState.Cars.Count ||
+            setup.CouplerSlackMetersByBoundary.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
+            setup.CouplerStiffnessByBoundary.Count != Math.Max(0, setup.InitialState.Cars.Count - 1) ||
+            setup.CouplerDampingByBoundary.Count != Math.Max(0, setup.InitialState.Cars.Count - 1))
             throw new ArgumentException("Simulation setup control mappings must match the vehicle count.", nameof(setup));
 
         resistanceParametersByCar = Array.AsReadOnly(setup.ResistanceParametersByCar.Select(parameters =>
@@ -98,10 +101,9 @@ public sealed class BrowserTrainDrivingController
         zeroCouplerForceBuffer = new double[initialCars.Count];
         couplerRestGapsMeters = Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, initialCars.Count - 1))
             .Select(i => initialCars[i + 1].DistanceMeters - initialCars[i].DistanceMeters).ToArray());
-        // Prototype values pending parsing native ORTS coupler slack and spring/damper parameters.
-        couplerSlackMeters = Array.AsReadOnly(Enumerable.Repeat(0.08d, couplerRestGapsMeters.Count).ToArray());
-        couplerStiffness = Array.AsReadOnly(Enumerable.Repeat(60_000d, couplerRestGapsMeters.Count).ToArray());
-        couplerDamping = Array.AsReadOnly(Enumerable.Repeat(20_000d, couplerRestGapsMeters.Count).ToArray());
+        couplerSlackMeters = setup.CouplerSlackMetersByBoundary;
+        couplerStiffness = setup.CouplerStiffnessByBoundary;
+        couplerDamping = setup.CouplerDampingByBoundary;
         couplerMaximumCompressionForces = Array.AsReadOnly(setup.CouplerForceLimits
             .Select(limit => limit.MaximumCompressionNewtons).ToArray());
         couplerMaximumTensionForces = Array.AsReadOnly(setup.CouplerForceLimits
