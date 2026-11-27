@@ -25,15 +25,19 @@ This matrix describes the experimental browser port's current implementation sur
 |---|---|---|
 | Route ZIP packages | Small ZIP import; large OPFS ZIP indexing; staged `.trk` metadata parsed with upstream STFReader; staged route can be loaded through the existing route pipeline | Staged-route compatibility currently materializes expanded entries into memory with a 2 GiB aggregate ceiling; archives above that ceiling remain indexed but cannot yet enter the synchronous route readers |
 | `.trk` route metadata | Parsed and route selection displayed | Full route/activity metadata parity is incomplete |
-| TDB/TSECTION track data | Track topology and geometry subset parsed | Signalling, activities, timetable and full switch logic are not implemented |
+| TDB/TSECTION track data | Track topology, geometry, signal heads and junction adjacency parsed | Track circuits remain vector-node approximations; full switch interlocking and signal-position segmentation are not implemented |
 | SIMISA/SBR terrain streams | Stream-based reader; compressed/uncompressed fixtures covered by regression tests | Not every SBR variant or route package is validated |
 | Terrain `.t` data | Terrain samples/patch metadata and mesh preview | Preview is capped to a small tile count and first LOD |
+| Route path files (`.pat`) | TrackPDP and TrPathNode tables parsed; main/siding links traced; service and activity paths are matched by PathID | Branch choice and path-following train movement are not yet a complete AI/player path runtime |
+| Service files (`.srv`) | Service definition, consist reference, path reference, efficiency and initial speed parsed; references checked against loaded `.con` and `.pat` assets | AI scheduling, traffic conflict handling, timetable execution and autonomous train movement are not implemented |
+| Signal configuration (`sigcfg.dat`) | Signal types, custom functions, lights, draw states, aspects, clear-ahead counts and script-file references parsed; signal script blocks indexed | Signal script instructions are not executed; complete Open Rails signal function, interlocking and aspect logic are not implemented |
+| Route signalling runtime | Signal heads attached to vector-node circuits; all consist vehicles contribute occupancy; selected branches required at junctions; configured native aspect names/draw states/speed limits mapped | Circuits are approximate vector-node blocks, not native signal-position circuits; no full signal script runtime or full interlocking parity |
 | WORLD scenery | Placements, supported shapes and basic supported textures rendered | Many block variants/material features are incomplete |
 | Track shapes (`.s`) | Geometry subset loaded and rendered | Full shape/material/animation support is not implemented |
-| ACE textures | Supported RGBA8 subset for preview | Seasonal variants and unsupported pixel formats are excluded; material/shader parity is partial |
-| TRAINSET rolling stock | Consist/ENG/WAG metadata and shape assets; first LOD mesh rendering | Cab views, animation, full materials, native control systems and sound remain incomplete |
-| Consist files | Metadata and vehicle placement across selected route | Activity/service integration and full desktop rules remain incomplete |
-| Activity files (`.act`) | Route-folder activity file selector; selected file is displayed | Activity parsing, services, timetable, event logic, and execution are not implemented |
+| ACE textures | Structured RGBA8 and packed BGR565/BGRA5551/BGRA4444 plus DXT1/3/5 base-mip decoding for cab artwork | Full mip/shader/material parity, seasonal variants and every legacy texture variant are not verified |
+| TRAINSET rolling stock | Consist/ENG/WAG metadata, shape assets, traction/resistance, coupler springs/damping/slack, brake-shoe and handbrake ratings; original CVF cab artwork is rendered | Cab controls are not yet interactive; animated gauges, full materials, complete native brake equipment and sound parity remain incomplete |
+| Consist files | Metadata, vehicle placement, per-car coupler dynamics, pneumatic prototype brakes and rated mechanical handbrake | Full desktop consist rules, native brake-valve/equipment parity and AI train movement remain incomplete |
+| Activity files (`.act`) | Header and time/location/action event parsing; time, location, reach-speed and AllStops events execute; AllStops uses native `.pat` waiting points | Passenger pickup, wagon pickup/drop-off, train assembly, station/service side effects and full activity timetable logic remain incomplete |
 
 ## Browser/device validation status
 
@@ -56,4 +60,4 @@ A browser that disables WebGL 2, blocks required WASM execution, or runs under r
 
 ## Compatibility policy
 
-Report limitations honestly. Passing CI validates automated tests and compilation/publishing, not browser graphics, input latency, mobile memory usage, or real-route fidelity. Add a tested browser/device row only after recording the exact browser/device version and test result.
+Report limitations honestly. Passing CI validates automated tests and compilation/publishing, not browser graphics, input latency, desktop memory usage, or real-route fidelity. Add a tested browser/device row only after recording the exact browser/device version and test result.
