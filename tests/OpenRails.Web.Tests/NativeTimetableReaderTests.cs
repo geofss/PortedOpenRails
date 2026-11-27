@@ -28,7 +28,7 @@ public sealed class NativeTimetableReaderTests
     {
         using var store = CreateStore("ROUTES/SCE/TIMETABLES/weekday.timetable",
             ",Train A,,Train C,#comment\n" +
-            "#comment,,,,,Weekday service\n" +
+            "#comment,,,,Weekday service\n" +
             "#path,Main,,Branch,\n" +
             "#consist,Express.con,,Local.con,\n" +
             "#direction,Up,,Down,\n" +
@@ -39,7 +39,7 @@ public sealed class NativeTimetableReaderTests
             .Read(store, "ROUTES/SCE/TIMETABLES/weekday.timetable");
 
         Assert.Equal("Weekday service", timetable.Description);
-        Assert.Equal("General briefing", timetable.Briefing);
+        Assert.Equal("Main line service", timetable.Briefing);
         Assert.Equal(2, timetable.Trains.Count);
         var first = timetable.Trains[0];
         Assert.Equal("Train A", first.Train);
