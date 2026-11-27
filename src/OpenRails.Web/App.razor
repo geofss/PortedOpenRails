@@ -704,6 +704,13 @@
     {
         selectedRoute = route;
         selectedActivityPath = null;
+        selectedActivityMetadata = null;
+        selectedActivityEvents = null;
+        activityExecution = null;
+        activityStationStopTracker = null;
+        activityStationStopProgress = null;
+        activityStartingSpeedMetersPerSecond = null;
+        activityPathWarning = null;
         selectedDefault = false;
         routeDiagnostics.Clear();
         serviceChoices = ServiceFileLocator.FindServices(composite?.Paths ?? Array.Empty<string>());
