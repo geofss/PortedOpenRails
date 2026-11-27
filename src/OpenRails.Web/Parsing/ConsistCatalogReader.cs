@@ -4,7 +4,7 @@ using Orts.Parsers.Msts;
 namespace OpenRails.Web.Parsing;
 
 public sealed record ConsistCatalogIssue(string Path, string Message);
-public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage, RollingStockMetadata? Metadata, string? ShapeAssetPath = null, bool ShapeFound = false, string? ShapeSourcePackage = null, LocomotiveTractionMetadata? TractionMetadata = null);
+public sealed record ConsistCarAssetReference(string ConsistName, int Uid, string CarName, string Folder, bool IsEngine, bool IsEndOfTrain, string AssetPath, bool Found, string? SourcePackage, RollingStockMetadata? Metadata, string? ShapeAssetPath = null, bool ShapeFound = false, string? ShapeSourcePackage = null, LocomotiveTractionMetadata? TractionMetadata = null, CabViewDefinition? CabView = null);
 public sealed record ConsistTcsAssetReference(string ConsistName, string FileName, string AssetPath, bool Found, string? SourcePackage);
 public sealed record ConsistCatalogResult(IReadOnlyList<ConsistMetadata> Consists, IReadOnlyList<ConsistCatalogIssue> Issues, IReadOnlyList<ConsistCarAssetReference> CarAssets, IReadOnlyList<ConsistTcsAssetReference> TcsAssets);
 
@@ -44,6 +44,7 @@ public sealed class ConsistCatalogReader
                     var sourcePackage = store is CompositeContentStore composite && found ? composite.GetSourcePackage(assetPath) : null;
                     RollingStockMetadata? metadata = null;
                     LocomotiveTractionMetadata? tractionMetadata = null;
+                    CabViewDefinition? cabView = null;
                     if (found && !car.IsEndOfTrain)
                     {
                         try
@@ -57,6 +58,17 @@ public sealed class ConsistCatalogReader
 
                         if (car.IsEngine)
                         {
+                            try
+                            {
+                                var cabPath = new CabViewAssetLocator().Locate(store, assetPath);
+                                if (cabPath is not null)
+                                    cabView = new CabViewDefinitionReader().Read(store, cabPath);
+                            }
+                            catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException or STFException)
+                            {
+                                issues.Add(new ConsistCatalogIssue(assetPath, $"Cab-view definition could not be read: {exception.Message}"));
+                            }
+
                             try
                             {
                                 tractionMetadata = new LocomotiveTractionMetadataReader().Read(store, assetPath);
@@ -85,7 +97,7 @@ public sealed class ConsistCatalogReader
                     carAssets.Add(new ConsistCarAssetReference(
                         consist.Name, car.Uid, car.Name, car.Folder, car.IsEngine, car.IsEndOfTrain,
                         assetPath, found, sourcePackage, metadata,
-                        shapeAsset?.Path, shapeAsset is not null, shapeSourcePackage, tractionMetadata));
+                        shapeAsset?.Path, shapeAsset is not null, shapeSourcePackage, tractionMetadata, cabView));
                 }
                 foreach (var duplicate in consist.Cars.GroupBy(car => car.Uid).Where(group => group.Count() > 1))
                     issues.Add(new ConsistCatalogIssue(path, $"Duplicate car UID {duplicate.Key} appears {duplicate.Count()} times in consist '{consist.Name}'."));

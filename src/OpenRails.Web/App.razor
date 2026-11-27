@@ -319,6 +319,22 @@
                             }
                         </div>
                     }
+                    @if (SelectedCabView is { } cabView)
+                    {
+                        <div class="route-details">
+                            <h3>Original locomotive cab definition</h3>
+                            <p class="hint">Loaded from @cabView.SourcePath · @cabView.Controls.Count original controls</p>
+                            @if (cabView.Views.Count > 0)
+                            {
+                                <p class="hint">Day cab image: <code>@cabView.Views[0].DayImagePath</code></p>
+                                <p class="hint">Night cab image: <code>@cabView.Views[0].NightImagePath</code></p>
+                            }
+                            @foreach (var control in cabView.Controls.Take(24))
+                            {
+                                <p>@(string.IsNullOrWhiteSpace(control.Label) ? control.ControlType : control.Label) · @control.Kind · control ID @control.ControlId · @control.X,@control.Y (@control.Width×@control.Height)</p>
+                            }
+                        </div>
+                    }
                     @if (currentSignalIndications.Count > 0)
                     {
                         <div class="route-details">
@@ -526,6 +542,11 @@
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
+
+    private CabViewDefinition? SelectedCabView => SelectedConsist is null
+        ? null
+        : consistCatalog?.CarAssets.FirstOrDefault(asset =>
+            asset.ConsistName == SelectedConsist.Name && asset.IsEngine && asset.CabView is not null)?.CabView;
 
     private int DavisResistanceCoverage => simulationSetup?.ResistanceParametersByCar.Count(parameters =>
         parameters.DavisA > 0 || parameters.DavisB > 0 || parameters.DavisC > 0) ?? 0;
