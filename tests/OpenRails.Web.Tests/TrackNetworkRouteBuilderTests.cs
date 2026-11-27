@@ -209,6 +209,35 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void DoesNotReportSafetyLimitWhenRouteEndsExactlyAtLimit()
+    {
+        var terminal = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { terminal }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10, maximumSegments: 1);
+
+        Assert.Single(route.Segments);
+        Assert.Empty(route.Diagnostics);
+    }
+
+    [Fact]
+    public void ReportsSafetyLimitOnlyWhenAnUnvisitedContinuationRemains()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var second = CreatePath(20, new[] { 2, 3 }, 100, 200);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, second }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10, maximumSegments: 1);
+
+        Assert.Single(route.Segments);
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("safety limit"));
+    }
+
+    [Fact]
     public void RejectsUnknownStartingVectorNode()
     {
         var network = new TrackNetwork(

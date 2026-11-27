@@ -159,7 +159,10 @@ public sealed class TrackNetworkRouteBuilder
             currentPosition = GetEndPosition(next.Path, next.Reversed);
         }
 
-        if (segments.Count == maximumSegments)
+        if (segments.Count == maximumSegments &&
+            network.VectorPaths.Any(path => !visited.Contains(path.TrackNodeIndex) &&
+                path.ConnectedNodeIndices.Count == 2 &&
+                path.ConnectedNodeIndices.Contains(currentNode)))
             diagnostics.Add($"Route traversal reached the safety limit of {maximumSegments} vector nodes.");
 
         var length = segments.Sum(segment => segment.LengthMeters);
