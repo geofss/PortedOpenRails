@@ -12,27 +12,6 @@
         <h1>Open Rails</h1>
         <span>Desktop browser edition</span>
     </header>
-    <div class="or-mainform-toolbar" role="toolbar" aria-label="Open Rails main commands">
-        @if (CanDriveLoadedRoute)
-        {
-            <a class="or-menu-command primary" href="#driving-controls">Start</a>
-            <a class="or-menu-command" href="#driving-controls">Resume / Replay…</a>
-        }
-        else
-        {
-            <span class="or-menu-command disabled" aria-disabled="true">Start</span>
-            <span class="or-menu-command disabled" aria-disabled="true">Resume / Replay…</span>
-        }
-        <a class="or-menu-command" href="#driving-settings">Options</a>
-        <a class="or-menu-command" href="#content-packages">Tools ▼</a>
-        <label class="or-menu-logging"><input type="checkbox" checked disabled /> Logging</label>
-    </div>
-    <div class="or-profile-strip">
-        <strong>Installation profile</strong>
-        <span>Browser-imported content packages</span>
-        <small>Browser storage replaces direct access to a local simulator installation folder.</small>
-    </div>
-
     <section class="or-mainform-workspace" aria-label="Open Rails main menu">
         <aside class="or-mainform-selection">
             <div class="or-mainform-group">
