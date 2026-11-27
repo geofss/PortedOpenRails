@@ -516,3 +516,30 @@ input[type="range"] { accent-color: #4776a8; }
     object-fit: contain;
     margin: 0 auto;
 }
+
+.or-cab-live-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #555;
+}
+.or-cab-live-control {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px;
+    color: #eee;
+    background: #252525;
+    border: 1px solid #666;
+    font-size: 0.85rem;
+}
+.or-cab-live-control output {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.or-cab-live-control input,
+.or-cab-live-control select {
+    width: 100%;
+}
