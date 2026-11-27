@@ -140,7 +140,7 @@
                     @if (ActivityChoices.Count > 0)
                     {
                         <div class="route-details">
-                            <label for="selected-activity">Activity file selection (not runnable yet)</label>
+                            <label for="selected-activity">Single-player activity</label>
                             <select id="selected-activity" value="@selectedActivityPath" @onchange="SelectActivity">
                                 <option value="">No activity selected · route preview</option>
                                 @foreach (var activityPath in ActivityChoices)
@@ -150,7 +150,31 @@
                             </select>
                             @if (!string.IsNullOrWhiteSpace(selectedActivityPath))
                             {
-                                <p class="hint">Selected activity file: <code>@selectedActivityPath</code>. Activity execution is not implemented yet.</p>
+                                @if (selectedActivityMetadata is not null)
+                                {
+                                    <div class="activity-summary">
+                                        <h4>@selectedActivityMetadata.Name</h4>
+                                        <p>@selectedActivityMetadata.Description</p>
+                                        @if (!string.IsNullOrWhiteSpace(selectedActivityMetadata.Briefing))
+                                        {
+                                            <p>@selectedActivityMetadata.Briefing</p>
+                                        }
+                                        <dl>
+                                            <dt>Mode</dt><dd>@selectedActivityMetadata.ModeName</dd>
+                                            <dt>Start time</dt><dd>@selectedActivityMetadata.StartTime</dd>
+                                            <dt>Season / weather</dt><dd>@selectedActivityMetadata.SeasonName / @selectedActivityMetadata.WeatherName</dd>
+                                            <dt>Duration</dt><dd>@(selectedActivityMetadata.DurationMinutes / 60) h @(selectedActivityMetadata.DurationMinutes % 60) min</dd>
+                                            <dt>Difficulty</dt><dd>@selectedActivityMetadata.DifficultyName</dd>
+                                            <dt>Path ID</dt><dd>@(selectedActivityMetadata.PathId ?? "Not specified")</dd>
+                                            <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
+                                        </dl>
+                                        <p class="hint">Header parsed. Event execution, service dispatch and activity-object placement are not yet connected.</p>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(activityParseError))
+                                {
+                                    <p class="error">@activityParseError</p>
+                                }
                             }
                         </div>
                     }
@@ -444,6 +468,8 @@
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
     private string? selectedActivityPath;
+    private ActivityMetadata? selectedActivityMetadata;
+    private string? activityParseError;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
         : Array.Empty<string>();
@@ -1028,6 +1054,23 @@
     private void SelectActivity(ChangeEventArgs args)
     {
         selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedActivityMetadata = null;
+        activityParseError = null;
+        if (selectedActivityPath is null || composite is null)
+            return;
+
+        try
+        {
+            selectedActivityMetadata = new ActivityMetadataReader().Read(composite, selectedActivityPath);
+            if (!string.Equals(selectedActivityMetadata.RouteId, selectedRoute?.Metadata.RouteId,
+                    StringComparison.OrdinalIgnoreCase))
+                activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
+        }
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
+            exception is ArgumentException)
+        {
+            activityParseError = $"Could not parse activity header: {exception.Message}";
+        }
     }
 
     private Task OnTrainMotionChanged(TrainConsistMotionState state)

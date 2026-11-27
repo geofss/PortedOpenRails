@@ -485,3 +485,16 @@ input[type="range"] { accent-color: #4776a8; }
     .or-profile-strip small { grid-column: 1; }
     .or-route-picker { grid-template-columns: 1fr; }
 }
+
+/* Compact original-application-style activity information panel. */
+.activity-summary {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #8b8b8b;
+    background: #f2f2f2;
+    color: #202020;
+}
+.activity-summary h4 { margin: 0 0 0.4rem; font-size: 1rem; }
+.activity-summary dl { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 0.2rem 0.8rem; }
+.activity-summary dt { font-weight: 600; }
+.activity-summary dd { margin: 0; }
