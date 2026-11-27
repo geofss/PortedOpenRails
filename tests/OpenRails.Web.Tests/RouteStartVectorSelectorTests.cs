@@ -22,6 +22,19 @@ public sealed class RouteStartVectorSelectorTests
     }
 
     [Fact]
+    public void RejectsNonFiniteRouteStartCoordinates()
+    {
+        var selector = new RouteStartVectorSelector();
+        var network = CreateNetwork(CreatePath(1, new[] { 1, 2 }, 0, 100, 0));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            selector.SelectNearest(network, new RouteStartCoordinates(0, 0, double.NaN, 0)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            selector.IsStartReversed(network.VectorPaths[0],
+                new RouteStartCoordinates(double.PositiveInfinity, 0, 0, 0)));
+    }
+
+    [Fact]
     public void DetectsWhenDeclaredRouteStartIsNearestTheStoredVectorEnd()
     {
         var path = CreatePath(42, new[] { 1, 2 }, 100, 500, 0);
