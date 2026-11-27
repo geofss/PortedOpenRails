@@ -101,7 +101,7 @@ public sealed class SignalScriptLibraryReader
                     locals.Add(DeclarationName(statement));
                 else if (statement.StartsWith("EXTERN FLOAT ", StringComparison.OrdinalIgnoreCase))
                     externals.Add(DeclarationName(statement));
-                else
+                else if (statement != "{" && statement != "}")
                     statementCount++;
 
                 foreach (var character in statement)
@@ -132,7 +132,8 @@ public sealed class SignalScriptLibraryReader
 
     private static string DeclarationName(string line)
     {
-        var declaration = line[(line.IndexOf(' ') + 1)..].Trim();
+        var prefix = line.StartsWith("EXTERN FLOAT ", StringComparison.OrdinalIgnoreCase) ? "EXTERN FLOAT " : "FLOAT ";
+        var declaration = line[prefix.Length..].Trim();
         var terminator = declaration.IndexOf(';');
         return (terminator >= 0 ? declaration[..terminator] : declaration).Trim();
     }

@@ -27,10 +27,10 @@ public sealed class RouteLoader
             : geometryReader.ReadRouteSections(store, assets.RouteTrackSectionsPath);
 
         var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
-        var signalConfigurationPath = assets.RouteRoot + "/sigcfg.dat";
-        var signalConfiguration = store.Contains(signalConfigurationPath)
-            ? new SignalConfigurationReader().Read(store, signalConfigurationPath)
-            : null;
+        var signalConfigurationPath = SignalConfigurationLocator.FindForRoute(store.Paths, assets.RouteRoot);
+        var signalConfiguration = signalConfigurationPath is null
+            ? null
+            : new SignalConfigurationReader().Read(store, signalConfigurationPath);
         var signalScripts = signalConfiguration is null ? null : new SignalScriptLibraryReader().Read(store, assets.RouteRoot, signalConfiguration);
         var signalling = new SignalNetworkBuilder().Build(database, network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
