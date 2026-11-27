@@ -6,6 +6,31 @@ namespace OpenRails.Web.Tests;
 public sealed class LocomotiveAxleDriveSetTests
 {
     [Fact]
+    public void MaterializesAxleConfigurationAndSpeedInputsOnlyOnce()
+    {
+        var fractions = new SinglePassReadOnlyList<float>(new[] { 0.5f, 0.5f });
+        var drive = new LocomotiveAxleDriveSet(fractions);
+
+        drive.SetAxleSpeeds(new SinglePassReadOnlyList<double>(new[] { 10d, 12d }));
+
+        Assert.Equal(2, drive.AxleCount);
+    }
+
+    private sealed class SinglePassReadOnlyList<T>(IReadOnlyList<T> values) : IReadOnlyList<T>
+    {
+        private bool enumerated;
+        public int Count => values.Count;
+        public T this[int index] => values[index];
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (enumerated) throw new InvalidOperationException("Collection can only be enumerated once.");
+            enumerated = true;
+            return values.GetEnumerator();
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Fact]
     public void DistributesTotalTargetByDrivenAxleFractions()
     {
         var drive = new LocomotiveAxleDriveSet(new[] { 0.25f, 0.25f, 0.25f, 0.25f });
