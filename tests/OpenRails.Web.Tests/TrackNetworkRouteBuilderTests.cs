@@ -27,6 +27,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.False(route.Segments[2].IsReversed);
         Assert.Equal(300, route.LengthMeters);
         Assert.Empty(route.Diagnostics);
+        Assert.True(route.IsDriveReady);
     }
 
     [Fact]
@@ -65,6 +66,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Single(route.Segments);
         Assert.Equal(2, route.PendingJunctionNodeIndex);
         Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("ambiguous"));
+        Assert.False(route.IsDriveReady);
     }
 
     [Fact]
@@ -84,6 +86,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Equal(new uint[] { 10, 30 },
             route.Segments.Select(segment => segment.Path.TrackNodeIndex));
         Assert.Empty(route.Diagnostics);
+        Assert.True(route.IsDriveReady);
     }
 
     [Fact]
@@ -128,6 +131,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Single(route.Segments);
         Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("geometry gap"));
         Assert.Equal(100, route.LengthMeters);
+        Assert.False(route.IsDriveReady);
     }
 
     [Fact]
