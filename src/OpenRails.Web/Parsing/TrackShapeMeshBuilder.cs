@@ -200,4 +200,5 @@ public sealed record TrackShapeMesh(
     uint Flags1,
     uint Flags2,
     IReadOnlyList<TrackShapeMatrix> Matrices,
-    IReadOnlyList<TrackShapeLodMesh> Lods,\n    IReadOnlyList<TrackShapeAnimationClip>? Animations = null);
+    IReadOnlyList<TrackShapeLodMesh> Lods,
+    IReadOnlyList<TrackShapeAnimationClip>? Animations = null);
