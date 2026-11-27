@@ -111,6 +111,22 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void BrakesWhenTrainIsMovingAgainstServiceDirection()
+    {
+        var forwardRoute = Plan(0, 100);
+        var forwardDecision = controller.Calculate(forwardRoute, 10, -8, 15);
+        Assert.Equal(0, forwardDecision.ThrottlePercent);
+        Assert.True(forwardDecision.BrakePercent > 0);
+        Assert.Equal(0, forwardDecision.TargetSpeedMetersPerSecond);
+
+        var reverseRoute = new ServiceRouteStartPosition(90, 0,
+            new TrackWorldPosition(0, 0, 90), new[] { 90d, 50d, 10d }, -1);
+        var reverseDecision = controller.Calculate(reverseRoute, 90, 8, 15);
+        Assert.Equal(0, reverseDecision.ThrottlePercent);
+        Assert.True(reverseDecision.BrakePercent > 0);
+    }
+
+    [Fact]
     public void SupportsReverseOrderedServicePath()
     {
         var route = new ServiceRouteStartPosition(90, 0,

@@ -142,6 +142,12 @@ public sealed class AiServiceDrivingController
         var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, approachSpeedLimit);
         var speed = Math.Abs(currentSpeedMetersPerSecond);
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
+        if (currentSpeedMetersPerSecond * direction < -0.1)
+        {
+            var opposingMotionBrake = Math.Clamp(speed * 35, 0, 100);
+            return new AiServiceControlDecision(0, opposingMotionBrake, 0, nextWaypoint,
+                false, Math.Max(0, remaining), waitingWaypointIndex, false);
+        }
         if (remaining <= stoppingBufferMeters)
             return new AiServiceControlDecision(0, 100, 0, nextWaypoint,
                 pathEndIsNearestLimit, Math.Max(0, remaining), waitingWaypointIndex,
