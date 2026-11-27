@@ -90,6 +90,25 @@ public sealed class SignalInterlockingControllerTests
     }
 
     [Fact]
+    public void ReplacesWholeTrainOccupancyAtomicallyIncludingTrailingCircuit()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.SetOccupiedCircuits("PLAYER", new HashSet<uint> { 10, 11 }));
+        Assert.False(interlocking.SetOccupiedCircuits("AI-1", new HashSet<uint> { 12, 11 }));
+
+        var afterConflict = interlocking.Snapshot();
+        Assert.Equal("PLAYER", afterConflict.OccupiedCircuits[10]);
+        Assert.Equal("PLAYER", afterConflict.OccupiedCircuits[11]);
+        Assert.DoesNotContain(12u, afterConflict.OccupiedCircuits.Keys);
+
+        Assert.True(interlocking.SetOccupiedCircuits("PLAYER", new HashSet<uint> { 11, 12 }));
+        var updated = interlocking.Snapshot();
+        Assert.DoesNotContain(10u, updated.OccupiedCircuits.Keys);
+        Assert.Equal("PLAYER", updated.OccupiedCircuits[11]);
+        Assert.Equal("PLAYER", updated.OccupiedCircuits[12]);
+    }
+
+    [Fact]
     public void RejectsInvalidCircuitTopology()
     {
         Assert.Throws<ArgumentException>(() => new SignalInterlockingController(
