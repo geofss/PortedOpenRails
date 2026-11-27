@@ -3,7 +3,7 @@ using OpenRails.Web.Parsing;
 namespace OpenRails.Web.Simulation;
 
 public sealed record ActivityStationStopProgress(int TotalStops, int VisitedStops,
-    bool StationStopReached, bool AllStopsCompleted);
+    bool StationStopReached, bool AllStopsCompleted, bool PathTraceComplete);
 
 public sealed class ActivityStationStopTracker
 {
