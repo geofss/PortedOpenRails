@@ -37,7 +37,7 @@ public static class LocomotiveAxleDriveRamp
 
         targetForceNewtons = Math.Clamp(targetForceNewtons, -maximumForceNewtons, maximumForceNewtons);
         currentForceNewtons = Math.Clamp(currentForceNewtons, -maximumForceNewtons, maximumForceNewtons);
-        if (elapsedSeconds == 0 || currentForceNewtons == targetForceNewtons)
+        if (elapsedSeconds == 0)
             return currentForceNewtons;
 
         var toZero = Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons);
