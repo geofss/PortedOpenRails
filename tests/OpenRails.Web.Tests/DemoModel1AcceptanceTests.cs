@@ -45,6 +45,8 @@ public sealed class DemoModel1AcceptanceTests
             "The real SCE track database produced no connected vector paths.");
         Assert.True(route.TrackNetwork.TotalTrackLengthMeters > 0,
             "The real SCE track network has no positive track length.");
+        Assert.Equal(route.TrackNetwork.VectorPaths.Count, route.Signalling.TrackCircuits.Count);
+        Assert.NotEmpty(route.Signalling.TrackCircuits);
         Assert.True(route.TerrainTiles.Found.Count > 0, "No SCE terrain tiles were discovered.");
         Assert.True(route.TrackShapeAssets.Found.Count > 0, "No SCE track-shape assets were discovered.");
         Assert.True(route.WorldTiles.Found.Count > 0, "No SCE WORLD tiles were discovered.");
@@ -55,7 +57,9 @@ public sealed class DemoModel1AcceptanceTests
             $"Demo Model 1 acceptance: nodes={route.TrackDatabase.NodeCount}; " +
             $"paths={route.TrackNetwork.VectorPathCount}; length={route.TrackNetwork.TotalTrackLengthMeters:N0}m; " +
             $"terrain={route.TerrainMeshes.Meshes.Count}; trackShapes={route.TrackShapeMeshes.LoadedMeshes.Count}; " +
-            $"world={route.WorldScenery.Loaded.Count}; validationIssues={route.Validation.Issues.Count}; " +
+            $"world={route.WorldScenery.Loaded.Count}; signalCircuits={route.Signalling.TrackCircuits.Count}; " +
+            $"signalHeads={route.Signalling.TrackCircuits.Sum(circuit => circuit.Signals.Count)}; " +
+            $"signalDiagnostics={route.Signalling.Diagnostics.Count}; validationIssues={route.Validation.Issues.Count}; " +
             $"trackNetworkUsable={route.Validation.TrackNetworkUsable}.");
     }
 }
