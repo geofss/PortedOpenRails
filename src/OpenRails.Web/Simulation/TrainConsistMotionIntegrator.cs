@@ -56,8 +56,8 @@ public sealed record TrainConsistMotionState
     public TrainConsistMotionState(IReadOnlyList<TrainCarMotionState> cars)
     {
         ArgumentNullException.ThrowIfNull(cars);
-        if (cars.Count == 0 || cars.Any(car => car is null))
-            throw new ArgumentException("A consist snapshot must contain at least one valid car state.", nameof(cars));
+        if (cars.Any(car => car is null))
+            throw new ArgumentException("A consist snapshot cannot contain null car states.", nameof(cars));
         Cars = Array.AsReadOnly(cars.ToArray());
     }
 }
