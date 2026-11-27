@@ -160,7 +160,7 @@
                                 }
                                 else
                                 {
-                                    <p class="hint">Main route trace: @binding.MainTrace.NodeIndices.Count nodes, @binding.MainTrace.Points.Count positioned points</p>
+                                    <p class="hint">Main route trace: @binding.MainTrace.NodeIndices.Count nodes, @binding.MainTrace.Points.Count positioned points · consist @(binding.Consist?.Name ?? "not found") · @(binding.IsRunnable ? "references resolved" : "not runnable")</p>
                                     @foreach (var diagnostic in binding.MainTrace.Diagnostics)
                                     {
                                         <p class="hint">@diagnostic</p>
@@ -711,15 +711,8 @@
                     return null;
                 }
             }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
-        serviceRouteBindings = loadedServices.Select(service =>
-        {
-            var path = loadedRoutePaths.FirstOrDefault(candidate =>
-                string.Equals(candidate.PathId, service.PathId, StringComparison.OrdinalIgnoreCase));
-            if (path is null)
-                return new ServiceRouteBinding(service, null, null,
-                    $"Service {service.Name} references missing route path '{service.PathId}'.");
-            return new ServiceRouteBinding(service, path, path.TraceMainRoute(), null);
-        }).ToArray();
+        serviceRouteBindings = ServiceRouteBindingResolver.Resolve(
+            loadedServices, loadedRoutePaths, consistCatalog?.Consists ?? Array.Empty<ConsistMetadata>());
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
     }
