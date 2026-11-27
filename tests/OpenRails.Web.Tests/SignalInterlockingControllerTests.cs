@@ -97,3 +97,24 @@ public sealed class SignalInterlockingControllerTests
             new Dictionary<uint, IReadOnlyCollection<uint>> { [100] = new uint[] { 10 } }));
     }
 }
+
+
+    [Fact]
+    public void RouteReleaseIsDeferredWhileTrainStillOccupiesItsReservedRoute()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.TryReserveRoute("AI-1", new uint[] { 10, 11 },
+            new Dictionary<uint, uint> { [100] = 11 }));
+        Assert.True(interlocking.SetOccupied("AI-1", 10, true));
+
+        Assert.False(interlocking.TryReleaseRoute("AI-1"));
+        var held = interlocking.Snapshot();
+        Assert.Equal("AI-1", held.ReservedCircuits[10]);
+        Assert.Equal("AI-1", held.JunctionLocks[100]);
+        Assert.False(interlocking.TrySetJunctionBranch(100, 12));
+
+        Assert.True(interlocking.SetOccupied("AI-1", 10, false));
+        Assert.True(interlocking.TryReleaseRoute("AI-1"));
+        Assert.Empty(interlocking.Snapshot().ReservedCircuits);
+        Assert.Empty(interlocking.Snapshot().JunctionLocks);
+    }
