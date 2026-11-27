@@ -26,7 +26,7 @@ public sealed class ActivityEventReader
                             reader.MustMatch("(");
                             reader.ParseBlock(new[]
                             {
-                                new STFReader.TokenProcessor("events", () => result = ReadEvents(reader))
+                                new STFReader.TokenProcessor("events", () => result = ReadEvents(reader, virtualPath))
                             });
                         })
                     });
@@ -36,7 +36,7 @@ public sealed class ActivityEventReader
         }
     }
 
-    private static ActivityEventSet ReadEvents(STFReader reader)
+    private static ActivityEventSet ReadEvents(STFReader reader, string sourcePath)
     {
         var events = new List<ActivityEventDefinition>();
         reader.MustMatch("(");
@@ -46,7 +46,7 @@ public sealed class ActivityEventReader
             new STFReader.TokenProcessor("eventcategorylocation", () => events.Add(ReadLocationEvent(reader))),
             new STFReader.TokenProcessor("eventcategoryaction", () => events.Add(ReadActionEvent(reader)))
         });
-        return new ActivityEventSet(reader.FileName, Array.AsReadOnly(events.ToArray()));
+        return new ActivityEventSet(sourcePath, Array.AsReadOnly(events.ToArray()));
     }
 
     private static ActivityEventDefinition ReadTimeEvent(STFReader reader)

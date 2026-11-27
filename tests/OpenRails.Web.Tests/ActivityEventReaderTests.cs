@@ -13,7 +13,7 @@ public sealed class ActivityEventReaderTests
     {
         using var store = CreateStore();
         var events = new ActivityEventReader().Read(store, "ROUTES/SCE/ACTIVITIES/Events.act");
-        Assert.Equal(2, events.Events.Count);
+        Assert.Equal(3, events.Events.Count);
         var start = events.Events.Single(item => item.Id == 10);
         Assert.Equal(ActivityEventKind.Time, start.Kind);
         Assert.Equal(300, start.TriggerSeconds);

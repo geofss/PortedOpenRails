@@ -168,7 +168,30 @@
                                             <dt>Path ID</dt><dd>@(selectedActivityMetadata.PathId ?? "Not specified")</dd>
                                             <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
                                         </dl>
-                                        <p class="hint">Header parsed. Event execution, service dispatch and activity-object placement are not yet connected.</p>
+                                        <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
+                                        @if (activityExecution is not null)
+                                        {
+                                            <div class="activity-summary">
+                                                <p class="hint">Activity elapsed time: @TimeSpan.FromSeconds(activityExecution.ElapsedSeconds).ToString()</p>
+                                                @if (activityExecution.PendingEvent is { } pendingEvent)
+                                                {
+                                                    <p class="success">Event @pendingEvent.EventId · @pendingEvent.EventName</p>
+                                                    @if (!string.IsNullOrWhiteSpace(pendingEvent.Message))
+                                                    {
+                                                        <p>@pendingEvent.Message</p>
+                                                    }
+                                                    <button type="button" @onclick="AcknowledgeActivityEvent">Acknowledge event</button>
+                                                }
+                                                @if (activityExecution.IsEnded)
+                                                {
+                                                    <p class="success">Activity ended · @(activityExecution.PendingEvent?.ActivitySucceeded == true ? "Success" : "Failed")</p>
+                                                }
+                                                @foreach (var unsupported in activityExecution.UnsupportedEvents.Take(8))
+                                                {
+                                                    <p class="hint">@unsupported</p>
+                                                }
+                                            </div>
+                                        }
                                     </div>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(activityParseError))
@@ -470,6 +493,9 @@
     private string? selectedActivityPath;
     private ActivityMetadata? selectedActivityMetadata;
     private string? activityParseError;
+    private ActivityEventSet? selectedActivityEvents;
+    private ActivityExecutionSession? activityExecution;
+    private double lastActivitySimulationTime;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
         : Array.Empty<string>();
@@ -1055,6 +1081,9 @@
     {
         selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
         selectedActivityMetadata = null;
+        selectedActivityEvents = null;
+        activityExecution = null;
+        lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         activityParseError = null;
         if (selectedActivityPath is null || composite is null)
             return;
@@ -1062,9 +1091,12 @@
         try
         {
             selectedActivityMetadata = new ActivityMetadataReader().Read(composite, selectedActivityPath);
+            selectedActivityEvents = new ActivityEventReader().Read(composite, selectedActivityPath);
             if (!string.Equals(selectedActivityMetadata.RouteId, selectedRoute?.Metadata.RouteId,
                     StringComparison.OrdinalIgnoreCase))
                 activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
+            else
+                activityExecution = new ActivityExecutionSession(selectedActivityEvents);
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
             exception is ArgumentException)
@@ -1076,7 +1108,21 @@
     private Task OnTrainMotionChanged(TrainConsistMotionState state)
     {
         currentMotionState = state;
+        if (activityExecution is not null && drivingController is not null)
+        {
+            var simulationTime = drivingController.SimulationTimeSeconds;
+            var elapsed = Math.Max(0, simulationTime - lastActivitySimulationTime);
+            lastActivitySimulationTime = simulationTime;
+            if (elapsed > 0 && state.Cars.Count > 0)
+                activityExecution.Advance(elapsed,
+                    new ActivityPlayerState(state.Cars[0].SpeedMetersPerSecond));
+        }
         return Task.CompletedTask;
+    }
+
+    private void AcknowledgeActivityEvent()
+    {
+        activityExecution?.Acknowledge();
     }
 
     public void Dispose()
