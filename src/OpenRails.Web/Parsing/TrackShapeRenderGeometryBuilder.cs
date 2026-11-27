@@ -28,7 +28,8 @@ public sealed class TrackShapeRenderGeometryBuilder
     public TrackShapeRenderGeometry Build(
         IEnumerable<TrackShapePlacement> placements,
         int animationClipIndex = -1,
-        float animationFrame = 0)
+        float animationFrame = 0,
+        Vector3? cameraPosition = null)
     {
         ArgumentNullException.ThrowIfNull(placements);
         var vertices = new List<Vector3>();
@@ -38,7 +39,9 @@ public sealed class TrackShapeRenderGeometryBuilder
         {
             var mesh = placement.Asset.Mesh;
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
-            var lod = mesh.Lods.FirstOrDefault();
+            var lodDistance = cameraPosition is { } camera
+                ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
+            var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
             if (lod is null) continue;
 
             foreach (var subObject in lod.SubObjects)
@@ -73,7 +76,8 @@ public sealed class TrackShapeRenderGeometryBuilder
         IReadOnlyList<LoadedTrackShapeTexture> loadedTextures,
         string? seasonFolder = null,
         int animationClipIndex = -1,
-        float animationFrame = 0)
+        float animationFrame = 0,
+        Vector3? cameraPosition = null)
     {
         ArgumentNullException.ThrowIfNull(placements);
         ArgumentNullException.ThrowIfNull(loadedTextures);
@@ -92,7 +96,9 @@ public sealed class TrackShapeRenderGeometryBuilder
         {
             var mesh = placement.Asset.Mesh;
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
-            var lod = mesh.Lods.FirstOrDefault();
+            var lodDistance = cameraPosition is { } camera
+                ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
+            var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
             if (lod is null) continue;
 
             foreach (var subObject in lod.SubObjects)
