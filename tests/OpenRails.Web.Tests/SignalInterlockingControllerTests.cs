@@ -96,9 +96,6 @@ public sealed class SignalInterlockingControllerTests
             new uint[] { 10 },
             new Dictionary<uint, IReadOnlyCollection<uint>> { [100] = new uint[] { 10 } }));
     }
-}
-
-
     [Fact]
     public void RouteReleaseIsDeferredWhileTrainStillOccupiesItsReservedRoute()
     {
@@ -117,4 +114,4 @@ public sealed class SignalInterlockingControllerTests
         Assert.True(interlocking.TryReleaseRoute("AI-1"));
         Assert.Empty(interlocking.Snapshot().ReservedCircuits);
         Assert.Empty(interlocking.Snapshot().JunctionLocks);
-    }
+}
