@@ -1,3 +1,7 @@
+// Behavior ported from the Open Rails project source.
+// Copyright (C) Open Rails contributors.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 using System.Text;
 using OpenRails.Web.Content;
 
