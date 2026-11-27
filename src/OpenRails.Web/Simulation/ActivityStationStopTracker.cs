@@ -1,3 +1,5 @@
+using OpenRails.Web.Parsing;
+
 namespace OpenRails.Web.Simulation;
 
 public sealed record ActivityStationStopProgress(int TotalStops, int VisitedStops,
@@ -9,10 +11,12 @@ public sealed class ActivityStationStopTracker
     public const double StoppedSpeedMetersPerSecond = 0.1;
     private readonly (int NodeIndex, int TileX, int TileZ, double X, double Z)[] stops;
     private readonly HashSet<int> visited = [];
+    private readonly bool pathTraceComplete;
 
     public int TotalStops => stops.Length;
     public int VisitedStops => visited.Count;
-    public bool AllStopsCompleted => stops.Length > 0 && visited.Count == stops.Length;
+    public bool AllStopsCompleted => pathTraceComplete && stops.Length > 0 && visited.Count == stops.Length;
+    public bool PathTraceComplete => pathTraceComplete;
     public double StopRadiusMeters { get; }
 
     public ActivityStationStopTracker(RoutePathDefinition path, double stopRadiusMeters = DefaultStopRadiusMeters)
@@ -21,7 +25,9 @@ public sealed class ActivityStationStopTracker
         if (!double.IsFinite(stopRadiusMeters) || stopRadiusMeters <= 0)
             throw new ArgumentOutOfRangeException(nameof(stopRadiusMeters));
         StopRadiusMeters = stopRadiusMeters;
-        stops = path.TraceMainRoute().NodeIndices
+        var trace = path.TraceMainRoute();
+        pathTraceComplete = trace.IsComplete;
+        stops = trace.NodeIndices
             .Where(index => path.Nodes[index].IsWaitingPoint && path.Nodes[index].FromPdpIndex < path.TrackPoints.Count)
             .Select(index =>
             {
@@ -49,6 +55,6 @@ public sealed class ActivityStationStopTracker
                 }
             }
         }
-        return new ActivityStationStopProgress(TotalStops, VisitedStops, reached, AllStopsCompleted);
+        return new ActivityStationStopProgress(TotalStops, VisitedStops, reached, AllStopsCompleted, PathTraceComplete);
     }
 }
