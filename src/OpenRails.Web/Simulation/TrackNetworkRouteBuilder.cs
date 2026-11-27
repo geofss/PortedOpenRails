@@ -177,6 +177,8 @@ public sealed class TrackNetworkRouteBuilder
             diagnostics.Add($"Route traversal reached the safety limit of {maximumSegments} vector nodes.");
 
         var length = segments.Sum(segment => segment.LengthMeters);
+        if (!double.IsFinite(length) || length <= 0)
+            throw new InvalidDataException("Connected route length exceeded the finite world-distance range.");
         return new TrackNetworkRoute(
             Array.AsReadOnly(segments.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()),

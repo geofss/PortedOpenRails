@@ -254,6 +254,21 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void RejectsConnectedRouteLengthOverflow()
+    {
+        var first = CreatePathWithoutGeometry(10, new[] { 1, 2 }) with { };
+        var second = CreatePathWithoutGeometry(20, new[] { 2, 3 });
+        first = new TrackVectorPath(10, new[] { 1, 2 }, Array.Empty<TrackSectionPlacement>(), double.MaxValue);
+        second = new TrackVectorPath(20, new[] { 2, 3 }, Array.Empty<TrackSectionPlacement>(), double.MaxValue);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, second }, Array.Empty<string>());
+
+        Assert.Throws<InvalidDataException>(() => new TrackNetworkRouteBuilder().Build(
+            network, 10, maximumSegments: 2, preferredNextTrackNodeIndex: 20));
+    }
+
+    [Fact]
     public void RejectsVectorPathsWithInvalidLengthMetadata()
     {
         var invalid = new TrackVectorPath(10, new[] { 1, 2 },
