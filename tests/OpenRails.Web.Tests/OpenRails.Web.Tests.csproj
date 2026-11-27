@@ -85,6 +85,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityPassengerServiceReader.cs" Link="Parsing/ActivityPassengerServiceReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/CabViewDefinitionReader.cs" Link="Parsing/CabViewDefinitionReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/CabViewAssetLocator.cs" Link="Parsing/CabViewAssetLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/NativeDeadlockPathSelector.cs" Link="Simulation/NativeDeadlockPathSelector.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SignalInterlockingController.cs" Link="Simulation/SignalInterlockingController.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SignalNetworkBuilder.cs" Link="Simulation/SignalNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SignalScriptInterpreter.cs" Link="Simulation/SignalScriptInterpreter.cs" />
