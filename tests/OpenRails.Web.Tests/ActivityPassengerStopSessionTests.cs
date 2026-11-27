@@ -107,4 +107,32 @@ public sealed class ActivityPassengerStopSessionTests
 
         Assert.False(stop.OnMissedStation(200).IsCompleted);
     }
+    [Fact]
+    public void SignalBlockIsReevaluatedWhenSignalClearsWithoutPermissionChange()
+    {
+        var stop = new ActivityPassengerStopSession(100, 130, 30);
+        stop.OnTrainStop(100, isAtStation: true);
+
+        var blocked = stop.OnTimer(130, distanceToNextSignalMeters: 299,
+            nextSignalIsStop: true, signalPermissionGranted: false);
+        Assert.False(blocked.MayDepart);
+
+        var cleared = stop.OnTimer(130, distanceToNextSignalMeters: 301,
+            nextSignalIsStop: true, signalPermissionGranted: false);
+        Assert.True(cleared.MayDepart);
+        Assert.Contains("You may depart", cleared.DisplayMessage);
+    }
+
+    [Fact]
+    public void RepeatedTrainStopNotificationsDoNotResetBoardingWindow()
+    {
+        var stop = new ActivityPassengerStopSession(100, 160, 30);
+        var first = stop.OnTrainStop(100, isAtStation: true);
+        var duplicate = stop.OnTrainStop(125, isAtStation: true);
+
+        Assert.Equal(first.BoardingEndClockSeconds, duplicate.BoardingEndClockSeconds);
+        Assert.Equal(100, duplicate.ActualArrivalSeconds);
+        Assert.Equal(35, stop.OnTimer(125).RemainingSeconds);
+    }
+
 }
