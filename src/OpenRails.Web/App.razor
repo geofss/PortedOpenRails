@@ -591,6 +591,7 @@
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
     private string? selectedActivityPath;
+    private double? activityStartingSpeedMetersPerSecond;
     private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
     private IReadOnlyList<ServiceMetadata> loadedServices = Array.Empty<ServiceMetadata>();
     private IReadOnlyList<string> availableRoutePathIds = Array.Empty<string>();
@@ -1210,7 +1211,8 @@
         try
         {
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
-                consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters);
+                consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
+                initialSpeedMetersPerSecond: activityStartingSpeedMetersPerSecond ?? 0);
             drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;
         }
@@ -1237,6 +1239,7 @@
         activityPathWarning = null;
         lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         activityParseError = null;
+        activityStartingSpeedMetersPerSecond = null;
         if (selectedActivityPath is null || composite is null)
             return;
 
@@ -1249,6 +1252,7 @@
                 activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
             else
             {
+                activityStartingSpeedMetersPerSecond = selectedActivityMetadata.StartingSpeedMetersPerSecond;
                 activityExecution = new ActivityExecutionSession(selectedActivityEvents);
                 var activityPath = loadedRoutePaths.FirstOrDefault(path =>
                     string.Equals(path.PathId, selectedActivityMetadata.PathId, StringComparison.OrdinalIgnoreCase));
@@ -1256,6 +1260,8 @@
                     activityStationStopTracker = new ActivityStationStopTracker(activityPath);
                 else
                     activityPathWarning = $"Activity PathID '{selectedActivityMetadata.PathId}' was not found in the selected route; AllStops actions cannot be evaluated.";
+                InitializeSimulationSetup();
+                lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
             }
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
