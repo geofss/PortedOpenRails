@@ -349,6 +349,34 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void RejectsOutOfRangeBrakeCommandsBeforeAdvancingOrWaitingForAFixedStep()
+    {
+        var initial = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });
+        var session = new TrainConsistSimulationSession(initial, new LocomotiveTractionMetadata?[] { null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommands(
+            0, new[] { 0f }, new[] { -1d }, new[] { 1_000d }, resistance, new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommands(
+            0, new[] { 0f }, new[] { 101d }, new[] { 1_000d }, resistance, new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithCommonAcceleration(
+            0, new[] { 0f }, resistance, 0, brakePercentByCar: new[] { 101d },
+            maximumBrakeForceNewtonsByCar: new[] { 1_000d }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
+    public void RejectsUnknownThrottleResponseAtConstruction()
+    {
+        var initial = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null },
+            new[] { (LocomotiveThrottleResponse)99 }));
+    }
+
+    [Fact]
     public void RejectsInputArraySizesThatDoNotMatchTheConsist()
     {
         var initial = new TrainConsistMotionState(new[]

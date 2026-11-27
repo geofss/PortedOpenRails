@@ -53,6 +53,9 @@ public sealed class TrainConsistSimulationSession
             Enumerable.Repeat(LocomotiveThrottleResponse.Linear, initialState.Cars.Count).ToArray();
         if (this.throttleResponses.Count != initialState.Cars.Count)
             throw new ArgumentException("Each car must have a matching throttle response.", nameof(throttleResponses));
+        if (this.throttleResponses.Any(response => !Enum.IsDefined(response)))
+            throw new ArgumentOutOfRangeException(nameof(throttleResponses),
+                "Every locomotive throttle response must be a supported mode.");
         loop = new TrainConsistSimulationLoop(
             initialState, fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame, routeLengthMeters);
         pneumaticBrakes = new TrainPneumaticBrakeSystem(
@@ -151,7 +154,7 @@ public sealed class TrainConsistSimulationSession
             (additionalBrakeForceNewtonsByCar is not null && additionalBrakeForceNewtonsByCar.Count != carCount))
             throw new ArgumentException("All per-car brake, rating, throttle, average-force, and coupler inputs must match the consist size.");
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
-            brakePercentByCar.Any(value => !double.IsFinite(value)) ||
+            brakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100) ||
             maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0) ||
             couplerForcesNewtons.Any(value => !double.IsFinite(value)) ||
             !float.IsFinite(powerReduction) ||
@@ -249,7 +252,7 @@ public sealed class TrainConsistSimulationSession
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
             !float.IsFinite(powerReduction) ||
             (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
-            (brakePercentByCar is not null && brakePercentByCar.Any(value => !double.IsFinite(value))) ||
+            (brakePercentByCar is not null && brakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100)) ||
             (maximumBrakeForceNewtonsByCar is not null && maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0)) ||
             !double.IsFinite(targetAccelerationMetersPerSecondSquared))
             throw new ArgumentOutOfRangeException(nameof(throttlePercentByCar),
