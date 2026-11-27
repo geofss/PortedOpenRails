@@ -167,6 +167,24 @@ public sealed class SignalScriptInterpreterTests
         Assert.Equal(3, result.State);
     }
 
+    [Theory]
+    [InlineData("/")]
+    [InlineData("%")]
+    public void DivisionByZeroFailsClosed(string operation)
+    {
+        var script = Script($"""
+            EXTERN FLOAT STATE;
+            STATE = 12 {operation} 0;
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(7, 1, false, 0, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(7, result.State);
+        Assert.Contains("zero", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static SignalScriptDefinition Script(string source)
     {
         var lines = source.Split('\n').Select(line => line.Trim()).ToArray();

@@ -207,8 +207,8 @@ public sealed class SignalScriptInterpreter
                 "+" => checked(left + right),
                 "-" => checked(left - right),
                 "*" => checked(left * right),
-                "/" => right == 0 ? 0 : left / right,
-                "%" => right == 0 ? 0 : left % right,
+                "/" => right == 0 ? throw new DivideByZeroException("SIGSCR division by zero.") : left / right,
+                "%" => right == 0 ? throw new DivideByZeroException("SIGSCR remainder by zero.") : left % right,
                 _ => throw new InvalidDataException($"Unsupported arithmetic operator '{Operator}'.")
             };
         }
