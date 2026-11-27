@@ -79,6 +79,43 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Assemble Demo Model 1 ready-to-import bundle
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: |
+          mkdir -p artifacts/demo-model-1-preview/app artifacts/demo-model-1-preview/content
+          cp -a artifacts/publish/wwwroot/. artifacts/demo-model-1-preview/app/
+          curl --fail --location --retry 3 --output artifacts/demo-model-1-preview/content/DemoModel1.zip https://static.openrails.org/files/DemoModel1.zip
+          echo "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b  artifacts/demo-model-1-preview/content/DemoModel1.zip" | sha256sum --check
+          cat > artifacts/demo-model-1-preview/README.txt <<'EOF'
+          PortedOpenRails + authorized Demo Model 1 preview
+
+          1. Extract this bundle.
+          2. Open a terminal in the app folder and run:
+                 python -m http.server 8000
+          3. Browse to http://localhost:8000/
+          4. In Content packages, choose the route ZIP at ../content/DemoModel1.zip.
+          5. The 272 MB route is handled by the disk-backed OPFS importer. Index ZIP contents,
+             then choose the Scottish Capital Express route and Load route into simulator.
+
+          Do not open app/index.html directly using file://.
+          Target: desktop-class browsers. Browser storage quota and the 2 GiB expanded-content
+          compatibility limit still apply.
+
+          Route attribution: Demo Model 1 © Making Tracks Ltd. Distributed with permission
+          from the Open Rails Management Team.
+          Open Rails / PortedOpenRails source remains GPL-licensed; see the repository LICENSE.
+          EOF
+
+      - name: Upload Demo Model 1 ready-to-import bundle
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortedOpenRails-DemoModel1-desktop-preview-${{ github.sha }}
+          path: artifacts/demo-model-1-preview
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test-and-build
