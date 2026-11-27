@@ -130,16 +130,18 @@ public sealed class AiServiceDrivingController
             pathEndIsNearestLimit = false;
         }
 
-        var approachSpeedLimit = signals
-            .Where(signal => signal.Aspect == RouteSignalAspect.Approach &&
-                signal.SpeedLimitMetersPerSecond is > 0 &&
+        // SIGCFG speed values are operational limits, not merely an Approach
+        // indication. Apply every valid upcoming native signal speed restriction
+        // regardless of its displayed aspect.
+        var signalSpeedLimit = signals
+            .Where(signal => signal.SpeedLimitMetersPerSecond is > 0 &&
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))
             .Select(signal => (double)signal.SpeedLimitMetersPerSecond!.Value)
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
-        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, approachSpeedLimit);
+        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, signalSpeedLimit);
         var speed = Math.Abs(currentSpeedMetersPerSecond);
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
         if (currentSpeedMetersPerSecond * direction < -0.1)
