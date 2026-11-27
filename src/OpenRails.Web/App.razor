@@ -142,6 +142,15 @@
                         <div class="route-details">
                             <h3>Original service definitions</h3>
                             <p class="hint">@loadedServices.Count service definitions parsed from TRAINS/SERVICES</p>
+                            <p class="hint">@loadedRoutePaths.Count route paths parsed · @loadedRoutePaths.Sum(path => path.Nodes.Count) linked path nodes</p>
+                            @foreach (var path in loadedRoutePaths)
+                            {
+                                <p><strong>@path.Name</strong> · @path.Start → @path.End · @path.Nodes.Count nodes · @(path.IsPlayerPath ? "Player path" : "AI-only path")</p>
+                                @foreach (var diagnostic in path.Diagnostics)
+                                {
+                                    <p class="hint">@path.PathId: @diagnostic</p>
+                                }
+                            }
                             @foreach (var service in loadedServices)
                             {
                                 <p><strong>@service.Name</strong> · consist @service.TrainConfig · path @service.PathId · initial speed @((service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</p>
@@ -541,6 +550,7 @@
     private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
     private IReadOnlyList<ServiceMetadata> loadedServices = Array.Empty<ServiceMetadata>();
     private IReadOnlyList<string> availableRoutePathIds = Array.Empty<string>();
+    private IReadOnlyList<RoutePathDefinition> loadedRoutePaths = Array.Empty<RoutePathDefinition>();
     private ActivityMetadata? selectedActivityMetadata;
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
@@ -638,6 +648,17 @@
             selectedRoute?.MetadataFile ?? string.Empty)
             .Select(path => System.IO.Path.GetFileNameWithoutExtension(path))
             .ToArray();
+        loadedRoutePaths = ServiceFileLocator.FindPaths(composite?.Paths ?? Array.Empty<string>(),
+            selectedRoute?.MetadataFile ?? string.Empty)
+            .Select(path =>
+            {
+                try { return new RoutePathFileReader().Read(composite!, path); }
+                catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+                {
+                    routeDiagnostics.Add($"Path {path}: {exception.Message}");
+                    return null;
+                }
+            }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
         errorMessage = null;
         loadedRoute = null;
         traversedRoute = null;

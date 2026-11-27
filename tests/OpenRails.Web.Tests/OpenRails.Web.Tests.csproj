@@ -71,6 +71,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityFileLocator.cs" Link="Parsing/ActivityFileLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ServiceMetadataReader.cs" Link="Parsing/ServiceMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ServiceFileLocator.cs" Link="Parsing/ServiceFileLocator.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RoutePathFileReader.cs" Link="Parsing/RoutePathFileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityMetadataReader.cs" Link="Parsing/ActivityMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityEventReader.cs" Link="Parsing/ActivityEventReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/CabViewDefinitionReader.cs" Link="Parsing/CabViewDefinitionReader.cs" />
