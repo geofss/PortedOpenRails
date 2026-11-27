@@ -115,3 +115,4 @@ public sealed class SignalInterlockingControllerTests
         Assert.Empty(interlocking.Snapshot().ReservedCircuits);
         Assert.Empty(interlocking.Snapshot().JunctionLocks);
 }
+}
