@@ -22,8 +22,7 @@ public sealed record TrainBrakeDistributorState
     public TrainBrakeDistributorState(
         IEnumerable<double> auxiliaryReservoirPressuresKPa,
         IEnumerable<TrainBrakeDistributorMode> modes)
-        : this(auxiliaryReservoirPressuresKPa, modes,
-            Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, auxiliaryReservoirPressuresKPa?.Count() ?? 0))
+        : this(MaterializeInitialState(auxiliaryReservoirPressuresKPa, modes))
     {
     }
 
@@ -31,9 +30,30 @@ public sealed record TrainBrakeDistributorState
         IEnumerable<double> auxiliaryReservoirPressuresKPa,
         IEnumerable<TrainBrakeDistributorMode> modes,
         IEnumerable<double> controlPressuresKPa)
-        : this(auxiliaryReservoirPressuresKPa, modes, controlPressuresKPa,
-            Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, auxiliaryReservoirPressuresKPa?.Count() ?? 0))
+        : this(MaterializeInitialState(auxiliaryReservoirPressuresKPa, modes, controlPressuresKPa))
     {
+    }
+
+    private TrainBrakeDistributorState(
+        (double[] Reservoirs, TrainBrakeDistributorMode[] Modes, double[] Controls, double[] LastPipes) values)
+        : this(values.Reservoirs, values.Modes, values.Controls, values.LastPipes)
+    {
+    }
+
+    private static (double[] Reservoirs, TrainBrakeDistributorMode[] Modes, double[] Controls, double[] LastPipes)
+        MaterializeInitialState(
+            IEnumerable<double> auxiliaryReservoirPressuresKPa,
+            IEnumerable<TrainBrakeDistributorMode> modes,
+            IEnumerable<double>? controlPressuresKPa = null)
+    {
+        ArgumentNullException.ThrowIfNull(auxiliaryReservoirPressuresKPa);
+        ArgumentNullException.ThrowIfNull(modes);
+        var reservoirs = auxiliaryReservoirPressuresKPa.ToArray();
+        var modeValues = modes.ToArray();
+        var controls = controlPressuresKPa?.ToArray() ??
+            Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, reservoirs.Length).ToArray();
+        var lastPipes = Enumerable.Repeat(TrainBrakePipeModel.NormalPressureKPa, reservoirs.Length).ToArray();
+        return (reservoirs, modeValues, controls, lastPipes);
     }
 
     public TrainBrakeDistributorState(
