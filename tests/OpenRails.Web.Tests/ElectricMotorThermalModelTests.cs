@@ -46,4 +46,26 @@ public sealed class ElectricMotorThermalModelTests
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             model.Advance(1, 0, 0, 0.5, 4, 1.1, 0, 50, 2, 40, 5));
     }
+
+    [Fact]
+    public void RejectsOverflowingThermalCalculationWithoutCorruptingMotorState()
+    {
+        var model = new ElectricMotorThermalModel(320);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            model.Advance(1, double.MaxValue, 2, 0.5, 4, 0.9, 0, 50, 2, 40, 5));
+
+        Assert.Equal(320, model.TemperatureKelvin);
+    }
+
+    [Fact]
+    public void RejectsThermalCalculationThatWouldCrossAbsoluteZero()
+    {
+        var model = new ElectricMotorThermalModel(1);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            model.Advance(1e100, 0, 0, 0.5, 4, 1, double.MaxValue, 50, 2, 40, 5));
+
+        Assert.Equal(1, model.TemperatureKelvin);
+    }
 }
