@@ -36,7 +36,9 @@ public static class VirtualPath
         if (include.StartsWith('/') || include.Contains(':'))
             throw new ArgumentException("Rooted include paths are not allowed.", nameof(includePath));
         var includeSegments = include.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (includeSegments.Length == 0 || includeSegments.All(segment => segment is "." or ".."))
+        if (includeSegments.Length == 0 ||
+            includeSegments.All(segment => segment is "." or "..") ||
+            includeSegments[^1] is "." or "..")
             throw new ArgumentException("The include path does not identify a file.", nameof(includePath));
 
         var stack = Normalize(containingFilePath)
