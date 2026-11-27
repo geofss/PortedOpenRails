@@ -8,23 +8,23 @@
 @implements IDisposable
 
 <main class="shell">
-    <p class="eyebrow">OPEN RAILS · WEB PORT</p>
-    <h1>PortedOpenRails</h1>
-    <p class="status">Milestone 3 · Route track network</p>
-    <p class="note">Choose the built-in preview or import your own route ZIP. Imported route metadata, track databases, and track-section geometry are read through the browser virtual content pipeline.</p>
+    <header class="or-mainform-heading">
+        <h1>Open Rails</h1>
+        <span>PortedOpenRails · desktop browser edition</span>
+    </header>
+    <div class="or-profile-strip">
+        <strong>Installation profile</strong>
+        <span>Browser-imported content packages</span>
+        <small>Browser storage replaces direct access to a local simulator installation folder.</small>
+    </div>
 
     <section class="route-choice" aria-labelledby="route-heading">
-        <h2 id="route-heading">Choose a route</h2>
+        <h2 id="route-heading">Route</h2>
         <div class="route-options">
-            <button class="route-card @(selectedDefault ? "selected" : "")" @onclick="SelectDefaultRoute">
-                <span class="route-card-title">Default Route</span>
-                <span class="route-card-tag">Built-in preview</span>
-                <span class="route-card-description">A starter route entry to explore the web-port interface. Track, scenery, and simulation are not included yet.</span>
-            </button>
             <label class="route-card upload-card">
-                <span class="route-card-title">Add Your Own Route</span>
-                <span class="route-card-tag">Import route ZIP</span>
-                <span class="route-card-description">Select ZIP content containing one or more .trk route metadata files.</span>
+                <span class="route-card-title">Browse route package…</span>
+                <span class="route-card-tag">Open Rails / MSTS ZIP</span>
+                <span class="route-card-description">Select a route archive containing its .trk, .tdb, TSECTION.DAT and route assets.</span>
                 <InputFile OnChange="HandleRouteZip" accept=".zip,application/zip" disabled="@isLoading" />
             </label>
         </div>
@@ -86,29 +86,20 @@
         }
         @if (routeChoices.Count > 0)
         {
-            <div class="route-list">
-                <h3>Routes found</h3>
-                @foreach (var route in routeChoices)
-                {
-                    <button class="route-row @(selectedRoute?.Metadata.RouteId == route.Metadata.RouteId ? "selected" : "")" @onclick="() => SelectRoute(route)">
-                        <strong>@route.Metadata.Name</strong>
-                        <span>@route.Metadata.RouteId</span>
-                        <small>@route.Metadata.Description</small>
-                        <small>Source: @route.PackageName · @route.MetadataFile</small>
-                    </button>
-                }
+            <div class="or-route-picker">
+                <label for="or-route-select">Select route</label>
+                <select id="or-route-select" value="@SelectedRouteIndex" @onchange="SelectRouteFromMenu" disabled="@isLoading">
+                    <option value="-1">Select an installed route…</option>
+                    @for (var routeIndex = 0; routeIndex < routeChoices.Count; routeIndex++)
+                    {
+                        var routeOption = routeChoices[routeIndex];
+                        <option value="@routeIndex">@routeOption.Metadata.Name (@routeOption.Metadata.RouteId)</option>
+                    }
+                </select>
             </div>
         }
 
-        @if (selectedDefault)
-        {
-            <div class="route-details">
-                <h3>Default Route · Preview</h3>
-                <p>This built-in entry is a UI preview only. No route assets are bundled, and the simulator is not running yet.</p>
-                <p class="success">Default route selected</p>
-            </div>
-        }
-        else if (selectedRoute is not null)
+        @if (selectedRoute is not null)
         {
             <div class="route-details">
                 <h3>@selectedRoute.Metadata.Name</h3>
@@ -417,6 +408,10 @@
             }
         }
     </section>
+    <footer class="or-mainform-footer">
+        <strong>Open Rails</strong>
+        <span>© Open Rails project · GPL source distribution</span>
+    </footer>
 </main>
 
 @code {
@@ -541,6 +536,20 @@
         selectedDefault = false;
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
+    }
+
+    private int SelectedRouteIndex => selectedRoute is null ? -1 : routeChoices.IndexOf(selectedRoute);
+
+    private async Task SelectRouteFromMenu(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var routeIndex) &&
+            routeIndex >= 0 && routeIndex < routeChoices.Count)
+        {
+            await SelectRoute(routeChoices[routeIndex]);
+        }
     }
 
     private async Task BuildRouteNetworkAsync(RouteChoice route)
