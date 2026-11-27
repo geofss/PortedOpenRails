@@ -52,11 +52,13 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 
 ## Implemented during the ongoing parity work
 
-- Added portable native animation clip/node/controller/keyframe data extraction for the upstream shape model.
-- Preserved linear-position keyframes and rotation keyframes (slerp and TCB key records) in the portable mesh model.
-- Added position interpolation and quaternion slerp sampling utility, with unit tests for interpolation, clamping, and invalid controller-kind usage.
-- Added a pose evaluator that maps named animation nodes to shape-matrix indices and samples per-node position/rotation transforms for a selected clip/frame.
-- Wired sampled poses into both untextured and textured track-shape render geometry hierarchy transforms. The builder accepts an animation clip index and frame; omitted/default values preserve static geometry.
-- Added regression tests for named-node mapping, sampled translation, unmatched helper nodes, missing clips, and non-finite frame rejection.
-- **Still incomplete:** runtime clock/frame advancement, train/wheel/cab animation binding, TCB rotational interpolation, and material/UV parity remain outstanding. WORLD and track-shape builders expose clip/frame parameters, but the application runtime still needs to drive those parameters from simulation time and bind specific clips to vehicle/scenery animation states. The render builder currently selects the first LOD and does not yet implement dynamic LOD selection.
-- Test source has been added but cannot be executed in this environment; no build/test pass is asserted.
+- Added portable native animation clip/node/controller/keyframe extraction, including TCB key parameters.
+- Added linear-position interpolation and TCB quaternion interpolation using neighboring quaternion logarithms and squad-style controls; regression coverage distinguishes TCB sampling from plain slerp.
+- Added a simulation-time-to-frame clock with looping and non-looping behavior.
+- Added named-node pose evaluation and applied sampled transforms in track-shape and WORLD render hierarchy traversal.
+- Added elapsed-simulation-time inputs to both render builders. Added a rolling-stock render-frame orchestrator that connects consist motion state, route placement, elapsed simulation time, animation sampling, season selection, and camera-distance LOD selection.
+- Added distance-based LOD selection for track shapes and WORLD scenery, choosing the nearest viewing-distance threshold and handling unordered source levels.
+- Shape mesh extraction now preserves every source vertex UV channel, all primitive texture slots with filter/LOD-bias/border metadata, UV operation metadata, light-material values, and additional primitive/vertex/light-state flags.
+- Added tests for TCB-vs-slerp behavior, simulation-time frame selection, loop/clamp behavior, and LOD threshold selection.
+- **Still incomplete:** the browser application must supply its live simulation clock and camera to the render-frame builder; train/wheel/cab-specific clip binding and animation controllers are not yet complete. The renderer still emits its legacy primary-UV vertex layout, so preserved secondary UV sets, multiple texture slots, UV operation evaluation, shader variants, lighting, alpha, and Z-buffer states are not yet fully rendered. Native TCB parity requires comparison against upstream reference outputs across irregular frame intervals and rotation edge cases.
+- **Verification:** source changes and test source are committed, but this environment cannot execute dotnet or browser end-to-end tests. No build/test pass is asserted.
