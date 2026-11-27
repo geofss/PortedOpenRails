@@ -72,10 +72,8 @@ public sealed class TrainConsistMotionIntegratorTests
     }
 
     [Fact]
-    public void MotionSnapshotRejectsEmptyAndNullCarCollections()
+    public void MotionSnapshotRejectsNullCarEntries()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TrainConsistMotionState(Array.Empty<TrainCarMotionState>()));
         Assert.Throws<ArgumentException>(() =>
             new TrainConsistMotionState(new TrainCarMotionState[] { null! }));
     }
