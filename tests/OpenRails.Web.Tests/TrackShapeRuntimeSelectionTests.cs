@@ -37,6 +37,26 @@ public sealed class TrackShapeRuntimeSelectionTests
     }
 
     [Fact]
+    public void MeshVertexRetainsEveryUvChannel()
+    {
+        var vertex = new TrackShapeMeshVertex(
+            System.Numerics.Vector3.Zero,
+            System.Numerics.Vector3.UnitY,
+            new System.Numerics.Vector2(0.1f, 0.2f),
+            0, uint.MaxValue, 0,
+            new[]
+            {
+                new System.Numerics.Vector2(0.3f, 0.4f),
+                new System.Numerics.Vector2(0.5f, 0.6f)
+            });
+
+        Assert.Equal(new System.Numerics.Vector2(0.1f, 0.2f), vertex.GetTextureCoordinate(0));
+        Assert.Equal(new System.Numerics.Vector2(0.3f, 0.4f), vertex.GetTextureCoordinate(1));
+        Assert.Equal(new System.Numerics.Vector2(0.5f, 0.6f), vertex.GetTextureCoordinate(2));
+        Assert.Equal(System.Numerics.Vector2.Zero, vertex.GetTextureCoordinate(3));
+    }
+
+    [Fact]
     public void LodSelectorRejectsInvalidDistanceAndHandlesNoLevels()
     {
         Assert.Null(TrackShapeLodSelector.Select(Array.Empty<TrackShapeLodMesh>(), 0));
