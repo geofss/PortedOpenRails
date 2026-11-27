@@ -22,6 +22,34 @@ public sealed class ActivityStationStopTrackerTests
     }
 
     [Fact]
+    public void BrokenPathTraceCannotCompleteAllStops()
+    {
+        var path = new RoutePathDefinition("route/path.pat", "Broken", "Broken", "A", "B", 0,
+            new[] { new RoutePathPoint(1, 2, 100, 0, 200, 1, 1) },
+            new[] { new RoutePathNode(2, 9, uint.MaxValue, 0) },
+            Array.Empty<string>());
+        var tracker = new ActivityStationStopTracker(path);
+
+        var progress = tracker.Advance(1, 2, 100, 200, 0);
+
+        Assert.False(progress.PathTraceComplete);
+        Assert.False(progress.AllStopsCompleted);
+    }
+
+    [Fact]
+    public void PathWithoutWaitingPointsDoesNotCompleteAllStopsImmediately()
+    {
+        var path = new RoutePathDefinition("route/path.pat", "NoStops", "NoStops", "A", "B", 0,
+            new[] { new RoutePathPoint(1, 2, 100, 0, 200, 1, 1) },
+            new[] { new RoutePathNode(0, uint.MaxValue, uint.MaxValue, 0) },
+            Array.Empty<string>());
+        var progress = new ActivityStationStopTracker(path).Advance(1, 2, 100, 200, 0);
+
+        Assert.Equal(0, progress.TotalStops);
+        Assert.False(progress.AllStopsCompleted);
+    }
+
+    [Fact]
     public void DoesNotCreditAnotherTileOrPointOutsideRadius()
     {
         var path = new RoutePathDefinition("route/path.pat", "Main", "Main", "A", "B", 0,

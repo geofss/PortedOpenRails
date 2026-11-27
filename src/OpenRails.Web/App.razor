@@ -204,6 +204,10 @@
                                         @if (activityStationStopProgress is { } stopProgress)
                                         {
                                             <p class="hint">Activity station stops: @stopProgress.VisitedStops / @stopProgress.TotalStops visited</p>
+                                            @if (!stopProgress.PathTraceComplete)
+                                            {
+                                                <p class="error">The activity path contains broken links; AllStops completion is disabled.</p>
+                                            }
                                         }
                                         @if (activityExecution is not null)
                                         {
