@@ -126,17 +126,27 @@ public sealed class TrackShapeRenderGeometryBuilder
                 var textureIndex = primitive.ImageName is not null &&
                     textureIndexes.TryGetValue((placement.Asset.ShapeIndex, primitive.ImageName), out var foundTexture)
                     ? foundTexture : -1;
-                var key = new TrackShapeBatchKey(textureIndex, primitive.AlphaTest,
-                    primitive.TextureAddressMode, primitive.ZBias);
+                var key = new TrackShapeBatchKey(
+                    placement.Asset.ShapeIndex, primitive.PrimitiveStateIndex, textureIndex,
+                    primitive.ShaderName, primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
+                    primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.AlphaTest,
+                    primitive.TextureAddressMode, primitive.ZBias, primitive.ZBufferMode);
                 if (!batchBuilders.TryGetValue(key, out var batch))
                 {
-                    batch = new TrackShapeBatchBuilder(key);
+                    batch = new TrackShapeBatchBuilder(key, primitive);
                     batchBuilders.Add(key, batch);
                 }
 
                 var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                 var worldTransform = localTransform * placement.WorldTransform;
                 var baseIndex = batch.Vertices.Count / 5;
+                var channelCount = subObject.Vertices.Count == 0 ? 0 :
+                    subObject.Vertices.Max(vertex => 1 + (vertex.AdditionalTextureCoordinates?.Count ?? 0));
+                while (batch.TextureCoordinateChannels.Count < channelCount)
+                {
+                    var channel = Enumerable.Repeat(Vector2.Zero, baseIndex).ToList();
+                    batch.TextureCoordinateChannels.Add(channel);
+                }
                 foreach (var vertex in subObject.Vertices)
                 {
                     var position = Vector3.Transform(vertex.Position, worldTransform);
@@ -145,6 +155,8 @@ public sealed class TrackShapeRenderGeometryBuilder
                     batch.Vertices.Add(position.Z);
                     batch.Vertices.Add(vertex.TextureCoordinate.X);
                     batch.Vertices.Add(vertex.TextureCoordinate.Y);
+                    for (var channel = 0; channel < batch.TextureCoordinateChannels.Count; channel++)
+                        batch.TextureCoordinateChannels[channel].Add(vertex.GetTextureCoordinate(channel));
                 }
 
                 foreach (var index in primitive.Indices)
@@ -166,7 +178,10 @@ public sealed class TrackShapeRenderGeometryBuilder
             .Where(batch => batch.Indices.Count > 0)
             .Select(batch => new TrackShapeTexturedRenderBatch(
                 batch.Vertices.ToArray(), batch.Indices.ToArray(), batch.Key.TextureIndex,
-                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias))
+                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias,
+                Array.AsReadOnly(batch.TextureCoordinateChannels
+                    .Select(channel => (IReadOnlyList<Vector2>)Array.AsReadOnly(channel.ToArray())).ToArray()),
+                batch.Material))
             .ToArray();
         return new TrackShapeTexturedRenderGeometry(Array.AsReadOnly(batches), truncated);
     }
@@ -184,13 +199,22 @@ public sealed class TrackShapeRenderGeometryBuilder
         return TrackShapeAnimationClock.GetFrame(clips[clipIndex], elapsed, loopAnimation);
     }
 
-    private sealed record TrackShapeBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
+    private sealed record TrackShapeBatchKey(
+        uint ShapeIndex, int PrimitiveStateIndex, int TextureIndex, string ShaderName,
+        int LightMaterialIndex, int LightConfigurationIndex, int TextureFilterMode,
+        float MipMapLodBias, bool AlphaTest, int TextureAddressMode, float ZBias, int ZBufferMode);
     private sealed class TrackShapeBatchBuilder
     {
         public TrackShapeBatchKey Key { get; }
+        public TrackShapePrimitiveMesh Material { get; }
         public List<float> Vertices { get; } = new();
         public List<int> Indices { get; } = new();
-        public TrackShapeBatchBuilder(TrackShapeBatchKey key) => Key = key;
+        public List<List<Vector2>> TextureCoordinateChannels { get; } = new();
+        public TrackShapeBatchBuilder(TrackShapeBatchKey key, TrackShapePrimitiveMesh material)
+        {
+            Key = key;
+            Material = material;
+        }
     }
 
     private sealed class ShapeImageKeyComparer : IEqualityComparer<(uint ShapeIndex, string ImageName)>
@@ -251,7 +275,9 @@ public sealed record TrackShapeTexturedRenderBatch(
     int TextureIndex,
     bool AlphaTest,
     int TextureAddressMode,
-    float ZBias);
+    float ZBias,
+    IReadOnlyList<IReadOnlyList<Vector2>>? TextureCoordinateChannels = null,
+    TrackShapePrimitiveMesh? Material = null);
 
 public sealed record TrackShapeTexturedRenderGeometry(
     IReadOnlyList<TrackShapeTexturedRenderBatch> Batches,
