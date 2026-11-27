@@ -190,17 +190,24 @@ public sealed class SignalNetwork
     /// <summary>Evaluates signals directly from the current interlocking occupancy and switch state.</summary>
     public IReadOnlyList<RouteSignalIndication> Evaluate(
         SignalInterlockingSnapshot interlockingState,
-        SignalScriptLibrary? scripts = null)
+        SignalScriptLibrary? scripts = null,
+        string? enabledTrainId = null)
     {
         ArgumentNullException.ThrowIfNull(interlockingState);
+        IReadOnlySet<uint>? enabledTrackNodes = null;
+        if (!string.IsNullOrWhiteSpace(enabledTrainId))
+            enabledTrackNodes = interlockingState.ReservedCircuits
+                .Where(pair => string.Equals(pair.Value, enabledTrainId, StringComparison.Ordinal))
+                .Select(pair => pair.Key).ToFrozenSet();
         return Evaluate(interlockingState.OccupiedCircuits.Keys.ToFrozenSet(),
-            interlockingState.SelectedJunctionBranches, scripts);
+            interlockingState.SelectedJunctionBranches, scripts, enabledTrackNodes);
     }
 
     public IReadOnlyList<RouteSignalIndication> Evaluate(
         IReadOnlySet<uint> occupiedTrackNodeIndices,
         IReadOnlyDictionary<uint, uint>? selectedJunctionBranches = null,
-        SignalScriptLibrary? scripts = null)
+        SignalScriptLibrary? scripts = null,
+        IReadOnlySet<uint>? enabledTrackNodeIndices = null)
     {
         ArgumentNullException.ThrowIfNull(occupiedTrackNodeIndices);
         var result = new List<RouteSignalIndication>();
@@ -261,7 +268,8 @@ public sealed class SignalNetwork
                         firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied.");
             }
 
-            result.Add(ApplyNativeScript(signal, baseline, blockState, scripts, selectedJunctionBranches));
+            var enabled = enabledTrackNodeIndices?.Contains(block.TrackNodeIndex) == true;
+            result.Add(ApplyNativeScript(signal, baseline, blockState, scripts, selectedJunctionBranches, enabled));
         }
 
         return Array.AsReadOnly(result.ToArray());
@@ -272,7 +280,8 @@ public sealed class SignalNetwork
         RouteSignalIndication baseline,
         int blockState,
         SignalScriptLibrary? scripts,
-        IReadOnlyDictionary<uint, uint>? selectedBranches)
+        IReadOnlyDictionary<uint, uint>? selectedBranches,
+        bool enabled)
     {
         var scriptName = signal.Definition?.Script;
         if (string.IsNullOrWhiteSpace(scriptName) || scripts is null ||
@@ -303,7 +312,7 @@ public sealed class SignalNetwork
                 initialState,
                 signal.Definition?.DrawStates.Values.FirstOrDefault(draw =>
                     draw.Name.Equals(baseline.DrawState, StringComparison.OrdinalIgnoreCase))?.Index ?? 0,
-                Enabled: false,
+                Enabled: enabled,
                 BlockState: blockState,
                 RouteSet: baseline.NextTrackNodeIndex.HasValue,
                 DrawStateResolver: ResolveDrawState));
