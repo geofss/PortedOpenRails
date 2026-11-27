@@ -55,6 +55,20 @@ public sealed class ActivityPassengerStopTimingTests
     }
 
     [Fact]
+    public void RejectsOverflowingDerivedScheduleIntervals()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ActivityPassengerStopTiming.Calculate(-double.MaxValue, double.MaxValue, 0, 0));
+    }
+
+    [Fact]
+    public void RejectsOverflowingBoardingEndClock()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ActivityPassengerStopTiming.Calculate(0, 1e308, 1e308, 1e308));
+    }
+
+    [Fact]
     public void RejectsNonFiniteTimesAndNegativePlatformMinimum()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>

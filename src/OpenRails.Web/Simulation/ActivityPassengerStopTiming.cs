@@ -23,6 +23,9 @@ public static class ActivityPassengerStopTiming
 
         var plannedBoardingSeconds = scheduledDepartureSeconds - scheduledArrivalSeconds;
         var punctualBoardingSeconds = scheduledDepartureSeconds - actualArrivalSeconds;
+        if (!double.IsFinite(plannedBoardingSeconds) || !double.IsFinite(punctualBoardingSeconds))
+            throw new ArgumentOutOfRangeException(nameof(scheduledDepartureSeconds),
+                "Derived passenger-stop schedule intervals must remain finite.");
         var expectedBoardingSeconds = plannedBoardingSeconds > 0
             ? plannedBoardingSeconds
             : platformMinimumWaitingSeconds;
@@ -41,6 +44,9 @@ public static class ActivityPassengerStopTiming
         // Native code starts with ClockTime + BoardingS and subtracts the time
         // elapsed since ActArrive. This is algebraically ActArrive + BoardingS.
         var boardingEndSeconds = actualArrivalSeconds + boardingSeconds;
+        if (!double.IsFinite(boardingEndSeconds))
+            throw new ArgumentOutOfRangeException(nameof(actualArrivalSeconds),
+                "Passenger-stop boarding end time exceeded the finite activity clock range.");
         return new ActivityPassengerStopTimingResult(
             plannedBoardingSeconds, punctualBoardingSeconds, boardingSeconds,
             boardingEndSeconds);
