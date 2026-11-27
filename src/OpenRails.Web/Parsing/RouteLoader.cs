@@ -27,6 +27,10 @@ public sealed class RouteLoader
             : geometryReader.ReadRouteSections(store, assets.RouteTrackSectionsPath);
 
         var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
+        var signalConfigurationPath = assets.RouteRoot + "/sigcfg.dat";
+        var signalConfiguration = store.Contains(signalConfigurationPath)
+            ? new SignalConfigurationReader().Read(store, signalConfigurationPath)
+            : null;
         var signalling = new SignalNetworkBuilder().Build(database, network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
@@ -47,6 +51,7 @@ public sealed class RouteLoader
             routeSections,
             network,
             signalling,
+            signalConfiguration,
             terrainTiles,
             trackShapeAssets,
             trackShapeMeshes,
@@ -68,6 +73,7 @@ public sealed record RouteLoadResult(
     TrackSectionCatalog? RouteTrackSections,
     TrackNetwork TrackNetwork,
     SignalNetwork Signalling,
+    SignalConfigurationDefinition? SignalConfiguration,
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
     RouteTrackShapeMeshLoadResult TrackShapeMeshes,
