@@ -81,7 +81,7 @@ public sealed class ServiceFileLocatorTests
 
         Assert.Equal(new[] { "TRAINS/SERVICES/Express.srv", "TRAINS/SERVICES/Freight.SRV" },
             ServiceFileLocator.FindServices(paths));
-        Assert.Equal(new[] { "ROUTES/RouteA/PATHS/Loop.PAT", "ROUTES/RouteA/PATHS/Main.pat" },
+        Assert.Equal(new[] { "ROUTES/RouteA/paths/Loop.PAT", "ROUTES/RouteA/PATHS/Main.pat" },
             ServiceFileLocator.FindPaths(paths, "ROUTES/RouteA/RouteA.trk"));
     }
 }

@@ -634,6 +634,28 @@
         selectedDefault = true;
         selectedRoute = null;
         selectedActivityPath = null;
+        serviceChoices = Array.Empty<string>();
+        loadedServices = Array.Empty<ServiceMetadata>();
+        availableRoutePathIds = Array.Empty<string>();
+        loadedRoutePaths = Array.Empty<RoutePathDefinition>();
+        errorMessage = null;
+        loadedRoute = null;
+        traversedRoute = null;
+        simulationSetup = null;
+        drivingController = null;
+        currentMotionState = null;
+        selectedTrackNodeIndex = 0;
+        reverseRouteStart = false;
+        selectedBranchTrackNodeIndices.Clear();
+        routeBuildMessage = null;
+    }
+
+    private async Task SelectRoute(RouteChoice route)
+    {
+        selectedRoute = route;
+        selectedActivityPath = null;
+        selectedDefault = false;
+        routeDiagnostics.Clear();
         serviceChoices = ServiceFileLocator.FindServices(composite?.Paths ?? Array.Empty<string>());
         loadedServices = serviceChoices.Select(path =>
         {
@@ -659,23 +681,6 @@
                     return null;
                 }
             }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
-        errorMessage = null;
-        loadedRoute = null;
-        traversedRoute = null;
-        simulationSetup = null;
-        drivingController = null;
-        currentMotionState = null;
-        selectedTrackNodeIndex = 0;
-        reverseRouteStart = false;
-        selectedBranchTrackNodeIndices.Clear();
-        routeBuildMessage = null;
-    }
-
-    private async Task SelectRoute(RouteChoice route)
-    {
-        selectedRoute = route;
-        selectedActivityPath = null;
-        selectedDefault = false;
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
     }
