@@ -273,3 +273,4 @@ public sealed class AiServiceDrivingControllerTests
 
         Assert.Equal(6, decision.TargetSpeedMetersPerSecond, 3);
 }
+}
