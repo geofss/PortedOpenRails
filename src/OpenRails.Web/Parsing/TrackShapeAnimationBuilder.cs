@@ -37,7 +37,7 @@ public static class TrackShapeAnimationBuilder
         var keys = source.Select(key => key switch
         {
             linear_key position => new TrackShapeAnimationKey(position.Frame,
-                new Vector3(position.X, position.Y, position.Z), null, null, null, null, null),
+                new Vector3(position.X, position.Y, position.Z), null, null, null, null, null, null),
             slerp_rot rotation => new TrackShapeAnimationKey(rotation.Frame, null,
                 Normalize(new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W)), null, null, null, null, null),
             tcb_key rotation => new TrackShapeAnimationKey(rotation.Frame, null,
