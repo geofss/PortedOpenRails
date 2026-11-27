@@ -1,3 +1,4 @@
+using OpenRails.Web.Parsing;
 using OpenRails.Web.Simulation;
 using Xunit;
 
@@ -90,6 +91,31 @@ public sealed class AiServiceDrivingControllerTests
         var decision = controller.Calculate(route, 90, 0, 10);
         Assert.Equal(1, decision.NextWaypointIndex);
         Assert.True(decision.ThrottlePercent > 0);
+    }
+
+    [Fact]
+    public void AppliesPathFollowerCommandsToTheLiveBrowserTrainController()
+    {
+        var consist = new ConsistMetadata("AiService", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "ai-service.con");
+        var traction = new LocomotiveTractionMetadata(
+            "AiTestLoco", 1_500, 1_500, 100_000, 100, 0, null, "ai-test.eng");
+        var asset = new ConsistCarAssetReference("AiTest", 1, "Engine", "Diesel", true,
+            false, "ai-test.eng", true, null,
+            new RollingStockMetadata("Engine", "Diesel", 40_000, 3, 4, 20, 4, 8,
+                "air_single_pipe", "distributor", 100_000, "ai-test.eng"),
+            "ai-test.s", true, null, traction);
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200);
+        var liveController = new BrowserTrainDrivingController(setup);
+        var plan = Plan(0, 150);
+
+        var decision = controller.Apply(liveController, plan, 10);
+
+        Assert.True(decision.ThrottlePercent > 0);
+        Assert.Equal(decision.ThrottlePercent, liveController.ThrottlePercent, 3);
+        Assert.Equal(0, liveController.BrakePercent);
     }
 
     private static ServiceRouteStartPosition Plan(double start, double end) =>
