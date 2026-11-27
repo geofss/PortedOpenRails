@@ -297,6 +297,52 @@ public sealed class SignalNetworkBuilderTests
         Assert.Contains("failed safely", indication.Reason);
     }
 
+
+    [Fact]
+    public void NativeSignalScriptReceivesEnabledForTrainWhoseRouteReservesItsCircuit()
+    {
+        var definition = new SignalTypeDefinition("main", "enabled-script", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var signal = new RouteSignalHead(13, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>());
+        var script = new SignalScriptDefinition("enabled-script",
+            new[]
+            {
+                "EXTERN FLOAT ENABLED;",
+                "EXTERN FLOAT STATE;",
+                "IF (ENABLED == 1) { STATE = 6; } ELSE { STATE = 0; }"
+            },
+            Array.Empty<string>(), new[] { "ENABLED", "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["enabled-script"] = script },
+            Array.Empty<string>());
+        var state = new SignalInterlockingSnapshot(
+            new Dictionary<uint, string> { [2] = "AI-1" },
+            new Dictionary<uint, string>(),
+            new Dictionary<uint, string>(),
+            new Dictionary<uint, uint>());
+
+        var enabled = Assert.Single(network.Evaluate(state, library, "AI-1"));
+        var disabled = Assert.Single(network.Evaluate(state, library, "AI-2"));
+
+        Assert.Equal(RouteSignalAspect.Clear1, enabled.Aspect);
+        Assert.Equal(RouteSignalAspect.Stop, disabled.Aspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
