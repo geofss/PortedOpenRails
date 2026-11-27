@@ -543,3 +543,56 @@ input[type="range"] { accent-color: #4776a8; }
 .or-cab-live-control select {
     width: 100%;
 }
+
+
+/* Native MainForm command strip */
+
+.or-mainform-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 42px;
+    margin: 5px 0 8px;
+    padding: 5px 7px;
+    border: 1px solid #aaa;
+    background: #e8e8e8;
+}
+.or-menu-command {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 27px;
+    padding: 3px 13px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+    text-decoration: none;
+    box-shadow: inset 0 1px 0 #fff;
+}
+.or-menu-command:hover:not(.disabled) {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+}
+.or-menu-command.primary {
+    min-width: 82px;
+    font-weight: 700;
+}
+.or-menu-command.disabled {
+    color: #888;
+    background: #eee;
+    cursor: not-allowed;
+}
+.or-menu-logging {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 0 5px;
+    color: #333;
+    font-size: 12px;
+}
+@media (max-width: 560px) {
+    .or-menu-logging { margin-left: 0; }
+}
