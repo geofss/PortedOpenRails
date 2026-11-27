@@ -17,6 +17,7 @@ public sealed class SignalInterlockingController
     private readonly Dictionary<uint, string> occupancy = [];
     private readonly Dictionary<uint, string> junctionLocks = [];
     private readonly Dictionary<uint, uint> selectedBranches = [];
+    private readonly Dictionary<string, HashSet<string>> waitsFor = new(StringComparer.Ordinal);
 
     public SignalInterlockingController(
         IEnumerable<uint> trackCircuitIds,
@@ -72,12 +73,13 @@ public sealed class SignalInterlockingController
 
         lock (gate)
         {
+            var blockers = new HashSet<string>(StringComparer.Ordinal);
             foreach (var circuit in routeCircuitIds)
             {
                 if (occupancy.TryGetValue(circuit, out var occupant) && occupant != trainId)
-                    return false;
+                    blockers.Add(occupant);
                 if (reservations.TryGetValue(circuit, out var owner) && owner != trainId)
-                    return false;
+                    blockers.Add(owner);
             }
 
             foreach (var (junction, branch) in requiredJunctionBranches)
@@ -86,9 +88,16 @@ public sealed class SignalInterlockingController
                     !routeCircuitIds.Contains(branch))
                     return false;
                 if (junctionLocks.TryGetValue(junction, out var lockOwner) && lockOwner != trainId)
-                    return false;
-                if (selectedBranches.TryGetValue(junction, out var selected) && selected != branch)
-                    return false;
+                    blockers.Add(lockOwner);
+                if (selectedBranches.TryGetValue(junction, out var selected) && selected != branch &&
+                    junctionLocks.TryGetValue(junction, out var selectedOwner) && selectedOwner != trainId)
+                    blockers.Add(selectedOwner);
+            }
+
+            if (blockers.Count > 0)
+            {
+                waitsFor[trainId] = blockers;
+                return false;
             }
 
             // Commit only after the complete route has passed every conflict check.
@@ -99,6 +108,7 @@ public sealed class SignalInterlockingController
                 junctionLocks[junction] = trainId;
                 selectedBranches[junction] = branch;
             }
+            waitsFor.Remove(trainId);
             return true;
         }
     }
@@ -147,6 +157,9 @@ public sealed class SignalInterlockingController
                 reservations.Remove(circuit);
             foreach (var junction in junctionLocks.Where(pair => pair.Value == trainId).Select(pair => pair.Key).ToArray())
                 junctionLocks.Remove(junction);
+            waitsFor.Remove(trainId);
+            foreach (var blockers in waitsFor.Values)
+                blockers.Remove(trainId);
             return true;
         }
     }
@@ -182,6 +195,48 @@ public sealed class SignalInterlockingController
     }
 
     public void ReleaseRoute(string trainId) => TryReleaseRoute(trainId);
+
+    /// <summary>
+    /// Returns trains participating in a wait-for cycle created by blocked
+    /// route reservations. This is a diagnostic, not an automatic route
+    /// cancellation: native dispatch policy must choose a safe recovery.
+    /// </summary>
+    public IReadOnlySet<string> GetDeadlockedTrainIds()
+    {
+        lock (gate)
+        {
+            var visiting = new HashSet<string>(StringComparer.Ordinal);
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            var deadlocked = new HashSet<string>(StringComparer.Ordinal);
+            var stack = new List<string>();
+
+            void Visit(string train)
+            {
+                if (visiting.Contains(train))
+                {
+                    var cycleStart = stack.IndexOf(train);
+                    if (cycleStart >= 0)
+                        foreach (var member in stack.Skip(cycleStart))
+                            deadlocked.Add(member);
+                    return;
+                }
+                if (!visited.Add(train))
+                    return;
+
+                visiting.Add(train);
+                stack.Add(train);
+                if (waitsFor.TryGetValue(train, out var blockers))
+                    foreach (var blocker in blockers)
+                        Visit(blocker);
+                stack.RemoveAt(stack.Count - 1);
+                visiting.Remove(train);
+            }
+
+            foreach (var train in waitsFor.Keys)
+                Visit(train);
+            return deadlocked;
+        }
+    }
 
     public SignalInterlockingSnapshot Snapshot()
     {
