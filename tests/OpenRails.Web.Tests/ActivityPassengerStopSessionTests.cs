@@ -14,7 +14,7 @@ public sealed class ActivityPassengerStopSessionTests
         var arrived = stop.OnTrainStop(100, isAtStation: true);
 
         Assert.True(arrived.Arrived);
-        Assert.Equal(130, arrived.BoardingEndClockSeconds);
+        Assert.Equal(160, arrived.BoardingEndClockSeconds);
     }
 
     [Fact]
@@ -23,12 +23,12 @@ public sealed class ActivityPassengerStopSessionTests
         var stop = new ActivityPassengerStopSession(100, 160, 30);
         stop.OnTrainStop(100, isAtStation: true);
 
-        var waiting = stop.OnTimer(129.2);
+        var waiting = stop.OnTimer(159.2);
         Assert.Equal(1, waiting.RemainingSeconds);
         Assert.False(waiting.MayDepart);
         Assert.Contains("00:01", waiting.DisplayMessage);
 
-        var ready = stop.OnTimer(130);
+        var ready = stop.OnTimer(160);
         Assert.True(ready.MayDepart);
         Assert.Contains("You may depart", ready.DisplayMessage);
     }
@@ -96,8 +96,8 @@ public sealed class ActivityPassengerStopSessionTests
         var state = stop.OnTrainStop(150, isAtStation: true);
 
         Assert.Equal(100, state.ActualArrivalSeconds);
-        Assert.Equal(130, state.BoardingEndClockSeconds);
-        Assert.True(stop.OnTimer(150).MayDepart);
+        Assert.Equal(160, state.BoardingEndClockSeconds);
+        Assert.True(stop.OnTimer(160).MayDepart);
     }
 
     [Fact]
