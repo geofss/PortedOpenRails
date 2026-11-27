@@ -35,7 +35,7 @@ public sealed class SignalScriptInterpreter
                 runtime.Returned, null, runtime.InstructionsExecuted, runtime.DrawStateWasAssigned);
         }
         catch (Exception exception) when (exception is InvalidDataException or NotSupportedException or
-            OverflowException or DivideByZeroException or ArgumentException)
+            OverflowException or DivideByZeroException or FormatException or ArgumentException)
         {
             return SignalScriptExecutionResult.Failed(context.InitialState, context.InitialDrawState,
                 exception.Message);

@@ -185,6 +185,22 @@ public sealed class SignalScriptInterpreterTests
         Assert.Contains("zero", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void OutOfRangeIntegerLiteralFailsClosed()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            STATE = 999999999999999999999999999999;
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(5, 1, false, 0, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(5, result.State);
+        Assert.NotNull(result.Diagnostic);
+    }
+
     private static SignalScriptDefinition Script(string source)
     {
         var lines = source.Split('\n').Select(line => line.Trim()).ToArray();
