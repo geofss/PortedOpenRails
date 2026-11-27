@@ -231,7 +231,7 @@ public sealed class ActivityEventReaderTests
                   EventCategoryAction (
                     ID ( 70 ) Name ( "Wagon work order" ) Activation_Level ( 0 )
                     EventTypePickUpWagons ( )
-                    Wagon_List ( UID ( 65538 ) SidingItem ( 5 ) Description ( "Brake van" ) )
+                    Wagon_List ( UID ( 65538 ) Description ( "Brake van" ) SidingItem ( 5 ) )
                     SidingItem ( 6 ) Outcomes ( )
                   )
                   EventCategoryAction (
