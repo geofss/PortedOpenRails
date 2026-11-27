@@ -11,9 +11,9 @@ This is a source-based parity audit, not a redesign brief. The browser UI must p
 - Original Open Rails title and footer attribution, with separate `Ported by geofss` credit.
 - Two-column MainForm-style layout with installation profile, route, mode, singleplayer, multiplayer, and details/commands groups.
 - Activity / Timetable mode switch.
-- Activity selection backed by route activity files and native activity metadata.
+- Activity selection backed by route activity files and native activity metadata, plus the native Explore option and start-at / heading-to selectors populated from route path files. Explore path-to-TDB execution is still withheld until the binding is complete.
 - Locomotive and consist selectors backed by parsed rolling-stock content; locomotive selection resolves its owning consist.
-- Timetable file discovery, native delimiter-grid parsing, timetable train-column selection, description and per-train briefing display.
+- Timetable set grouping by virtual directory, native delimiter-grid parsing, timetable train-column selection, description and per-train briefing display. Day, season, weather and weather-file controls are present but explicitly unavailable pending native metadata/runtime support.
 - Start action gated by a usable route network, connected traversal, resolved consist and initialized simulation; Resume / Replay remains disabled until native save selection and restore are implemented.
 - Multiplayer Client / Server controls are shown disabled; browser transport and session lifecycle are not falsely represented as available.
 - Options dialog with all ten upstream page names: General, Audio, Video, Simulation, Keyboard, RailDriver, Data logger, Evaluation, System, Experimental.
@@ -28,11 +28,11 @@ This is a source-based parity audit, not a redesign brief. The browser UI must p
 | Upstream control / behavior | Current browser status | Remaining work |
 |---|---|---|
 | Installation profiles | One browser content profile | Multiple named browser profiles, independent package namespaces, import/export and profile persistence |
-| Activity / Explore workflow | Activity selection and locomotive/consist selectors exist | Native Explore activity mode; start-at and heading-to path selectors; exact locomotive-to-consist dependency; upstream enable rules |
+| Activity / Explore workflow | Activity selection, Explore option, route-path start/destination selectors, locomotive/consist selectors | Bind Explore path points to TDB traversal; exact locomotive-to-consist dependency and upstream enable rules |
 | Activity environment | Native metadata displayed | Editable time, duration, season, weather and difficulty defaults/overrides; apply them to the simulation/activity runtime |
-| Timetable set and timetable | Native timetable files are discovered and parsed | Native timetable-set grouping, timetable/day model, weather/season/weather-file selection, selection persistence and full timetable runtime integration |
+| Timetable set and timetable | Sets grouped by directory; native timetable file and train columns parsed | Native day model, weather/season/weather-file selection, selection persistence and full timetable runtime integration |
 | Timetable train | Train columns are selectable and briefing is displayed | Resolve train path/consist/direction/start into a runnable player service and enable Start only when all references validate |
-| Singleplayer Start | Navigates to initialized browser driving panel | Match upstream action lifecycle and start semantics for activity and timetable sessions |
+| Singleplayer Start | Enabled only for selected native activity with a valid connected route and initialized simulation; action navigates to driving panel | Match upstream action lifecycle and start semantics; add validated Explore and timetable start paths |
 | Resume / Replay | Disabled intentionally | Port native save enumeration, compatibility checks, restore, replay selection and state migration |
 | Multiplayer | Client/server panel shown disabled | Browser-compatible transport, protocol/session lifecycle, username/host validation, resume and start actions |
 | Options — General | Basic browser preferences persist | Port native settings model, all General controls, validation, telemetry/update integration and migration |
