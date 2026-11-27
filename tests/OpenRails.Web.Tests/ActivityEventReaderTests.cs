@@ -168,6 +168,73 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void NativeAssembleTrainMatchesExactConsistInEitherDirection()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            WagonAction(80, "AssembleTrain", new[] { "1 - 2", "1 - 3" })
+        }));
+
+        Assert.Equal(80, session.Advance(0, new ActivityPlayerState(0,
+            OtherTrains: new[] { new ActivityTrainState(new[] { "1 - 3", "1 - 2" }, false, false) }))?.EventId);
+    }
+
+    [Fact]
+    public void NativeAssembleTrainAtLocationRequiresPlayerTrainInsideSiding()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            WagonAction(81, "AssembleTrainAtLocation", new[] { "1 - 2" })
+        }));
+        var consists = new[] { new ActivityTrainState(new[] { "1 - 2" }, false, false) };
+
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0, OtherTrains: consists)));
+        Assert.Equal(81, session.Advance(0, new ActivityPlayerState(0,
+            OtherTrains: consists, PlayerTrainAtSiding: true))?.EventId);
+    }
+
+    [Fact]
+    public void NativeDropOffRequiresListedWagonsInStaticConsistAtSiding()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            WagonAction(82, "DropOffWagonsAtLocation", new[] { "1 - 2", "1 - 3" })
+        }));
+
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0, OtherTrains: new[]
+        {
+            new ActivityTrainState(new[] { "1 - 2", "1 - 3" }, false, true)
+        })));
+        Assert.Equal(82, session.Advance(0, new ActivityPlayerState(0, OtherTrains: new[]
+        {
+            new ActivityTrainState(new[] { "1 - 9", "1 - 2", "1 - 3" }, true, true)
+        }))?.EventId);
+    }
+
+    [Fact]
+    public void NativePickUpWagonsRequiresEveryListedCarAndLowSpeed()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            WagonAction(83, "PickUpWagons", new[] { "1 - 2", "1 - 3" })
+        }));
+
+        Assert.Null(session.Advance(0, new ActivityPlayerState(1.1,
+            PlayerConsistCarIds: new[] { "1 - 2", "1 - 3" })));
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0,
+            PlayerConsistCarIds: new[] { "1 - 2" })));
+        Assert.Equal(83, session.Advance(0, new ActivityPlayerState(1,
+            PlayerConsistCarIds: new[] { "1 - 9", "1 - 2", "1 - 3" }))?.EventId);
+    }
+
+    private static ActivityEventDefinition WagonAction(int id, string action,
+        IReadOnlyList<string> carIds) => new(
+        id, action, ActivityEventKind.Action, 1, 0, true, 0, 0, 0, 0, 0, 0,
+        action, "", "", ActivityEventOutcomes.Empty,
+        WagonRequirements: carIds.Select((carId, index) =>
+            new ActivityWagonRequirement((uint)(index + 1), (uint)(index + 10), "", carId)).ToArray());
+
+    [Fact]
     public void NativeActivityCompletionTakesEffectWhenEventTriggersNotWhenWindowIsAcknowledged()
     {
         var definition = new ActivityEventSet("activity.act", new[]

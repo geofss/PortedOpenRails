@@ -222,9 +222,14 @@ public sealed record ActivityEventDefinition(
     uint? SidingItemId = null, IReadOnlyList<ActivityWagonRequirement>? WagonRequirements = null);
 
 public sealed record ActivityEventSet(string SourcePath, IReadOnlyList<ActivityEventDefinition> Events);
+public sealed record ActivityTrainState(IReadOnlyList<string> CarIds, bool IsStatic, bool AtSiding);
+
 public sealed record ActivityPlayerState(double SpeedMetersPerSecond, int? TileX = null,
     int? TileZ = null, double? X = null, double? Z = null,
-    bool StationStopReached = false, bool AllStopsCompleted = false);
+    bool StationStopReached = false, bool AllStopsCompleted = false,
+    IReadOnlyList<string>? PlayerConsistCarIds = null,
+    IReadOnlyList<ActivityTrainState>? OtherTrains = null,
+    bool PlayerTrainAtSiding = false);
 
 public sealed record ActivityEventExecutionResult(int EventId, string EventName,
     bool Triggered, string Message, bool ActivityEnded, bool ActivitySucceeded);
@@ -270,7 +275,8 @@ public sealed class ActivityExecutionSession
 
         UnsupportedEvents = Array.AsReadOnly(events
             .Where(item => item.Definition.Kind == ActivityEventKind.Action &&
-                item.Definition.ActionType is not ("ReachSpeed" or "AllStops"))
+                item.Definition.ActionType is not ("ReachSpeed" or "AllStops" or "AssembleTrain" or
+                    "AssembleTrainAtLocation" or "DropOffWagonsAtLocation" or "PickUpWagons"))
             .Select(item => $"Event {item.Definition.Id} ({item.Definition.ActionType}): station or service action integration is required.")
             .ToArray());
     }
@@ -375,8 +381,62 @@ public sealed class ActivityExecutionSession
         ActivityEventKind.Action when item.ActionType == "ReachSpeed" =>
             Math.Abs(player.SpeedMetersPerSecond) >= item.TriggerSpeedMetersPerSecond,
         ActivityEventKind.Action when item.ActionType == "AllStops" => player.AllStopsCompleted,
+        ActivityEventKind.Action when item.ActionType == "AssembleTrain" =>
+            MatchesAnyConsist(item, player),
+        ActivityEventKind.Action when item.ActionType == "AssembleTrainAtLocation" =>
+            player.PlayerTrainAtSiding && MatchesAnyConsist(item, player),
+        ActivityEventKind.Action when item.ActionType == "DropOffWagonsAtLocation" =>
+            MatchesStaticSidingConsist(item, player),
+        ActivityEventKind.Action when item.ActionType == "PickUpWagons" =>
+            Math.Abs(player.SpeedMetersPerSecond) <= 1 &&
+            ContainsRequiredWagons(player.PlayerConsistCarIds, item),
         _ => false
     };
+
+    // Ported from Activity.EventCategoryActionWrapper: AssembleTrain accepts
+    // the listed consist in either direction; wagon pickup only requires every
+    // listed car to be present and the player train to be moving at <= 1 m/s.
+    private static bool MatchesAnyConsist(ActivityEventDefinition definition,
+        ActivityPlayerState player)
+    {
+        var required = RequiredCarIds(definition);
+        if (required.Length == 0)
+            return false;
+        if (MatchesOrdered(player.PlayerConsistCarIds, required))
+            return true;
+        return player.OtherTrains?.Any(train => MatchesOrdered(train.CarIds, required)) == true;
+    }
+
+    private static bool MatchesStaticSidingConsist(ActivityEventDefinition definition,
+        ActivityPlayerState player)
+    {
+        var required = RequiredCarIds(definition);
+        if (required.Length == 0 || player.OtherTrains is null)
+            return false;
+        // Native matchesConsistNoOrder ignores extra cars and requires a STATIC
+        // consist at the siding to contain every work-order car.
+        return player.OtherTrains.Any(train => train.IsStatic && train.AtSiding &&
+            required.All(id => train.CarIds.Contains(id, StringComparer.Ordinal)));
+    }
+
+    private static bool ContainsRequiredWagons(IReadOnlyList<string>? consist,
+        ActivityEventDefinition definition)
+    {
+        var required = RequiredCarIds(definition);
+        return consist is not null && required.Length > 0 &&
+            required.All(id => consist.Contains(id, StringComparer.Ordinal));
+    }
+
+    private static string[] RequiredCarIds(ActivityEventDefinition definition) =>
+        definition.WagonRequirements?.Select(item => item.CarId).ToArray() ?? Array.Empty<string>();
+
+    private static bool MatchesOrdered(IReadOnlyList<string>? consist, string[] required)
+    {
+        if (consist is null || consist.Count != required.Length)
+            return false;
+        return consist.SequenceEqual(required, StringComparer.Ordinal) ||
+            consist.Reverse().SequenceEqual(required, StringComparer.Ordinal);
+    }
 
     private sealed class RuntimeEvent(ActivityEventDefinition definition)
     {
