@@ -47,6 +47,37 @@ public sealed class SignalNetworkBuilderTests
         Assert.Contains("No unique", indication.Reason);
     }
 
+    [Fact]
+    public void ConflictingSelectionsAcrossSignalControlledJunctionsFailRestrictive()
+    {
+        var signal = new RouteSignalHead(
+            7, "main", string.Empty, 0, 0, 2, 10,
+            new[]
+            {
+                new TrackSignalDirection(5, 1, 3, 1),
+                new TrackSignalDirection(6, 1, 3, 1)
+            });
+        var circuits = new[]
+        {
+            new SignalTrackCircuit(2, 100, new uint[] { 3, 4 }, new[] { signal }),
+            new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>()),
+            new SignalTrackCircuit(4, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+        };
+        var junctions = new Dictionary<uint, IReadOnlyList<uint>>
+        {
+            [5] = new uint[] { 3, 4 },
+            [6] = new uint[] { 3, 4 }
+        };
+        var network = new SignalNetwork(circuits, junctions, Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(
+            new HashSet<uint>(),
+            new Dictionary<uint, uint> { [5] = 3, [6] = 4 }));
+
+        Assert.Equal(RouteSignalAspect.Stop, indication.Aspect);
+        Assert.Contains("No unique", indication.Reason);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]

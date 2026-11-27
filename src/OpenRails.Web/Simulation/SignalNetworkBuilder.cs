@@ -211,23 +211,22 @@ public sealed class SignalNetwork
         // only the branch selected for that junction is considered valid.
         var controlledJunctions = signal?.Directions.Select(direction => direction.TrackNode).Distinct().ToArray()
             ?? Array.Empty<uint>();
+        var viableCandidates = candidates.ToHashSet();
         foreach (var junction in controlledJunctions)
         {
-            if (!junctionLinks.TryGetValue(junction, out var links))
-                continue;
-            if (selectedBranches is null || !selectedBranches.TryGetValue(junction, out var selected))
+            if (!junctionLinks.TryGetValue(junction, out var links) ||
+                selectedBranches is null ||
+                !selectedBranches.TryGetValue(junction, out var selected) ||
+                !links.Contains(selected))
                 return null;
-            if (!links.Contains(selected))
+
+            // Every junction referenced by this signal must agree on the same
+            // connected continuation. A later direction record cannot be ignored.
+            viableCandidates.IntersectWith(new[] { selected });
+            if (viableCandidates.Count == 0)
                 return null;
-            if (candidates.Contains(selected))
-                return selected;
         }
 
-        if (candidates.Length == 1)
-            return candidates[0];
-        if (candidates.Length != 0 || controlledJunctions.Length != 0)
-            return null;
-
-        return null;
+        return viableCandidates.Count == 1 ? viableCandidates.Single() : null;
     }
 }
