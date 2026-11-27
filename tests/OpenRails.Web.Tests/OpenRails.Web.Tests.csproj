@@ -85,6 +85,8 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/SignalScriptLibraryReader.cs" Link="Parsing/SignalScriptLibraryReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/SignalOccupancyResolver.cs" Link="Simulation/SignalOccupancyResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityLocationResolver.cs" Link="Simulation/ActivityLocationResolver.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteProfile.cs" Link="Simulation/TrackNetworkRouteProfile.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/ServiceRoutePositionResolver.cs" Link="Simulation/ServiceRoutePositionResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityStationStopTracker.cs" Link="Simulation/ActivityStationStopTracker.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistReader.cs" Link="Parsing/ConsistReader.cs" />
