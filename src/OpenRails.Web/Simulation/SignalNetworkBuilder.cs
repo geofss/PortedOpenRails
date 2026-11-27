@@ -91,12 +91,19 @@ public sealed class SignalNetworkBuilder
             }
         }
 
-        var blocks = vectorNodes.Values.Select(path => new SignalTrackCircuit(
-            path.TrackNodeIndex,
-            path.LengthMeters,
-            Array.AsReadOnly(adjacency[path.TrackNodeIndex].OrderBy(id => id).ToArray()),
-            Array.AsReadOnly(signals.Where(signal => signal.TrackNodeIndex == path.TrackNodeIndex)
-                .OrderBy(signal => signal.DistanceMeters).ToArray()))).ToArray();
+        var blocks = vectorNodes.Values.Select(path =>
+        {
+            var junctionNodes = path.ConnectedNodeIndices
+                .Where(endpoint => database.TryGetNode(endpoint, out var node) && node?.Kind == TrackNodeKind.Junction)
+                .Select(endpoint => checked((uint)endpoint)).Distinct().OrderBy(id => id).ToArray();
+            return new SignalTrackCircuit(
+                path.TrackNodeIndex,
+                path.LengthMeters,
+                Array.AsReadOnly(adjacency[path.TrackNodeIndex].OrderBy(id => id).ToArray()),
+                Array.AsReadOnly(signals.Where(signal => signal.TrackNodeIndex == path.TrackNodeIndex)
+                    .OrderBy(signal => signal.DistanceMeters).ToArray()),
+                Array.AsReadOnly(junctionNodes));
+        }).ToArray();
 
         var immutableJunctionLinks = junctionLinks.ToDictionary(
             pair => pair.Key,
@@ -110,7 +117,8 @@ public sealed record SignalTrackCircuit(
     uint TrackNodeIndex,
     double LengthMeters,
     IReadOnlyList<uint> ConnectedTrackNodeIndices,
-    IReadOnlyList<RouteSignalHead> Signals);
+    IReadOnlyList<RouteSignalHead> Signals,
+    IReadOnlyList<uint>? JunctionNodeIndices = null);
 
 /// <summary>Signal head placement and its original TDB direction records.</summary>
 public sealed record RouteSignalHead(
@@ -172,30 +180,51 @@ public sealed class SignalNetwork
         foreach (var block in TrackCircuits)
         foreach (var signal in block.Signals)
         {
-            var next = ResolveNextBlock(block.TrackNodeIndex, signal, selectedJunctionBranches);
             if (occupiedTrackNodeIndices.Contains(block.TrackNodeIndex))
             {
-                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, next, "The signal's own track circuit is occupied."));
-                continue;
-            }
-            if (next is null)
-            {
-                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, null, "No unique, selected route is available beyond this signal."));
-                continue;
-            }
-            if (occupiedTrackNodeIndices.Contains(next.Value))
-            {
-                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, next, "The next track circuit is occupied."));
+                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, null, "The signal's own track circuit is occupied."));
                 continue;
             }
 
-            var beyond = ResolveNextBlock(next.Value, null, selectedJunctionBranches, block.TrackNodeIndex);
-            if (beyond is null)
-                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, next, "The route beyond the next block is not uniquely established."));
-            else if (occupiedTrackNodeIndices.Contains(beyond.Value))
-                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, next, "The second track circuit ahead is occupied."));
+            var requiredClearAhead = signal.Definition?.NumberClearAhead is >= 0 and <= 32
+                ? Math.Max(1, signal.Definition.NumberClearAhead)
+                : 2;
+            var current = block.TrackNodeIndex;
+            uint? previous = null;
+            uint? firstNext = null;
+            var clearBlocks = 0;
+            var blocked = false;
+            var unresolved = false;
+            for (var clearIndex = 0; clearIndex < requiredClearAhead; clearIndex++)
+            {
+                var next = ResolveNextBlock(current, clearIndex == 0 ? signal : null,
+                    selectedJunctionBranches, previous);
+                if (next is null)
+                {
+                    unresolved = true;
+                    break;
+                }
+                firstNext ??= next;
+                if (occupiedTrackNodeIndices.Contains(next.Value))
+                {
+                    blocked = true;
+                    break;
+                }
+                clearBlocks++;
+                previous = current;
+                current = next.Value;
+            }
+
+            if (clearBlocks == 0 && (blocked || unresolved))
+                result.Add(CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
+                    blocked ? "The next track circuit is occupied." : "No unique, selected route is available beyond this signal."));
+            else if (blocked || unresolved)
+                result.Add(CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
+                    blocked ? "A required track circuit ahead is occupied." : "The required clear-ahead route is not uniquely established."));
             else
-                result.Add(CreateIndication(signal, RouteSignalAspect.Clear2, next, "Two consecutive track circuits ahead are clear."));
+                result.Add(CreateIndication(signal,
+                    requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
+                    firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied."));
         }
 
         return Array.AsReadOnly(result.ToArray());
@@ -238,8 +267,9 @@ public sealed class SignalNetwork
 
         // Direction records identify the junction controlling this signal. If present,
         // only the branch selected for that junction is considered valid.
-        var controlledJunctions = signal?.Directions.Select(direction => direction.TrackNode).Distinct().ToArray()
-            ?? Array.Empty<uint>();
+        var controlledJunctions = (block.JunctionNodeIndices ?? Array.Empty<uint>())
+            .Concat(signal?.Directions.Select(direction => direction.TrackNode) ?? Array.Empty<uint>())
+            .Distinct().ToArray();
         var viableCandidates = candidates.ToHashSet();
         foreach (var junction in controlledJunctions)
         {
@@ -249,8 +279,8 @@ public sealed class SignalNetwork
                 !links.Contains(selected))
                 return null;
 
-            // Every junction referenced by this signal must agree on the same
-            // connected continuation. A later direction record cannot be ignored.
+            // Every connected junction must have a selected branch, not only
+            // the junction named by the signal's own direction record.
             viableCandidates.IntersectWith(new[] { selected });
             if (viableCandidates.Count == 0)
                 return null;
