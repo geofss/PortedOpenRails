@@ -171,14 +171,14 @@ public sealed class SignalConfigurationReader
             })
         });
         foreach (var aspect in aspects)
-            if (!drawStates.ContainsKey(aspect.DrawStateName))
+            if (!drawStates.ContainsKey(aspect.DrawState))
                 diagnostics.Add($"SignalType '{name}' aspect '{aspect.Aspect}' references missing draw state '{aspect.DrawStateName}'.");
         foreach (var state in drawStates.Values)
             foreach (var light in state.Lights)
                 if (light.LightIndex >= lights.Count)
                     diagnostics.Add($"SignalType '{name}' draw state '{state.Name}' references missing light {light.LightIndex}.");
         return new SignalTypeDefinition(name, script, function, lightTexture, subtype, numClearAhead,
-            flags, lights, drawStates.Values, aspects);
+            flags, lights, drawStates, aspects);
     }
 
     private static void ReadLights(STFReader reader, ICollection<SignalLightDefinition> lights,
