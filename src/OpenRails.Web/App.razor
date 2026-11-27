@@ -396,6 +396,7 @@
     private readonly List<StoredBrowserPackage> storedPackages = [];
     private readonly Dictionary<string, BrowserPackageArchiveIndex> indexedPackages = [];
     private readonly Dictionary<string, List<StagedRouteMetadata>> stagedRouteMetadata = [];
+    private readonly Dictionary<string, string> loadedStagedPackageNames = new(StringComparer.Ordinal);
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
@@ -671,6 +672,20 @@
 
         isLoading = true;
         errorMessage = null;
+        if (loadedStagedPackageNames.TryGetValue(package.Id, out var existingPackageName))
+        {
+            var existingRoute = routeChoices.FirstOrDefault(item =>
+                item.PackageName.Equals(existingPackageName, StringComparison.OrdinalIgnoreCase) &&
+                item.MetadataFile.Equals(routeFile, StringComparison.OrdinalIgnoreCase));
+            if (existingRoute is null)
+            {
+                existingRoute = new RouteChoice(metadata, existingPackageName, VirtualPath.Normalize(routeFile));
+                routeChoices.Add(existingRoute);
+            }
+            await SelectRoute(existingRoute);
+            isLoading = false;
+            return;
+        }
         largePackageMessage = $"Loading {package.FileName} entry-by-entry from OPFS. The current synchronous Open Rails readers require a bounded expanded-content compatibility store (maximum 2 GiB).";
         try
         {
@@ -692,6 +707,7 @@
             var store = await BrowserPackageVirtualContentStore.LoadAsync(JS, package.Id, progress);
             var packageName = GetUniquePackageName(package.FileName);
             layers.Insert(0, new PackageLayer(packageName, store));
+            loadedStagedPackageNames[package.Id] = packageName;
             RebuildComposite();
 
             var route = new RouteChoice(metadata, packageName, VirtualPath.Normalize(routeFile));
@@ -885,6 +901,9 @@
 
         var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
         layers.Remove(layer);
+        foreach (var stagedId in loadedStagedPackageNames.Where(pair =>
+            pair.Value.Equals(layer.Name, StringComparison.OrdinalIgnoreCase)).Select(pair => pair.Key).ToArray())
+            loadedStagedPackageNames.Remove(stagedId);
         DisposePackageStore(layer.Store);
 
         routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
