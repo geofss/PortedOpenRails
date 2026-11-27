@@ -6,6 +6,7 @@ public sealed record TrainConsistSimulationSetup(
     TrainConsistSimulationSession Session,
     TrainConsistMotionState InitialState,
     IReadOnlyList<double> MaximumBrakeForceNewtonsByCar,
+    IReadOnlyList<double> MaximumHandBrakeForceNewtonsByCar,
     IReadOnlyList<TrainCarResistanceParameters> ResistanceParametersByCar,
     IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
@@ -72,6 +73,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         var states = new List<TrainCarMotionState>(cars.Length);
         var traction = new List<LocomotiveTractionMetadata?>(cars.Length);
         var brakeRatings = new List<double>(cars.Length);
+        var handbrakeRatings = new List<double>(cars.Length);
         var resistanceParameters = new List<TrainCarResistanceParameters>(cars.Length);
         var poweredCars = new List<bool>(cars.Length);
         var brakeProfiles = new List<RollingStockBrakeProfile>(cars.Length);
@@ -124,6 +126,13 @@ public sealed class TrainConsistSimulationSetupBuilder
             traction.Add(car.IsEngine ? asset?.TractionMetadata : null);
             poweredCars.Add(car.IsEngine && asset?.TractionMetadata is not null);
             brakeRatings.Add(maximumBrakeForce);
+            var maximumHandbrakeForce = metadata?.MaxHandBrakeForceN ?? 0;
+            if (!float.IsFinite(maximumHandbrakeForce) || maximumHandbrakeForce < 0)
+            {
+                diagnostics.Add($"{car.Name}: invalid handbrake force metadata ignored.");
+                maximumHandbrakeForce = 0;
+            }
+            handbrakeRatings.Add(maximumHandbrakeForce);
             cursor += length;
         }
 
@@ -168,6 +177,7 @@ public sealed class TrainConsistSimulationSetupBuilder
             session,
             initialState,
             Array.AsReadOnly(brakeRatings.ToArray()),
+            Array.AsReadOnly(handbrakeRatings.ToArray()),
             Array.AsReadOnly(resistanceParameters.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(couplerLimits.ToArray()),

@@ -124,7 +124,8 @@ public sealed class TrainConsistSimulationSession
         Func<IReadOnlyList<double>>? brakePercentProvider = null,
         Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null,
         int tractionDirection = 1,
-        IReadOnlyList<double>? adhesionCoefficientByCar = null)
+        IReadOnlyList<double>? adhesionCoefficientByCar = null,
+        IReadOnlyList<double>? additionalBrakeForceNewtonsByCar = null)
     {
         ArgumentNullException.ThrowIfNull(throttlePercentByCar);
         ArgumentNullException.ThrowIfNull(brakePercentByCar);
@@ -142,14 +143,16 @@ public sealed class TrainConsistSimulationSession
         var carCount = State.Cars.Count;
         if (throttlePercentByCar.Count != carCount || brakePercentByCar.Count != carCount ||
             maximumBrakeForceNewtonsByCar.Count != carCount || couplerForcesNewtons.Count != carCount ||
-            (averageForceByCar is not null && averageForceByCar.Count != carCount))
+            (averageForceByCar is not null && averageForceByCar.Count != carCount) ||
+            (additionalBrakeForceNewtonsByCar is not null && additionalBrakeForceNewtonsByCar.Count != carCount))
             throw new ArgumentException("All per-car brake, rating, throttle, average-force, and coupler inputs must match the consist size.");
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
             brakePercentByCar.Any(value => !double.IsFinite(value)) ||
             maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0) ||
             couplerForcesNewtons.Any(value => !double.IsFinite(value)) ||
             !float.IsFinite(powerReduction) ||
-            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))))
+            (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))) ||
+            (additionalBrakeForceNewtonsByCar is not null && additionalBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0)))
             throw new ArgumentOutOfRangeException(nameof(brakePercentByCar),
                 "Brake, rating, throttle, power, average-force, and coupler inputs must be finite; brake ratings must be non-negative.");
 
@@ -186,7 +189,7 @@ public sealed class TrainConsistSimulationSession
                     motiveForce * tractionDirection,
                     resistance.GravityForceNewtons,
                     resistance.RollingFrictionForceNewtons,
-                    resistance.BrakeRetardForceNewtons + commandedBrake,
+                    resistance.BrakeRetardForceNewtons + commandedBrake + (additionalBrakeForceNewtonsByCar?[i] ?? 0),
                     resistance.CurveResistanceForceNewtons,
                     resistance.WindResistanceForceNewtons,
                     resistance.TunnelResistanceForceNewtons);
@@ -285,7 +288,8 @@ public sealed class TrainConsistSimulationSession
         IReadOnlyList<float>? averageForceByCar = null,
         Func<TrainConsistMotionState, IReadOnlyList<double>>? couplerForceProvider = null,
         int tractionDirection = 1,
-        IReadOnlyList<double>? adhesionCoefficientByCar = null)
+        IReadOnlyList<double>? adhesionCoefficientByCar = null,
+        IReadOnlyList<double>? additionalBrakeForceNewtonsByCar = null)
     {
         if (!double.IsFinite(brakeCommandPercent) || brakeCommandPercent < 0 || brakeCommandPercent > 100)
             throw new ArgumentOutOfRangeException(nameof(brakeCommandPercent));
@@ -302,7 +306,8 @@ public sealed class TrainConsistSimulationSession
             () => pneumaticBrakes.BrakePercentByCar,
             couplerForceProvider,
             tractionDirection,
-            adhesionCoefficientByCar);
+            adhesionCoefficientByCar,
+            additionalBrakeForceNewtonsByCar);
     }
 
     /// <summary>
