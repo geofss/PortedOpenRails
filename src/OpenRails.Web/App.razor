@@ -111,13 +111,29 @@
                 {
                     <div class="or-mode-panel">
                         <label for="or-timetable-set">Timetable set</label>
-                        <select id="or-timetable-set" value="@selectedTimetablePath" @onchange="SelectTimetable" disabled="@(composite is null || isLoading)">
+                        <select id="or-timetable-set" value="@selectedTimetableSetPath" @onchange="SelectTimetableSet" disabled="@(composite is null || isLoading)">
+                            <option value="">Select a timetable set…</option>
+                            @foreach (var timetableSet in TimetableSetChoices)
+                            {
+                                <option value="@timetableSet">@System.IO.Path.GetFileName(timetableSet)</option>
+                            }
+                        </select>
+                        <label for="or-timetable-file">Timetable</label>
+                        <select id="or-timetable-file" value="@selectedTimetablePath" @onchange="SelectTimetable" disabled="@(string.IsNullOrWhiteSpace(selectedTimetableSetPath) || isLoading)">
                             <option value="">Select a timetable…</option>
-                            @foreach (var timetablePath in TimetableChoices)
+                            @foreach (var timetablePath in TimetablesInSelectedSet)
                             {
                                 <option value="@timetablePath">@System.IO.Path.GetFileName(timetablePath)</option>
                             }
                         </select>
+                        <label for="or-timetable-day">Day</label>
+                        <select id="or-timetable-day" disabled><option>Native day selection not yet parsed</option></select>
+                        <label for="or-timetable-season">Season</label>
+                        <select id="or-timetable-season" disabled><option>Native season selection not yet connected</option></select>
+                        <label for="or-timetable-weather">Weather</label>
+                        <select id="or-timetable-weather" disabled><option>Native weather selection not yet connected</option></select>
+                        <label for="or-timetable-weather-file">Weather file</label>
+                        <select id="or-timetable-weather-file" disabled><option>Weather-file catalog not yet ported</option></select>
                         <label for="or-timetable-train">Train</label>
                         <select id="or-timetable-train" value="@selectedTimetableTrain" @onchange="SelectTimetableTrain" disabled="@(selectedTimetable is null)">
                             <option value="">Select a train…</option>
@@ -878,6 +894,7 @@
     private string selectedOptionsTab = "General";
     private string? selectedExploreStart;
     private string? selectedExplorePathId;
+    private string? selectedTimetableSetPath;
     private string? selectedTimetablePath;
     private string? selectedTimetableTrain;
     private NativeTimetableDefinition? selectedTimetable;
@@ -907,12 +924,21 @@
         .Where(path => path.EndsWith(".timetable", StringComparison.OrdinalIgnoreCase) ||
                        path.EndsWith(".tt", StringComparison.OrdinalIgnoreCase))
         .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
+    private IReadOnlyList<string> TimetableSetChoices => TimetableChoices
+        .Select(path => System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/') ?? string.Empty)
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+    private IReadOnlyList<string> TimetablesInSelectedSet => TimetableChoices
+        .Where(path => string.Equals(
+            System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'),
+            selectedTimetableSetPath, StringComparison.OrdinalIgnoreCase)).ToArray();
 
     private async Task SetMode(bool activityMode)
     {
         isActivityMode = activityMode;
         if (activityMode)
         {
+            selectedTimetableSetPath = null;
             selectedTimetablePath = null;
             selectedTimetable = null;
             selectedTimetableTrain = null;
@@ -1010,6 +1036,18 @@
     {
         if (OptionTabs.Contains(tab, StringComparer.Ordinal))
             selectedOptionsTab = tab;
+    }
+
+    private void SelectTimetableSet(ChangeEventArgs args)
+    {
+        selectedTimetableSetPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetablePath = null;
+        selectedTimetable = null;
+        selectedTimetableTrain = null;
+        selectedTimetableTrainDefinition = null;
+        var firstTimetable = TimetablesInSelectedSet.FirstOrDefault();
+        if (firstTimetable is not null)
+            SelectTimetable(new ChangeEventArgs { Value = firstTimetable });
     }
 
     private void SelectTimetable(ChangeEventArgs args)
