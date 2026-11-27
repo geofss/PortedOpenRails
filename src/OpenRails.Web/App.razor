@@ -1156,7 +1156,11 @@
             }).Where(constraint => constraint is not null).Cast<AiServiceSignalConstraint>().ToArray();
 
     private bool CanStartSelectedMode =>
-        isActivityMode && selectedActivityMetadata is not null && CanDriveLoadedRoute;
+        isActivityMode &&
+        selectedActivityMetadata is not null &&
+        activityParseError is null &&
+        activityPathWarning is null &&
+        CanDriveLoadedRoute;
 
     private bool CanDriveLoadedRoute =>
         loadedRoute?.Validation.TrackNetworkUsable == true &&
