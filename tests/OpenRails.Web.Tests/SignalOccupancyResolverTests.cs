@@ -36,7 +36,8 @@ public sealed class SignalOccupancyResolverTests
             new TrainCarRouteOccupancy(5, 12)
         });
 
-        Assert.False(occupied is ISet<uint>);
+        Assert.IsAssignableFrom<ISet<uint>>(occupied);
+        Assert.Throws<NotSupportedException>(() => ((ISet<uint>)occupied).Add(999));
         Assert.Equal(new uint[] { 2 }, occupied.OrderBy(value => value));
     }
 
