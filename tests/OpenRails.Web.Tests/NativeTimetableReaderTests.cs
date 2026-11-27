@@ -18,7 +18,7 @@ public sealed class NativeTimetableReaderTests
 
         Assert.Equal(',', grid.Separator);
         Assert.Equal(3, grid.Rows.Count);
-        Assert.Equal(new[] { "Train A", "", "Train C" }, grid.Rows[0]);
+        Assert.Equal(new[] { "", "Train A", "", "Train C" }, grid.Rows[0]);
         Assert.Equal(new[] { "#path", "Main", "Main", "Branch" }, grid.Rows[1]);
         Assert.Equal(new[] { "#start", "08:00", "", "08:15" }, grid.Rows[2]);
     }
