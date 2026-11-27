@@ -80,6 +80,24 @@ public sealed class TrainConsistMotionIntegratorTests
             new TrainConsistMotionState(new TrainCarMotionState[] { null! }));
     }
 
+
+    [Fact]
+    public void MotionSnapshotJsonRoundTripPreservesOrderedCarState()
+    {
+        var snapshot = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(12_000, 4.5, 100),
+            new TrainCarMotionState(24_000, 4.25, 120)
+        });
+
+        var json = System.Text.Json.JsonSerializer.Serialize(snapshot);
+        var restored = System.Text.Json.JsonSerializer.Deserialize<TrainConsistMotionState>(json);
+
+        Assert.NotNull(restored);
+        Assert.Equal(snapshot.Cars, restored!.Cars);
+        Assert.IsNotType<TrainCarMotionState[]>(restored.Cars);
+    }
+
     [Fact]
     public void RejectsMismatchedPerCarForceArrays()
     {
