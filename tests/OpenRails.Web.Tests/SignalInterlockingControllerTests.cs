@@ -93,6 +93,7 @@ public sealed class SignalInterlockingControllerTests
     public void RejectsInvalidCircuitTopology()
     {
         Assert.Throws<ArgumentException>(() => new SignalInterlockingController(
-            new uint[] { 10 }, new Dictionary<uint, IReadOnlyCollection<uint>>()));
+            new uint[] { 10 },
+            new Dictionary<uint, IReadOnlyCollection<uint>> { [100] = new uint[] { 10 } }));
     }
 }

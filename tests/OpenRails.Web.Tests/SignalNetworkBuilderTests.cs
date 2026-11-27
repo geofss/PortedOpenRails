@@ -49,7 +49,7 @@ public sealed class SignalNetworkBuilderTests
         var indication = Assert.Single(signalNetwork.Evaluate(interlocking.Snapshot()));
 
         Assert.Equal(RouteSignalAspect.Stop, indication.Aspect);
-        Assert.Contains("own track circuit is occupied", indication.Reason);
+        Assert.Contains("next track circuit is occupied", indication.Reason);
     }
 
     [Fact]
