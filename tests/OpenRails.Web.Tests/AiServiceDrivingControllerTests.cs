@@ -260,9 +260,6 @@ public sealed class AiServiceDrivingControllerTests
 
     private static ServiceRouteStartPosition Plan(double start, double end) =>
         new(start, 0, new TrackWorldPosition(0, 0, start), new[] { start, end }, 1);
-}
-
-
     [Fact]
     public void AppliesConfiguredSignalSpeedRestrictionEvenWhenAspectIsClear()
     {
@@ -275,4 +272,4 @@ public sealed class AiServiceDrivingControllerTests
         var decision = controller.Calculate(route, 10, 0, 20, signalConstraints: signals);
 
         Assert.Equal(6, decision.TargetSpeedMetersPerSecond, 3);
-    }
+}
