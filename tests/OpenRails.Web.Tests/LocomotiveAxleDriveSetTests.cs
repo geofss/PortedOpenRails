@@ -57,6 +57,40 @@ public sealed class LocomotiveAxleDriveSetTests
     }
 
     [Fact]
+    public void CapturedSnapshotCollectionsAreReadOnly()
+    {
+        var drive = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        drive.Advance(1, 10_000, 10_000, forceRampUpNewtonsPerSecond: 10_000);
+        var snapshot = drive.CaptureState();
+
+        Assert.IsNotType<float[]>(snapshot.TractiveForceFractions);
+        Assert.IsNotType<float[]>(snapshot.ForceByAxle);
+        Assert.IsNotType<double[]>(snapshot.PreviousSpeedByAxle);
+        Assert.IsNotType<double[]>(snapshot.SpeedByAxle);
+        Assert.Throws<NotSupportedException>(() => ((IList<float>)snapshot.ForceByAxle)[0] = 99);
+    }
+
+    [Fact]
+    public void RejectsSnapshotWithNullCollections()
+    {
+        var drive = new LocomotiveAxleDriveSet(new[] { 1f });
+        var snapshot = new LocomotiveAxleDriveSnapshot(null!, new[] { 0f }, new[] { 0d }, new[] { 0d });
+        Assert.Throws<ArgumentException>(() => drive.RestoreState(snapshot));
+    }
+
+    [Fact]
+    public void RejectsNonFiniteSnapshotValuesWithoutMutatingLiveState()
+    {
+        var drive = new LocomotiveAxleDriveSet(new[] { 1f });
+        drive.Advance(1, 15_000, 15_000, forceRampUpNewtonsPerSecond: 15_000);
+        var before = drive.CaptureState();
+        var invalid = new LocomotiveAxleDriveSnapshot(new[] { 1f }, new[] { float.NaN }, new[] { 0d }, new[] { 0d });
+
+        Assert.Throws<ArgumentException>(() => drive.RestoreState(invalid));
+        Assert.Equal(before.ForceByAxle, drive.ForceByAxle);
+    }
+
+    [Fact]
     public void RejectsSnapshotFromDifferentAxleTopology()
     {
         var source = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
