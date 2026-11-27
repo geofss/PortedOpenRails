@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using OpenRails.Web.Parsing;
 
 namespace OpenRails.Web.Simulation;
@@ -184,6 +185,16 @@ public sealed class SignalNetwork
         blocks = TrackCircuits.ToDictionary(block => block.TrackNodeIndex);
         this.junctionLinks = junctionLinks;
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
+    }
+
+    /// <summary>Evaluates signals directly from the current interlocking occupancy and switch state.</summary>
+    public IReadOnlyList<RouteSignalIndication> Evaluate(
+        SignalInterlockingSnapshot interlockingState,
+        SignalScriptLibrary? scripts = null)
+    {
+        ArgumentNullException.ThrowIfNull(interlockingState);
+        return Evaluate(interlockingState.OccupiedCircuits.Keys.ToFrozenSet(),
+            interlockingState.SelectedJunctionBranches, scripts);
     }
 
     public IReadOnlyList<RouteSignalIndication> Evaluate(

@@ -36,6 +36,23 @@ public sealed class SignalNetworkBuilderTests
     }
 
     [Fact]
+    public void EvaluatesSignalAspectsFromLiveInterlockingSnapshot()
+    {
+        var (database, network) = CreateFixture();
+        var signalNetwork = new SignalNetworkBuilder().Build(database, network);
+        var interlocking = signalNetwork.CreateInterlockingController();
+
+        Assert.True(interlocking.TryReserveRoute("PLAYER", new uint[] { 2, 3 },
+            new Dictionary<uint, uint> { [5] = 3 }));
+        Assert.True(interlocking.SetOccupied("PLAYER", 3, true));
+
+        var indication = Assert.Single(signalNetwork.Evaluate(interlocking.Snapshot()));
+
+        Assert.Equal(RouteSignalAspect.Stop, indication.Aspect);
+        Assert.Contains("own track circuit is occupied", indication.Reason);
+    }
+
+    [Fact]
     public void OccupancyProducesStopAndApproachIndications()
     {
         var (database, network) = CreateFixture();
