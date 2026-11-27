@@ -23,7 +23,11 @@ public sealed record RollingStockMetadata(
     float? DavisCResistance = null,
     float? CouplerStiffnessNPerM = null,
     float? CouplerDampingNsPerM = null,
-    float? CouplerSlackMeters = null);
+    float? CouplerSlackMeters = null,
+    float? MaxHandBrakeForceN = null,
+    float? MaxBrakeShoeForceN = null,
+    int? NumberCarBrakeShoes = null,
+    string? BrakeShoeType = null);
 
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
@@ -47,6 +51,10 @@ public sealed class RollingStockMetadataReader
             string? brakeSystemType = null;
             string? brakeEquipmentType = null;
             float? maxBrakeForceN = null;
+            float? maxHandBrakeForceN = null;
+            float? maxBrakeShoeForceN = null;
+            int? numberCarBrakeShoes = null;
+            string? brakeShoeType = null;
             float? minCouplerStrengthN = null;
             float? davisAForceN = null;
             float? davisBResistance = null;
@@ -74,6 +82,10 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("brakeequipmenttype", () => brakeEquipmentType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
+                        new STFReader.TokenProcessor("maxhandbrakeforce", () => maxHandBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
+                        new STFReader.TokenProcessor("ortsmaxbrakeshoeforce", () => maxBrakeShoeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
+                        new STFReader.TokenProcessor("ortsnumbercarbrakeshoes", () => numberCarBrakeShoes = reader.ReadIntBlock(null)),
+                        new STFReader.TokenProcessor("ortsbrakeshoetype", () => brakeShoeType = ReadBrakeShoeType(reader)),
                         new STFReader.TokenProcessor("coupling", () => minCouplerStrengthN = ReadCoupling(reader, minCouplerStrengthN, couplerStiffnessValues, couplerDampingValues, couplerSlackValues)),
                         new STFReader.TokenProcessor("ortsdavis_a", () => davisAForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, 0f)),
                         new STFReader.TokenProcessor("ortsdavis_b", () => davisBResistance = reader.ReadFloatBlock(STFReader.UNITS.Resistance, 0f)),
@@ -86,8 +98,17 @@ public sealed class RollingStockMetadataReader
             return new RollingStockMetadata(name, type, massKg, widthM, heightM, lengthM, numberAxles, numberWheels,
                 brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName,
                 minCouplerStrengthN, davisAForceN, davisBResistance, davisCResistance,
-                Average(couplerStiffnessValues), Average(couplerDampingValues), Average(couplerSlackValues));
+                Average(couplerStiffnessValues), Average(couplerDampingValues), Average(couplerSlackValues),
+                maxHandBrakeForceN, maxBrakeShoeForceN, numberCarBrakeShoes, brakeShoeType);
         }
+    }
+
+    private static string ReadBrakeShoeType(STFReader reader)
+    {
+        reader.MustMatch("(");
+        var value = reader.ReadString();
+        reader.SkipRestOfBlock();
+        return value;
     }
 
     private static float? ReadCoupling(

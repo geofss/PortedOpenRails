@@ -45,6 +45,32 @@ public sealed class RollingStockCouplerMetadataReaderTests
         Assert.Equal(0.13f, metadata.CouplerSlackMeters.GetValueOrDefault(), 5);
     }
 
+    [Fact]
+    public void ReadsHandbrakeAndBrakeShoeEquipmentParameters()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/TEST/brakes.wag", """
+            SIMISA@@@@@@@@@@JINX0t1t______
+            Wagon ( BrakeCar
+                Size ( 2.8m 4m 20m )
+                Mass ( 40t )
+                MaxBrakeForce ( 120kN )
+                MaxHandBrakeForce ( 35kN )
+                ORTSMaxBrakeShoeForce ( 8kN )
+                ORTSNumberCarBrakeShoes ( 8 )
+                ORTSBrakeShoeType ( CastIron )
+                BrakeSystemType ( Air_single_pipe )
+                BrakeEquipmentType ( Distributor )
+            )
+            """));
+
+        var metadata = new RollingStockMetadataReader().Read(store, "TRAINS/TRAINSET/TEST/brakes.wag");
+
+        Assert.Equal(35_000f, metadata.MaxHandBrakeForceN);
+        Assert.Equal(8_000f, metadata.MaxBrakeShoeForceN);
+        Assert.Equal(8, metadata.NumberCarBrakeShoes);
+        Assert.Equal("CastIron", metadata.BrakeShoeType);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();
