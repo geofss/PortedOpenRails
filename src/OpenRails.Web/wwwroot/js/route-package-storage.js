@@ -42,7 +42,11 @@ export async function storeArchive(streamReference, originalName, expectedBytes,
 
     try {
         writer = await archiveHandle.createWritable({ keepExistingData: false });
-        const reader = streamReference.stream().getReader();
+        const sourceStream = await streamReference.stream();
+        if (!sourceStream || typeof sourceStream.getReader !== "function") {
+            throw new Error("Blazor did not provide a readable upload stream. Refresh the application and retry the route import.");
+        }
+        const reader = sourceStream.getReader();
         try {
             while (true) {
                 const { value, done } = await reader.read();
