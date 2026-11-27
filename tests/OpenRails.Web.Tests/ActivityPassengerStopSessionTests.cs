@@ -135,4 +135,17 @@ public sealed class ActivityPassengerStopSessionTests
         Assert.Equal(35, stop.OnTimer(125).RemainingSeconds);
     }
 
+    [Theory]
+    [InlineData(double.NaN, 160, 30, "scheduledArrivalSeconds")]
+    [InlineData(100, double.PositiveInfinity, 30, "scheduledDepartureSeconds")]
+    [InlineData(100, 160, -1, "platformMinimumWaitingSeconds")]
+    public void RejectsInvalidScheduleAndWaitValues(double arrival, double departure,
+        double minimumWait, string expectedParameter)
+    {
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActivityPassengerStopSession(arrival, departure, minimumWait));
+
+        Assert.Equal(expectedParameter, exception.ParamName);
+    }
+
 }

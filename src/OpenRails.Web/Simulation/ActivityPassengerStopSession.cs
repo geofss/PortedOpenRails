@@ -27,12 +27,14 @@ public sealed class ActivityPassengerStopSession
         double scheduledDepartureSeconds, double platformMinimumWaitingSeconds,
         bool isLastTask = false, double? assumedActualArrivalSeconds = null)
     {
-        if (!double.IsFinite(scheduledArrivalSeconds) ||
-            !double.IsFinite(scheduledDepartureSeconds) ||
-            !double.IsFinite(platformMinimumWaitingSeconds) ||
-            platformMinimumWaitingSeconds < 0 ||
-            assumedActualArrivalSeconds.HasValue && !double.IsFinite(assumedActualArrivalSeconds.Value))
+        if (!double.IsFinite(scheduledArrivalSeconds))
             throw new ArgumentOutOfRangeException(nameof(scheduledArrivalSeconds));
+        if (!double.IsFinite(scheduledDepartureSeconds))
+            throw new ArgumentOutOfRangeException(nameof(scheduledDepartureSeconds));
+        if (!double.IsFinite(platformMinimumWaitingSeconds) || platformMinimumWaitingSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(platformMinimumWaitingSeconds));
+        if (assumedActualArrivalSeconds.HasValue && !double.IsFinite(assumedActualArrivalSeconds.Value))
+            throw new ArgumentOutOfRangeException(nameof(assumedActualArrivalSeconds));
 
         this.scheduledArrivalSeconds = scheduledArrivalSeconds;
         this.scheduledDepartureSeconds = scheduledDepartureSeconds;
