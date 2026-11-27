@@ -313,7 +313,8 @@ public sealed class ActivityExecutionSession
             var outcomes = item.Definition.Outcomes;
             pending = new ActivityEventExecutionResult(item.Definition.Id, item.Definition.Name,
                 true, outcomes.ActivityFailure ?? outcomes.DisplayMessage ?? item.Definition.SuccessMessage,
-                activityEnded, outcomes.ActivitySuccess && item.TimesTriggered == 1);
+                activityEnded, string.IsNullOrWhiteSpace(outcomes.ActivityFailure) &&
+                    outcomes.ActivitySuccess && item.TimesTriggered == 1);
             return pending;
         }
         return null;
@@ -331,6 +332,14 @@ public sealed class ActivityExecutionSession
     private bool ApplyNativeOutcomes(RuntimeEvent current)
     {
         var outcomes = current.Definition.Outcomes;
+        // Native EventWrapper.IsActivityEnded disables the event before processing
+        // outcomes: non-reversible events lose activation, while reversible events
+        // stay active but are blocked until their trigger condition clears.
+        if (current.Definition.Reversible)
+            current.IsDisabled = true;
+        else
+            current.ActivationLevel = 0;
+
         // EventWrapper.IsActivityEnded returns before applying outcomes after a
         // reversible event has fired more than once.
         if (current.TimesTriggered > 1)
