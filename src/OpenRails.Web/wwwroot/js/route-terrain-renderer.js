@@ -410,7 +410,7 @@ function drawTrackShapeBatches(batches,pixels,project){
   const uvSources=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`uvSource${index}`));
   const uvScales=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`uvScale${index}`));
   const alphaTest=gl.getUniformLocation(shapeProgram,"alphaTest");
-  const textureParameter=(texture,slot,operation,binding)=>{
+  const textureParameter=(texture,slot,operation,binding,batch)=>{
     gl.activeTexture(gl.TEXTURE0+slot);
     gl.bindTexture(gl.TEXTURE_2D,texture);
     const address=operation?.textureAddressMode ?? operation?.TextureAddressMode ?? batch.textureAddressMode;
@@ -470,11 +470,11 @@ function drawTrackShapeBatches(batches,pixels,project){
       const p3=Number(operation?.parameter3 ?? operation?.Parameter3 ?? 1);
       const p4=Number(operation?.parameter4 ?? operation?.Parameter4 ?? p3);
       let scale=[1,1];
-      if(kind.includes("uniformscale")) scale=[p3,p3];
-      else if(kind.includes("nonuniformscale")) scale=[p3,p4];
+      if(kind.includes("nonuniformscale")) scale=[p3,p4];
+      else if(kind.includes("uniformscale")) scale=[p3,p3];
       gl.uniform2f(uvScales[slot],scale[0],scale[1]);
       if(valid){
-        textureParameter(shapeTextures[textureIndex],slot,operation,bindings[slot]);
+        textureParameter(shapeTextures[textureIndex],slot,operation,bindings[slot],batch);
         gl.uniform1i(samplers[slot],slot);
       }
     }
