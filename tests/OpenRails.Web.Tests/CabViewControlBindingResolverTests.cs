@@ -19,7 +19,7 @@ public sealed class CabViewControlBindingResolverTests
     public void ResolvesSupportedNativeCabControlTypes(string controlType, string kind, CabViewControlBinding expected)
     {
         var control = new CabViewControlDefinition(kind, controlType, "", "", "", "", "",
-            0, 0, 1, 1, 0, 100, 1, 0, 0, 0, 0, 0, Array.Empty<int>());
+            0, 0, 1, 1, 0, 100, 1, 0, 0, 0, 0, 0, 0, Array.Empty<int>());
         Assert.Equal(expected, CabViewControlBindingResolver.Resolve(control));
     }
 
@@ -27,7 +27,7 @@ public sealed class CabViewControlBindingResolverTests
     public void DoesNotMapIndependentEngineBrakeToTrainBrake()
     {
         var control = new CabViewControlDefinition("lever", "ENGINE_BRAKE", "", "", "", "", "",
-            0, 0, 1, 1, 0, 100, 1, 0, 0, 0, 0, 0, Array.Empty<int>());
+            0, 0, 1, 1, 0, 100, 1, 0, 0, 0, 0, 0, 0, Array.Empty<int>());
         Assert.Equal(CabViewControlBinding.NotConnected, CabViewControlBindingResolver.Resolve(control));
     }
 }
