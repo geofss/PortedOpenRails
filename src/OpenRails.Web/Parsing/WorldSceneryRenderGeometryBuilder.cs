@@ -99,14 +99,17 @@ public sealed class WorldSceneryRenderGeometryBuilder
                         var textureIndex = primitive.ImageName is not null &&
                             shapeTextureIndexes.TryGetValue((placement.Uid, primitive.ImageName), out var foundTexture)
                             ? foundTexture : -1;
+                        var textureSlotIndexes = primitive.TextureBindings?.Select(binding =>
+                            shapeTextureIndexes.TryGetValue((placement.Uid, binding.ImageName), out var slot)
+                                ? slot : -1).ToArray() ?? (textureIndex >= 0 ? new[] { textureIndex } : Array.Empty<int>());
                         var key = new WorldBatchKey(textureIndex, primitive.AlphaTest,
                             primitive.TextureAddressMode, primitive.ZBias, placement.Uid,
-                            primitive.PrimitiveStateIndex, primitive.ShaderName,
+                            primitive.PrimitiveStateIndex, string.Join(",", textureSlotIndexes), primitive.ShaderName,
                             primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
                             primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.ZBufferMode);
                         if (!batchBuilders.TryGetValue(key, out var batch))
                         {
-                            batch = new WorldBatchBuilder(key, primitive);
+                            batch = new WorldBatchBuilder(key, primitive, textureSlotIndexes);
                             batchBuilders.Add(key, batch);
                         }
 
@@ -199,7 +202,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias,
                 Array.AsReadOnly(batch.TextureCoordinateChannels
                     .Select(channel => (IReadOnlyList<Vector2>)Array.AsReadOnly(channel.ToArray())).ToArray()),
-                batch.Material))
+                batch.Material,
+                Array.AsReadOnly(batch.TextureIndexes)))
             .ToArray();
         return new WorldSceneryRenderGeometry(
             Array.AsReadOnly(textureAssets.ToArray()), Array.AsReadOnly(batches), truncated);
@@ -262,20 +266,22 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
     private sealed record WorldBatchKey(
         int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias,
-        uint ShapeIndex = 0, int PrimitiveStateIndex = -1, string ShaderName = "",
+        uint ShapeIndex = 0, int PrimitiveStateIndex = -1, string TextureSlotKey = "", string ShaderName = "",
         int LightMaterialIndex = -1, int LightConfigurationIndex = -1,
         int TextureFilterMode = 0, float MipMapLodBias = 0, int ZBufferMode = 1);
     private sealed class WorldBatchBuilder
     {
         public WorldBatchKey Key { get; }
         public TrackShapePrimitiveMesh? Material { get; }
+        public int[] TextureIndexes { get; }
         public List<float> Vertices { get; } = new();
         public List<int> Indices { get; } = new();
         public List<List<Vector2>> TextureCoordinateChannels { get; } = new();
-        public WorldBatchBuilder(WorldBatchKey key, TrackShapePrimitiveMesh? material = null)
+        public WorldBatchBuilder(WorldBatchKey key, TrackShapePrimitiveMesh? material = null, int[]? textureIndexes = null)
         {
             Key = key;
             Material = material;
+            TextureIndexes = textureIndexes ?? Array.Empty<int>();
         }
     }
 
