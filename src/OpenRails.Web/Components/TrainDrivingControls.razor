@@ -256,6 +256,9 @@
 
     private void HandleKeyboardControl(KeyboardEventArgs args)
     {
+        if (aiServiceEnabled && args.Key is "ArrowUp" or "ArrowDown" or " " or "Spacebar" or
+            "f" or "F" or "n" or "N" or "r" or "R")
+            return;
         if (args.Repeat)
             return;
 
