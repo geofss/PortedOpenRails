@@ -777,10 +777,23 @@
     {
         try
         {
+            // If this OPFS package was already loaded, remove its in-memory content
+            // layer first so deleting the staged file also releases route memory.
+            if (loadedStagedPackageNames.TryGetValue(package.Id, out var packageName))
+            {
+                var loadedLayer = layers.FirstOrDefault(layer =>
+                    layer.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase));
+                if (loadedLayer is not null)
+                    await RemovePackageAsync(loadedLayer);
+                else
+                    loadedStagedPackageNames.Remove(package.Id);
+            }
+
             await BrowserPackageArchiveUploader.DeleteAsync(JS, package.Id);
             storedPackages.RemoveAll(item => item.Id == package.Id);
             indexedPackages.Remove(package.Id);
-            largePackageMessage = $"Deleted staged archive {package.FileName}.";
+            stagedRouteMetadata.Remove(package.Id);
+            largePackageMessage = $"Deleted staged archive {package.FileName} and released its loaded route package.";
         }
         catch (JSException exception)
         {
