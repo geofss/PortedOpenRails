@@ -229,6 +229,23 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void NativePickUpPassengersActionIsRecognizedAsNativeNoOp()
+    {
+        var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(85, "Pick up passengers", ActivityEventKind.Action,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "PickUpPassengers", "", "",
+                ActivityEventOutcomes.Empty)
+        }));
+
+        // Open Rails' EventCategoryActionWrapper has an intentionally empty
+        // PickUpPassengers case; it is recognized, but does not trigger.
+        Assert.Empty(session.UnsupportedEvents);
+        Assert.Null(session.Advance(0, new ActivityPlayerState(0,
+            PassengerTaskCount: 1, LastPassengerTaskCompleted: true)));
+    }
+
+    [Fact]
     public void NativePickUpWagonsRequiresEveryListedCarAndLowSpeed()
     {
         var session = new ActivityExecutionSession(new ActivityEventSet("activity.act", new[]
