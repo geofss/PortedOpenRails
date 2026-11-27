@@ -35,6 +35,24 @@ public sealed class ServiceRoutePositionResolverTests
     }
 
     [Fact]
+    public void RejectsServicePathThatStartsOnRouteButBranchesAwayLater()
+    {
+        var profile = BuildProfile(CreatePath(100));
+        var trace = new RoutePathTrace(new[] { 0, 1 },
+            new[]
+            {
+                new RoutePathPoint(0, 0, 0, 0, 10, 1, 1),
+                new RoutePathPoint(0, 0, 100, 0, 80, 1, 1)
+            },
+            Array.Empty<string>());
+
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            ServiceRoutePositionResolver.Resolve(trace, profile, maximumOffsetMeters: 20));
+
+        Assert.Contains("Service path point 1", exception.Message);
+    }
+
+    [Fact]
     public void RejectsBrokenServicePathTrace()
     {
         var profile = BuildProfile(CreatePath(100));

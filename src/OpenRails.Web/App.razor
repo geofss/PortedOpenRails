@@ -1250,7 +1250,7 @@
             drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
         {
             routeBuildMessage = $"Simulation setup unavailable: {exception.Message}";
         }

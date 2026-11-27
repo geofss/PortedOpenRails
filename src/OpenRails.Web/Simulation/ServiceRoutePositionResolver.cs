@@ -17,20 +17,34 @@ public static class ServiceRoutePositionResolver
         if (!trace.IsComplete)
             throw new InvalidDataException("Service path contains broken node links and cannot be positioned on the selected route.");
 
-        var point = trace.Points.FirstOrDefault(candidate => !candidate.IsInvalid);
-        if (point is null)
+        var validPoints = trace.Points.Where(candidate => !candidate.IsInvalid).ToArray();
+        if (validPoints.Length == 0)
             throw new InvalidDataException("Service path has no valid positioned starting point.");
 
-        var worldPosition = new TrackWorldPosition(
-            point.TileX * ActivityLocationResolver.TileSizeMeters + point.X,
-            point.Y,
-            point.TileZ * ActivityLocationResolver.TileSizeMeters + point.Z);
-        if (!profile.TryFindNearestDistance(worldPosition, maximumOffsetMeters,
-                out var distance, out var offset))
-            throw new InvalidDataException(
-                $"Service path start is {offset:N1} m from the selected connected route; maximum allowed offset is {maximumOffsetMeters:N1} m.");
+        double startDistance = 0;
+        double startOffset = 0;
+        TrackWorldPosition? startPosition = null;
+        for (var index = 0; index < validPoints.Length; index++)
+        {
+            var point = validPoints[index];
+            var worldPosition = new TrackWorldPosition(
+                point.TileX * ActivityLocationResolver.TileSizeMeters + point.X,
+                point.Y,
+                point.TileZ * ActivityLocationResolver.TileSizeMeters + point.Z);
+            if (!profile.TryFindNearestDistance(worldPosition, maximumOffsetMeters,
+                    out var distance, out var offset))
+                throw new InvalidDataException(
+                    $"Service path point {index} is {offset:N1} m from the selected connected route; maximum allowed offset is {maximumOffsetMeters:N1} m.");
 
-        return new ServiceRouteStartPosition(distance, offset, worldPosition);
+            if (index == 0)
+            {
+                startDistance = distance;
+                startOffset = offset;
+                startPosition = worldPosition;
+            }
+        }
+
+        return new ServiceRouteStartPosition(startDistance, startOffset, startPosition!);
     }
 }
 
