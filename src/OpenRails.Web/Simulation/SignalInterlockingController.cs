@@ -151,7 +151,6 @@ public sealed class SignalInterlockingController
         }
     }
 
-    /// <summary>Compatibility wrapper; a release is deferred while the train occupies track.</summary>
     /// <summary>
     /// Atomically replaces one train's occupied circuit set using the current
     /// positions of all consist vehicles, including trailing vehicles.
