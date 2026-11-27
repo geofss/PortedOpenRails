@@ -17,6 +17,7 @@ public sealed record AiServiceSignalConstraint(
 public sealed class AiServiceDrivingController
 {
     private readonly HashSet<int> releasedWaitingPoints = [];
+    private readonly object waitingPointLock = new();
     public AiServiceControlDecision Calculate(
         ServiceRouteStartPosition route,
         double currentDistanceMeters,
@@ -101,7 +102,8 @@ public sealed class AiServiceDrivingController
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
         if (remaining <= stoppingBufferMeters)
             return new AiServiceControlDecision(0, 100, 0, nextWaypoint,
-                pathEndIsNearestLimit, Math.Max(0, remaining), waitingWaypointIndex);
+                pathEndIsNearestLimit, Math.Max(0, remaining), waitingWaypointIndex,
+                waitingWaypointIndex is not null && speed <= 0.25);
 
         var availableBrakingDistance = Math.Max(0, remaining - stoppingBufferMeters);
         var brakingLimitedSpeed = Math.Sqrt(2 * serviceDecelerationMetersPerSecondSquared * availableBrakingDistance);
@@ -145,9 +147,12 @@ public sealed class AiServiceDrivingController
                 Math.Abs(lead.SpeedMetersPerSecond));
         }
 
+        HashSet<int> releasedSnapshot;
+        lock (waitingPointLock)
+            releasedSnapshot = new HashSet<int>(releasedWaitingPoints);
         var decision = Calculate(route, lead.DistanceMeters, lead.SpeedMetersPerSecond,
             targetSpeedMetersPerSecond, signalConstraints: signalConstraints,
-            releasedWaitingPointIndices: releasedWaitingPoints);
+            releasedWaitingPointIndices: releasedSnapshot);
         controller.SetThrottle((float)decision.ThrottlePercent);
         controller.SetBrake(decision.BrakePercent);
         return decision;
@@ -157,7 +162,8 @@ public sealed class AiServiceDrivingController
     {
         if (waypointIndex < 0)
             throw new ArgumentOutOfRangeException(nameof(waypointIndex));
-        releasedWaitingPoints.Add(waypointIndex);
+        lock (waitingPointLock)
+            releasedWaitingPoints.Add(waypointIndex);
     }
 
     private static int FindNextWaypoint(IReadOnlyList<double> waypoints, double currentDistance, int direction)
@@ -177,4 +183,5 @@ public sealed record AiServiceControlDecision(
     int NextWaypointIndex,
     bool IsPathComplete,
     double RemainingDistanceMeters,
-    int? WaitingWaypointIndex = null);
+    int? WaitingWaypointIndex = null,
+    bool IsWaitingAtWaypoint = false);

@@ -23,7 +23,12 @@
                     <input id="ai-service-target-speed" type="range" min="5" max="200" step="5"
                            value="@aiTargetSpeedKmh" disabled="@(!aiServiceEnabled)" @oninput="ChangeAiTargetSpeed" />
                 </div>
-                <p class="hint">Follows the selected .pat waypoint order, stops for evaluated Stop signals, applies configured Approach speed limits and brakes for the final path point. The target speed is operator-selected; native route speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
+                <p class="hint">Follows the selected .pat waypoint order, holds at native waiting points until released, stops for evaluated Stop signals, applies configured Approach speed limits and brakes for the final path point. The target speed is operator-selected; native route speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
+                @if (aiServiceEnabled && lastAiServiceDecision?.WaitingWaypointIndex is int waitingIndex)
+                {
+                    <p class="hint">@(lastAiServiceDecision.IsWaitingAtWaypoint ? $"AI service stopped at native waiting point {waitingIndex + 1}." : $"AI service is braking for waiting point {waitingIndex + 1}.")</p>
+                    <button type="button" disabled="@(!lastAiServiceDecision.IsWaitingAtWaypoint)" @onclick="ReleaseAiWaitingPoint">Release waiting point</button>
+                }
             </div>
         }
         <table class="or-train-driving-status">
@@ -180,6 +185,7 @@
     private readonly AiServiceDrivingController aiServiceDriver = new();
     private bool aiServiceEnabled;
     private double aiTargetSpeedKmh = 40;
+    private AiServiceControlDecision? lastAiServiceDecision;
 
     private IJSObjectReference? gamepadModule;
     private IJSObjectReference? audioModule;
@@ -533,8 +539,18 @@
         aiServiceEnabled = bool.TryParse(args.Value?.ToString(), out var enabled) && enabled &&
             AiServiceRoutePlan is not null;
         Controller.SetThrottle(0);
+        lastAiServiceDecision = null;
         if (!aiServiceEnabled)
             Controller.SetBrake(0);
+    }
+
+    private void ReleaseAiWaitingPoint()
+    {
+        if (lastAiServiceDecision is { IsWaitingAtWaypoint: true, WaitingWaypointIndex: { } index })
+        {
+            aiServiceDriver.ReleaseWaitingPoint(index);
+            lastAiServiceDecision = null;
+        }
     }
 
     private void ChangeAiTargetSpeed(ChangeEventArgs args)
@@ -560,7 +576,8 @@
                     (double)System.Diagnostics.Stopwatch.Frequency;
                 previousTimestamp = currentTimestamp;
                 if (aiServiceEnabled && AiServiceRoutePlan is { } servicePlan)
-                    aiServiceDriver.Apply(Controller, servicePlan, aiTargetSpeedKmh / 3.6, AiServiceSignalConstraints);
+                    lastAiServiceDecision = aiServiceDriver.Apply(
+                        Controller, servicePlan, aiTargetSpeedKmh / 3.6, AiServiceSignalConstraints);
                 else
                     await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));

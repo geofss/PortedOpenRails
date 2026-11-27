@@ -430,7 +430,7 @@
                             Controller="drivingController"
                             Consist="SelectedConsist"
                             StorageKey="@SimulationSnapshotKey"
-                            AiServiceRoutePlan="selectedServiceRoutePlan"
+                            AiServiceRoutePlan="(selectedServiceRoutePlan?.SupportsAiPathFollowing == true ? selectedServiceRoutePlan : null)"
                             AiServiceSignalConstraints="AiServiceSignalConstraints"
                             MotionChanged="OnTrainMotionChanged" />
                     }
@@ -1254,7 +1254,8 @@
                 ? null
                 : ServiceRoutePositionResolver.Resolve(
                     serviceBinding.MainTrace!, activityRouteProfile ??
-                    throw new InvalidDataException("The connected route has no usable position profile."));
+                    throw new InvalidDataException("The connected route has no usable position profile."),
+                    path: serviceBinding.Path);
             var serviceStartDistance = selectedServiceRoutePlan?.DistanceMeters ?? 0;
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
