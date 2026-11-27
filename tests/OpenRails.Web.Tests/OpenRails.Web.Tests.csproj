@@ -91,6 +91,8 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/ServiceRoutePositionResolver.cs" Link="Simulation/ServiceRoutePositionResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiServiceDrivingController.cs" Link="Simulation/AiServiceDrivingController.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityStationStopTracker.cs" Link="Simulation/ActivityStationStopTracker.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/ActivityPassengerStopTiming.cs" Link="Simulation/ActivityPassengerStopTiming.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/ActivityPassengerStopSession.cs" Link="Simulation/ActivityPassengerStopSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistReader.cs" Link="Parsing/ConsistReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistFileReader.cs" Link="Parsing/ConsistFileReader.cs" />
