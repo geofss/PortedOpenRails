@@ -45,8 +45,9 @@
                 {
                     <div class="or-mode-panel">
                         <label for="or-main-activity">Activity</label>
-                        <select id="or-main-activity" value="@selectedActivityPath" @onchange="SelectActivity" disabled="@(selectedRoute is null || isLoading)">
+                        <select id="or-main-activity" value="@(isExploreMode ? "__explore__" : selectedActivityPath)" @onchange="SelectActivity" disabled="@(selectedRoute is null || isLoading)">
                             <option value="">Select an activity…</option>
+                            <option value="__explore__">Explore</option>
                             @foreach (var activityPath in ActivityChoices)
                             {
                                 <option value="@activityPath">@System.IO.Path.GetFileNameWithoutExtension(activityPath)</option>
@@ -69,6 +70,26 @@
                                     <option value="@consist.Name">@consist.Name · @consist.Cars.Count cars</option>
                                 }
                             </select>
+                        }
+                        @if (isExploreMode)
+                        {
+                            <label for="or-explore-start">Starting at</label>
+                            <select id="or-explore-start" value="@selectedExploreStart" @onchange="SelectExploreStart" disabled="@(ExploreStartChoices.Count == 0)">
+                                <option value="">Select a starting location…</option>
+                                @foreach (var start in ExploreStartChoices)
+                                {
+                                    <option value="@start">@start</option>
+                                }
+                            </select>
+                            <label for="or-explore-destination">Heading to</label>
+                            <select id="or-explore-destination" value="@selectedExplorePathId" @onchange="SelectExplorePath" disabled="@(ExploreDestinationChoices.Count == 0)">
+                                <option value="">Select a destination…</option>
+                                @foreach (var path in ExploreDestinationChoices)
+                                {
+                                    <option value="@path.PathId">@path.End · @path.Name</option>
+                                }
+                            </select>
+                            <p class="hint">Explore path selection is read from native .pat files. Start remains unavailable until the selected path is bound to the TDB driving traversal.</p>
                         }
                         @if (selectedActivityMetadata is { } activity)
                         {
@@ -844,6 +865,7 @@
 
 @code {
     private bool isActivityMode = true;
+    private bool isExploreMode;
     private bool showOptionsDialog;
     private bool loggingEnabled = true;
     private bool browserAutosaveEnabled;
@@ -854,6 +876,8 @@
     private int optionsSnapshotAutosaveMinutes;
     private int optionsSnapshotAudioVolume;
     private string selectedOptionsTab = "General";
+    private string? selectedExploreStart;
+    private string? selectedExplorePathId;
     private string? selectedTimetablePath;
     private string? selectedTimetableTrain;
     private NativeTimetableDefinition? selectedTimetable;
@@ -871,6 +895,13 @@
             return engine is null || SelectedConsist is null ? null : $"{SelectedConsist.Name}|{engine.Uid}";
         }
     }
+
+    private IReadOnlyList<string> ExploreStartChoices => loadedRoutePaths
+        .Select(path => path.Start).Where(start => !string.IsNullOrWhiteSpace(start))
+        .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(start => start, StringComparer.OrdinalIgnoreCase).ToArray();
+    private IReadOnlyList<RoutePathDefinition> ExploreDestinationChoices => loadedRoutePaths
+        .Where(path => string.Equals(path.Start, selectedExploreStart, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(path => path.End, StringComparer.OrdinalIgnoreCase).ThenBy(path => path.Name, StringComparer.OrdinalIgnoreCase).ToArray();
 
     private IReadOnlyList<string> TimetableChoices => composite?.Paths
         .Where(path => path.EndsWith(".timetable", StringComparison.OrdinalIgnoreCase) ||
@@ -901,6 +932,19 @@
             InitializeSimulationSetup();
         }
         await SaveBrowserPreferencesAsync();
+    }
+
+    private void SelectExploreStart(ChangeEventArgs args)
+    {
+        selectedExploreStart = args.Value?.ToString();
+        selectedExplorePathId = ExploreDestinationChoices.FirstOrDefault()?.PathId;
+    }
+
+    private void SelectExplorePath(ChangeEventArgs args)
+    {
+        var pathId = args.Value?.ToString();
+        selectedExplorePathId = ExploreDestinationChoices.Any(path =>
+            string.Equals(path.PathId, pathId, StringComparison.OrdinalIgnoreCase)) ? pathId : null;
     }
 
     private void SelectLocomotive(ChangeEventArgs args)
@@ -1167,6 +1211,9 @@
     private async Task SelectRoute(RouteChoice route)
     {
         selectedRoute = route;
+        selectedExploreStart = null;
+        selectedExplorePathId = null;
+        isExploreMode = false;
         selectedServicePath = null;
         selectedActivityPath = null;
         selectedActivityMetadata = null;
@@ -1207,6 +1254,8 @@
             }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
         serviceRouteBindings = ServiceRouteBindingResolver.Resolve(
             loadedServices, loadedRoutePaths, consistCatalog?.Consists ?? Array.Empty<ConsistMetadata>());
+        selectedExploreStart = ExploreStartChoices.FirstOrDefault();
+        selectedExplorePathId = ExploreDestinationChoices.FirstOrDefault()?.PathId;
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
     }
@@ -1751,7 +1800,28 @@
     private void SelectActivity(ChangeEventArgs args)
     {
         selectedServicePath = null;
-        selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        var selectedValue = args.Value?.ToString();
+        if (string.Equals(selectedValue, "__explore__", StringComparison.Ordinal))
+        {
+            isExploreMode = true;
+            selectedActivityPath = null;
+            selectedActivityMetadata = null;
+            selectedActivityEvents = null;
+            selectedActivityPassengerService = null;
+            selectedActivityPassengerPlatformBinding = null;
+            activityExecution = null;
+            activityStationStopTracker = null;
+            activityStationStopProgress = null;
+            activityPathWarning = null;
+            activityParseError = null;
+            activityStartingSpeedMetersPerSecond = null;
+            selectedExploreStart ??= ExploreStartChoices.FirstOrDefault();
+            selectedExplorePathId ??= ExploreDestinationChoices.FirstOrDefault()?.PathId;
+            InitializeSimulationSetup();
+            return;
+        }
+        isExploreMode = false;
+        selectedActivityPath = string.IsNullOrWhiteSpace(selectedValue) ? null : selectedValue;
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
         selectedActivityPassengerService = null;
