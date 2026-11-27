@@ -144,6 +144,14 @@ public sealed class TrackNetworkRouteBuilder
             }
 
             var next = candidates[0];
+            if (!preferredSelectedAtThisJunction && !double.IsFinite(next.Gap))
+            {
+                pendingJunctionNodeIndex = currentNode;
+                diagnostics.Add(
+                    $"Route traversal stopped at junction node {currentNode}: the only available continuation " +
+                    $"vector {next.Path.TrackNodeIndex} has no usable endpoint geometry.");
+                break;
+            }
             if (double.IsFinite(next.Gap) && next.Gap > 25)
             {
                 diagnostics.Add(

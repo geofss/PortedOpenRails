@@ -169,6 +169,22 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void StopsWhenTheOnlyContinuationHasNoEndpointGeometry()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var continuation = CreatePathWithoutGeometry(20, new[] { 2, 3 });
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, continuation }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10);
+
+        Assert.Single(route.Segments);
+        Assert.Equal(2, route.PendingJunctionNodeIndex);
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("no usable endpoint geometry"));
+    }
+
+    [Fact]
     public void StopsAtAmbiguousJunctionWhenOnlyOneBranchHasEndpointGeometry()
     {
         var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
