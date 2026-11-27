@@ -57,6 +57,8 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeMeshBuilder.cs" Link="Parsing/TrackShapeMeshBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAnimationBuilder.cs" Link="Parsing/TrackShapeAnimationBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAnimationPoseBuilder.cs" Link="Parsing/TrackShapeAnimationPoseBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAnimationClock.cs" Link="Parsing/TrackShapeAnimationClock.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeLodSelector.cs" Link="Parsing/TrackShapeLodSelector.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAssetLoader.cs" Link="Parsing/TrackShapeAssetLoader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapePlacementBuilder.cs" Link="Parsing/TrackShapePlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeRenderGeometryBuilder.cs" Link="Parsing/TrackShapeRenderGeometryBuilder.cs" />
