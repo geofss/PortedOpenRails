@@ -6,13 +6,14 @@ namespace OpenRails.Web.Tests;
 public sealed class BrowserZipPackageLoaderTests
 {
     [Fact]
-    public void DefaultUploadLimitAllowsPublishedDemoModel1ArchiveSize()
+    public void DemoModel1UsesDiskBackedImportInsteadOfTheInMemoryZipPath()
     {
         const long demoModel1ArchiveBytes = 272_422_379;
 
         Assert.True(
-            ZipContentStore.DefaultMaxBrowserArchiveBytes >= demoModel1ArchiveBytes,
-            $"The browser upload limit ({ZipContentStore.DefaultMaxBrowserArchiveBytes} bytes) must permit the authorized Demo Model 1 archive ({demoModel1ArchiveBytes} bytes).");
+            demoModel1ArchiveBytes > ZipContentStore.DefaultMaxBrowserArchiveBytes,
+            "The authorized Demo Model 1 archive must be routed through the OPFS streaming importer, not copied into a WebAssembly MemoryStream.");
+        Assert.True(BrowserPackageArchiveLimits.MaxArchiveBytes >= demoModel1ArchiveBytes);
     }
 
     [Fact]
@@ -25,7 +26,7 @@ public sealed class BrowserZipPackageLoaderTests
     [Fact]
     public void InMemoryZipParserRemainsSeparatelyBounded()
     {
-        Assert.Equal(300L * 1024 * 1024, ZipContentStore.DefaultMaxBrowserArchiveBytes);
+        Assert.Equal(64L * 1024 * 1024, ZipContentStore.DefaultMaxBrowserArchiveBytes);
         Assert.True(BrowserPackageArchiveLimits.MaxArchiveBytes > ZipContentStore.DefaultMaxBrowserArchiveBytes);
     }
 }
