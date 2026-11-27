@@ -201,6 +201,10 @@
                                             <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
                                         </dl>
                                         <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
+                                        @if (activityStationStopProgress is { } stopProgress)
+                                        {
+                                            <p class="hint">Activity station stops: @stopProgress.VisitedStops / @stopProgress.TotalStops visited</p>
+                                        }
                                         @if (activityExecution is not null)
                                         {
                                             <div class="activity-summary">
@@ -588,6 +592,8 @@
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
     private ActivityExecutionSession? activityExecution;
+    private ActivityStationStopTracker? activityStationStopTracker;
+    private ActivityStationStopProgress? activityStationStopProgress;
     private double lastActivitySimulationTime;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
@@ -1217,6 +1223,8 @@
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
         activityExecution = null;
+        activityStationStopTracker = null;
+        activityStationStopProgress = null;
         lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
         activityParseError = null;
         if (selectedActivityPath is null || composite is null)
@@ -1230,7 +1238,13 @@
                     StringComparison.OrdinalIgnoreCase))
                 activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
             else
+            {
                 activityExecution = new ActivityExecutionSession(selectedActivityEvents);
+                var activityPath = loadedRoutePaths.FirstOrDefault(path =>
+                    string.Equals(path.PathId, selectedActivityMetadata.PathId, StringComparison.OrdinalIgnoreCase));
+                if (activityPath is not null)
+                    activityStationStopTracker = new ActivityStationStopTracker(activityPath);
+            }
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
             exception is ArgumentException)
@@ -1276,10 +1290,15 @@
                     var position = activityRouteProfile is null
                         ? null
                         : ActivityLocationResolver.Resolve(activityRouteProfile.Sample(leadCar.DistanceMeters).Position);
+                    if (position is not null && activityStationStopTracker is not null)
+                        activityStationStopProgress = activityStationStopTracker.Advance(
+                            position.TileX, position.TileZ, position.X, position.Z, leadCar.SpeedMetersPerSecond);
                     activityExecution.Advance(elapsed, position is null
                         ? new ActivityPlayerState(leadCar.SpeedMetersPerSecond)
                         : new ActivityPlayerState(leadCar.SpeedMetersPerSecond,
-                            position.TileX, position.TileZ, position.X, position.Z));
+                            position.TileX, position.TileZ, position.X, position.Z,
+                            activityStationStopProgress?.StationStopReached ?? false,
+                            activityStationStopProgress?.AllStopsCompleted ?? false));
                 }
         }
         return Task.CompletedTask;

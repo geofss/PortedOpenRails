@@ -184,7 +184,8 @@ public sealed record ActivityEventDefinition(
 
 public sealed record ActivityEventSet(string SourcePath, IReadOnlyList<ActivityEventDefinition> Events);
 public sealed record ActivityPlayerState(double SpeedMetersPerSecond, int? TileX = null,
-    int? TileZ = null, double? X = null, double? Z = null);
+    int? TileZ = null, double? X = null, double? Z = null,
+    bool StationStopReached = false, bool AllStopsCompleted = false);
 
 public sealed record ActivityEventExecutionResult(int EventId, string EventName,
     bool Triggered, string Message, bool ActivityEnded, bool ActivitySucceeded);
@@ -209,7 +210,7 @@ public sealed class ActivityExecutionSession
             throw new InvalidDataException("Activity event IDs must be unique.");
         UnsupportedEvents = Array.AsReadOnly(events
             .Where(item => item.Definition.Kind == ActivityEventKind.Action &&
-                item.Definition.ActionType is not "ReachSpeed")
+                item.Definition.ActionType is not ("ReachSpeed" or "AllStops"))
             .Select(item => $"Event {item.Definition.Id} ({item.Definition.ActionType}): station or service action integration is required.")
             .ToArray());
     }
@@ -278,6 +279,7 @@ public sealed class ActivityExecutionSession
             Math.Sqrt(Math.Pow(player.X.Value - item.X, 2) + Math.Pow(player.Z.Value - item.Z, 2)) <= item.RadiusMeters,
         ActivityEventKind.Action when item.ActionType == "ReachSpeed" =>
             Math.Abs(player.SpeedMetersPerSecond) >= item.TriggerSpeedMetersPerSecond,
+        ActivityEventKind.Action when item.ActionType == "AllStops" => player.AllStopsCompleted,
         _ => false
     };
 
