@@ -175,6 +175,52 @@ public sealed class LocomotiveTractionModelTests
         Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 90_000, 0.1, metadata));
     }
 
+    [Fact]
+    public void RejectsNonFiniteLocomotiveLimitsAtConstruction()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "Invalid", float.NaN, 0, 0, 100, 0, null, "invalid.eng");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LocomotiveTractionModel(metadata));
+    }
+
+    [Fact]
+    public void RejectsUnknownThrottleResponseMode()
+    {
+        var model = new LocomotiveTractionModel(CreateCurveMetadata(maxPower: 1_000_000));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            model.CalculateTractiveForce(50, 5, (LocomotiveThrottleResponse)99));
+    }
+
+    [Fact]
+    public void RejectsNonFiniteForceReturnedByTractionCurve()
+    {
+        var curve = new Orts.Parsers.Msts.Interpolator(2);
+        curve[0] = float.PositiveInfinity;
+        curve[10] = float.PositiveInfinity;
+        var curves = new Orts.Parsers.Msts.InterpolatorDiesel2D(2);
+        curves[0] = curve;
+        curves[1] = curve;
+        curves.HasNegativeValue();
+        var metadata = new LocomotiveTractionMetadata(
+            "Overflow", 100_000, 80_000, 0, 100, 0, curves, "overflow.eng");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new LocomotiveTractionModel(metadata).CalculateTractiveForce(100, 0));
+    }
+
+    [Fact]
+    public void RejectsRampCalculationOverflowInsteadOfReturningInfinity()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "Ramp", 100_000, 80_000, 1_000_000, 100, 0, null, "ramp.eng",
+            float.MaxValue, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            LocomotiveTractionRamp.Advance(0, 100_000, 1e300, metadata));
+    }
+
     private static LocomotiveTractionMetadata CreateCurveMetadata(float maxPower)
     {
         var zeroThrottle = new Orts.Parsers.Msts.Interpolator(2);

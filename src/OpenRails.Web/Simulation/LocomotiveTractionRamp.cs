@@ -35,16 +35,24 @@ public static class LocomotiveTractionRamp
         if (rate == 0)
             return targetForceNewtons;
 
-        var maximumChange = rate * (float)elapsedSeconds;
+        var maximumChange = (double)rate * elapsedSeconds;
+        if (!double.IsFinite(maximumChange))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Calculated traction-force change exceeded the finite simulation range.");
+
         if (Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons) && currentForceNewtons != 0)
         {
-            var magnitudeAfterRampDown = Math.Max(0, Math.Abs(currentForceNewtons) - maximumChange);
-            return Math.Sign(currentForceNewtons) * magnitudeAfterRampDown;
+            var magnitudeAfterRampDown = Math.Max(0d, Math.Abs((double)currentForceNewtons) - maximumChange);
+            return (float)(Math.Sign(currentForceNewtons) * magnitudeAfterRampDown);
         }
 
-        var delta = targetForceNewtons - currentForceNewtons;
-        return Math.Abs(delta) <= maximumChange
+        var delta = (double)targetForceNewtons - currentForceNewtons;
+        var nextForce = Math.Abs(delta) <= maximumChange
             ? targetForceNewtons
             : currentForceNewtons + Math.Sign(delta) * maximumChange;
+        if (!double.IsFinite(nextForce) || nextForce > float.MaxValue || nextForce < -float.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Calculated traction-force state exceeded the finite simulation range.");
+        return (float)nextForce;
     }
 }

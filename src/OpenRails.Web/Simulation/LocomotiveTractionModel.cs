@@ -21,6 +21,20 @@ public sealed class LocomotiveTractionModel
     public LocomotiveTractionModel(LocomotiveTractionMetadata metadata)
     {
         this.metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
+        var limits = new[]
+        {
+            metadata.MaxForceNewtons,
+            metadata.MaxContinuousForceNewtons,
+            metadata.MaxPowerWatts,
+            metadata.MaxSpeedMetersPerSecond,
+            metadata.UnloadingSpeedMetersPerSecond,
+            metadata.TractionForceRampUpNewtonsPerSecond,
+            metadata.TractionForceRampDownNewtonsPerSecond,
+            metadata.TractionForceRampDownToZeroNewtonsPerSecond
+        };
+        if (limits.Any(value => !float.IsFinite(value) || value < 0))
+            throw new ArgumentOutOfRangeException(nameof(metadata),
+                "Locomotive force, power, speed, and ramp limits must be finite and non-negative.");
     }
 
     public float CalculateTractiveForce(
@@ -30,6 +44,8 @@ public sealed class LocomotiveTractionModel
         float powerReduction = 0,
         float averageForceNewtons = 0)
     {
+        if (!Enum.IsDefined(throttleResponse))
+            throw new ArgumentOutOfRangeException(nameof(throttleResponse));
         if (!float.IsFinite(throttlePercent) || !float.IsFinite(speedMetersPerSecond) ||
             !float.IsFinite(powerReduction) || !float.IsFinite(averageForceNewtons))
             throw new ArgumentOutOfRangeException(nameof(throttlePercent));
@@ -89,6 +105,10 @@ public sealed class LocomotiveTractionModel
             if (force > heatLimitedForce)
                 force = heatLimitedForce;
         }
+
+        if (!float.IsFinite(force))
+            throw new ArgumentOutOfRangeException(nameof(speedMetersPerSecond),
+                "Calculated locomotive tractive force exceeded the finite simulation range.");
 
         return force;
     }
