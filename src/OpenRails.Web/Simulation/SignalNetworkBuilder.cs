@@ -76,6 +76,11 @@ public sealed class SignalNetworkBuilder
                         diagnostics.Add($"Signal item {item.Index} has a direction record referencing non-junction TrackNode {direction.TrackNode}.");
                 }
 
+                SignalTypeDefinition? configuredType = null;
+                if (configuration is not null &&
+                    !configuration.SignalTypes.TryGetValue(item.SignalType ?? string.Empty, out configuredType))
+                    diagnostics.Add($"Signal item {item.Index} references undefined SIGCFG type '{item.SignalType}'.");
+
                 signals.Add(new RouteSignalHead(
                     item.Index,
                     item.SignalType ?? string.Empty,
@@ -85,9 +90,7 @@ public sealed class SignalNetworkBuilder
                     host.Index,
                     Math.Clamp(item.DistanceAlongTrack, 0, (float)path.LengthMeters),
                     Array.AsReadOnly(directions.ToArray()),
-                    configuration is not null && configuration.SignalTypes.TryGetValue(item.SignalType ?? string.Empty, out var configuredType)
-                        ? configuredType
-                        : null));
+                    configuredType));
             }
         }
 
