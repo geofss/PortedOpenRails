@@ -70,7 +70,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackSectionGeometryReader.cs" Link="Parsing/TrackSectionGeometryReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityFileLocator.cs" Link="Parsing/ActivityFileLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityMetadataReader.cs" Link="Parsing/ActivityMetadataReader.cs" />
-    <Compile Include="../../src/OpenRails.Web/Parsing/CabViewDefinitionReader.cs" Link="Parsing/CabViewDefinitionReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/CabViewDefinitionReader.cs" Link="Parsing/CabViewDefinitionReader.cs" />\n    <Compile Include="../../src/OpenRails.Web/Simulation/SignalNetworkBuilder.cs" Link="Simulation/SignalNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteMetadataReader.cs" Link="Parsing/RouteMetadataReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistReader.cs" Link="Parsing/ConsistReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ConsistFileReader.cs" Link="Parsing/ConsistFileReader.cs" />
