@@ -46,11 +46,14 @@ public sealed class ActivityStationStopTracker
             // AllStops is a path-order condition, not a set of stations visited
             // in any order. A train cannot satisfy a skipped earlier stop by
             // stopping at a later waiting point first.
-            var nextStop = stops.FirstOrDefault(stop => !visited.Contains(stop.NodeIndex));
-            if (nextStop != default && nextStop.TileX == tileX && nextStop.TileZ == tileZ)
+            var nextStopIndex = Array.FindIndex(stops, stop => !visited.Contains(stop.NodeIndex));
+            if (nextStopIndex >= 0)
             {
+                var nextStop = stops[nextStopIndex];
                 var dx = x - nextStop.X;
                 var dz = z - nextStop.Z;
+                if (nextStop.TileX != tileX || nextStop.TileZ != tileZ)
+                    return new ActivityStationStopProgress(TotalStops, VisitedStops, false, AllStopsCompleted, PathTraceComplete);
                 if (dx * dx + dz * dz <= StopRadiusMeters * StopRadiusMeters)
                 {
                     visited.Add(nextStop.NodeIndex);

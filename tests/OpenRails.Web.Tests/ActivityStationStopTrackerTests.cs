@@ -106,6 +106,19 @@ public sealed class ActivityStationStopTrackerTests
     }
 
     [Fact]
+    public void CreditsWaitingPointAtWorldOrigin()
+    {
+        var path = new RoutePathDefinition("route/path.pat", "Origin", "Origin", "A", "A", 0,
+            new[] { new RoutePathPoint(0, 0, 0, 0, 0, 1, 1) },
+            new[] { new RoutePathNode(2, uint.MaxValue, uint.MaxValue, 0) },
+            Array.Empty<string>());
+        var progress = new ActivityStationStopTracker(path).Advance(0, 0, 0, 0, 0);
+
+        Assert.True(progress.StationStopReached);
+        Assert.True(progress.AllStopsCompleted);
+    }
+
+    [Fact]
     public void DoesNotCreditAnotherTileOrPointOutsideRadius()
     {
         var path = new RoutePathDefinition("route/path.pat", "Main", "Main", "A", "B", 0,
