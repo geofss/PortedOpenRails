@@ -30,7 +30,7 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(RouteSignalAspect.Stop, stop.Aspect);
         Assert.Equal("The next track circuit is occupied.", stop.Reason);
 
-        var approach = Assert.Single(signals.Evaluate(new HashSet<uint> { 4 }));
+        var approach = Assert.Single(signals.Evaluate(new HashSet<uint> { 4 }, selected));
         Assert.Equal(RouteSignalAspect.Approach, approach.Aspect);
     }
 

@@ -26,7 +26,8 @@ public sealed class RouteLoader
             ? null
             : geometryReader.ReadRouteSections(store, assets.RouteTrackSectionsPath);
 
-        var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);\n        var signalling = new SignalNetworkBuilder().Build(database, network);
+        var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
+        var signalling = new SignalNetworkBuilder().Build(database, network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
