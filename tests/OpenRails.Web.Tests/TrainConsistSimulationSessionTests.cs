@@ -7,6 +7,39 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainConsistSimulationSessionTests
 {
     [Fact]
+    public void AppliesNativeTractionRampOnFixedStepsAndRestoresRampState()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "Ramping", 10_000, 10_000, 1_000_000, 100, 0, null, "ramping.eng",
+            TractionForceRampUpNewtonsPerSecond: 1_000,
+            TractionForceRampDownNewtonsPerSecond: 2_000,
+            TractionForceRampDownToZeroNewtonsPerSecond: 10_000);
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+        var rampSnapshot = session.CaptureState();
+
+        Assert.Equal(new[] { 100f }, rampSnapshot.AppliedTractionForceNewtonsByCar);
+        Assert.Equal(0.01, session.State.Cars[0].SpeedMetersPerSecond, 8);
+
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+        var expectedSpeed = session.State.Cars[0].SpeedMetersPerSecond;
+
+        session.RestoreState(rampSnapshot);
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+
+        Assert.Equal(expectedSpeed, session.State.Cars[0].SpeedMetersPerSecond, 8);
+    }
+
+    [Fact]
     public void BrakeCommandConsistScenarioRetardsTrainAcrossFixedSteps()
     {
         var initial = new TrainConsistMotionState(new[]
