@@ -34,6 +34,27 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void CarriesPerVehicleHandbrakeRatingsIntoSimulationSetup()
+    {
+        var consist = new ConsistMetadata("Handbrake", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "handbrake.con");
+        var engine = CreateAsset(1, "Engine", 20_000, 15, 50_000, null);
+        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null);
+        var assets = new[]
+        {
+            engine with { Metadata = engine.Metadata! with { MaxHandBrakeForceN = 30_000 } },
+            wagon with { Metadata = wagon.Metadata! with { MaxHandBrakeForceN = 15_000 } }
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+
+        Assert.Equal(new[] { 30_000d, 15_000d }, setup.MaximumHandBrakeForceNewtonsByCar);
+    }
+
+    [Fact]
     public void UsesTheWeakestAdjacentVehicleCouplerRating()
     {
         var consist = new ConsistMetadata("Freight", new[]
