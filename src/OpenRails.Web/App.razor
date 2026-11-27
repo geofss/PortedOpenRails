@@ -319,6 +319,20 @@
                             }
                         </div>
                     }
+                    @if (currentSignalIndications.Count > 0)
+                    {
+                        <div class="route-details">
+                            <h3>Live route signalling</h3>
+                            <p class="hint">Occupancy is derived from every vehicle body, including trailing cars, against the selected TDB vector-node route.</p>
+                            @foreach (var indication in currentSignalIndications)
+                            {
+                                <p class="@(indication.Aspect == RouteSignalAspect.Stop ? "error" : indication.Aspect == RouteSignalAspect.Approach ? "hint" : "success")">
+                                    Signal item @indication.Signal.TrackItemIndex · @indication.Signal.SignalType · @indication.Aspect
+                                    — @indication.Reason
+                                </p>
+                            }
+                        </div>
+                    }
                     @if (drivingController is not null)
                     {
                         <TrainDrivingControls @key="drivingController"
@@ -487,6 +501,7 @@
     private TrainConsistSimulationSetup? simulationSetup;
     private BrowserTrainDrivingController? drivingController;
     private TrainConsistMotionState? currentMotionState;
+    private IReadOnlyList<RouteSignalIndication> currentSignalIndications = Array.Empty<RouteSignalIndication>();
     private uint selectedTrackNodeIndex;
     private bool reverseRouteStart;
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
@@ -1112,6 +1127,29 @@
     private Task OnTrainMotionChanged(TrainConsistMotionState state)
     {
         currentMotionState = state;
+        if (loadedRoute is not null && traversedRoute is not null && state.Cars.Count > 0)
+        {
+            var selectedConsistCars = SelectedConsist?.Cars.Where(car => !car.IsEndOfTrain).ToArray()
+                ?? Array.Empty<ConsistCar>();
+            var carOccupancies = state.Cars.Select((carState, index) =>
+            {
+                var consistCar = index < selectedConsistCars.Length ? selectedConsistCars[index] : null;
+                var asset = consistCar is null ? null : consistCatalog?.CarAssets.FirstOrDefault(candidate =>
+                    candidate.Uid == consistCar.Uid &&
+                    string.Equals(candidate.CarName, consistCar.Name, StringComparison.OrdinalIgnoreCase));
+                var declaredLength = asset?.Metadata?.LengthM ?? 0;
+                var length = float.IsFinite(declaredLength) && declaredLength > 0 ? declaredLength : 10;
+                return new TrainCarRouteOccupancy(carState.DistanceMeters, length);
+            }).ToArray();
+            var occupiedNodes = SignalOccupancyResolver.Resolve(traversedRoute, carOccupancies);
+            var selectedBranches = selectedBranchTrackNodeIndices.ToDictionary(
+                pair => checked((uint)pair.Key), pair => pair.Value);
+            currentSignalIndications = loadedRoute.Signalling.Evaluate(occupiedNodes, selectedBranches);
+        }
+        else
+        {
+            currentSignalIndications = Array.Empty<RouteSignalIndication>();
+        }
         if (activityExecution is not null && drivingController is not null)
         {
             var simulationTime = drivingController.SimulationTimeSeconds;
