@@ -212,6 +212,27 @@
                                             <dt>Path ID</dt><dd>@(selectedActivityMetadata.PathId ?? "Not specified")</dd>
                                             <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
                                         </dl>
+                                        @if (selectedActivityPassengerService is { Stops.Count: > 0 } passengerService)
+                                        {
+                                            <h4>Passenger timetable · @passengerService.ServiceName</h4>
+                                            <p class="hint">Player service starts at @TimeSpan.FromSeconds(passengerService.StartTimeSeconds).ToString(@"hh\\:mm\\:ss") · @passengerService.Stops.Count scheduled platform stops</p>
+                                            <div class="table-scroll">
+                                                <table>
+                                                    <thead><tr><th>Platform item</th><th>Arrival</th><th>Departure</th><th>Distance down path</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var stop in passengerService.Stops)
+                                                        {
+                                                            <tr>
+                                                                <td>@stop.PlatformStartId</td>
+                                                                <td>@DateTime.MinValue.AddSeconds(stop.ArrivalSeconds).ToString("HH:mm:ss")</td>
+                                                                <td>@DateTime.MinValue.AddSeconds(stop.DepartureSeconds).ToString("HH:mm:ss")</td>
+                                                                <td>@stop.DistanceDownPathMeters.ToString("N1") m</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
                                         <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
                                         @if (!string.IsNullOrWhiteSpace(activityPathWarning))
                                         {
@@ -612,6 +633,7 @@
     private ActivityMetadata? selectedActivityMetadata;
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
+    private ActivityPassengerServiceDefinition? selectedActivityPassengerService;
     private ActivityExecutionSession? activityExecution;
     private ActivityStationStopTracker? activityStationStopTracker;
     private ActivityStationStopProgress? activityStationStopProgress;
@@ -735,6 +757,7 @@
         selectedActivityPath = null;
         selectedActivityMetadata = null;
         selectedActivityEvents = null;
+        selectedActivityPassengerService = null;
         activityExecution = null;
         activityStationStopTracker = null;
         activityStationStopProgress = null;
@@ -1306,6 +1329,8 @@
         {
             selectedActivityMetadata = new ActivityMetadataReader().Read(composite, selectedActivityPath);
             selectedActivityEvents = new ActivityEventReader().Read(composite, selectedActivityPath);
+            selectedActivityPassengerService =
+                new ActivityPassengerServiceReader().Read(composite, selectedActivityPath);
             if (!string.Equals(selectedActivityMetadata.RouteId, selectedRoute?.Metadata.RouteId,
                     StringComparison.OrdinalIgnoreCase))
                 activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
