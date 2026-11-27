@@ -49,6 +49,37 @@ public sealed class TrainConsistMotionIntegratorTests
         Assert.Equal(21.9, result.Cars[1].DistanceMeters, 8);
     }
 
+
+    [Fact]
+    public void MotionSnapshotCopiesCallerOwnedReadOnlyList()
+    {
+        var source = new List<TrainCarMotionState>
+        {
+            new(10_000, 1, 0),
+            new(20_000, 2, 10)
+        };
+        IReadOnlyList<TrainCarMotionState> readOnlyView = source;
+
+        var snapshot = new TrainConsistMotionState(readOnlyView);
+        source[0] = new TrainCarMotionState(99_000, 9, 99);
+        source.Add(new TrainCarMotionState(30_000, 3, 20));
+
+        Assert.Equal(2, snapshot.Cars.Count);
+        Assert.Equal(10_000, snapshot.Cars[0].MassKilograms);
+        Assert.Equal(0, snapshot.Cars[0].DistanceMeters);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<TrainCarMotionState>)snapshot.Cars)[0] = new TrainCarMotionState(1, 0, 0));
+    }
+
+    [Fact]
+    public void MotionSnapshotRejectsEmptyAndNullCarCollections()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TrainConsistMotionState(Array.Empty<TrainCarMotionState>()));
+        Assert.Throws<ArgumentException>(() =>
+            new TrainConsistMotionState(new TrainCarMotionState[] { null! }));
+    }
+
     [Fact]
     public void RejectsMismatchedPerCarForceArrays()
     {
