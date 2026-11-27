@@ -109,7 +109,14 @@ public sealed class TrainConsistSimulationSetupBuilder
             else if (brakeProfile.Support == RollingStockBrakeSupport.Unspecified)
                 diagnostics.Add($"{car.Name}: brake-system metadata is missing; browser pneumatic braking is disabled for this vehicle rather than assuming air-brake equipment.");
 
-            var maximumBrakeForce = metadata?.MaxBrakeForceN ?? 0;
+            var shoeForce = metadata?.MaxBrakeShoeForceN ?? 0;
+            var shoeCount = metadata?.NumberCarBrakeShoes ?? 0;
+            var derivedShoeBrakeForce = float.IsFinite(shoeForce) && shoeForce > 0 && shoeCount > 0
+                ? shoeForce * shoeCount
+                : 0;
+            var maximumBrakeForce = metadata?.MaxBrakeForceN ?? derivedShoeBrakeForce;
+            if (metadata?.MaxBrakeForceN is null && derivedShoeBrakeForce > 0)
+                diagnostics.Add($"{car.Name}: maximum brake force derived from {shoeCount} declared brake shoes.");
             if (!float.IsFinite(maximumBrakeForce) || maximumBrakeForce <= 0)
             {
                 maximumBrakeForce = mass * 9.80665f * 0.1f;

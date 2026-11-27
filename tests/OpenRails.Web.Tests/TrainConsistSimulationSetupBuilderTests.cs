@@ -55,6 +55,31 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void DerivesMaximumBrakeForceFromDeclaredBrakeShoesWhenTotalIsAbsent()
+    {
+        var consist = new ConsistMetadata("BrakeShoes", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "brake-shoes.con");
+        var asset = CreateAsset(1, "Wagon", 20_000, 15, 0, null);
+        asset = asset with
+        {
+            Metadata = asset.Metadata! with
+            {
+                MaxBrakeForceN = null,
+                MaxBrakeShoeForceN = 8_000,
+                NumberCarBrakeShoes = 8,
+                BrakeShoeType = "CastIron"
+            }
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200);
+
+        Assert.Equal(64_000d, Assert.Single(setup.MaximumBrakeForceNewtonsByCar));
+        Assert.Contains(setup.Diagnostics, message => message.Contains("derived from 8 declared brake shoes"));
+    }
+
+    [Fact]
     public void UsesTheWeakestAdjacentVehicleCouplerRating()
     {
         var consist = new ConsistMetadata("Freight", new[]
