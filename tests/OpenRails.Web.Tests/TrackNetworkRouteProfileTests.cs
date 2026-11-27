@@ -75,6 +75,31 @@ public sealed class TrackNetworkRouteProfileTests
     }
 
     [Fact]
+    public void MapsSignalPositionOnForwardAndReversedVectorSegments()
+    {
+        var path = CreateSlopePath(100, 0, trackNodeIndex: 42);
+        var forward = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, false) }, Array.Empty<string>(), 100), 5);
+        var reverse = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, true) }, Array.Empty<string>(), 100), 5);
+
+        Assert.True(forward.TryGetRouteDistanceForTrackNode(42, 25, out var forwardDistance));
+        Assert.True(reverse.TryGetRouteDistanceForTrackNode(42, 25, out var reverseDistance));
+        Assert.Equal(25, forwardDistance, 3);
+        Assert.Equal(75, reverseDistance, 3);
+    }
+
+    [Fact]
+    public void DoesNotMapSignalsFromVectorNodesOutsideTheConnectedRoute()
+    {
+        var profile = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(CreateSlopePath(100, 0), false) },
+            Array.Empty<string>(), 100), 5);
+
+        Assert.False(profile.TryGetRouteDistanceForTrackNode(999, 10, out _));
+    }
+
+    [Fact]
     public void ClampsSamplesAtBothEndsOfTheConnectedRoute()
     {
         var path = CreateSlopePath(100, 10);

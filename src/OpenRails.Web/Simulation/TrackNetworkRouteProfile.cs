@@ -16,16 +16,19 @@ public sealed class TrackNetworkRouteProfile
 {
     private readonly TrackWorldPosition[] points;
     private readonly double[] cumulativeDistances;
+    private readonly IReadOnlyDictionary<uint, TrackRouteSegmentProfile> segmentProfiles;
 
     public double LengthMeters => cumulativeDistances[^1];
     public int PointCount => points.Length;
 
     private TrackNetworkRouteProfile(
         TrackWorldPosition[] points,
-        double[] cumulativeDistances)
+        double[] cumulativeDistances,
+        IReadOnlyDictionary<uint, TrackRouteSegmentProfile> segmentProfiles)
     {
         this.points = points;
         this.cumulativeDistances = cumulativeDistances;
+        this.segmentProfiles = segmentProfiles;
     }
 
     public static TrackNetworkRouteProfile Build(
@@ -38,6 +41,8 @@ public sealed class TrackNetworkRouteProfile
 
         var tessellator = new TrackGeometryTessellator();
         var samples = new List<TrackWorldPosition>();
+        var segmentProfiles = new Dictionary<uint, TrackRouteSegmentProfile>();
+        var profileDistance = 0d;
         foreach (var segment in route.Segments)
         {
             var segmentPoints = tessellator.BuildPolyline(
@@ -53,15 +58,27 @@ public sealed class TrackNetworkRouteProfile
                 if (gap > 25)
                     break;
                 if (gap > 1e-6)
+                {
                     samples.Add(segmentPoints[0]);
+                    profileDistance += TrackDistance(samples[^2], samples[^1]);
+                }
             }
             else
             {
                 samples.Add(segmentPoints[0]);
             }
 
+            var segmentStartDistance = profileDistance;
             for (var i = 1; i < segmentPoints.Count; i++)
+            {
                 samples.Add(segmentPoints[i]);
+                profileDistance += TrackDistance(segmentPoints[i - 1], segmentPoints[i]);
+            }
+
+            var profileLength = profileDistance - segmentStartDistance;
+            if (segment.Path.LengthMeters > 0 && profileLength > 0)
+                segmentProfiles[segment.Path.TrackNodeIndex] = new TrackRouteSegmentProfile(
+                    segmentStartDistance, profileLength, segment.Path.LengthMeters, segment.IsReversed);
         }
 
         if (samples.Count < 2)
@@ -75,7 +92,27 @@ public sealed class TrackNetworkRouteProfile
         if (!double.IsFinite(cumulative[^1]) || cumulative[^1] <= 0)
             throw new InvalidDataException("Connected route profile has no measurable length.");
 
-        return new TrackNetworkRouteProfile(points, cumulative);
+        return new TrackNetworkRouteProfile(points, cumulative, segmentProfiles);
+    }
+
+    /// <summary>Maps a vector-node-local signal position onto this directed route profile.</summary>
+    public bool TryGetRouteDistanceForTrackNode(
+        uint trackNodeIndex,
+        double distanceAlongTrackMeters,
+        out double routeDistanceMeters)
+    {
+        routeDistanceMeters = 0;
+        if (!double.IsFinite(distanceAlongTrackMeters) ||
+            !segmentProfiles.TryGetValue(trackNodeIndex, out var segment) ||
+            segment.SourceLengthMeters <= 0)
+            return false;
+
+        var localDistance = Math.Clamp(distanceAlongTrackMeters, 0, segment.SourceLengthMeters);
+        var fraction = localDistance / segment.SourceLengthMeters;
+        if (segment.IsReversed)
+            fraction = 1 - fraction;
+        routeDistanceMeters = segment.StartDistanceMeters + fraction * segment.ProfileLengthMeters;
+        return true;
     }
 
     /// <summary>Finds the nearest point on the connected route profile to a world-space location.</summary>
@@ -151,6 +188,10 @@ public sealed class TrackNetworkRouteProfile
         var heading = Math.Atan2(deltaX, deltaZ);
         return new TrackRouteProfileSample(position, grade, heading);
     }
+
+    private sealed record TrackRouteSegmentProfile(
+        double StartDistanceMeters, double ProfileLengthMeters,
+        double SourceLengthMeters, bool IsReversed);
 
     private static double TrackDistance(TrackWorldPosition a, TrackWorldPosition b)
     {

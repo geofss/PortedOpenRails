@@ -9,6 +9,11 @@ namespace OpenRails.Web.Simulation;
 /// supplied by the operator because native speed restrictions and timetables
 /// are not yet available to this browser controller.
 /// </summary>
+public sealed record AiServiceSignalConstraint(
+    double RouteDistanceMeters,
+    RouteSignalAspect Aspect,
+    float? SpeedLimitMetersPerSecond);
+
 public sealed class AiServiceDrivingController
 {
     public AiServiceControlDecision Calculate(
@@ -17,7 +22,8 @@ public sealed class AiServiceDrivingController
         double currentSpeedMetersPerSecond,
         double targetSpeedMetersPerSecond,
         double serviceDecelerationMetersPerSecondSquared = 0.65,
-        double stoppingBufferMeters = 2)
+        double stoppingBufferMeters = 2,
+        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null)
     {
         ArgumentNullException.ThrowIfNull(route);
         if (!double.IsFinite(currentDistanceMeters))
@@ -36,14 +42,43 @@ public sealed class AiServiceDrivingController
         var direction = route.Direction < 0 ? -1 : 1;
         var endDistance = waypoints[^1];
         var remaining = direction > 0 ? endDistance - currentDistanceMeters : currentDistanceMeters - endDistance;
+        var pathEndIsNearestLimit = true;
+        var stopSignalAhead = (signalConstraints ?? Array.Empty<AiServiceSignalConstraint>())
+            .Where(signal => signal.Aspect == RouteSignalAspect.Stop &&
+                (direction > 0
+                    ? signal.RouteDistanceMeters > currentDistanceMeters + 0.5
+                    : signal.RouteDistanceMeters < currentDistanceMeters - 0.5))
+            .Select(signal => direction > 0
+                ? signal.RouteDistanceMeters - currentDistanceMeters
+                : currentDistanceMeters - signal.RouteDistanceMeters)
+            .Where(distance => distance >= 0)
+            .OrderBy(distance => distance)
+            .FirstOrDefault(double.PositiveInfinity);
+        if (stopSignalAhead < remaining)
+        {
+            remaining = stopSignalAhead;
+            pathEndIsNearestLimit = false;
+        }
+
+        var approachSpeedLimit = (signalConstraints ?? Array.Empty<AiServiceSignalConstraint>())
+            .Where(signal => signal.Aspect == RouteSignalAspect.Approach &&
+                signal.SpeedLimitMetersPerSecond is > 0 &&
+                (direction > 0
+                    ? signal.RouteDistanceMeters > currentDistanceMeters
+                    : signal.RouteDistanceMeters < currentDistanceMeters))
+            .Select(signal => signal.SpeedLimitMetersPerSecond!.Value)
+            .DefaultIfEmpty(double.PositiveInfinity)
+            .Min();
+        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, approachSpeedLimit);
         var speed = Math.Abs(currentSpeedMetersPerSecond);
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
         if (remaining <= stoppingBufferMeters)
-            return new AiServiceControlDecision(0, 100, 0, nextWaypoint, true, Math.Max(0, remaining));
+            return new AiServiceControlDecision(0, 100, 0, nextWaypoint,
+                pathEndIsNearestLimit, Math.Max(0, remaining));
 
         var availableBrakingDistance = Math.Max(0, remaining - stoppingBufferMeters);
         var brakingLimitedSpeed = Math.Sqrt(2 * serviceDecelerationMetersPerSecondSquared * availableBrakingDistance);
-        var commandedSpeed = Math.Min(targetSpeedMetersPerSecond, brakingLimitedSpeed);
+        var commandedSpeed = Math.Min(requestedSpeed, brakingLimitedSpeed);
         var error = commandedSpeed - speed;
         var throttle = error > 0.35 ? Math.Clamp(error * 22, 0, 100) : 0;
         var brake = error < -0.35 ? Math.Clamp(-error * 35, 0, 100) : 0;
@@ -54,7 +89,8 @@ public sealed class AiServiceDrivingController
     public AiServiceControlDecision Apply(
         BrowserTrainDrivingController controller,
         ServiceRouteStartPosition route,
-        double targetSpeedMetersPerSecond)
+        double targetSpeedMetersPerSecond,
+        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null)
     {
         ArgumentNullException.ThrowIfNull(controller);
         ArgumentNullException.ThrowIfNull(route);
@@ -83,7 +119,7 @@ public sealed class AiServiceDrivingController
         }
 
         var decision = Calculate(route, lead.DistanceMeters, lead.SpeedMetersPerSecond,
-            targetSpeedMetersPerSecond);
+            targetSpeedMetersPerSecond, signalConstraints: signalConstraints);
         controller.SetThrottle((float)decision.ThrottlePercent);
         controller.SetBrake(decision.BrakePercent);
         return decision;

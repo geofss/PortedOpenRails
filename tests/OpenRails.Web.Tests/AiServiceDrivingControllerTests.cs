@@ -26,6 +26,54 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void BrakesForTheNearestStopSignalBeforeThePathEnd()
+    {
+        var route = Plan(0, 100);
+        var signals = new[]
+        {
+            new AiServiceSignalConstraint(40, RouteSignalAspect.Stop, null),
+            new AiServiceSignalConstraint(70, RouteSignalAspect.Stop, null)
+        };
+
+        var decision = controller.Calculate(route, 10, 15, 20, signalConstraints: signals);
+
+        Assert.True(decision.BrakePercent > 0);
+        Assert.True(decision.TargetSpeedMetersPerSecond < 20);
+        Assert.False(decision.IsPathComplete);
+        Assert.Equal(30, decision.RemainingDistanceMeters, 3);
+    }
+
+    [Fact]
+    public void AppliesApproachAspectSpeedLimitAhead()
+    {
+        var route = Plan(0, 100);
+        var signals = new[]
+        {
+            new AiServiceSignalConstraint(50, RouteSignalAspect.Approach, 5)
+        };
+
+        var decision = controller.Calculate(route, 10, 0, 20, signalConstraints: signals);
+
+        Assert.Equal(5, decision.TargetSpeedMetersPerSecond, 3);
+    }
+
+    [Fact]
+    public void IgnoresStopSignalBehindReverseMovingService()
+    {
+        var route = new ServiceRouteStartPosition(90, 0,
+            new TrackWorldPosition(0, 0, 90), new[] { 90d, 50d, 10d }, -1);
+        var signals = new[]
+        {
+            new AiServiceSignalConstraint(95, RouteSignalAspect.Stop, null)
+        };
+
+        var decision = controller.Calculate(route, 90, 0, 10, signalConstraints: signals);
+
+        Assert.True(decision.ThrottlePercent > 0);
+        Assert.Equal(80, decision.RemainingDistanceMeters, 3);
+    }
+
+    [Fact]
     public void AppliesFullBrakeAtPathEnd()
     {
         var decision = controller.Calculate(Plan(0, 100), 99, 4, 10);
