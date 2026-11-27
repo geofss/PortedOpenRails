@@ -430,6 +430,7 @@
                             Controller="drivingController"
                             Consist="SelectedConsist"
                             StorageKey="@SimulationSnapshotKey"
+                            AiServiceRoutePlan="selectedServiceRoutePlan"
                             MotionChanged="OnTrainMotionChanged" />
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
@@ -599,6 +600,7 @@
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
     private string? selectedServicePath;
+    private ServiceRouteStartPosition? selectedServiceRoutePlan;
     private string? selectedActivityPath;
     private double? activityStartingSpeedMetersPerSecond;
     private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
@@ -1226,6 +1228,7 @@
         simulationSetup = null;
         drivingController = null;
         currentMotionState = null;
+        selectedServiceRoutePlan = null;
         var serviceBinding = SelectedServiceBinding;
         var consist = serviceBinding?.Consist ?? SelectedConsist;
         if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
@@ -1234,11 +1237,12 @@
         {
             var initialSpeed = activityStartingSpeedMetersPerSecond ??
                 serviceBinding?.Service.InitialSpeedMetersPerSecond ?? 0;
-            var serviceStartDistance = serviceBinding is null
-                ? 0
+            selectedServiceRoutePlan = serviceBinding is null
+                ? null
                 : ServiceRoutePositionResolver.Resolve(
                     serviceBinding.MainTrace!, activityRouteProfile ??
-                    throw new InvalidDataException("The connected route has no usable position profile.")).DistanceMeters;
+                    throw new InvalidDataException("The connected route has no usable position profile."));
+            var serviceStartDistance = selectedServiceRoutePlan?.DistanceMeters ?? 0;
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
                 startDistanceMeters: serviceStartDistance,

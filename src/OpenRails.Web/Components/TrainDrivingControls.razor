@@ -11,7 +11,21 @@
         <span>Open Rails</span>
     </div>
     <div class="or-driving-window-body">
-        <p class="hint">Browser-connected controls · traction, pneumatic braking, and consist dynamics</p>
+        <p class="hint">Browser-connected controls · traction, pneumatic braking, and consist dynamics</p>        @if (AiServiceRoutePlan is not null)
+        {
+            <div class="driving-settings" aria-label="AI service path following">
+                <label>
+                    <input type="checkbox" checked="@aiServiceEnabled" @onchange="ToggleAiServiceMode" />
+                    AI service path following
+                </label>
+                <div class="driving-control-row">
+                    <label for="ai-service-target-speed">AI target speed · @aiTargetSpeedKmh.ToString("N0") km/h</label>
+                    <input id="ai-service-target-speed" type="range" min="5" max="200" step="5"
+                           value="@aiTargetSpeedKmh" disabled="@(!aiServiceEnabled)" @oninput="ChangeAiTargetSpeed" />
+                </div>
+                <p class="hint">Follows the selected .pat waypoint order and brakes for its final point. The target speed is operator-selected; native speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
+            </div>
+        }
         <table class="or-train-driving-status">
             <tbody>
                 <tr>
@@ -31,11 +45,11 @@
     <div class="driving-control-row">
         <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
         <input id="train-throttle" type="range" min="0" max="100" step="1"
-               value="@Controller.ThrottlePercent" disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
+               value="@Controller.ThrottlePercent" disabled="@(aiServiceEnabled || Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
     </div>
     <div class="driving-control-row">
         <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train and set throttle to zero")</label>
-        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
+        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(aiServiceEnabled || !Controller.CanChangeReverser)" @onchange="ChangeReverser">
             <option value="1">Forward</option>
             <option value="0">Neutral</option>
             <option value="-1">Reverse</option>
@@ -44,7 +58,7 @@
     <div class="driving-control-row">
         <label for="train-brake">Brake · @Controller.BrakePercent.ToString("N0")%</label>
         <input id="train-brake" type="range" min="0" max="100" step="1"
-               value="@Controller.BrakePercent" @oninput="ChangeBrake" />
+               value="@Controller.BrakePercent" disabled="@aiServiceEnabled" @oninput="ChangeBrake" />
     </div>
     <div class="driving-control-row">
         <label for="train-handbrake">Mechanical handbrake · @Controller.HandbrakePercent.ToString("N0")%</label>
@@ -161,6 +175,10 @@
     [Parameter] public string StorageKey { get; set; } = "default";
     private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
+    [Parameter] public ServiceRouteStartPosition? AiServiceRoutePlan { get; set; }
+    private readonly AiServiceDrivingController aiServiceDriver = new();
+    private bool aiServiceEnabled;
+    private double aiTargetSpeedKmh = 40;
 
     private IJSObjectReference? gamepadModule;
     private IJSObjectReference? audioModule;
@@ -506,6 +524,24 @@
         return Task.CompletedTask;
     }
 
+    private void ToggleAiServiceMode(ChangeEventArgs args)
+    {
+        aiServiceEnabled = bool.TryParse(args.Value?.ToString(), out var enabled) && enabled &&
+            AiServiceRoutePlan is not null;
+        Controller.SetThrottle(0);
+        if (!aiServiceEnabled)
+            Controller.SetBrake(0);
+    }
+
+    private void ChangeAiTargetSpeed(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value) &&
+            double.IsFinite(value))
+            aiTargetSpeedKmh = Math.Clamp(value, 5, 200);
+    }
+
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(33));
@@ -519,7 +555,10 @@
                 var elapsed = (currentTimestamp - previousTimestamp) /
                     (double)System.Diagnostics.Stopwatch.Frequency;
                 previousTimestamp = currentTimestamp;
-                await PollGamepadAsync();
+                if (aiServiceEnabled && AiServiceRoutePlan is { } servicePlan)
+                    aiServiceDriver.Apply(Controller, servicePlan, aiTargetSpeedKmh / 3.6);
+                else
+                    await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));
                 if (audioEnabled && audioModule is not null)
                     await audioModule.InvokeVoidAsync("update", Controller.ThrottlePercent, speedKmh, Controller.BrakePercent);
