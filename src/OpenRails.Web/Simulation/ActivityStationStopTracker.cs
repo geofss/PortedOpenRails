@@ -54,7 +54,7 @@ public sealed class ActivityStationStopTracker
                 var dz = z - nextStop.Z;
                 if (nextStop.TileX != tileX || nextStop.TileZ != tileZ)
                     return new ActivityStationStopProgress(TotalStops, VisitedStops, false, AllStopsCompleted, PathTraceComplete);
-                if (dx * dx + dz * dz <= StopRadiusMeters * StopRadiusMeters)
+                if (Math.Hypot(dx, dz) <= StopRadiusMeters)
                 {
                     visited.Add(nextStop.NodeIndex);
                     reached = true;

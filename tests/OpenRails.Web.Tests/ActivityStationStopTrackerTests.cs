@@ -119,6 +119,21 @@ public sealed class ActivityStationStopTrackerTests
     }
 
     [Fact]
+    public void UsesOverflowSafeDistanceForLargeCoordinatesAndRadius()
+    {
+        var path = new RoutePathDefinition("route/path.pat", "Large", "Large", "A", "B", 0,
+            new[] { new RoutePathPoint(0, 0, 0, 0, 0, 1, 1) },
+            new[] { new RoutePathNode(2, uint.MaxValue, uint.MaxValue, 0) },
+            Array.Empty<string>());
+        var tracker = new ActivityStationStopTracker(path, double.MaxValue);
+
+        var progress = tracker.Advance(0, 0, double.MaxValue, double.MaxValue, 0);
+
+        Assert.False(progress.StationStopReached);
+        Assert.Equal(0, progress.VisitedStops);
+    }
+
+    [Fact]
     public void DoesNotCreditAnotherTileOrPointOutsideRadius()
     {
         var path = new RoutePathDefinition("route/path.pat", "Main", "Main", "A", "B", 0,
