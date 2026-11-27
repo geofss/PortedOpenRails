@@ -66,16 +66,13 @@ public sealed class TrackShapeRenderGeometryBuilder
 
     public TrackShapeTexturedRenderGeometry BuildTextured(
         IEnumerable<TrackShapePlacement> placements,
-        IReadOnlyList<LoadedTrackShapeTexture> loadedTextures)
+        IReadOnlyList<LoadedTrackShapeTexture> loadedTextures,
+        string? seasonFolder = null)
     {
         ArgumentNullException.ThrowIfNull(placements);
         ArgumentNullException.ThrowIfNull(loadedTextures);
 
-        var textureReferences = loadedTextures
-            .Where(texture => texture.Reference.SeasonFolder is null &&
-                texture.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                texture.Texture.MipLevels.Count > 0)
-            .ToArray();
+        var textureReferences = TrackShapeSeasonTextureSelector.Select(loadedTextures, seasonFolder).ToArray();
         var textureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
         for (var i = 0; i < textureReferences.Length; i++)
             textureIndexes.TryAdd((textureReferences[i].Reference.ShapeIndex, textureReferences[i].Reference.ImageName), i);
