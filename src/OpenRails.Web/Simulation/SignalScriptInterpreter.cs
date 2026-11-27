@@ -297,8 +297,10 @@ public sealed class SignalScriptInterpreter
             var condition = ParseCondition();
             Expect("{");
             branches.Add(new Branch(condition, ParseBlock(true)));
-            while (Match("ELSEIF") || (Match("ELSE") && Match("IF")))
+            while (Is("ELSEIF") || (Is("ELSE") && Peek(1).Text.Equals("IF", StringComparison.OrdinalIgnoreCase)))
             {
+                if (Match("ELSE")) Expect("IF");
+                else Expect("ELSEIF");
                 var nextCondition = ParseCondition();
                 Expect("{");
                 branches.Add(new Branch(nextCondition, ParseBlock(true)));
@@ -311,9 +313,33 @@ public sealed class SignalScriptInterpreter
             return new Conditional(branches);
         }
 
-        private Condition ParseCondition()
+        private Condition ParseCondition() => ParseConditionOr();
+
+        private Condition ParseConditionOr()
         {
-            if (Match("!")) return new Not(ParseCondition());
+            var value = ParseConditionAnd();
+            while (Is("||") || Is("OR"))
+            {
+                var op = Advance().Text;
+                value = new Logical(value, op, ParseConditionAnd());
+            }
+            return value;
+        }
+
+        private Condition ParseConditionAnd()
+        {
+            var value = ParseConditionAtom();
+            while (Is("&&") || Is("AND"))
+            {
+                var op = Advance().Text;
+                value = new Logical(value, op, ParseConditionAtom());
+            }
+            return value;
+        }
+
+        private Condition ParseConditionAtom()
+        {
+            if (Match("!")) return new Not(ParseConditionAtom());
             if (Match("("))
             {
                 var inner = ParseCondition();
@@ -329,27 +355,7 @@ public sealed class SignalScriptInterpreter
             return new Truthy(left);
         }
 
-        private Expression ParseExpression() => ParseLogicalOr();
-        private Expression ParseLogicalOr()
-        {
-            var value = ParseLogicalAnd();
-            while (Is("||") || Is("OR"))
-            {
-                var op = Advance().Text;
-                value = new Binary(value, op, ParseLogicalAnd());
-            }
-            return value;
-        }
-        private Expression ParseLogicalAnd()
-        {
-            var value = ParseAdditive();
-            while (Is("&&") || Is("AND"))
-            {
-                var op = Advance().Text;
-                value = new Binary(value, op, ParseAdditive());
-            }
-            return value;
-        }
+        private Expression ParseExpression() => ParseAdditive();
         private Expression ParseAdditive()
         {
             var value = ParseMultiplicative();
@@ -425,6 +431,7 @@ public sealed class SignalScriptInterpreter
             return token;
         }
         private Token Current => tokens[position];
+        private Token Peek(int offset) => tokens[Math.Min(position + offset, tokens.Count - 1)];
         private InvalidDataException Error(string message) => new($"SIGSCR line {Current.Line}: {message}");
 
         private static List<Token> Lex(string source)
