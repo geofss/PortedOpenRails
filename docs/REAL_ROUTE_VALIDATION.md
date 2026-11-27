@@ -19,16 +19,16 @@ The published Demo Model 1 archive is 272,422,379 bytes, which exceeds the previ
 
 ## Parsing and virtual-content checks
 
-- [ ] Confirm route/global metadata files resolve through virtual content paths (case-insensitive where intended).
+- [ ] Confirm route/global metadata files resolve through virtual content paths (case-insensitive where intended). (The dedicated CI acceptance test loads the real route through the production virtual-content reader; full browser ZIP import remains unverified.)
 - [ ] Confirm nested STF includes resolve relative to their parent and reject traversal outside the virtual root.
-- [ ] Confirm TDB nodes, vector sections, pins, junction metadata, and connected path topology parse without fatal errors.
-- [ ] Confirm global and route-specific TSECTION catalogs resolve section lengths and track-shape references.
-- [ ] Confirm referenced track-shape `.s` assets are discovered and parse into geometry/LOD data.
-- [ ] Confirm terrain tile/sample/patch metadata is discovered and parseable.
-- [ ] Confirm WORLD scenery files are discovered; malformed files produce diagnostics without discarding valid neighboring tiles.
+- [x] Confirm real-route TDB nodes, connected vector paths, and positive track length load without fatal errors in the dedicated CI acceptance test. (Detailed pin/junction diagnostics still need manual review.)
+- [x] Confirm the real route's route-specific and global TSECTION catalogs are present and consumed by the production route loader in the dedicated CI acceptance test.
+- [x] Confirm real-route track-shape assets are discovered and at least one track-shape mesh is loaded in the dedicated CI acceptance test. (Full material/LOD visual parity remains unverified.)
+- [x] Confirm real-route terrain tiles are discovered and terrain meshes are generated in the dedicated CI acceptance test. (Visual preview and every tile/LOD remain unverified.)
+- [x] Confirm real-route WORLD tiles are discovered and scenery tiles are parsed in the dedicated CI acceptance test. (Malformed-neighbor recovery and visual placement remain unverified.)
 - [ ] Confirm missing/unsupported assets are reported with virtual path and package provenance.
 
-## Preview checks
+## Automated real-route CI evidence\n\n- [x] Dedicated GitHub Actions acceptance job downloaded the authorized Demo Model 1 source, restored dependencies, and loaded the real Scottish Capital Express route through `RouteLoader` successfully on 2026-11-27.\n- [x] Route acceptance assertions passed for SCE metadata, track database size, connected vector paths, positive track length, terrain tile discovery, track-shape discovery, WORLD tile discovery, generated terrain meshes, and loaded WORLD scenery.\n- [x] Separate route regression job passed route parsing, geometry, terrain, and scenery tests.\n- [ ] Capture and review the acceptance job's numeric diagnostics (node/path/length/terrain/shape/WORLD counts and validation issue count) before treating the route diagnostics audit as complete.\n\nThe automated result validates the production route loader against the real authorized route package in CI. It does **not** yet validate importing the ZIP through the browser picker, rendering the route in an actual browser, placing the real consist, or driving a train end-to-end.\n\n## Preview checks
 
 - [ ] Terrain patches render within the documented preview cap.
 - [ ] Track overlays follow the parsed route topology and stay aligned with terrain.
