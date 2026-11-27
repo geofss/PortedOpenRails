@@ -111,7 +111,6 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkBuilder.cs" Link="Simulation/TrackNetworkBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteBuilder.cs" Link="Simulation/TrackNetworkRouteBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/RouteStartVectorSelector.cs" Link="Simulation/RouteStartVectorSelector.cs" />
-    <Compile Include="../../src/OpenRails.Web/Simulation/TrackNetworkRouteProfile.cs" Link="Simulation/TrackNetworkRouteProfile.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrackGeometryTessellator.cs" Link="Simulation/TrackGeometryTessellator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTrackPlacementBuilder.cs" Link="Parsing/RollingStockTrackPlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/FixedStepSimulationScheduler.cs" Link="Simulation/FixedStepSimulationScheduler.cs" />
