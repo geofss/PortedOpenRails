@@ -32,6 +32,8 @@ The browser UI is a port of the upstream Menu application, not a redesign. Upstr
 
 - Source inventory: completed for the main form, route/activity/consist/path discovery, and Options tabs.
 - Browser data and control surfaces: partially implemented in `App.razor` and the existing components.
+- Main-form command strip: browser toolbar now uses the native Open Rails command labels and compact Windows Forms-style chrome; Start/Resume are gated by route and simulation readiness.
+- Options form: the native ten-tab order is represented in `TrainDrivingControls.razor`; Audio is the only currently enabled native tab, while unported tabs remain disabled. Browser gamepad preferences are kept separate from native Options controls.
 - Main-form layout and transition parity: not complete.
 - Options-tab parity: not complete.
 - End-to-end UI parity: not claimed.
