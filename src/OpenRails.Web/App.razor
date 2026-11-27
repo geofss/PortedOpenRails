@@ -52,6 +52,24 @@
                                 <option value="@activityPath">@System.IO.Path.GetFileNameWithoutExtension(activityPath)</option>
                             }
                         </select>
+                        @if (consistCatalog is { Consists.Count: > 0 })
+                        {
+                            <label for="or-main-locomotive">Locomotive</label>
+                            <select id="or-main-locomotive" value="@SelectedLocomotiveKey" @onchange="SelectLocomotive" disabled="@isLoading">
+                                <option value="">Select a locomotive…</option>
+                                @foreach (var locomotive in LocomotiveChoices)
+                                {
+                                    <option value="@($"{locomotive.ConsistName}|{locomotive.Uid}")">@locomotive.CarName · @locomotive.ConsistName</option>
+                                }
+                            </select>
+                            <label for="or-main-consist">Consist</label>
+                            <select id="or-main-consist" value="@SelectedConsist?.Name" @onchange="SelectConsist" disabled="@isLoading">
+                                @foreach (var consist in consistCatalog.Consists)
+                                {
+                                    <option value="@consist.Name">@consist.Name · @consist.Cars.Count cars</option>
+                                }
+                            </select>
+                        }
                         @if (selectedActivityMetadata is { } activity)
                         {
                             <dl class="or-compact-details">
@@ -147,7 +165,7 @@
                             </div>
                         </details>
                     </div>
-                    <label class="or-logging-toggle"><input type="checkbox" @bind="loggingEnabled" /> Logging</label>
+                    <label class="or-logging-toggle"><input type="checkbox" @bind="loggingEnabled" @bind:after="SaveBrowserPreferencesAsync" /> Logging</label>
                     <p class="hint">Logging preference is currently a UI preference; native log-file routing is not yet ported to the browser.</p>
                 </div>
                 <div class="or-mainform-group or-notifications">
@@ -175,14 +193,14 @@
                             case "General":
                                 <h3>General</h3>
                                 <p>Autosave, language, units, update mode, telemetry and general simulator preferences.</p>
-                                <label><input type="checkbox" @bind="browserAutosaveEnabled" /> Browser session autosave preference</label>
-                                <label>Autosave interval <select @bind="browserAutosaveMinutes"><option value="15">15 mins</option><option value="30">30 mins</option><option value="60">60 mins</option></select></label>
+                                <label><input type="checkbox" @bind="browserAutosaveEnabled" @bind:after="SaveBrowserPreferencesAsync" /> Browser session autosave preference</label>
+                                <label>Autosave interval <select @bind="browserAutosaveMinutes" @bind:after="SaveBrowserPreferencesAsync"><option value="15">15 mins</option><option value="30">30 mins</option><option value="60">60 mins</option></select></label>
                                 <p class="hint">These browser preference controls are local UI state only; native save-game autosave is not yet connected.</p>
                                 break;
                             case "Audio":
                                 <h3>Audio</h3>
                                 <p>Upstream controls: sound volume, external sound heard internally, sound detail level.</p>
-                                <label>Browser audio output <input type="range" min="0" max="100" @bind="browserAudioVolume" /> @browserAudioVolume%</label>
+                                <label>Browser audio output <input type="range" min="0" max="100" @bind="browserAudioVolume" @bind:after="SaveBrowserPreferencesAsync" /> @browserAudioVolume%</label>
                                 <p class="hint">Volume preference is not yet wired to the simulator audio mixer.</p>
                                 break;
                             case "Video":
@@ -838,12 +856,24 @@
     private NativeTimetableTrainDefinition? selectedTimetableTrainDefinition;
     private static readonly string[] OptionTabs =
         ["General", "Audio", "Video", "Simulation", "Keyboard", "RailDriver", "Data logger", "Evaluation", "System", "Experimental"];
+    private const string BrowserPreferencesKey = "portedopenrails.mainform.preferences.v1";
+    private IReadOnlyList<ConsistCarAssetReference> LocomotiveChoices => consistCatalog?.CarAssets
+        .Where(asset => asset.IsEngine).ToArray() ?? Array.Empty<ConsistCarAssetReference>();
+    private string? SelectedLocomotiveKey
+    {
+        get
+        {
+            var engine = SelectedConsist?.Cars.FirstOrDefault(car => car.IsEngine);
+            return engine is null || SelectedConsist is null ? null : $"{SelectedConsist.Name}|{engine.Uid}";
+        }
+    }
+
     private IReadOnlyList<string> TimetableChoices => composite?.Paths
         .Where(path => path.EndsWith(".timetable", StringComparison.OrdinalIgnoreCase) ||
                        path.EndsWith(".tt", StringComparison.OrdinalIgnoreCase))
         .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
 
-    private void SetMode(bool activityMode)
+    private async Task SetMode(bool activityMode)
     {
         isActivityMode = activityMode;
         if (activityMode)
@@ -865,6 +895,41 @@
             activityStationStopProgress = null;
             activityStartingSpeedMetersPerSecond = null;
             InitializeSimulationSetup();
+        }
+        await SaveBrowserPreferencesAsync();
+    }
+
+    private void SelectLocomotive(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        var separator = value.LastIndexOf('|');
+        if (separator <= 0 || !int.TryParse(value[(separator + 1)..], out var uid))
+            return;
+        var consistName = value[..separator];
+        var consist = consistCatalog?.Consists.FirstOrDefault(item =>
+            string.Equals(item.Name, consistName, StringComparison.OrdinalIgnoreCase) &&
+            item.Cars.Any(car => car.Uid == uid && car.IsEngine));
+        if (consist is null)
+            return;
+        selectedConsistName = consist.Name;
+        selectedServicePath = null;
+        InitializeSimulationSetup();
+    }
+
+    private async Task SaveBrowserPreferencesAsync()
+    {
+        var preferences = new BrowserUiPreferences(loggingEnabled, browserAutosaveEnabled,
+            browserAutosaveMinutes, browserAudioVolume, isActivityMode);
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", BrowserPreferencesKey,
+                System.Text.Json.JsonSerializer.Serialize(preferences));
+        }
+        catch (JSException)
+        {
+            // Browser storage can be disabled; current-session settings remain usable.
         }
     }
 
@@ -1235,6 +1300,31 @@
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            var preferencesJson = await JS.InvokeAsync<string?>("localStorage.getItem", BrowserPreferencesKey);
+            if (!string.IsNullOrWhiteSpace(preferencesJson))
+            {
+                var preferences = System.Text.Json.JsonSerializer.Deserialize<BrowserUiPreferences>(preferencesJson);
+                if (preferences is not null)
+                {
+                    loggingEnabled = preferences.LoggingEnabled;
+                    browserAutosaveEnabled = preferences.AutosaveEnabled;
+                    browserAutosaveMinutes = preferences.AutosaveMinutes is 15 or 30 or 60 ? preferences.AutosaveMinutes : 30;
+                    browserAudioVolume = Math.Clamp(preferences.AudioVolume, 0, 100);
+                    isActivityMode = preferences.ActivityMode;
+                }
+            }
+        }
+        catch (JSException)
+        {
+            // Browser storage may be unavailable; use safe defaults.
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Ignore stale or malformed browser preference data.
+        }
+
         try
         {
             storedPackages.AddRange(await BrowserPackageArchiveUploader.ListAsync(JS));
@@ -1741,6 +1831,7 @@
             DisposePackageStore(layer.Store);
     }
 
+    private sealed record BrowserUiPreferences(bool LoggingEnabled, bool AutosaveEnabled, int AutosaveMinutes, int AudioVolume, bool ActivityMode);
     private sealed record RouteChoice(RouteMetadata Metadata, string PackageName, string MetadataFile);
     private sealed record StagedRouteMetadata(string Path, RouteMetadata Metadata);
 }
