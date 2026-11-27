@@ -67,6 +67,7 @@
                                     {
                                         <small class="success">Parsed with upstream STFReader: @stagedRoute.Metadata.Name · ID @stagedRoute.Metadata.RouteId</small>
                                         <small>@stagedRoute.Metadata.Description</small>
+                                        <button type="button" @onclick="() => LoadStagedRouteAsync(package, routeFile, stagedRoute.Metadata)" disabled="@isLoading">Load route into simulator</button>
                                     }
                                 }
                             }
@@ -656,6 +657,57 @@
         }
     }
 
+    private async Task LoadStagedRouteAsync(
+        StoredBrowserPackage package,
+        string routeFile,
+        RouteMetadata metadata)
+    {
+        if (isLoading)
+            return;
+
+        isLoading = true;
+        errorMessage = null;
+        largePackageMessage = $"Loading {package.FileName} entry-by-entry from OPFS. The current synchronous Open Rails readers require a bounded expanded-content compatibility store (maximum 2 GiB).";
+        try
+        {
+            var progress = new Progress<(int Completed, int Total)>(value =>
+            {
+                _ = InvokeAsync(() =>
+                {
+                    largePackageMessage = $"Reading route package entries from OPFS: {value.Completed:N0}/{value.Total:N0}";
+                    StateHasChanged();
+                });
+            });
+            var store = await BrowserPackageVirtualContentStore.LoadAsync(JS, package.Id, progress);
+            var packageName = GetUniquePackageName(package.FileName);
+            layers.Insert(0, new PackageLayer(packageName, store));
+            RebuildComposite();
+
+            var route = new RouteChoice(metadata, packageName, VirtualPath.Normalize(routeFile));
+            routeChoices.RemoveAll(item =>
+                item.PackageName.Equals(packageName, StringComparison.OrdinalIgnoreCase) &&
+                item.MetadataFile.Equals(route.MetadataFile, StringComparison.OrdinalIgnoreCase));
+            routeChoices.Add(route);
+            largePackageMessage = $"Loaded {store.Paths.Count:N0} route-package files into the browser content pipeline. Building the original route systems…";
+            await SelectRoute(route);
+        }
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
+            exception is ArgumentException || exception is JSException || exception is OverflowException)
+        {
+            errorMessage = $"Could not load staged route: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static void DisposePackageStore(IVirtualContentStore store)
+    {
+        if (store is IDisposable disposable)
+            disposable.Dispose();
+    }
+
     private async Task DeleteStoredPackageAsync(StoredBrowserPackage package)
     {
         try
@@ -822,7 +874,7 @@
 
         var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
         layers.Remove(layer);
-        layer.Store.Dispose();
+        DisposePackageStore(layer.Store);
 
         routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
         if (removedSelectedRoute)
@@ -895,7 +947,7 @@
     {
         composite?.Dispose();
         foreach (var layer in layers)
-            layer.Store.Dispose();
+            DisposePackageStore(layer.Store);
     }
 
     private sealed record RouteChoice(RouteMetadata Metadata, string PackageName, string MetadataFile);
