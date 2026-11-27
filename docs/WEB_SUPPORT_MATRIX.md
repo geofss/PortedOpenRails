@@ -12,7 +12,7 @@ This matrix describes the experimental browser port's current implementation sur
 | WebAssembly support | Required; the app is published as WASM |
 | WebGL 2 | Required for route/terrain preview rendering |
 | JavaScript modules | Used by the renderer and browser gamepad reader |
-| ZIP file import | Browser-side user-selected content; files are not uploaded by the port |
+| ZIP file import | Small ZIPs use the bounded in-memory importer; large ZIPs up to 30 GB can be streamed into OPFS without buffering the compressed archive |
 | Graphics quality presets | Low/Medium/High controls reduce WebGL pixel scale, terrain tile cap, track sampling density, and geometry budgets; preset persists in browser storage with reset-to-High |
 | Pointer/touch interaction | Route preview orbit/zoom and pointer-driven control sliders |
 | Keyboard input | Focused driving-control pad shortcuts |
@@ -23,7 +23,7 @@ This matrix describes the experimental browser port's current implementation sur
 
 | Content | Prototype status | Limitations |
 |---|---|---|
-| Route ZIP packages | Import and local virtual-content indexing | Not all route files are parsed |
+| Route ZIP packages | Small ZIP import; large OPFS ZIP indexing; staged `.trk` metadata parsed with upstream STFReader; staged route can be loaded through the existing route pipeline | Staged-route compatibility currently materializes expanded entries into memory with a 2 GiB aggregate ceiling; archives above that ceiling remain indexed but cannot yet enter the synchronous route readers |
 | `.trk` route metadata | Parsed and route selection displayed | Full route/activity metadata parity is incomplete |
 | TDB/TSECTION track data | Track topology and geometry subset parsed | Signalling, activities, timetable and full switch logic are not implemented |
 | SIMISA/SBR terrain streams | Stream-based reader; compressed/uncompressed fixtures covered by regression tests | Not every SBR variant or route package is validated |
@@ -40,11 +40,10 @@ This matrix describes the experimental browser port's current implementation sur
 | Environment | Validation status |
 |---|---|
 | GitHub Actions Linux runner | Regression tests and WebAssembly publish are CI-validated when the latest workflow passes |
-| Desktop Chromium-family browser | Expected candidate where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
-| Desktop Firefox | Expected candidate where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
-| Desktop Safari | Expected candidate where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
-| Android browsers | WebAssembly/WebGL 2 capability is required; performance and touch behavior not yet device-validated |
-| iOS/iPadOS browsers | WebAssembly/WebGL 2 capability is required; performance, memory, and touch behavior not yet device-validated |
+| Desktop Chromium-family browser | Target environment where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
+| Desktop Firefox | Target environment where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
+| Desktop Safari | Target environment where WebAssembly and WebGL 2 are enabled; runtime/device validation not yet recorded |
+| Mobile browsers | Outside the current target; this project targets desktop PC browsers only |
 
 A browser that disables WebGL 2, blocks required WASM execution, or runs under restrictive resource limits may not be able to use the scene preview. Browser/version minimums cannot be responsibly claimed until the app is exercised on actual browser builds and devices.
 
