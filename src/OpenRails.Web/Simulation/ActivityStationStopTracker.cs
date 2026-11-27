@@ -54,7 +54,7 @@ public sealed class ActivityStationStopTracker
                 var dz = z - nextStop.Z;
                 if (nextStop.TileX != tileX || nextStop.TileZ != tileZ)
                     return new ActivityStationStopProgress(TotalStops, VisitedStops, false, AllStopsCompleted, PathTraceComplete);
-                if (Math.Hypot(dx, dz) <= StopRadiusMeters)
+                if (HorizontalDistance(dx, dz) <= StopRadiusMeters)
                 {
                     visited.Add(nextStop.NodeIndex);
                     reached = true;
@@ -62,5 +62,19 @@ public sealed class ActivityStationStopTracker
             }
         }
         return new ActivityStationStopProgress(TotalStops, VisitedStops, reached, AllStopsCompleted, PathTraceComplete);
+    }
+
+    private static double HorizontalDistance(double x, double z)
+    {
+        var absoluteX = Math.Abs(x);
+        var absoluteZ = Math.Abs(z);
+        var maximum = Math.Max(absoluteX, absoluteZ);
+        if (maximum == 0)
+            return 0;
+        if (!double.IsFinite(maximum))
+            return double.PositiveInfinity;
+        var minimum = Math.Min(absoluteX, absoluteZ);
+        var ratio = minimum / maximum;
+        return maximum * Math.Sqrt(1 + ratio * ratio);
     }
 }
