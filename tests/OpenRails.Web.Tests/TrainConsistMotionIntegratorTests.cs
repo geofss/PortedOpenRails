@@ -65,7 +65,7 @@ public sealed class TrainConsistMotionIntegratorTests
         source.Add(new TrainCarMotionState(30_000, 3, 20));
 
         Assert.Equal(2, snapshot.Cars.Count);
-        Assert.Equal(10_000, snapshot.Cars[0].MassKilograms);
+        Assert.Equal(10_000, snapshot.Cars[0].MassKg);
         Assert.Equal(0, snapshot.Cars[0].DistanceMeters);
         Assert.Throws<NotSupportedException>(() =>
             ((IList<TrainCarMotionState>)snapshot.Cars)[0] = new TrainCarMotionState(1, 0, 0));
