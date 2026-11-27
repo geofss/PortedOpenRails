@@ -50,10 +50,18 @@ public sealed class AceTexturePngEncoderTests
     }
 
     [Fact]
-    public void RejectsDxtFormatsThatNeedGpuDecoding()
+    public void DecodesDxt3AndDxt5AlphaBlocks()
     {
-        var texture = new AceTextureData(4, 4, AceTexturePixelFormat.Dxt1,
-            false, true, 0, new[] { new byte[8] }, Array.Empty<AceTextureChannel>());
-        Assert.Throws<NotSupportedException>(() => AceTexturePngEncoder.Encode(texture));
+        var dxt3 = new AceTextureData(4, 4, AceTexturePixelFormat.Dxt3,
+            false, true, 8,
+            new[] { new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 0, 248, 0, 248, 0, 0, 0, 0 } },
+            Array.Empty<AceTextureChannel>());
+        var dxt5 = new AceTextureData(4, 4, AceTexturePixelFormat.Dxt5,
+            false, true, 8,
+            new[] { new byte[] { 255, 0, 0, 0, 0, 0, 0, 0, 0, 248, 0, 248, 0, 0, 0, 0 } },
+            Array.Empty<AceTextureChannel>());
+
+        Assert.True(AceTexturePngEncoder.Encode(dxt3).Length > 60);
+        Assert.True(AceTexturePngEncoder.Encode(dxt5).Length > 60);
     }
 }
