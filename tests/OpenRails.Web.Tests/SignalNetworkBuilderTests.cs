@@ -199,12 +199,13 @@ public sealed class SignalNetworkBuilderTests
             new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
             new Dictionary<string, SignalDrawStateDefinition>
             {
-                ["script-clear"] = new(2, "script-clear", Array.Empty<SignalDrawLightDefinition>(), 0)
+                ["script-clear"] = new(0, "script-clear", Array.Empty<SignalDrawLightDefinition>(), 0),
+                ["baseline-clear"] = new(1, "baseline-clear", Array.Empty<SignalDrawLightDefinition>(), 0)
             },
             new[]
             {
                 new SignalAspectDefinition("STOP", "", -1, false, false, false),
-                new SignalAspectDefinition("CLEAR_1", "script-clear", 12, false, false, false)
+                new SignalAspectDefinition("CLEAR_1", "baseline-clear", 12, false, false, false)
             });
         var signal = new RouteSignalHead(11, "main", "", 0, 0, 2, 0,
             Array.Empty<TrackSignalDirection>(), definition);
@@ -217,7 +218,7 @@ public sealed class SignalNetworkBuilderTests
             new Dictionary<uint, IReadOnlyList<uint>>(),
             Array.Empty<string>());
         var script = new SignalScriptDefinition("native-main",
-            new[] { "EXTERN FLOAT STATE;", "EXTERN FLOAT DRAW_STATE;", "STATE = 6;", "DRAW_STATE = 2;" },
+            new[] { "EXTERN FLOAT STATE;", "EXTERN FLOAT DRAW_STATE;", "STATE = 6;", "DRAW_STATE = 0;" },
             Array.Empty<string>(), new[] { "STATE", "DRAW_STATE" }, 2, Array.Empty<string>());
         var library = new SignalScriptLibrary(
             new Dictionary<string, SignalScriptDefinition> { ["native-main"] = script },

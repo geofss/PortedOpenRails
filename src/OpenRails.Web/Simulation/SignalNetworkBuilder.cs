@@ -305,9 +305,9 @@ public sealed class SignalNetwork
         return new RouteSignalIndication(signal, routeAspect, baseline.NextTrackNodeIndex,
             $"{baseline.Reason} Native SIGSCR '{scriptName}' executed.",
             configured.Aspect,
-            execution.DrawState != 0 && signal.Definition!.DrawStates.Values
-                .FirstOrDefault(draw => draw.Index == execution.DrawState)?.Name is { } drawName
-                    ? drawName : configured.DrawState,
+            execution.DrawStateWasAssigned
+                ? signal.Definition!.DrawStates.Values.FirstOrDefault(draw => draw.Index == execution.DrawState)?.Name ?? configured.DrawState
+                : configured.DrawState,
             configured.SpeedMetersPerSecond >= 0 ? configured.SpeedMetersPerSecond : null);
     }
 

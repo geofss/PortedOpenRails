@@ -32,7 +32,7 @@ public sealed class SignalScriptInterpreter
             var runtime = new Runtime(script, context, instructionBudget);
             runtime.Execute(statements);
             return new SignalScriptExecutionResult(true, runtime.State, runtime.DrawState,
-                runtime.Returned, null, runtime.InstructionsExecuted);
+                runtime.Returned, null, runtime.InstructionsExecuted, runtime.DrawStateWasAssigned);
         }
         catch (Exception exception) when (exception is InvalidDataException or NotSupportedException or
             OverflowException or DivideByZeroException or ArgumentException)
@@ -52,6 +52,7 @@ public sealed class SignalScriptInterpreter
         public int State { get; private set; }
         public int DrawState { get; private set; }
         public bool Returned { get; private set; }
+        public bool DrawStateWasAssigned { get; private set; }
         public int InstructionsExecuted { get; private set; }
 
         public Runtime(SignalScriptDefinition script, SignalScriptExecutionContext context, int budget)
@@ -138,6 +139,7 @@ public sealed class SignalScriptInterpreter
             if (name.Equals("DRAW_STATE", StringComparison.OrdinalIgnoreCase))
             {
                 DrawState = value;
+                DrawStateWasAssigned = true;
                 external[name] = value;
                 return;
             }
@@ -514,8 +516,9 @@ public sealed record SignalScriptExecutionResult(
     int DrawState,
     bool Returned,
     string? Diagnostic,
-    int InstructionsExecuted)
+    int InstructionsExecuted,
+    bool DrawStateWasAssigned = false)
 {
     public static SignalScriptExecutionResult Failed(int state, int drawState, string diagnostic) =>
-        new(false, state, drawState, false, diagnostic, 0);
+        new(false, state, drawState, false, diagnostic, 0, false);
 }
