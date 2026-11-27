@@ -105,6 +105,76 @@ public sealed class LocomotiveTractionModelTests
         Assert.Equal(0, model.CalculateTractiveForce(100, 51));
     }
 
+    [Fact]
+    public void ReadsNativeTractionForceRampRates()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/Ramp.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                ORTSTractiveForceRampUpRate ( 10000 )
+                ORTSTractiveForceRampDownRate ( 20kN/s )
+                ORTSTractiveForceRampDownToZeroRate ( 1000lbf/s )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/Ramp.eng");
+
+        Assert.Equal(10_000, metadata.TractionForceRampUpNewtonsPerSecond);
+        Assert.Equal(20_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(4_448.2217f, metadata.TractionForceRampDownToZeroNewtonsPerSecond, 2);
+    }
+
+    [Fact]
+    public void DefaultsRampDownToZeroRateToRampDownRateWhenUnspecified()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/Down.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                ORTSTractiveForceRampDownRate ( 20kN/s )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/Down.eng");
+
+        Assert.Equal(20_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(20_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+    }
+
+    [Fact]
+    public void DerivesNativeRampRatesFromRunUpTimeWhenExplicitRatesAreAbsent()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/RunUp.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                RunUpTimeToMaxForce ( 10 )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/RunUp.eng");
+
+        Assert.Equal(20_000, metadata.TractionForceRampUpNewtonsPerSecond);
+        Assert.Equal(40_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(200_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+    }
+
+    [Fact]
+    public void AppliesAsymmetricNativeTractionForceRamping()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "Ramp", 200_000, 150_000, 2_000_000, 120, 0, null, "ramp.eng",
+            10_000, 20_000, 50_000);
+
+        Assert.Equal(1_000, LocomotiveTractionRamp.Advance(0, 100_000, 0.1, metadata));
+        Assert.Equal(95_000, LocomotiveTractionRamp.Advance(100_000, 0, 0.1, metadata));
+        Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 90_000, 0.1, metadata));
+    }
+
     private static LocomotiveTractionMetadata CreateCurveMetadata(float maxPower)
     {
         var zeroThrottle = new Orts.Parsers.Msts.Interpolator(2);

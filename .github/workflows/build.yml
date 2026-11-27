@@ -1,8 +1,9 @@
 name: Build and deploy WebAssembly app
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "port/upstream-core-files"]
   pull_request:
     branches: [main]
 
@@ -20,7 +21,7 @@ jobs:
         run: python3 tests/test_demo_model_1_package_audit.py
 
       - name: Validate renderer JavaScript syntax
-        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js
+        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js && node --check src/OpenRails.Web/wwwroot/js/route-package-storage.js && node --check src/OpenRails.Web/wwwroot/js/route-package-indexer.js
 
       - name: Run gamepad reader unit tests
         run: node tests/gamepad-reader.test.mjs && node tests/gamepad-audio.test.mjs && node tests/preview-quality-storage.test.mjs && node tests/route-camera-presets.test.mjs && node tests/train-driving-settings.test.mjs
@@ -46,13 +47,13 @@ jobs:
         run: sed -i 's|<base href="/" />|<base href="/PortedOpenRails/" />|' artifacts/publish/wwwroot/index.html
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/publish/wwwroot
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test-and-build
     concurrency:
       group: portedopenrails-pages

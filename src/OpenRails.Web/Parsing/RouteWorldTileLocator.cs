@@ -43,15 +43,19 @@ public sealed class RouteWorldTileLocator
             available.TryAdd((x, z), path);
         }
 
-        var found = new List<WorldTileReference>();
-        var missing = new List<(int TileX, int TileZ)>();
-        foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
-        {
-            if (available.TryGetValue(tile, out var path))
-                found.Add(new WorldTileReference(tile.X, tile.Z, path));
-            else
-                missing.Add(tile);
-        }
+        // Load every WORLD tile shipped with this route, not only tiles crossed
+        // by track centerlines. Towns, yards, depots and other scenery often sit
+        // beside the track and would otherwise silently disappear from the route.
+        var found = available
+            .OrderBy(pair => pair.Key.Z)
+            .ThenBy(pair => pair.Key.X)
+            .Select(pair => new WorldTileReference(pair.Key.X, pair.Key.Z, pair.Value))
+            .ToArray();
+        var missing = needed
+            .Where(tile => !available.ContainsKey(tile))
+            .OrderBy(tile => tile.Z)
+            .ThenBy(tile => tile.X)
+            .ToArray();
 
         return new RouteWorldTileDiscovery(found, missing);
     }

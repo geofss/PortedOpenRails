@@ -75,6 +75,49 @@ public sealed class TrackNetworkRouteProfileTests
     }
 
     [Fact]
+    public void MapsSignalPositionOnForwardAndReversedVectorSegments()
+    {
+        var path = CreateSlopePath(100, 0, trackNodeIndex: 42);
+        var forward = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, false) }, Array.Empty<string>(), 100), 5);
+        var reverse = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, true) }, Array.Empty<string>(), 100), 5);
+
+        Assert.True(forward.TryGetRouteDistanceForTrackNode(42, 25, out var forwardDistance));
+        Assert.True(reverse.TryGetRouteDistanceForTrackNode(42, 25, out var reverseDistance));
+        Assert.Equal(25, forwardDistance, 3);
+        Assert.Equal(75, reverseDistance, 3);
+    }
+
+    [Fact]
+    public void MapsSignalDistanceUsingCumulativeOffsetAcrossConnectedVectorNodes()
+    {
+        var first = CreateSlopePath(100, 0, trackNodeIndex: 1, endpointNodes: new[] { 2, 3 });
+        var second = CreateSlopePath(100, 0, startZ: 100, trackNodeIndex: 2,
+            endpointNodes: new[] { 3, 4 });
+        var profile = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[]
+            {
+                new TrackNetworkRouteSegment(first, false),
+                new TrackNetworkRouteSegment(second, false)
+            },
+            Array.Empty<string>(), 200), 5);
+
+        Assert.True(profile.TryGetRouteDistanceForTrackNode(2, 25, out var distance));
+        Assert.Equal(125, distance, 3);
+    }
+
+    [Fact]
+    public void DoesNotMapSignalsFromVectorNodesOutsideTheConnectedRoute()
+    {
+        var profile = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(CreateSlopePath(100, 0), false) },
+            Array.Empty<string>(), 100), 5);
+
+        Assert.False(profile.TryGetRouteDistanceForTrackNode(999, 10, out _));
+    }
+
+    [Fact]
     public void ClampsSamplesAtBothEndsOfTheConnectedRoute()
     {
         var path = CreateSlopePath(100, 10);
@@ -86,6 +129,41 @@ public sealed class TrackNetworkRouteProfileTests
 
         Assert.Equal(0, profile.Sample(-25).Position.Z, 3);
         Assert.Equal(100, profile.Sample(125).Position.Z, 3);
+    }
+
+    [Fact]
+    public void FindsNearestProjectedDistanceAndLateralOffset()
+    {
+        var path = CreateSlopePath(100, 0);
+        var route = new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, false) },
+            Array.Empty<string>(), 100);
+        var profile = TrackNetworkRouteProfile.Build(route, 5);
+
+        var matched = profile.TryFindNearestDistance(
+            new TrackWorldPosition(3, 0, 30), 5,
+            out var distance, out var offset);
+
+        Assert.True(matched);
+        Assert.Equal(30, distance, 3);
+        Assert.Equal(3, offset, 3);
+    }
+
+    [Fact]
+    public void RejectsNearestPointOutsideConfiguredOffset()
+    {
+        var path = CreateSlopePath(100, 0);
+        var route = new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(path, false) },
+            Array.Empty<string>(), 100);
+        var profile = TrackNetworkRouteProfile.Build(route, 5);
+
+        var matched = profile.TryFindNearestDistance(
+            new TrackWorldPosition(40, 0, 30), 10,
+            out _, out var offset);
+
+        Assert.False(matched);
+        Assert.Equal(40, offset, 3);
     }
 
     private static TrackVectorPath CreateSlopePath(

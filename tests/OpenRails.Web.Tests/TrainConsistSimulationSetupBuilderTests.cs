@@ -34,6 +34,116 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     }
 
     [Fact]
+    public void ConfiguredSetupAdvancesTractionPneumaticsHandbrakeAndDynamicCouplersTogether()
+    {
+        var consist = new ConsistMetadata("Freight", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "freight.con");
+        var engine = CreateAsset(1, "Engine", 20_000, 15, 50_000,
+            new LocomotiveTractionMetadata("Engine", 100_000, 100_000, 500_000, 100, 0, null, "engine.eng"),
+            100_000) with
+        {
+            Metadata = CreateAsset(1, "Engine", 20_000, 15, 50_000, null).Metadata! with
+            {
+                BrakeSystemType = "air_single_pipe",
+                BrakeEquipmentType = "distributor",
+                MaxHandBrakeForceN = 20_000
+            }
+        };
+        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null, 100_000) with
+        {
+            Metadata = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null).Metadata! with
+            {
+                BrakeSystemType = "air_single_pipe",
+                BrakeEquipmentType = "distributor",
+                MaxHandBrakeForceN = 12_000
+            }
+        };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { engine, wagon }, 1_000);
+        var steps = setup.Advance(0.1, new[] { 50f, 0f }, 30,
+            handBrakePercentByCar: new[] { 0d, 25d });
+
+        Assert.Equal(6, steps);
+        Assert.True(setup.Session.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.Equal(0, setup.Session.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.True(setup.Session.State.Cars[0].DistanceMeters > setup.InitialState.Cars[0].DistanceMeters);
+        Assert.Equal(17.5, Assert.Single(setup.CouplerRestGapsMetersByBoundary), 8);
+        Assert.Equal(2, setup.Session.BrakePipeState.PressuresKPa.Count);
+        Assert.All(setup.Session.BrakePipeState.PressuresKPa, pressure => Assert.True(pressure < TrainBrakePipeModel.NormalPressureKPa));
+        Assert.Equal(2, setup.Session.BrakeCylinderState.PressuresKPa.Count);
+        Assert.True(setup.Session.BrakeCylinderState.PressuresKPa.Any(pressure => pressure > 0));
+    }
+
+    [Fact]
+    public void RejectsConsistThatWouldBeClampedBeyondConnectedRouteEnd()
+    {
+        var consist = new ConsistMetadata("TooLong", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "too-long.con");
+        var assets = new[]
+        {
+            CreateAsset(1, "Engine", 20_000, 15, 50_000, null),
+            CreateAsset(2, "Wagon", 30_000, 20, 60_000, null)
+        };
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrainConsistSimulationSetupBuilder().Build(
+                consist, assets, routeLengthMeters: 40, startDistanceMeters: 10));
+
+        Assert.Contains("only 30.0 m remains", exception.Message);
+    }
+
+    [Fact]
+    public void CarriesPerVehicleHandbrakeRatingsIntoSimulationSetup()
+    {
+        var consist = new ConsistMetadata("Handbrake", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false),
+            new ConsistCar("Wagon", "Freight", 2, false, false, false)
+        }, "handbrake.con");
+        var engine = CreateAsset(1, "Engine", 20_000, 15, 50_000, null);
+        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null);
+        var assets = new[]
+        {
+            engine with { Metadata = engine.Metadata! with { MaxHandBrakeForceN = 30_000 } },
+            wagon with { Metadata = wagon.Metadata! with { MaxHandBrakeForceN = 15_000 } }
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
+
+        Assert.Equal(new[] { 30_000d, 15_000d }, setup.MaximumHandBrakeForceNewtonsByCar);
+    }
+
+    [Fact]
+    public void DerivesMaximumBrakeForceFromDeclaredBrakeShoesWhenTotalIsAbsent()
+    {
+        var consist = new ConsistMetadata("BrakeShoes", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "brake-shoes.con");
+        var asset = CreateAsset(1, "Wagon", 20_000, 15, 0, null);
+        asset = asset with
+        {
+            Metadata = asset.Metadata! with
+            {
+                MaxBrakeForceN = null,
+                MaxBrakeShoeForceN = 8_000,
+                NumberCarBrakeShoes = 8,
+                BrakeShoeType = "CastIron"
+            }
+        };
+
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200);
+
+        Assert.Equal(64_000d, Assert.Single(setup.MaximumBrakeForceNewtonsByCar));
+        Assert.Contains(setup.Diagnostics, message => message.Contains("derived from 8 declared brake shoes"));
+    }
+
+    [Fact]
     public void UsesTheWeakestAdjacentVehicleCouplerRating()
     {
         var consist = new ConsistMetadata("Freight", new[]
@@ -86,7 +196,8 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         var assets = new[]
         {
             CreateAsset(2, "Wagon", 30_000, 20, 60_000, null,
-                davisA: -1, davisB: float.NaN, davisC: 0.5f)
+                davisA: -1, davisB: float.NaN, davisC: 0.5f,
+                brakeSystemType: "air_single_pipe", brakeEquipmentType: "distributor")
         };
 
         var setup = new TrainConsistSimulationSetupBuilder().Build(consist, assets, 500);
@@ -179,7 +290,6 @@ public sealed class TrainConsistSimulationSetupBuilderTests
     [InlineData("ep", "triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("AIR_SINGLE_PIPE", "DISTRIBUTOR", RollingStockBrakeSupport.PrototypeAirDistributor)]
     [InlineData("air_single_pipe", "", RollingStockBrakeSupport.UnsupportedOrUnverified)]
-    [InlineData("air_single_pipe", "graduated_release_triple_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("air_single_pipe", "distributing_valve", RollingStockBrakeSupport.UnsupportedOrUnverified)]
     [InlineData("air_twin_pipe", "distributor", RollingStockBrakeSupport.PrototypeAirDistributor)]
     [InlineData("air_single_pipe", "triple_valve", RollingStockBrakeSupport.PrototypeAirDistributor)]
@@ -194,6 +304,33 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         var metadata = new RollingStockMetadata("Car", "Freight", 20_000, 3, 4, 15, 4, 8,
             systemType, equipmentType, 50_000, "car.wag");
         Assert.Equal(expected, RollingStockBrakeProfile.FromMetadata(metadata).Support);
+    }
+
+    [Fact]
+    public void ConfiguredSetupCanApplyReverseTractionDirection()
+    {
+        var consist = new ConsistMetadata("Reverse", new[]
+        {
+            new ConsistCar("Engine", "Diesel", 1, true, false, false)
+        }, "reverse.con");
+        var traction = new LocomotiveTractionMetadata(
+            "Engine", 100_000, 100_000, 500_000, 100, 0, null, "engine.eng");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist,
+            new[] { CreateAsset(1, "Engine", 20_000, 15, 50_000, traction) },
+            routeLengthMeters: 500,
+            startDistanceMeters: 100,
+            initialSpeedMetersPerSecond: 0);
+
+        var steps = setup.Advance(
+            0.1,
+            new[] { 50f },
+            brakeCommandPercent: 0,
+            tractionDirection: -1);
+
+        Assert.Equal(6, steps);
+        Assert.True(setup.Session.State.Cars[0].SpeedMetersPerSecond < 0);
+        Assert.True(setup.Session.State.Cars[0].DistanceMeters < setup.InitialState.Cars[0].DistanceMeters);
     }
 
     private static ConsistCarAssetReference CreateAsset(

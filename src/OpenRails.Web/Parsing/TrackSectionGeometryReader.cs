@@ -104,8 +104,9 @@ public sealed class TrackSectionGeometryReader
                                 throw new InvalidDataException($"Duplicate dynamic track path index {dynamicIndex}.");
                         })
                     });
-                    if (dynamicPaths.Count != declaredCount)
-                        throw new InvalidDataException($"Route TSECTION declares {declaredCount} dynamic paths but contains {dynamicPaths.Count}.");
+                    // Match upstream Open Rails: SectionIdx's declared value is a dictionary
+                    // capacity hint, not a required number of TrackPath records. Real routes
+                    // (including Demo Model 1) legitimately contain sparse dynamic indices.
                 })
             });
             return new TrackSectionCatalog(maximum, sections, dynamicPaths: dynamicPaths);

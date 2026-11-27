@@ -6,11 +6,74 @@ public sealed record TrainConsistSimulationSetup(
     TrainConsistSimulationSession Session,
     TrainConsistMotionState InitialState,
     IReadOnlyList<double> MaximumBrakeForceNewtonsByCar,
+    IReadOnlyList<double> MaximumHandBrakeForceNewtonsByCar,
     IReadOnlyList<TrainCarResistanceParameters> ResistanceParametersByCar,
     IReadOnlyList<bool> PoweredCars,
     IReadOnlyList<TrainCouplerForceLimit> CouplerForceLimits,
+    IReadOnlyList<double> CouplerSlackMetersByBoundary,
+    IReadOnlyList<double> CouplerStiffnessByBoundary,
+    IReadOnlyList<double> CouplerDampingByBoundary,
+    IReadOnlyList<double> CouplerRestGapsMetersByBoundary,
     IReadOnlyList<RollingStockBrakeProfile> BrakeProfilesByCar,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    /// <summary>
+    /// Runs the configured consist end-to-end: metadata-derived resistance,
+    /// pneumatic brake propagation, locomotive traction, adhesion limits,
+    /// and dynamic slack/damper coupler forces all advance on fixed ticks.
+    /// </summary>
+    public int Advance(
+        double elapsedFrameSeconds,
+        IReadOnlyList<float> throttlePercentByCar,
+        double brakeCommandPercent,
+        bool emergency = false,
+        IReadOnlyList<double>? handBrakePercentByCar = null,
+        float powerReduction = 0,
+        IReadOnlyList<double>? adhesionCoefficientByCar = null,
+        int tractionDirection = 1)
+    {
+        ArgumentNullException.ThrowIfNull(throttlePercentByCar);
+        var carCount = InitialState.Cars.Count;
+        if (throttlePercentByCar.Count != carCount ||
+            throttlePercentByCar.Any(value => !float.IsFinite(value)))
+            throw new ArgumentException("Throttle commands must contain one finite value per vehicle.", nameof(throttlePercentByCar));
+        if (!double.IsFinite(brakeCommandPercent) || brakeCommandPercent < 0 || brakeCommandPercent > 100)
+            throw new ArgumentOutOfRangeException(nameof(brakeCommandPercent));
+        if (handBrakePercentByCar is not null &&
+            (handBrakePercentByCar.Count != carCount ||
+             handBrakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100)))
+            throw new ArgumentOutOfRangeException(nameof(handBrakePercentByCar));
+        if (!float.IsFinite(powerReduction))
+            throw new ArgumentOutOfRangeException(nameof(powerReduction));
+
+        var handBrakeForces = new double[carCount];
+        for (var i = 0; i < carCount; i++)
+            handBrakeForces[i] = MaximumHandBrakeForceNewtonsByCar[i] *
+                ((handBrakePercentByCar is null ? 0 : handBrakePercentByCar[i]) / 100d);
+
+        var resistanceModel = new TrainCarResistanceModel();
+        TrainCarResistanceForces Resistance(int index, TrainCarMotionState car) =>
+            resistanceModel.Calculate(car, ResistanceParametersByCar[index]);
+
+        return Session.AdvanceWithPneumaticBrakesAndDynamicCouplers(
+            elapsedFrameSeconds,
+            throttlePercentByCar,
+            brakeCommandPercent,
+            MaximumBrakeForceNewtonsByCar,
+            Resistance,
+            CouplerRestGapsMetersByBoundary,
+            CouplerSlackMetersByBoundary,
+            CouplerStiffnessByBoundary,
+            CouplerDampingByBoundary,
+            CouplerForceLimits.Select(limit => limit.MaximumCompressionNewtons).ToArray(),
+            CouplerForceLimits.Select(limit => limit.MaximumTensionNewtons).ToArray(),
+            emergency,
+            powerReduction,
+            tractionDirection: tractionDirection,
+            adhesionCoefficientByCar: adhesionCoefficientByCar,
+            additionalBrakeForceNewtonsByCar: handBrakeForces);
+    }
+}
 
 /// <summary>
 /// Builds a browser-ready fixed-step consist session from the parsed original
@@ -30,6 +93,21 @@ public sealed class TrainConsistSimulationSetupBuilder
             return 0;
         }
         return value.Value;
+    }
+
+    private static double AverageOrFallback(float? first, float? second, double fallback,
+        string parameter, string frontCar, string rearCar, List<string> diagnostics)
+    {
+        var values = new[] { first, second }
+            .Where(value => value is > 0 && float.IsFinite(value.Value))
+            .Select(value => (double)value!.Value)
+            .ToArray();
+        if (values.Length == 0)
+        {
+            diagnostics.Add($"Coupler between {frontCar} and {rearCar}: {parameter} metadata unavailable; using browser fallback {fallback:N0}.");
+            return fallback;
+        }
+        return values.Average();
     }
 
     public TrainConsistSimulationSetup Build(
@@ -54,6 +132,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         var states = new List<TrainCarMotionState>(cars.Length);
         var traction = new List<LocomotiveTractionMetadata?>(cars.Length);
         var brakeRatings = new List<double>(cars.Length);
+        var handbrakeRatings = new List<double>(cars.Length);
         var resistanceParameters = new List<TrainCarResistanceParameters>(cars.Length);
         var poweredCars = new List<bool>(cars.Length);
         var brakeProfiles = new List<RollingStockBrakeProfile>(cars.Length);
@@ -63,7 +142,7 @@ public sealed class TrainConsistSimulationSetupBuilder
         foreach (var car in cars)
         {
             var asset = carAssets.FirstOrDefault(candidate =>
-                candidate.ConsistName == consist.Name && candidate.Uid == car.Uid);
+                candidate.Uid == car.Uid && string.Equals(candidate.CarName, car.Name, StringComparison.OrdinalIgnoreCase));
             var metadata = asset?.Metadata;
             var mass = metadata?.MassKg ?? 0;
             if (!float.IsFinite(mass) || mass <= 0)
@@ -89,7 +168,14 @@ public sealed class TrainConsistSimulationSetupBuilder
             else if (brakeProfile.Support == RollingStockBrakeSupport.Unspecified)
                 diagnostics.Add($"{car.Name}: brake-system metadata is missing; browser pneumatic braking is disabled for this vehicle rather than assuming air-brake equipment.");
 
-            var maximumBrakeForce = metadata?.MaxBrakeForceN ?? 0;
+            var shoeForce = metadata?.MaxBrakeShoeForceN ?? 0;
+            var shoeCount = metadata?.NumberCarBrakeShoes ?? 0;
+            var derivedShoeBrakeForce = float.IsFinite(shoeForce) && shoeForce > 0 && shoeCount > 0
+                ? shoeForce * shoeCount
+                : 0;
+            var maximumBrakeForce = metadata?.MaxBrakeForceN ?? derivedShoeBrakeForce;
+            if (metadata?.MaxBrakeForceN is null && derivedShoeBrakeForce > 0)
+                diagnostics.Add($"{car.Name}: maximum brake force derived from {shoeCount} declared brake shoes.");
             if (!float.IsFinite(maximumBrakeForce) || maximumBrakeForce <= 0)
             {
                 maximumBrakeForce = mass * 9.80665f * 0.1f;
@@ -106,16 +192,26 @@ public sealed class TrainConsistSimulationSetupBuilder
             traction.Add(car.IsEngine ? asset?.TractionMetadata : null);
             poweredCars.Add(car.IsEngine && asset?.TractionMetadata is not null);
             brakeRatings.Add(maximumBrakeForce);
+            var maximumHandbrakeForce = metadata?.MaxHandBrakeForceN ?? 0;
+            if (!float.IsFinite(maximumHandbrakeForce) || maximumHandbrakeForce < 0)
+            {
+                diagnostics.Add($"{car.Name}: invalid handbrake force metadata ignored.");
+                maximumHandbrakeForce = 0;
+            }
+            handbrakeRatings.Add(maximumHandbrakeForce);
             cursor += length;
         }
 
         var couplerLimits = new List<TrainCouplerForceLimit>(Math.Max(0, cars.Length - 1));
+        var couplerSlack = new List<double>(Math.Max(0, cars.Length - 1));
+        var couplerStiffness = new List<double>(Math.Max(0, cars.Length - 1));
+        var couplerDamping = new List<double>(Math.Max(0, cars.Length - 1));
         for (var i = 0; i < cars.Length - 1; i++)
         {
             var frontAsset = carAssets.FirstOrDefault(candidate =>
-                candidate.ConsistName == consist.Name && candidate.Uid == cars[i].Uid);
+                candidate.Uid == cars[i].Uid && string.Equals(candidate.CarName, cars[i].Name, StringComparison.OrdinalIgnoreCase));
             var rearAsset = carAssets.FirstOrDefault(candidate =>
-                candidate.ConsistName == consist.Name && candidate.Uid == cars[i + 1].Uid);
+                candidate.Uid == cars[i + 1].Uid && string.Equals(candidate.CarName, cars[i + 1].Name, StringComparison.OrdinalIgnoreCase));
             var ratedStrengths = new[]
                 {
                     frontAsset?.Metadata?.MinCouplerStrengthN,
@@ -128,10 +224,14 @@ public sealed class TrainConsistSimulationSetupBuilder
             if (ratedStrengths.Length == 0)
                 diagnostics.Add($"Coupler between {cars[i].Name} and {cars[i + 1].Name}: strength metadata unavailable; no finite force limit applied.");
             couplerLimits.Add(new TrainCouplerForceLimit(strength, strength));
+            couplerSlack.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerSlackMeters, rearAsset?.Metadata?.CouplerSlackMeters, 0.08, "slack", cars[i].Name, cars[i + 1].Name, diagnostics));
+            couplerStiffness.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerStiffnessNPerM, rearAsset?.Metadata?.CouplerStiffnessNPerM, 60_000, "stiffness", cars[i].Name, cars[i + 1].Name, diagnostics));
+            couplerDamping.Add(AverageOrFallback(frontAsset?.Metadata?.CouplerDampingNsPerM, rearAsset?.Metadata?.CouplerDampingNsPerM, 20_000, "damping", cars[i].Name, cars[i + 1].Name, diagnostics));
         }
 
-        if (cursor > routeLengthMeters)
-            diagnostics.Add($"Initial consist length extends to {cursor:N1} m, beyond the {routeLengthMeters:N1} m connected route.");
+        if (cursor > routeLengthMeters + 1e-6)
+            throw new ArgumentOutOfRangeException(nameof(startDistanceMeters),
+                $"The consist requires {cursor - startDistanceMeters:N1} m from its start position, but only {routeLengthMeters - startDistanceMeters:N1} m remains on the connected route.");
 
         var initialState = new TrainConsistMotionState(states);
         var session = new TrainConsistSimulationSession(
@@ -144,9 +244,15 @@ public sealed class TrainConsistSimulationSetupBuilder
             session,
             initialState,
             Array.AsReadOnly(brakeRatings.ToArray()),
+            Array.AsReadOnly(handbrakeRatings.ToArray()),
             Array.AsReadOnly(resistanceParameters.ToArray()),
             Array.AsReadOnly(poweredCars.ToArray()),
             Array.AsReadOnly(couplerLimits.ToArray()),
+            Array.AsReadOnly(couplerSlack.ToArray()),
+            Array.AsReadOnly(couplerStiffness.ToArray()),
+            Array.AsReadOnly(couplerDamping.ToArray()),
+            Array.AsReadOnly(Enumerable.Range(0, Math.Max(0, states.Count - 1))
+                .Select(i => states[i + 1].DistanceMeters - states[i].DistanceMeters).ToArray()),
             Array.AsReadOnly(brakeProfiles.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()));
     }

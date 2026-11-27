@@ -24,16 +24,13 @@ public sealed class WorldShapeAssetLocator
         ArgumentNullException.ThrowIfNull(worldTiles);
 
         var root = VirtualPath.Normalize(routeRoot);
-        var available = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in store.Paths)
-            available.TryAdd(path, path);
-
         var found = new List<WorldShapeAssetReference>();
         var missing = new List<WorldShapeAssetIssue>();
 
         foreach (var tile in worldTiles)
         {
-            foreach (var item in tile.StaticObjects.Select(value => (value.Uid, value.FileName, Kind: "Static"))
+            foreach (var item in tile.StaticObjects.Select(value =>
+                    (value.Uid, value.FileName, Kind: value.ObjectKind))
                 .Concat(tile.TrackObjects.Select(value => (value.Uid, value.FileName, Kind: "TrackObj"))))
             {
                 if (string.IsNullOrWhiteSpace(item.FileName))
@@ -48,20 +45,8 @@ public sealed class WorldShapeAssetLocator
                     continue;
                 }
 
-                var candidates = new[]
-                {
-                    fileName.StartsWith("GLOBAL/", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.StartsWith("ROUTES/", StringComparison.OrdinalIgnoreCase)
-                        ? fileName
-                        : null,
-                    $"{root}/SHAPES/{fileName}",
-                    $"GLOBAL/SHAPES/{fileName}"
-                };
-
-                var resolved = candidates
-                    .Where(candidate => candidate is not null)
-                    .Select(candidate => available.TryGetValue(candidate!, out var actual) ? actual : null)
-                    .FirstOrDefault(actual => actual is not null);
+                var resolved = RouteContentPathResolver.Resolve(
+                    store, root, "SHAPES", "GLOBAL/SHAPES", fileName);
 
                 if (resolved is null)
                     missing.Add(new WorldShapeAssetIssue(tile.TileX, tile.TileZ, item.Uid,

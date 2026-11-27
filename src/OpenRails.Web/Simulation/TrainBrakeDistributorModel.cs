@@ -108,7 +108,7 @@ public sealed class TrainBrakeDistributorModel
     private readonly double reservoirRechargeTimeConstantSeconds;
 
     public TrainBrakeDistributorModel(
-        double applicationTimeConstantSeconds = 0.7,
+        double applicationTimeConstantSeconds = 0.3,
         double releaseTimeConstantSeconds = 1.4,
         double reservoirRechargeTimeConstantSeconds = 8)
     {
@@ -177,10 +177,21 @@ public sealed class TrainBrakeDistributorModel
                 continue;
             }
 
-            // A renewed pipe reduction must take priority over a distributor
-            // that was previously releasing; otherwise a second brake demand
-            // could be ignored until the cylinder had completely exhausted.
-            if (pipePressure < control - MinimumApplicationDifferentialKPa)
+            // A rise in pipe pressure means the driver is releasing the brake.
+            // Detect that direction before comparing with the stored application
+            // reference: during recharge the pipe can remain well below that
+            // reference for several seconds, but the distributor must already
+            // begin exhausting the cylinder.
+            var pipeIsRecharging = pipePressure > state.LastPipePressuresKPa[i] + 0.5;
+            var pipeIsReducing = pipePressure < state.LastPipePressuresKPa[i] - 0.01;
+
+            // A renewed pipe reduction takes priority over a distributor that
+            // was previously releasing. Continue an in-progress application
+            // while the pipe is below its reference and is not recharging.
+            var applicationDemand = pipePressure < control - MinimumApplicationDifferentialKPa;
+            if (applicationDemand &&
+                (pipeIsReducing ||
+                 (!pipeIsRecharging && state.Modes[i] == TrainBrakeDistributorMode.Apply)))
             {
                 var requestedCylinderPressure = Math.Clamp(
                     (control - pipePressure) * 0.76,
@@ -196,9 +207,11 @@ public sealed class TrainBrakeDistributorModel
                 modes[i] = Math.Abs(target - nextCylinder) <= 1
                     ? TrainBrakeDistributorMode.Lap
                     : TrainBrakeDistributorMode.Apply;
-                controls[i] = pipePressure;
+                // Keep the reference pressure while applying so slow service
+                // reductions accumulate against one stable target.
+                controls[i] = control;
             }
-            else if (pipePressure > state.LastPipePressuresKPa[i] + 0.5 ||
+            else if (pipeIsRecharging ||
                      (state.Modes[i] == TrainBrakeDistributorMode.Release && cylinder > 0.5))
             {
                 cylinderPressures[i] = Relax(cylinder, 0, elapsedSeconds, releaseTimeConstantSeconds);

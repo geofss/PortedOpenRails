@@ -41,6 +41,33 @@ public sealed class RouteWorldTileLocatorTests
         Assert.Equal(34, z);
     }
 
+    [Fact]
+    public void IncludesOffTrackWorldTilesFromTheSameRoutePackage()
+    {
+        var source = new TrackVectorSection(1, 0, 0, 0, 0, 0, 1, "00", 0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(1, null, 10, null, null, false);
+        var placement = new TrackSectionPlacement(source, geometry, new TrackWorldPosition(0, 0, 0), 10);
+        var path = new TrackVectorPath(1, new[] { 2, 3 }, new[] { placement }, 10);
+        var vector = new TrackNode(1, TrackNodeKind.Vector, null, null, new[] { source },
+            new[] { new TrackPin(2, 0), new TrackPin(3, 1) });
+        var nodeA = new TrackNode(2, TrackNodeKind.End, null, null, Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var nodeB = new TrackNode(3, TrackNodeKind.End, null, null, Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null, vector, nodeA, nodeB }, Array.Empty<string>()),
+            new[] { path }, Array.Empty<string>());
+        using var store = CreateStore(
+            ("Demo Model 1/ROUTES/SCE/WORLD/W+000000+000000.w", "track-side world"),
+            ("Demo Model 1/ROUTES/SCE/WORLD/W+000005+000005.w", "off-track town world"));
+
+        var result = new RouteWorldTileLocator().Locate(store,
+            "Demo Model 1/ROUTES/SCE", network);
+
+        Assert.Equal(2, result.Found.Count);
+        Assert.Contains(result.Found, tile => tile.TileX == 0 && tile.TileZ == 0);
+        Assert.Contains(result.Found, tile => tile.TileX == 5 && tile.TileZ == 5);
+        Assert.Empty(result.Missing);
+    }
+
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)
     {
         var memory = new MemoryStream();

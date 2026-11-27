@@ -1,0 +1,183 @@
+@using OpenRails.Web.Content
+@using OpenRails.Web.Parsing
+@using OpenRails.Web.Simulation
+
+@if (Definition is not null)
+{
+    <div class="or-cab-panel" aria-label="Original Open Rails cab view">
+        @if (Definition.Views.Count > 1)
+        {
+            <label for="or-cab-view-select">Cab view</label>
+            <select id="or-cab-view-select" value="@viewIndex" @onchange="SelectView">
+                @for (var index = 0; index < Definition.Views.Count; index++)
+                {
+                    <option value="@index">@System.IO.Path.GetFileName(Definition.Views[index].DayImagePath)</option>
+                }
+            </select>
+        }
+        @if (HasNightImage)
+        {
+            <button type="button" aria-pressed="@showNight" @onclick="ToggleLighting">@(showNight ? "Show day cab" : "Show night cab")</button>
+        }
+        @if (!string.IsNullOrWhiteSpace(imageDataUri))
+        {
+            <img src="@imageDataUri" alt="Original locomotive cab view" decoding="async" />
+        }
+        @if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            <p class="error" role="alert">@loadError</p>
+        }
+        @if (Controller is not null && Definition.Controls.Count > 0)
+        {
+            <div class="or-cab-live-controls" aria-label="Cab controls and live instruments">
+                @foreach (var control in Definition.Controls)
+                {
+                    var binding = CabViewControlBindingResolver.Resolve(control);
+                    <div class="or-cab-live-control">
+                        <strong>@(string.IsNullOrWhiteSpace(control.Label) ? control.ControlType : control.Label)</strong>
+                        @if (binding == CabViewControlBinding.ThrottleLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
+                            <input type="range" min="0" max="100" step="1" value="@Controller.ThrottlePercent" aria-label="Cab throttle"
+                                   disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
+                        }
+                        else if (binding == CabViewControlBinding.TrainBrakeLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Train brake · @Controller.BrakePercent.ToString("N0")%</label>
+                            <input type="range" min="0" max="100" step="1" value="@Controller.BrakePercent" aria-label="Cab train brake" @oninput="ChangeBrake" />
+                        }
+                        else if (binding == CabViewControlBinding.DirectionLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <label>Direction</label>
+                            <select value="@((int)Controller.ReverserPosition)" aria-label="Cab direction" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
+                                <option value="1">Forward</option>
+                                <option value="0">Neutral</option>
+                                <option value="-1">Reverse</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <output aria-live="polite">@GetLiveValue(binding)</output>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="hint">No supported cab controls are available for this locomotive.</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IVirtualContentStore? Store { get; set; }
+    [Parameter, EditorRequired] public CabViewDefinition? Definition { get; set; }
+    [Parameter] public BrowserTrainDrivingController? Controller { get; set; }
+
+    private string? imageDataUri;
+    private bool showNight;
+    private int viewIndex;
+    private CabViewImage? SelectedView => Definition is not null && viewIndex >= 0 && viewIndex < Definition.Views.Count
+        ? Definition.Views[viewIndex]
+        : null;
+    private bool HasNightImage => Store is not null && SelectedView is { } view &&
+        !string.IsNullOrWhiteSpace(view.NightImagePath) && Store.Contains(view.NightImagePath);
+    private string? loadError;
+    private string? loadedPath;
+    private string? loadedDefinitionPath;
+    private IVirtualContentStore? loadedStore;
+
+    private void ChangeThrottle(ChangeEventArgs args)
+    {
+        if (Controller is not null && float.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetThrottle(value);
+    }
+
+    private void ChangeBrake(ChangeEventArgs args)
+    {
+        if (Controller is not null && double.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetBrake(value);
+    }
+
+    private void ChangeReverser(ChangeEventArgs args)
+    {
+        if (Controller is not null && int.TryParse(args.Value?.ToString(), out var value) &&
+            Enum.IsDefined(typeof(TrainReverserPosition), value))
+            Controller.SetReverser((TrainReverserPosition)value);
+    }
+
+    private string GetLiveValue(CabViewControlBinding binding)
+    {
+        if (Controller is null) return "No active train";
+        var lead = Controller.State.Cars.FirstOrDefault();
+        return binding switch
+        {
+            CabViewControlBinding.Speedometer => lead is null ? "—" : $"{lead.SpeedMetersPerSecond * 3.6:N1} km/h",
+            CabViewControlBinding.ThrottleLever or CabViewControlBinding.ThrottleDisplay => $"{Controller.ThrottlePercent:N0}%",
+            CabViewControlBinding.TrainBrakeLever or CabViewControlBinding.TrainBrakeDisplay => $"{Controller.BrakePercent:N0}%",
+            CabViewControlBinding.DirectionLever or CabViewControlBinding.DirectionDisplay => Controller.ReverserPosition.ToString(),
+            CabViewControlBinding.BrakePipe => Controller.BrakePipeState.PressuresKPa.Count > 0
+                ? $"{Controller.BrakePipeState.PressuresKPa[0]:N0} kPa" : "—",
+            CabViewControlBinding.BrakeCylinder => Controller.BrakeCylinderState.PressuresKPa.Count > 0
+                ? $"{Controller.BrakeCylinderState.PressuresKPa[0]:N0} kPa" : "—",
+            CabViewControlBinding.Doors => $"Left {(Controller.LeftDoorsOpen ? "open" : "closed")} · Right {(Controller.RightDoorsOpen ? "open" : "closed")}",
+            CabViewControlBinding.EmergencyBrake => Controller.IsEmergencyStopApplied ? "Applied" : "Released",
+            _ => "Not connected"
+        };
+    }
+
+    private void ToggleLighting()
+    {
+        showNight = !showNight;
+        loadedPath = null;
+        OnParametersSet();
+    }
+
+    private void SelectView(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var selected) &&
+            Definition is not null && selected >= 0 && selected < Definition.Views.Count)
+        {
+            viewIndex = selected;
+            showNight = false;
+            loadedPath = null;
+            OnParametersSet();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(Store, loadedStore) ||
+            !string.Equals(Definition?.SourcePath, loadedDefinitionPath, StringComparison.OrdinalIgnoreCase))
+        {
+            loadedStore = Store;
+            loadedDefinitionPath = Definition?.SourcePath;
+            viewIndex = 0;
+            showNight = false;
+            loadedPath = null;
+        }
+        if (Definition is not null && viewIndex >= Definition.Views.Count)
+            viewIndex = 0;
+        var view = SelectedView;
+        var path = view is null ? null : showNight && HasNightImage ? view.NightImagePath : view.DayImagePath;
+        if (string.Equals(path, loadedPath, StringComparison.OrdinalIgnoreCase))
+            return;
+        loadedPath = path;
+        imageDataUri = null;
+        loadError = null;
+        if (Store is null || string.IsNullOrWhiteSpace(path) || !Store.Contains(path))
+            return;
+        try
+        {
+            var texture = new AceTextureReader().Read(Store, path);
+            imageDataUri = AceTexturePngEncoder.EncodeDataUri(texture);
+        }
+        catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException or ArgumentException)
+        {
+            loadError = $"Cab image '{path}' could not be displayed: {exception.Message}";
+        }
+    }
+}

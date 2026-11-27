@@ -43,6 +43,20 @@ public sealed class TrackShapeAssetLocatorTests
         Assert.Contains(result.Missing, item => item.ShapeIndex == 7 && item.Reason.Contains("not found"));
     }
 
+    [Fact]
+    public void ResolvesGlobalShapeInsideDemoModelParentFolder()
+    {
+        var shape = new TrackShapeDefinition(7, "track.s", 0, 0, 0,
+            Array.Empty<TrackShapePath>(), false, false, false);
+        var network = CreateNetwork(shape);
+        using var store = CreateStore(("Demo Model 1/GLOBAL/SHAPES/track.s", "global shape"));
+
+        var result = new TrackShapeAssetLocator().Locate(store, "Demo Model 1/ROUTES/SCE", network);
+
+        Assert.Equal("Demo Model 1/GLOBAL/SHAPES/track.s", Assert.Single(result.Found).Path);
+        Assert.Empty(result.Missing);
+    }
+
     private static TrackNetwork CreateNetwork(params TrackShapeDefinition[] shapes)
     {
         var source = new TrackVectorSection(1, 7, 0, 0, 0, 0, 1, "00", 0, 0, 0, 0, 0, 0, 0, 0);

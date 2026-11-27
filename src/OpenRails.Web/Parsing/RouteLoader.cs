@@ -27,6 +27,12 @@ public sealed class RouteLoader
             : geometryReader.ReadRouteSections(store, assets.RouteTrackSectionsPath);
 
         var network = new TrackNetworkBuilder().Build(database, globalSections, routeSections);
+        var signalConfigurationPath = SignalConfigurationLocator.FindForRoute(store.Paths, assets.RouteRoot);
+        var signalConfiguration = signalConfigurationPath is null
+            ? null
+            : new SignalConfigurationReader().Read(store, signalConfigurationPath);
+        var signalScripts = signalConfiguration is null ? null : new SignalScriptLibraryReader().Read(store, assets.RouteRoot, signalConfiguration);
+        var signalling = new SignalNetworkBuilder().Build(database, network, signalConfiguration);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
@@ -36,7 +42,7 @@ public sealed class RouteLoader
         var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
         var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
         var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
-        var validation = RouteValidationReport.Build(network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures);
+        var validation = RouteValidationReport.Build(database, network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures);
 
         return new RouteLoadResult(
             metadata,
@@ -45,6 +51,9 @@ public sealed class RouteLoader
             globalSections,
             routeSections,
             network,
+            signalling,
+            signalConfiguration,
+            signalScripts,
             terrainTiles,
             trackShapeAssets,
             trackShapeMeshes,
@@ -65,6 +74,9 @@ public sealed record RouteLoadResult(
     TrackSectionCatalog GlobalTrackSections,
     TrackSectionCatalog? RouteTrackSections,
     TrackNetwork TrackNetwork,
+    SignalNetwork Signalling,
+    SignalConfigurationDefinition? SignalConfiguration,
+    SignalScriptLibrary? SignalScripts,
     RouteTerrainTileDiscovery TerrainTiles,
     TrackShapeAssetDiscovery TrackShapeAssets,
     RouteTrackShapeMeshLoadResult TrackShapeMeshes,

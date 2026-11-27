@@ -252,3 +252,294 @@ input[type="file"] {
     font: inherit;
     cursor: pointer;
 }
+
+
+/* Browser port of the original Open Rails WinForms main-menu appearance.
+   The 3D route viewport remains dark; menu chrome follows the native
+   Windows Forms system palette, compact typography and square controls. */
+:root {
+    color-scheme: light;
+    font-family: "Microsoft Sans Serif", "Segoe UI", Tahoma, sans-serif;
+    color: #111;
+    background: #f0f0f0;
+}
+
+body {
+    margin: 0;
+    padding: 8px;
+    background: #f0f0f0;
+    color: #111;
+    font-family: "Microsoft Sans Serif", "Segoe UI", Tahoma, sans-serif;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.shell {
+    width: min(1180px, calc(100% - 16px));
+    margin: 8px auto;
+    padding: 8px;
+    border: 1px solid #898989;
+    border-radius: 0;
+    background: #f0f0f0;
+    box-shadow: none;
+}
+
+.or-mainform-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 28px;
+    margin: 0 0 6px;
+    padding: 0 2px 5px;
+    border-bottom: 1px solid #b6b6b6;
+}
+.or-mainform-heading h1 {
+    margin: 0;
+    color: #111;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+.or-mainform-heading span {
+    color: #555;
+    font-size: 11px;
+}
+.or-profile-strip {
+    display: grid;
+    grid-template-columns: 145px minmax(160px, 1fr);
+    align-items: baseline;
+    gap: 2px 8px;
+    margin: 6px 0 8px;
+    padding: 5px 7px;
+    border: 1px solid #aaa;
+    background: #fff;
+}
+.or-profile-strip strong { font-weight: 600; }
+.or-profile-strip small {
+    grid-column: 2;
+    color: #555;
+    font-size: 11px;
+}
+.or-route-picker {
+    display: grid;
+    grid-template-columns: 110px minmax(180px, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 6px 8px;
+    border: 1px solid #aaa;
+    background: #fff;
+}
+.or-route-picker label { font-weight: 600; }
+
+h1, h2, h3, h4 { color: #111; letter-spacing: 0; }
+h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+h3 { margin: 10px 0 6px; font-size: 13px; font-weight: 600; }
+h4 { font-size: 12px; font-weight: 600; }
+
+.note, .hint, .status { color: #444; }
+.success { color: #176b2c; }
+.error { color: #a00000; }
+code { color: #222; }
+
+button, input, select, textarea {
+    font: inherit;
+    color: #111;
+}
+button {
+    min-height: 23px;
+    padding: 2px 9px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+    box-shadow: inset 0 1px 0 #fff;
+    cursor: pointer;
+}
+button:hover:not(:disabled) {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: inset 0 1px 0 #fff;
+}
+button:active:not(:disabled) {
+    background: #dce8f5;
+    box-shadow: inset 0 1px 2px #aaa;
+}
+button:disabled { color: #888; cursor: default; opacity: .7; }
+input[type="file"], input:not([type="range"]), select, textarea {
+    max-width: 100%;
+    min-height: 23px;
+    border: 1px solid #888;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+}
+input[type="range"] { accent-color: #4776a8; }
+
+.route-choice, .import-panel, .route-details, .driving-settings,
+.package-summary, .consist-entry {
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+    box-shadow: none;
+}
+.route-choice { margin-top: 8px; padding: 9px; }
+.import-panel { margin-top: 8px; padding: 9px; }
+.route-details { margin-top: 8px; padding: 9px; }
+.route-options { gap: 6px; }
+.route-card, .route-row {
+    gap: 5px;
+    padding: 7px 8px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fdfdfd;
+    color: #111;
+    box-shadow: none;
+}
+.route-card-title { font-size: 13px; font-weight: 600; }
+.route-card-tag, .route-row span { color: #315c86; font-size: 11px; font-weight: 600; }
+.route-card-description, .route-row small { color: #444; line-height: 1.35; }
+.route-card:hover, .route-card.selected, .route-row.selected {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: inset 0 0 0 1px #c4d7eb;
+}
+.route-details dl { gap: 5px 12px; }
+.route-details dt { color: #333; }
+.route-details dd { color: #111; }
+.route-row { margin: 4px 0; }
+.package-summary { padding: 8px; }
+.path-list { max-height: 260px; }
+.path-list li { color: #333; }
+.path-list code { color: #222; }
+
+.package-actions { gap: 4px; }
+.package-actions button, .route-camera-presets button, .driving-settings button {
+    min-height: 22px;
+    padding: 2px 8px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+}
+.package-actions button:hover:not(:disabled),
+.route-camera-presets button:hover,
+.route-camera-presets button[aria-pressed="true"] {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: none;
+}
+
+.keyboard-control-pad {
+    padding: 8px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #f7f7f7;
+    color: #333;
+}
+.keyboard-control-pad strong, .keyboard-control-state { color: #1e4f7a; }
+.keyboard-control-pad:focus-visible { outline-color: #4776a8; }
+
+.driving-settings { padding: 9px; }
+.driving-control-row label { color: #222; font-weight: 600; }
+.driving-control-row input[type="range"] { accent-color: #4776a8; }
+
+.or-mainform-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    margin-top: 10px;
+    padding: 6px 8px;
+    border-top: 1px solid #b6b6b6;
+    color: #333;
+}
+.or-mainform-footer strong {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding-left: 58px;
+    background-image: url("https://raw.githubusercontent.com/openrails/openrails/dfb5246ca9da46e352cfcd2a365d284ac55c1a1f/Source/ORTS.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 48px 48px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+.or-mainform-footer span { color: #555; font-size: 10px; }
+
+.route-world-view {
+    border: 1px solid #777;
+    border-radius: 0;
+    background: #111820;
+}
+.route-world-canvas { border-radius: 0; }
+
+@media (max-width: 720px) {
+    .shell { width: auto; margin: 0; }
+    .or-mainform-heading { align-items: flex-start; flex-direction: column; }
+    .or-profile-strip { grid-template-columns: 1fr; }
+    .or-profile-strip small { grid-column: 1; }
+    .or-route-picker { grid-template-columns: 1fr; }
+}
+
+/* Compact original-application-style activity information panel. */
+.activity-summary {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #8b8b8b;
+    background: #f2f2f2;
+    color: #202020;
+}
+.activity-summary h4 { margin: 0 0 0.4rem; font-size: 1rem; }
+.activity-summary dl { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 0.2rem 0.8rem; }
+.activity-summary dt { font-weight: 600; }
+.activity-summary dd { margin: 0; }
+
+.or-cab-panel {
+    background: #151515;
+    border: 1px solid #777;
+    padding: 6px;
+    margin: 8px 0;
+    max-height: 520px;
+    overflow: auto;
+}
+.or-cab-panel img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 480px;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+.or-cab-live-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #555;
+}
+.or-cab-live-control {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px;
+    color: #eee;
+    background: #252525;
+    border: 1px solid #666;
+    font-size: 0.85rem;
+}
+.or-cab-live-control output {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.or-cab-live-control input,
+.or-cab-live-control select {
+    width: 100%;
+}

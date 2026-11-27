@@ -5,17 +5,56 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<section class="route-details driving-controls">
-    <h3>Train driving controls</h3>
-    <p class="hint">Prototype controls · fixed-step traction, pneumatic braking, and dynamic coupler forces</p>
+<section class="or-train-driving-window" aria-label="Train Driving Info">
+    <div class="or-window-titlebar">
+        <strong>Train Driving Info</strong>
+        <span>Open Rails</span>
+    </div>
+    <div class="or-driving-window-body">
+        <p class="hint">Browser-connected controls · traction, pneumatic braking, and consist dynamics</p>        @if (AiServiceRoutePlan is not null)
+        {
+            <div class="driving-settings" aria-label="AI service path following">
+                <label>
+                    <input type="checkbox" checked="@aiServiceEnabled" @onchange="ToggleAiServiceMode" />
+                    AI service path following
+                </label>
+                <div class="driving-control-row">
+                    <label for="ai-service-target-speed">AI target speed · @aiTargetSpeedKmh.ToString("N0") km/h</label>
+                    <input id="ai-service-target-speed" type="range" min="5" max="200" step="5"
+                           value="@aiTargetSpeedKmh" disabled="@(!aiServiceEnabled)" @oninput="ChangeAiTargetSpeed" />
+                </div>
+                <p class="hint">Follows the selected .pat waypoint order, holds at native waiting points until released, stops for evaluated Stop signals, applies configured Approach speed limits and brakes for the final path point. The target speed is operator-selected; native route speed restrictions, timetables and multi-train traffic conflicts are not yet modelled.</p>
+                @if (aiServiceEnabled && lastAiServiceDecision?.WaitingWaypointIndex is int waitingIndex)
+                {
+                    <p class="hint">@(lastAiServiceDecision.IsWaitingAtWaypoint ? $"AI service stopped at native waiting point {waitingIndex + 1}." : $"AI service is braking for waiting point {waitingIndex + 1}.")</p>
+                    <button type="button" disabled="@(!lastAiServiceDecision.IsWaitingAtWaypoint)" @onclick="ReleaseAiWaitingPoint">Release waiting point</button>
+                }
+            </div>
+        }
+        <table class="or-train-driving-status">
+            <tbody>
+                <tr>
+                    <th>Speed</th><td>@speedKmh.ToString("N1") km/h</td>
+                    <th>Throttle</th><td>@Controller.ThrottlePercent.ToString("N0")%</td>
+                </tr>
+                <tr>
+                    <th>Direction</th><td>@Controller.ReverserPosition</td>
+                    <th>Train brake</th><td>@Controller.BrakePercent.ToString("N0")%</td>
+                </tr>
+                <tr>
+                    <th>Brake pipe</th><td>@PressureAt(Controller.BrakePipeState.PressuresKPa, 0)</td>
+                    <th>Brake cylinder</th><td>@PressureAt(Controller.BrakeCylinderState.PressuresKPa, 0)</td>
+                </tr>
+            </tbody>
+        </table>
     <div class="driving-control-row">
         <label for="train-throttle">Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
         <input id="train-throttle" type="range" min="0" max="100" step="1"
-               value="@Controller.ThrottlePercent" disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
+               value="@Controller.ThrottlePercent" disabled="@(aiServiceEnabled || Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
     </div>
     <div class="driving-control-row">
         <label for="train-reverser">Reverser · @(Controller.CanChangeReverser ? "available" : "stop train and set throttle to zero")</label>
-        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
+        <select id="train-reverser" value="@((int)Controller.ReverserPosition)" disabled="@(aiServiceEnabled || !Controller.CanChangeReverser)" @onchange="ChangeReverser">
             <option value="1">Forward</option>
             <option value="0">Neutral</option>
             <option value="-1">Reverse</option>
@@ -24,7 +63,12 @@
     <div class="driving-control-row">
         <label for="train-brake">Brake · @Controller.BrakePercent.ToString("N0")%</label>
         <input id="train-brake" type="range" min="0" max="100" step="1"
-               value="@Controller.BrakePercent" @oninput="ChangeBrake" />
+               value="@Controller.BrakePercent" disabled="@aiServiceEnabled" @oninput="ChangeBrake" />
+    </div>
+    <div class="driving-control-row">
+        <label for="train-handbrake">Mechanical handbrake · @Controller.HandbrakePercent.ToString("N0")%</label>
+        <input id="train-handbrake" type="range" min="0" max="100" step="1"
+               value="@Controller.HandbrakePercent" @oninput="ChangeHandbrake" />
     </div>
     <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral, left/right shoulder buttons toggle left/right doors, south face button applies emergency stop, east face button explicitly releases it (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
     <div class="driving-settings" aria-label="Driving settings">
@@ -86,8 +130,8 @@
                             <td>@((car.SpeedMetersPerSecond * 3.6).ToString("N1")) km/h</td>
                             <td>@car.DistanceMeters.ToString("N1") m</td>
                             <td>@(Controller.RouteGradePercentByCar.Count > i ? Controller.RouteGradePercentByCar[i].ToString("N2") + "%" : "—")</td>
-                            <td>@Controller.BrakePipeState.PressuresKPa[i].ToString("N0") kPa</td>
-                            <td>@Controller.BrakeCylinderState.PressuresKPa[i].ToString("N0") kPa</td>
+                            <td>@PressureAt(Controller.BrakePipeState.PressuresKPa, i)</td>
+                            <td>@PressureAt(Controller.BrakeCylinderState.PressuresKPa, i)</td>
                         </tr>
                     }
                 </tbody>
@@ -114,18 +158,20 @@
         </div>
     }
     <dl>
+        <dt>Mechanical handbrake</dt><dd>@Controller.HandbrakePercent.ToString("N0")%</dd>
         <dt>Passenger doors</dt><dd>Left: @(Controller.LeftDoorsOpen ? "Open" : "Closed") · Right: @(Controller.RightDoorsOpen ? "Open" : "Closed")</dd>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         @if (Controller.LeadCarRouteGradePercent is double gradePercent)
         {
             <dt>Track grade · lead car</dt><dd>@gradePercent.ToString("N2")%</dd>
         }
-        <dt>Brake pipe · front / rear</dt><dd>@Controller.BrakePipeState.PressuresKPa[0].ToString("N0") / @Controller.BrakePipeState.PressuresKPa[^1].ToString("N0") kPa</dd>
-        <dt>Brake cylinder · front / rear</dt><dd>@Controller.BrakeCylinderState.PressuresKPa[0].ToString("N0") / @Controller.BrakeCylinderState.PressuresKPa[^1].ToString("N0") kPa</dd>
+        <dt>Brake pipe · front / rear</dt><dd>@PressureFrontRear(Controller.BrakePipeState.PressuresKPa)</dd>
+        <dt>Brake cylinder · front / rear</dt><dd>@PressureFrontRear(Controller.BrakeCylinderState.PressuresKPa)</dd>
         <dt>Simulation time</dt><dd>@Controller.SimulationTimeSeconds.ToString("N1") s</dd>
         <dt>Dropped frame time</dt><dd>@Controller.DroppedTimeSeconds.ToString("N2") s</dd>
         <dt>Physics state</dt><dd>@(isRunning ? "Running" : Controller.IsPaused ? "Paused" : "Ready")</dd>
     </dl>
+    </div>
 </section>
 
 @code {
@@ -134,6 +180,12 @@
     [Parameter] public string StorageKey { get; set; } = "default";
     private IReadOnlyList<ConsistCar> DrivingCars => Consist?.Cars.Where(car => !car.IsEndOfTrain).ToArray() ?? Array.Empty<ConsistCar>();
     [Parameter] public EventCallback<TrainConsistMotionState> MotionChanged { get; set; }
+    [Parameter] public ServiceRouteStartPosition? AiServiceRoutePlan { get; set; }
+    [Parameter] public IReadOnlyList<AiServiceSignalConstraint> AiServiceSignalConstraints { get; set; } = Array.Empty<AiServiceSignalConstraint>();
+    private readonly AiServiceDrivingController aiServiceDriver = new();
+    private bool aiServiceEnabled;
+    private double aiTargetSpeedKmh = 40;
+    private AiServiceControlDecision? lastAiServiceDecision;
 
     private IJSObjectReference? gamepadModule;
     private IJSObjectReference? audioModule;
@@ -158,6 +210,12 @@
     private Task? runTask;
     private bool isRunning;
     private string? simulationError;
+    private static string PressureAt(IReadOnlyList<double> pressures, int index) =>
+        index >= 0 && index < pressures.Count ? $"{pressures[index]:N0} kPa" : "—";
+
+    private static string PressureFrontRear(IReadOnlyList<double> pressures) =>
+        pressures.Count == 0 ? "—" : $"{pressures[0]:N0} / {pressures[^1]:N0} kPa";
+
     private double speedKmh => Controller.State.Cars.Count == 0
         ? 0
         : Controller.State.Cars[0].SpeedMetersPerSecond * 3.6;
@@ -195,8 +253,18 @@
             Controller.SetBrake(value);
     }
 
+    private void ChangeHandbrake(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetHandbrake(value);
+    }
+
     private void HandleKeyboardControl(KeyboardEventArgs args)
     {
+        if (aiServiceEnabled && args.Key is "ArrowUp" or "ArrowDown" or " " or "Spacebar" or
+            "f" or "F" or "n" or "N" or "r" or "R")
+            return;
         if (args.Repeat)
             return;
 
@@ -466,6 +534,34 @@
         return Task.CompletedTask;
     }
 
+    private void ToggleAiServiceMode(ChangeEventArgs args)
+    {
+        aiServiceEnabled = bool.TryParse(args.Value?.ToString(), out var enabled) && enabled &&
+            AiServiceRoutePlan is not null;
+        Controller.SetThrottle(0);
+        lastAiServiceDecision = null;
+        if (!aiServiceEnabled)
+            Controller.SetBrake(0);
+    }
+
+    private void ReleaseAiWaitingPoint()
+    {
+        if (lastAiServiceDecision is { IsWaitingAtWaypoint: true, WaitingWaypointIndex: { } index })
+        {
+            aiServiceDriver.ReleaseWaitingPoint(index);
+            lastAiServiceDecision = null;
+        }
+    }
+
+    private void ChangeAiTargetSpeed(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value) &&
+            double.IsFinite(value))
+            aiTargetSpeedKmh = Math.Clamp(value, 5, 200);
+    }
+
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(33));
@@ -479,7 +575,11 @@
                 var elapsed = (currentTimestamp - previousTimestamp) /
                     (double)System.Diagnostics.Stopwatch.Frequency;
                 previousTimestamp = currentTimestamp;
-                await PollGamepadAsync();
+                if (aiServiceEnabled && AiServiceRoutePlan is { } servicePlan)
+                    lastAiServiceDecision = aiServiceDriver.Apply(
+                        Controller, servicePlan, aiTargetSpeedKmh / 3.6, AiServiceSignalConstraints);
+                else
+                    await PollGamepadAsync();
                 Controller.Advance(Math.Clamp(elapsed, 0, 0.25));
                 if (audioEnabled && audioModule is not null)
                     await audioModule.InvokeVoidAsync("update", Controller.ThrottlePercent, speedKmh, Controller.BrakePercent);

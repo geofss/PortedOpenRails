@@ -106,6 +106,28 @@ public sealed class TrackSectionGeometryReaderTests
     }
 
     [Fact]
+    public void AcceptsSparseRouteDynamicPathTableLikeUpstreamOpenRails()
+    {
+        using var store = CreateStore(("ROUTES/SCE/TSECTION.DAT", """
+            SIMISA@@@@@@@@@@JINX0T0t
+            TrackSections ( 1 TrackSection ( SectionCurve ( ) 10 8m 0 ) )
+            SectionIdx (
+                241
+                TrackPath ( 40000 2 10 11 )
+                TrackPath ( 40236 1 12 )
+            )
+            """));
+
+        var catalog = new TrackSectionGeometryReader().ReadRouteSections(store, "ROUTES/SCE/TSECTION.DAT");
+
+        Assert.Equal(2, catalog.DynamicPaths.Count);
+        Assert.True(catalog.TryGetDynamicPath(40000, out var first));
+        Assert.Equal(new uint[] { 10, 11 }, first.TrackSectionIndices);
+        Assert.True(catalog.TryGetDynamicPath(40236, out var last));
+        Assert.Equal(new uint[] { 12 }, last.TrackSectionIndices);
+    }
+
+    [Fact]
     public void ReadsRouteSpecificDynamicTrackPathMappings()
     {
         using var store = CreateStore(("ROUTES/Test/tsection.dat", """

@@ -99,7 +99,8 @@ public sealed class CompositeContentStore : IVirtualContentStore, IDisposable
         if (ownsStores)
         {
             foreach (var layer in layers)
-                layer.Store.Dispose();
+                if (layer.Store is IDisposable disposableStore)
+                    disposableStore.Dispose();
         }
     }
 
@@ -113,11 +114,11 @@ public sealed class CompositeContentStore : IVirtualContentStore, IDisposable
 /// A named package layer. Earlier layers in CompositeContentStore win conflicts.
 /// The composite store owns and disposes all supplied package stores.
 /// </summary>
-public sealed record PackageLayer(string Name, ZipContentStore Store)
+public sealed record PackageLayer(string Name, IVirtualContentStore Store)
 {
     public string Name { get; } = string.IsNullOrWhiteSpace(Name)
         ? throw new ArgumentException("A package layer must have a name.", nameof(Name))
         : Name;
 
-    public ZipContentStore Store { get; } = Store ?? throw new ArgumentNullException(nameof(Store));
+    public IVirtualContentStore Store { get; } = Store ?? throw new ArgumentNullException(nameof(Store));
 }
