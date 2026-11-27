@@ -46,6 +46,11 @@
         <input id="train-brake" type="range" min="0" max="100" step="1"
                value="@Controller.BrakePercent" @oninput="ChangeBrake" />
     </div>
+    <div class="driving-control-row">
+        <label for="train-handbrake">Mechanical handbrake · @Controller.HandbrakePercent.ToString("N0")%</label>
+        <input id="train-handbrake" type="range" min="0" max="100" step="1"
+               value="@Controller.HandbrakePercent" @oninput="ChangeHandbrake" />
+    </div>
     <p class="hint">Gamepad: right trigger throttle, left trigger brake, D-pad up/down/left for forward/reverse/neutral, left/right shoulder buttons toggle left/right doors, south face button applies emergency stop, east face button explicitly releases it (standard mapping). If the controller disconnects while driving, throttle is cut and full brake is applied.</p>
     <div class="driving-settings" aria-label="Driving settings">
         <h4>Driving settings</h4>
@@ -134,6 +139,7 @@
         </div>
     }
     <dl>
+        <dt>Mechanical handbrake</dt><dd>@Controller.HandbrakePercent.ToString("N0")%</dd>
         <dt>Passenger doors</dt><dd>Left: @(Controller.LeftDoorsOpen ? "Open" : "Closed") · Right: @(Controller.RightDoorsOpen ? "Open" : "Closed")</dd>
         <dt>Train speed</dt><dd>@(speedKmh.ToString("N1")) km/h</dd>
         @if (Controller.LeadCarRouteGradePercent is double gradePercent)
@@ -214,6 +220,13 @@
         if (double.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var value))
             Controller.SetBrake(value);
+    }
+
+    private void ChangeHandbrake(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var value))
+            Controller.SetHandbrake(value);
     }
 
     private void HandleKeyboardControl(KeyboardEventArgs args)
