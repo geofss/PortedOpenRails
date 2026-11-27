@@ -215,7 +215,7 @@
                                         @if (selectedActivityPassengerService is { Stops.Count: > 0 } passengerService)
                                         {
                                             <h4>Passenger timetable · @passengerService.ServiceName</h4>
-                                            <p class="hint">Player service starts at @TimeSpan.FromSeconds(passengerService.StartTimeSeconds).ToString(@"hh\\:mm\\:ss") · @passengerService.Stops.Count scheduled platform stops</p>
+                                            <p class="hint">Player service starts at @TimeSpan.FromSeconds(passengerService.StartTimeSeconds).ToString(@"hh\:mm\:ss") · @passengerService.Stops.Count scheduled platform stops</p>
                                             <div class="table-scroll">
                                                 <table>
                                                     <thead><tr><th>Platform item</th><th>Arrival</th><th>Departure</th><th>Distance down path</th></tr></thead>
