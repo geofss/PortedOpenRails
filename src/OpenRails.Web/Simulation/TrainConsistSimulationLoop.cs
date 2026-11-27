@@ -29,6 +29,8 @@ public sealed class TrainConsistSimulationLoop
             (!double.IsFinite(routeLengthMeters.Value) || routeLengthMeters.Value <= 0))
             throw new ArgumentOutOfRangeException(nameof(routeLengthMeters));
         this.routeLengthMeters = routeLengthMeters;
+        if (routeLengthMeters is not null)
+            State = ClampCarsToRoute(State, routeLengthMeters.Value);
         scheduler = new FixedStepSimulationScheduler(
             fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame);
     }
@@ -74,7 +76,10 @@ public sealed class TrainConsistSimulationLoop
 
     public void Reset(TrainConsistMotionState initialState)
     {
-        State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
+        var resetState = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
+        State = routeLengthMeters is null
+            ? resetState
+            : ClampCarsToRoute(resetState, routeLengthMeters.Value);
         scheduler.Reset();
     }
 
