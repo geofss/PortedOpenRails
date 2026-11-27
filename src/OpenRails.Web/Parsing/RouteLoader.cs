@@ -33,6 +33,7 @@ public sealed class RouteLoader
             : new SignalConfigurationReader().Read(store, signalConfigurationPath);
         var signalScripts = signalConfiguration is null ? null : new SignalScriptLibraryReader().Read(store, assets.RouteRoot, signalConfiguration);
         var signalling = new SignalNetworkBuilder().Build(database, network, signalConfiguration);
+        var trackItemPlacements = new RouteTrackItemPlacementBuilder().Build(network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
@@ -63,7 +64,8 @@ public sealed class RouteLoader
             terrainTextureAssets,
             terrainTextures,
             worldScenery,
-            validation);
+            validation,
+            trackItemPlacements);
     }
 }
 
@@ -86,7 +88,8 @@ public sealed record RouteLoadResult(
     TerrainTextureAssetDiscovery TerrainTextureAssets,
     TerrainTextureAssetLoadResult TerrainTextures,
     RouteWorldSceneryLoadResult WorldScenery,
-    RouteValidationReport Validation);
+    RouteValidationReport Validation,
+    RouteTrackItemPlacementResult? TrackItemPlacements = null);
 
 
 /// <summary>Loads route scenery chunks independently so malformed tiles do not abort the route.</summary>
