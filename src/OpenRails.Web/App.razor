@@ -124,7 +124,7 @@
             <div class="or-mainform-group">
                 <h2>Singleplayer</h2>
                 <div class="or-action-row">
-                    <a class="or-menu-command primary @(CanDriveLoadedRoute ? "" : "disabled")" href="@(CanDriveLoadedRoute ? "#driving-controls" : "#route-heading")" aria-disabled="@(!CanDriveLoadedRoute)">Start</a>
+                    <a class="or-menu-command primary @(CanStartSelectedMode ? "" : "disabled")" href="@(CanStartSelectedMode ? "#driving-controls" : "#route-heading")" aria-disabled="@(!CanStartSelectedMode)">Start</a>
                     <button type="button" disabled title="Resume and replay save-state selection is not yet ported">Resume / Replay…</button>
                 </div>
                 <p class="hint">Start is enabled only when the selected route, connected track, consist and simulation session are ready.</p>
@@ -146,7 +146,7 @@
                 <div class="or-mainform-group">
                     <h2>Open Rails</h2>
                     <div class="or-action-row">
-                        <button type="button" @onclick="() => showOptionsDialog = true">Options</button>
+                        <button type="button" @onclick="OpenOptionsDialog">Options</button>
                         <a class="or-menu-command" href="#content-packages">Content</a>
                         <details class="or-menu-dropdown">
                             <summary>Tools ▼</summary>
@@ -179,7 +179,7 @@
                 <section class="or-options-dialog" role="dialog" aria-modal="false" aria-labelledby="or-options-title">
                     <header class="or-options-header">
                         <h2 id="or-options-title">Options</h2>
-                        <button type="button" @onclick="() => showOptionsDialog = false" aria-label="Close Options">Close</button>
+                        <button type="button" @onclick="CancelOptionsDialog" aria-label="Close Options">Close</button>
                     </header>
                     <nav class="or-options-tabs" role="tablist" aria-label="Options pages">
                         @foreach (var tab in OptionTabs)
@@ -247,8 +247,8 @@
                     </div>
                     <footer class="or-options-footer">
                         <span class="hint">Original Open Rails Options tab inventory; unsupported settings remain clearly identified.</span>
-                        <button type="button" @onclick="() => showOptionsDialog = false">OK</button>
-                        <button type="button" @onclick="() => showOptionsDialog = false">Cancel</button>
+                        <button type="button" @onclick="CommitOptionsDialog">OK</button>
+                        <button type="button" @onclick="CancelOptionsDialog">Cancel</button>
                     </footer>
                 </section>
             }
@@ -849,6 +849,10 @@
     private bool browserAutosaveEnabled;
     private int browserAutosaveMinutes = 30;
     private int browserAudioVolume = 80;
+    private bool optionsSnapshotLogging;
+    private bool optionsSnapshotAutosave;
+    private int optionsSnapshotAutosaveMinutes;
+    private int optionsSnapshotAudioVolume;
     private string selectedOptionsTab = "General";
     private string? selectedTimetablePath;
     private string? selectedTimetableTrain;
@@ -931,6 +935,31 @@
         {
             // Browser storage can be disabled; current-session settings remain usable.
         }
+    }
+
+    private void OpenOptionsDialog()
+    {
+        optionsSnapshotLogging = loggingEnabled;
+        optionsSnapshotAutosave = browserAutosaveEnabled;
+        optionsSnapshotAutosaveMinutes = browserAutosaveMinutes;
+        optionsSnapshotAudioVolume = browserAudioVolume;
+        showOptionsDialog = true;
+    }
+
+    private async Task CommitOptionsDialog()
+    {
+        await SaveBrowserPreferencesAsync();
+        showOptionsDialog = false;
+    }
+
+    private async Task CancelOptionsDialog()
+    {
+        loggingEnabled = optionsSnapshotLogging;
+        browserAutosaveEnabled = optionsSnapshotAutosave;
+        browserAutosaveMinutes = optionsSnapshotAutosaveMinutes;
+        browserAudioVolume = optionsSnapshotAudioVolume;
+        await SaveBrowserPreferencesAsync();
+        showOptionsDialog = false;
     }
 
     private void SelectOptionsTab(string tab)
@@ -1043,6 +1072,9 @@
                 return new AiServiceSignalConstraint(distance, indication.Aspect,
                     indication.SpeedLimitMetersPerSecond);
             }).Where(constraint => constraint is not null).Cast<AiServiceSignalConstraint>().ToArray();
+
+    private bool CanStartSelectedMode =>
+        isActivityMode && selectedActivityMetadata is not null && CanDriveLoadedRoute;
 
     private bool CanDriveLoadedRoute =>
         loadedRoute?.Validation.TrackNetworkUsable == true &&
