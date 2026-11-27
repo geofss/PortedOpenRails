@@ -24,6 +24,36 @@ public sealed class NativeTimetableReaderTests
     }
 
     [Fact]
+    public void ExtractsNativeTimetableDescriptionPathsConsistsAndDepartureTimes()
+    {
+        using var store = CreateStore("ROUTES/SCE/TIMETABLES/weekday.timetable",
+            ",Train A,,Train C,#comment\n" +
+            "#comment,,,,,Weekday service\n" +
+            "#path,Main,,Branch,\n" +
+            "#consist,Express.con,,Local.con,\n" +
+            "#direction,Up,,Down,\n" +
+            "#start,08:00,,08:15,\n" +
+            "#briefing,Main line service,,Branch service,General briefing\n");
+
+        var timetable = new NativeTimetableDefinitionReader()
+            .Read(store, "ROUTES/SCE/TIMETABLES/weekday.timetable");
+
+        Assert.Equal("Weekday service", timetable.Description);
+        Assert.Equal("General briefing", timetable.Briefing);
+        Assert.Equal(2, timetable.Trains.Count);
+        var first = timetable.Trains[0];
+        Assert.Equal("Train A", first.Train);
+        Assert.Equal("Main", first.Path);
+        Assert.Equal("Express.con", first.Consist);
+        Assert.Equal("Up", first.Direction);
+        Assert.Equal("08:00", first.StartTime);
+        Assert.Equal("Main line service", first.Briefing);
+        Assert.True(first.TryGetDepartureSeconds(out var departure));
+        Assert.Equal(8 * 60 * 60, departure);
+        Assert.Equal("Branch", timetable.Trains[1].Path);
+    }
+
+    [Fact]
     public void ReadsNativeSemicolonAndTabSeparators()
     {
         using var semicolonStore = CreateStore("semi.timetable", ";Train A;Train B\n#path;A;B\n");
