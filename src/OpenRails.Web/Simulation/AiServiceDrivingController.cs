@@ -14,6 +14,11 @@ public sealed record AiServiceSignalConstraint(
     RouteSignalAspect Aspect,
     float? SpeedLimitMetersPerSecond);
 
+/// <summary>Leading train state used by the native-style following-distance governor.</summary>
+public sealed record AiTrainFollowingConstraint(
+    double DistanceAheadMeters,
+    double LeadingTrainSpeedMetersPerSecond);
+
 public sealed class AiServiceDrivingController
 {
     private readonly HashSet<int> releasedWaitingPoints = [];
@@ -26,7 +31,8 @@ public sealed class AiServiceDrivingController
         double serviceDecelerationMetersPerSecondSquared = 0.65,
         double stoppingBufferMeters = 2,
         IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
-        IReadOnlySet<int>? releasedWaitingPointIndices = null)
+        IReadOnlySet<int>? releasedWaitingPointIndices = null,
+        AiTrainFollowingConstraint? trainAhead = null)
     {
         ArgumentNullException.ThrowIfNull(route);
         if (!double.IsFinite(currentDistanceMeters))
@@ -57,6 +63,12 @@ public sealed class AiServiceDrivingController
             route.RouteWaypoints is { Count: > 0 } routeWaypointsForValidation &&
             routeDistances.Count != routeWaypointsForValidation.Count)
             throw new ArgumentException("Service route distance and waypoint collections must have matching lengths.", nameof(route));
+
+        if (trainAhead is not null &&
+            (!double.IsFinite(trainAhead.DistanceAheadMeters) || trainAhead.DistanceAheadMeters < 0 ||
+             !double.IsFinite(trainAhead.LeadingTrainSpeedMetersPerSecond) ||
+             trainAhead.LeadingTrainSpeedMetersPerSecond < 0))
+            throw new ArgumentException("Train-following state must contain finite non-negative distance and speed.", nameof(trainAhead));
 
         var signals = signalConstraints ?? Array.Empty<AiServiceSignalConstraint>();
         if (signals.Any(signal => signal is null ||
@@ -142,6 +154,17 @@ public sealed class AiServiceDrivingController
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
         var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, signalSpeedLimit);
+        if (trainAhead is not null)
+        {
+            // Preserve a configurable stand-off distance and never command a
+            // closing speed that cannot be removed within the available gap.
+            const double followingBufferMeters = 20;
+            var usableGap = Math.Max(0, trainAhead.DistanceAheadMeters - followingBufferMeters);
+            var safeFollowingSpeed = Math.Sqrt(
+                trainAhead.LeadingTrainSpeedMetersPerSecond * trainAhead.LeadingTrainSpeedMetersPerSecond +
+                2 * serviceDecelerationMetersPerSecondSquared * usableGap);
+            requestedSpeed = Math.Min(requestedSpeed, safeFollowingSpeed);
+        }
         var speed = Math.Abs(currentSpeedMetersPerSecond);
         var nextWaypoint = FindNextWaypoint(waypoints, currentDistanceMeters, direction);
         if (currentSpeedMetersPerSecond * direction < -0.1)
