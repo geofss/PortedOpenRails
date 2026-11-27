@@ -111,6 +111,22 @@ public sealed class ActivityEventReaderTests
     }
 
     [Fact]
+    public void ReadsNativeWagonWorkOrderIdsAndSidingReferences()
+    {
+        using var store = CreateStore();
+        var action = Assert.Single(new ActivityEventReader()
+            .Read(store, "ROUTES/SCE/ACTIVITIES/Events.act").Events
+            .Where(item => item.Id == 70));
+
+        Assert.Equal(6u, action.SidingItemId);
+        var wagon = Assert.Single(action.WagonRequirements!);
+        Assert.Equal(65538u, wagon.UniqueId);
+        Assert.Equal(5u, wagon.SidingItemId);
+        Assert.Equal("1 - 2", wagon.CarId);
+        Assert.Equal("Brake van", wagon.Description);
+    }
+
+    [Fact]
     public void ReadsBothNativeSpellingsOfReversibleActionFlag()
     {
         using var store = CreateStore();
@@ -211,6 +227,12 @@ public sealed class ActivityEventReaderTests
                     ID ( 60 ) Name ( "Location event" ) Activation_Level ( 0 )
                     TriggerOnStop ( 1 ) Location ( 1 2 100 200 25 )
                     Outcomes ( )
+                  )
+                  EventCategoryAction (
+                    ID ( 70 ) Name ( "Wagon work order" ) Activation_Level ( 0 )
+                    EventTypePickUpWagons ( )
+                    Wagon_List ( UID ( 65538 ) SidingItem ( 5 ) Description ( "Brake van" ) )
+                    SidingItem ( 6 ) Outcomes ( )
                   )
                   EventCategoryAction (
                     ID ( 30 ) Name ( "Reach speed" ) Activation_Level ( 1 )

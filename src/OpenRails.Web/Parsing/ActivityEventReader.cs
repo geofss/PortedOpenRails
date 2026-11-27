@@ -105,6 +105,8 @@ public sealed class ActivityEventReader
             new STFReader.TokenProcessor("name", () => value.Name = reader.ReadStringBlock("")),
             new STFReader.TokenProcessor("activation_level", () => value.ActivationLevel = reader.ReadIntBlock(0)),
             new STFReader.TokenProcessor("speed", () => value.TriggerSpeedMetersPerSecond = reader.ReadFloatBlock(STFReader.UNITS.Speed, 0)),
+            new STFReader.TokenProcessor("sidingitem", () => value.SidingItemId = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("wagon_list", () => value.WagonRequirements = ReadWagonList(reader)),
             new STFReader.TokenProcessor("eventtypereachspeed", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "ReachSpeed"; }),
             new STFReader.TokenProcessor("eventtypeallstops", () => { reader.MustMatch("("); reader.MustMatch(")"); value.ActionType = "AllStops"; }),
             new STFReader.TokenProcessor("reversable_event", () => { reader.MustMatch("("); reader.MustMatch(")"); value.Reversible = true; }),
@@ -119,6 +121,32 @@ public sealed class ActivityEventReader
             new STFReader.TokenProcessor("texttodisplayoncompletionifnottriggered", () => value.FailureMessage = reader.ReadStringBlock(""))
         });
         return value.ToDefinition();
+    }
+
+    // Mirrors Orts.Formats.Msts.WagonList: each work-order wagon is
+    // committed when its SidingItem token is encountered, using the current UID
+    // and description (which is optional in native activity files).
+    private static IReadOnlyList<ActivityWagonRequirement> ReadWagonList(STFReader reader)
+    {
+        var requirements = new List<ActivityWagonRequirement>();
+        uint? uid = null;
+        uint? sidingItemId = null;
+        var description = "";
+        reader.MustMatch("(");
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("uid", () => uid = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("sidingitem", () =>
+            {
+                sidingItemId = reader.ReadUIntBlock(null);
+                if (!uid.HasValue || !sidingItemId.HasValue)
+                    throw new InvalidDataException("Native activity Wagon_List requires UID before SidingItem.");
+                var carId = $"{(uid.Value >> 16) & 0xFFFF} - {uid.Value & 0xFFFF}";
+                requirements.Add(new ActivityWagonRequirement(uid.Value, sidingItemId.Value, description, carId));
+            }),
+            new STFReader.TokenProcessor("description", () => description = reader.ReadStringBlock("")),
+        });
+        return requirements.AsReadOnly();
     }
 
     private static ActivityEventOutcomes ReadOutcomes(STFReader reader)
@@ -156,13 +184,15 @@ public sealed class ActivityEventReader
         public float TriggerSpeedMetersPerSecond;
         public string ActionType = "";
         public bool Reversible;
+        public uint? SidingItemId;
+        public IReadOnlyList<ActivityWagonRequirement>? WagonRequirements;
         public string SuccessMessage = "";
         public string FailureMessage = "";
         public ActivityEventOutcomes Outcomes = ActivityEventOutcomes.Empty;
         public ActivityEventDefinition ToDefinition() => new(
             Id, Name, kind, ActivationLevel, TriggerSeconds, TriggerOnStop,
             TileX, TileZ, X, Z, RadiusMeters, TriggerSpeedMetersPerSecond,
-            ActionType, SuccessMessage, FailureMessage, Outcomes, Reversible);
+            ActionType, SuccessMessage, FailureMessage, Outcomes, Reversible, SidingItemId, WagonRequirements);
     }
 }
 
@@ -181,11 +211,15 @@ public sealed record ActivityEventOutcomes(
         new(Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>(), false, null, null);
 }
 
+public sealed record ActivityWagonRequirement(uint UniqueId, uint SidingItemId,
+    string Description, string CarId);
+
 public sealed record ActivityEventDefinition(
     int Id, string Name, ActivityEventKind Kind, int InitialActivationLevel,
     double TriggerSeconds, bool TriggerOnStop, int TileX, int TileZ, float X, float Z,
     float RadiusMeters, float TriggerSpeedMetersPerSecond, string ActionType,
-    string SuccessMessage, string FailureMessage, ActivityEventOutcomes Outcomes, bool Reversible = false);
+    string SuccessMessage, string FailureMessage, ActivityEventOutcomes Outcomes, bool Reversible = false,
+    uint? SidingItemId = null, IReadOnlyList<ActivityWagonRequirement>? WagonRequirements = null);
 
 public sealed record ActivityEventSet(string SourcePath, IReadOnlyList<ActivityEventDefinition> Events);
 public sealed record ActivityPlayerState(double SpeedMetersPerSecond, int? TileX = null,
