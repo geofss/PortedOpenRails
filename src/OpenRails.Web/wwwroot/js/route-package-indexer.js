@@ -196,6 +196,15 @@ export async function inspectArchive(id) {
     }
     if (cursor !== central.byteLength) throw new Error("Unexpected trailing bytes in the ZIP central directory.");
     entries.sort((a, b) => a.path.localeCompare(b.path, "en"));
+    const indexHandle = await directory.getFileHandle(id + ".index.json", { create: true });
+    const indexWriter = await indexHandle.createWritable();
+    try {
+        await indexWriter.write(JSON.stringify({ version: 1, id, entries }));
+        await indexWriter.close();
+    } catch (error) {
+        await indexWriter.abort().catch(() => {});
+        throw error;
+    }
     return {
         id,
         fileName: metadata.fileName,
@@ -204,4 +213,86 @@ export async function inspectArchive(id) {
         totalUncompressedBytes: totalUncompressed,
         routeFiles: entries.filter(entry => entry.path.toLowerCase().endsWith(".trk")).map(entry => entry.path)
     };
+}
+
+
+// Entry descriptors are persisted separately from the ZIP so later reads do not
+// need to rescan a potentially multi-gigabyte archive.
+async function readStoredIndex(directory, id) {
+    const handle = await directory.getFileHandle(id + ".index.json");
+    const index = JSON.parse(await (await handle.getFile()).text());
+    if (index.version !== 1 || validateId(index.id) !== id || !Array.isArray(index.entries)) {
+        throw new Error("Stored ZIP index is invalid or belongs to another archive.");
+    }
+    return index;
+}
+
+export async function listEntries(id) {
+    validateId(id);
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
+    const index = await readStoredIndex(directory, id);
+    return index.entries.map(entry => entry.path);
+}
+
+const crcTable = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let value = n;
+        for (let bit = 0; bit < 8; bit++) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+        table[n] = value >>> 0;
+    }
+    return table;
+})();
+
+export async function openEntry(id, requestedPath) {
+    validateId(id);
+    const normalized = normalizeEntryPath(requestedPath);
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
+    const index = await readStoredIndex(directory, id);
+    const key = normalized.toLocaleLowerCase("en-US");
+    const entry = index.entries.find(candidate => candidate.path.toLocaleLowerCase("en-US") === key);
+    if (!entry) throw new Error("Archive entry was not found: " + normalized);
+
+    const metadata = JSON.parse(await (await directory.getFileHandle(id + ".json")).getFile().then(file => file.text()));
+    const archive = await (await directory.getFileHandle(id + ".zip")).getFile();
+    if (archive.size !== metadata.sizeBytes ||
+        entry.dataOffset < 0 || entry.compressedSize < 0 ||
+        entry.dataOffset + entry.compressedSize > archive.size) {
+        throw new Error("Staged archive or indexed entry boundaries are invalid.");
+    }
+
+    let stream = archive.slice(entry.dataOffset, entry.dataOffset + entry.compressedSize).stream();
+    if (entry.compressionMethod === 8) {
+        if (typeof DecompressionStream === "undefined") throw new Error("This browser does not support streaming ZIP deflate decompression.");
+        try {
+            stream = stream.pipeThrough(new DecompressionStream("deflate-raw"));
+        } catch (error) {
+            throw new Error("This browser cannot decode raw DEFLATE ZIP entries: " + error.message);
+        }
+    } else if (entry.compressionMethod !== 0) {
+        throw new Error("Unsupported ZIP compression method " + entry.compressionMethod + ".");
+    }
+
+    let crc = 0xffffffff;
+    let total = 0;
+    const verifier = new TransformStream({
+        transform(chunk, controller) {
+            const bytes = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
+            total += bytes.byteLength;
+            if (!Number.isSafeInteger(total) || total > entry.uncompressedSize) {
+                throw new Error("ZIP entry expanded beyond its declared size: " + entry.path);
+            }
+            for (let i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+            controller.enqueue(bytes);
+        },
+        flush() {
+            const actualCrc = (crc ^ 0xffffffff) >>> 0;
+            if (total !== entry.uncompressedSize || actualCrc !== entry.crc32) {
+                throw new Error("ZIP entry size or CRC-32 validation failed: " + entry.path);
+            }
+        }
+    });
+    return DotNet.createJSStreamReference(stream.pipeThrough(verifier));
 }
