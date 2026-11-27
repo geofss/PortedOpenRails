@@ -367,5 +367,14 @@ export async function openEntry(id, requestedPath) {
             }
         }
     });
-    return DotNet.createJSStreamReference(stream.pipeThrough(verifier));
+    // Blazor's DotNet.createJSStreamReference accepts a Blob or typed-array
+    // payload, not a WHATWG ReadableStream. Materialize this single validated
+    // entry as a Blob; the .NET compatibility bridge already materializes each
+    // entry into its bounded virtual store, so this keeps the interop contract
+    // correct while retaining per-entry limits and CRC verification.
+    const validatedBlob = await new Response(stream.pipeThrough(verifier)).blob();
+    if (!(validatedBlob instanceof Blob)) {
+        throw new Error("ZIP entry could not be materialized as a browser Blob: " + entry.path);
+    }
+    return DotNet.createJSStreamReference(validatedBlob);
 }
