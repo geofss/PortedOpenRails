@@ -66,7 +66,19 @@ public sealed class AiServiceDrivingController
 
         IReadOnlyList<double> waypoints = route.RouteWaypointDistancesMeters is { Count: > 0 } distances
             ? distances : new[] { route.DistanceMeters };
-        var direction = route.Direction < 0 ? -1 : 1;
+        var direction = route.Direction;
+        if (Math.Abs(waypoints[0] - route.DistanceMeters) > 0.5)
+            throw new ArgumentException("The first service waypoint must match the route start distance.", nameof(route));
+        for (var index = 1; index < waypoints.Count; index++)
+        {
+            var progress = (waypoints[index] - waypoints[index - 1]) * direction;
+            if (progress < -0.5)
+                throw new ArgumentException("Service route waypoints must follow the declared route direction.", nameof(route));
+        }
+        if (route.RouteWaypoints is { Count: > 0 } alignedWaypoints)
+            for (var index = 0; index < waypoints.Count; index++)
+                if (Math.Abs(alignedWaypoints[index].DistanceMeters - waypoints[index]) > 0.5)
+                    throw new ArgumentException("Service route waypoint metadata must align with route distances.", nameof(route));
         var endDistance = waypoints[^1];
         var remaining = direction > 0 ? endDistance - currentDistanceMeters : currentDistanceMeters - endDistance;
         if (!double.IsFinite(remaining))

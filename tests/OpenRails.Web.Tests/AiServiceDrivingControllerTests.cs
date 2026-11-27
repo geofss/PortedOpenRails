@@ -121,6 +121,24 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void RejectsWaypointsThatConflictWithDeclaredRouteDirectionOrMetadata()
+    {
+        var reversed = new ServiceRouteStartPosition(0, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { 0d, 40d, 20d }, 1);
+        Assert.Throws<ArgumentException>(() => controller.Calculate(reversed, 0, 0, 10));
+
+        var mismatched = new ServiceRouteStartPosition(0, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { 0d, 40d, 100d }, 1,
+            new[]
+            {
+                new ServiceRouteWaypoint(0, false, false),
+                new ServiceRouteWaypoint(50, true, false),
+                new ServiceRouteWaypoint(100, false, false)
+            });
+        Assert.Throws<ArgumentException>(() => controller.Calculate(mismatched, 0, 0, 10));
+    }
+
+    [Fact]
     public void RejectsServiceDistancesWhoseDifferencesOverflow()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
