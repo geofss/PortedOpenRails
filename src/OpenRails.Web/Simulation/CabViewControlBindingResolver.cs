@@ -15,8 +15,8 @@ public static class CabViewControlBindingResolver
             "SPEEDOMETER" => CabViewControlBinding.Speedometer,
             "THROTTLE" or "REGULATOR" => lever ? CabViewControlBinding.ThrottleLever : CabViewControlBinding.ThrottleDisplay,
             "THROTTLE_DISPLAY" => CabViewControlBinding.ThrottleDisplay,
-            "TRAIN_BRAKE" => lever ? CabViewControlBinding.TrainBrakeLever : CabViewControlBinding.NotConnected,
-            "DIRECTION" => lever ? CabViewControlBinding.DirectionLever : CabViewControlBinding.NotConnected,
+            "TRAIN_BRAKE" => lever ? CabViewControlBinding.TrainBrakeLever : CabViewControlBinding.TrainBrakeDisplay,
+            "DIRECTION" => lever ? CabViewControlBinding.DirectionLever : CabViewControlBinding.DirectionDisplay,
             "DIRECTION_DISPLAY" => CabViewControlBinding.DirectionLever,
             "BRAKE_PIPE" => CabViewControlBinding.BrakePipe,
             "BRAKE_CYL" => CabViewControlBinding.BrakeCylinder,
@@ -30,5 +30,5 @@ public static class CabViewControlBindingResolver
 public enum CabViewControlBinding
 {
     NotConnected, Speedometer, ThrottleLever, ThrottleDisplay, TrainBrakeLever,
-    DirectionLever, BrakePipe, BrakeCylinder, Doors, EmergencyBrake
+    DirectionLever, DirectionDisplay, TrainBrakeDisplay, BrakePipe, BrakeCylinder, Doors, EmergencyBrake
 }

@@ -23,6 +23,17 @@ public sealed class CabViewControlBindingResolverTests
         Assert.Equal(expected, CabViewControlBindingResolver.Resolve(control));
     }
 
+    [Theory]
+    [InlineData("TRAIN_BRAKE", "dial", CabViewControlBinding.TrainBrakeDisplay)]
+    [InlineData("DIRECTION", "digital", CabViewControlBinding.DirectionDisplay)]
+    public void MapsNativeReadOnlyBrakeAndDirectionDisplays(string controlType, string kind,
+        CabViewControlBinding expected)
+    {
+        var control = new CabViewControlDefinition(kind, controlType, "", "", "", "", "",
+            0, 0, 1, 1, 0, 100, 1, 0, 0, 0, 0, 0, 0, Array.Empty<int>());
+        Assert.Equal(expected, CabViewControlBindingResolver.Resolve(control));
+    }
+
     [Fact]
     public void DoesNotMapIndependentEngineBrakeToTrainBrake()
     {

@@ -117,8 +117,8 @@
         {
             CabViewControlBinding.Speedometer => lead is null ? "—" : $"{lead.SpeedMetersPerSecond * 3.6:N1} km/h",
             CabViewControlBinding.ThrottleLever or CabViewControlBinding.ThrottleDisplay => $"{Controller.ThrottlePercent:N0}%",
-            CabViewControlBinding.TrainBrakeLever => $"{Controller.BrakePercent:N0}%",
-            CabViewControlBinding.DirectionLever => Controller.ReverserPosition.ToString(),
+            CabViewControlBinding.TrainBrakeLever or CabViewControlBinding.TrainBrakeDisplay => $"{Controller.BrakePercent:N0}%",
+            CabViewControlBinding.DirectionLever or CabViewControlBinding.DirectionDisplay => Controller.ReverserPosition.ToString(),
             CabViewControlBinding.BrakePipe => Controller.BrakePipeState.PressuresKPa.Count > 0
                 ? $"{Controller.BrakePipeState.PressuresKPa[0]:N0} kPa" : "—",
             CabViewControlBinding.BrakeCylinder => Controller.BrakeCylinderState.PressuresKPa.Count > 0
