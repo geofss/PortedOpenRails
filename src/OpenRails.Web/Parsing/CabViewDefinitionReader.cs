@@ -76,8 +76,12 @@ public sealed class CabViewDefinitionReader
 
     private static CabViewVector ReadVector(STFReader reader)
     {
-        var value = reader.ReadVector3Block(STFReader.UNITS.None, new Microsoft.Xna.Framework.Vector3());
-        return new CabViewVector(value.X, value.Y, value.Z);
+        reader.MustMatch("(");
+        var x = reader.ReadFloat(STFReader.UNITS.None, 0f);
+        var y = reader.ReadFloat(STFReader.UNITS.None, 0f);
+        var z = reader.ReadFloat(STFReader.UNITS.None, 0f);
+        reader.MustMatch(")");
+        return new CabViewVector(x, y, z);
     }
 }
 
