@@ -12,6 +12,21 @@
         <h1>Open Rails</h1>
         <span>PortedOpenRails · desktop browser edition</span>
     </header>
+    <div class="or-mainform-toolbar" role="toolbar" aria-label="Open Rails main commands">
+        @if (CanDriveLoadedRoute)
+        {
+            <a class="or-menu-command primary" href="#driving-controls">Start</a>
+            <a class="or-menu-command" href="#driving-controls">Resume / Replay…</a>
+        }
+        else
+        {
+            <span class="or-menu-command disabled" aria-disabled="true">Start</span>
+            <span class="or-menu-command disabled" aria-disabled="true">Resume / Replay…</span>
+        }
+        <a class="or-menu-command" href="#driving-settings">Options</a>
+        <a class="or-menu-command" href="#content-packages">Tools ▼</a>
+        <label class="or-menu-logging"><input type="checkbox" checked disabled /> Logging</label>
+    </div>
     <div class="or-profile-strip">
         <strong>Installation profile</strong>
         <span>Browser-imported content packages</span>
@@ -498,7 +513,7 @@
         }
     </section>
 
-    <section class="import-panel" aria-labelledby="import-heading">
+    <section id="content-packages" class="import-panel" aria-labelledby="import-heading">
         <h2 id="import-heading">Content packages</h2>
         <p class="note">Import additional ZIP packages to create a layered virtual content namespace. Earlier packages have higher priority.</p>
         <InputFile OnChange="HandleFilesSelected" accept=".zip,application/zip" multiple disabled="@isLoading" />
