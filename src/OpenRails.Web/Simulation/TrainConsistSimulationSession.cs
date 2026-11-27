@@ -361,7 +361,7 @@ public sealed class TrainConsistSimulationSession
         if (couplerForceLimits is not null && couplerForceLimits.Count != Math.Max(0, carCount - 1))
             throw new ArgumentException("Coupler force limits must match the consist boundary count.", nameof(couplerForceLimits));
         if (throttlePercentByCar.Any(value => !float.IsFinite(value)) ||
-            brakePercentByCar.Any(value => !double.IsFinite(value)) ||
+            brakePercentByCar.Any(value => !double.IsFinite(value) || value < 0 || value > 100) ||
             maximumBrakeForceNewtonsByCar.Any(value => !double.IsFinite(value) || value < 0) ||
             !float.IsFinite(powerReduction) ||
             (averageForceByCar is not null && averageForceByCar.Any(value => !float.IsFinite(value))))

@@ -523,6 +523,22 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void AutomaticCouplerPathRejectsOutOfRangeBrakeCommandsWithoutAdvancing()
+    {
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { null });
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithAutomaticCouplers(
+            0, new[] { 0f }, new[] { -0.1d }, new[] { 1_000d }, resistance));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithAutomaticCouplers(
+            0, new[] { 0f }, new[] { 100.1d }, new[] { 1_000d }, resistance));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
     public void PausingAndResettingMaintainConsistClockState()
     {
         var initial = new TrainConsistMotionState(new[]
