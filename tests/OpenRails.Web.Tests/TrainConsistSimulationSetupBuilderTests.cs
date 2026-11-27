@@ -43,18 +43,37 @@ public sealed class TrainConsistSimulationSetupBuilderTests
         }, "freight.con");
         var engine = CreateAsset(1, "Engine", 20_000, 15, 50_000,
             new LocomotiveTractionMetadata("Engine", 100_000, 100_000, 500_000, 100, 0, null, "engine.eng"),
-            100_000);
-        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null, 100_000);
+            100_000) with
+        {
+            Metadata = CreateAsset(1, "Engine", 20_000, 15, 50_000, null).Metadata! with
+            {
+                BrakeSystemType = "air_single_pipe",
+                BrakeEquipmentType = "distributor",
+                MaxHandBrakeForceN = 20_000
+            }
+        };
+        var wagon = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null, 100_000) with
+        {
+            Metadata = CreateAsset(2, "Wagon", 30_000, 20, 60_000, null).Metadata! with
+            {
+                BrakeSystemType = "air_single_pipe",
+                BrakeEquipmentType = "distributor",
+                MaxHandBrakeForceN = 12_000
+            }
+        };
         var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { engine, wagon }, 1_000);
-        var steps = setup.Advance(0.1, new[] { 50f, 0f }, 0,
+        var steps = setup.Advance(0.1, new[] { 50f, 0f }, 30,
             handBrakePercentByCar: new[] { 0d, 25d });
 
         Assert.Equal(6, steps);
         Assert.True(setup.Session.State.Cars[0].SpeedMetersPerSecond > 0);
-        Assert.True(setup.Session.State.Cars[1].SpeedMetersPerSecond > 0);
+        Assert.Equal(0, setup.Session.State.Cars[1].SpeedMetersPerSecond, 8);
         Assert.True(setup.Session.State.Cars[0].DistanceMeters > setup.InitialState.Cars[0].DistanceMeters);
-        Assert.Equal(0, Assert.Single(setup.CouplerRestGapsMetersByBoundary) - 17.5, 8);
-        Assert.Equal(1, setup.Session.BrakePipeState.PressuresKPa.Count);
+        Assert.Equal(17.5, Assert.Single(setup.CouplerRestGapsMetersByBoundary), 8);
+        Assert.Equal(2, setup.Session.BrakePipeState.PressuresKPa.Count);
+        Assert.All(setup.Session.BrakePipeState.PressuresKPa, pressure => Assert.True(pressure < TrainBrakePipeModel.NormalPressureKPa));
+        Assert.Equal(2, setup.Session.BrakeCylinderState.PressuresKPa.Count);
+        Assert.True(setup.Session.BrakeCylinderState.PressuresKPa.Any(pressure => pressure > 0));
     }
 
     [Fact]
