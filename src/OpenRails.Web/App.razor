@@ -60,6 +60,15 @@
                             @foreach (var routeFile in archiveIndex.RouteFiles)
                             {
                                 <small>Route candidate: <code>@routeFile</code></small>
+                                @if (stagedRouteMetadata.TryGetValue(package.Id, out var stagedRoutes))
+                                {
+                                    var stagedRoute = stagedRoutes.FirstOrDefault(route => route.Path == routeFile);
+                                    @if (stagedRoute is not null)
+                                    {
+                                        <small class="success">Parsed with upstream STFReader: @stagedRoute.Metadata.Name · ID @stagedRoute.Metadata.RouteId</small>
+                                        <small>@stagedRoute.Metadata.Description</small>
+                                    }
+                                }
                             }
                             @if (archiveIndex.RouteFiles.Count == 0)
                             {
@@ -381,6 +390,7 @@
     private string? largePackageMessage;
     private readonly List<StoredBrowserPackage> storedPackages = [];
     private readonly Dictionary<string, BrowserPackageArchiveIndex> indexedPackages = [];
+    private readonly Dictionary<string, List<StagedRouteMetadata>> stagedRouteMetadata = [];
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
@@ -607,11 +617,34 @@
     {
         isLoading = true;
         errorMessage = null;
+        stagedRouteMetadata.Remove(package.Id);
         try
         {
             var index = await BrowserPackageArchiveIndexer.InspectAsync(JS, package.Id);
             indexedPackages[package.Id] = index;
-            largePackageMessage = $"Indexed {index.EntryCount:N0} files in {package.FileName}. Found {index.RouteFiles.Count} .trk route candidate(s). This is ZIP discovery only; route files are not yet connected to the synchronous Open Rails content readers.";
+
+            var parsedRoutes = new List<StagedRouteMetadata>();
+            var rejectedRoutes = new List<string>();
+            foreach (var routePath in index.RouteFiles)
+            {
+                try
+                {
+                    var metadata = await BrowserPackageRouteMetadataReader.ReadAsync(JS, package.Id, routePath);
+                    parsedRoutes.Add(new StagedRouteMetadata(routePath, metadata));
+                }
+                catch (Exception exception) when (exception is JSException || exception is IOException ||
+                    exception is InvalidDataException || exception is ArgumentException)
+                {
+                    rejectedRoutes.Add($"{routePath}: {exception.Message}");
+                }
+            }
+
+            stagedRouteMetadata[package.Id] = parsedRoutes;
+            largePackageMessage = $"Indexed {index.EntryCount:N0} files in {package.FileName}. " +
+                $"Upstream STFReader successfully parsed {parsedRoutes.Count}/{index.RouteFiles.Count} route metadata file(s). " +
+                "The archive remains disk-backed; full track, terrain, and scenery loading still needs the asynchronous content-store integration.";
+            if (rejectedRoutes.Count > 0)
+                errorMessage = string.Join(" | ", rejectedRoutes.Take(5));
         }
         catch (Exception exception) when (exception is JSException || exception is IOException || exception is InvalidDataException || exception is ArgumentException)
         {
@@ -866,4 +899,5 @@
     }
 
     private sealed record RouteChoice(RouteMetadata Metadata, string PackageName, string MetadataFile);
+    private sealed record StagedRouteMetadata(string Path, RouteMetadata Metadata);
 }
