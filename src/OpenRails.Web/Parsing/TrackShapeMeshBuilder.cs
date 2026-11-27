@@ -62,7 +62,7 @@ public sealed class TrackShapeMeshBuilder
                 subObjects));
         }
 
-        return new TrackShapeMesh(source.shape_header.flags1, source.shape_header.flags2, matrices, lods);
+        return new TrackShapeMesh(source.shape_header.flags1, source.shape_header.flags2, matrices, lods, TrackShapeAnimationBuilder.Build(source));
     }
 
     private static IReadOnlyList<TrackShapeMeshVertex> BuildVertices(shape source, sub_object subObject)
@@ -200,4 +200,4 @@ public sealed record TrackShapeMesh(
     uint Flags1,
     uint Flags2,
     IReadOnlyList<TrackShapeMatrix> Matrices,
-    IReadOnlyList<TrackShapeLodMesh> Lods);
+    IReadOnlyList<TrackShapeLodMesh> Lods,\n    IReadOnlyList<TrackShapeAnimationClip>? Animations = null);
