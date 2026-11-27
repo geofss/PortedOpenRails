@@ -185,7 +185,7 @@ public sealed class SignalScriptInterpreter
             var value = Operand.Evaluate(runtime);
             return Operator switch
             {
-                "-" => unchecked(-value),
+                "-" => checked(-value),
                 "+" => value,
                 "!" => value == 0 ? 1 : 0,
                 _ => throw new InvalidDataException($"Unsupported unary operator '{Operator}'.")
@@ -204,9 +204,9 @@ public sealed class SignalScriptInterpreter
             var right = Right.Evaluate(runtime);
             return Operator switch
             {
-                "+" => unchecked(left + right),
-                "-" => unchecked(left - right),
-                "*" => unchecked(left * right),
+                "+" => checked(left + right),
+                "-" => checked(left - right),
+                "*" => checked(left * right),
                 "/" => right == 0 ? 0 : left / right,
                 "%" => right == 0 ? 0 : left % right,
                 _ => throw new InvalidDataException($"Unsupported arithmetic operator '{Operator}'.")

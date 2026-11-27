@@ -136,6 +136,37 @@ public sealed class SignalScriptInterpreterTests
         Assert.Contains("read-only", result.Diagnostic);
     }
 
+    [Fact]
+    public void ArithmeticOverflowFailsClosedAndPreservesInitialSignalState()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            STATE = 2147483647 + 1;
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(6, 2, false, 0, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(6, result.State);
+        Assert.Contains("overflow", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void UnaryNegationOverflowFailsClosed()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            STATE = -(-2147483647 - 1);
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(3, 1, false, 0, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(3, result.State);
+    }
+
     private static SignalScriptDefinition Script(string source)
     {
         var lines = source.Split('\n').Select(line => line.Trim()).ToArray();
