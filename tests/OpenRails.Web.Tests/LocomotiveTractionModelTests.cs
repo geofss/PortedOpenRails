@@ -133,7 +133,7 @@ public sealed class LocomotiveTractionModelTests
             SIMISA@@@@@@@@@@JINX0t1t
             Engine (
                 MaxForce ( 200000 )
-                ORTSTractiveForceRampDownRate ( 20 kN/s )
+                ORTSTractiveForceRampDownRate ( 20kN/s )
             )
             """));
 
