@@ -148,4 +148,48 @@ public sealed class ActivityPassengerStopSessionTests
         Assert.Equal(expectedParameter, exception.ParamName);
     }
 
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void RejectsNonFiniteAssumedArrival(double assumedArrival)
+    {
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActivityPassengerStopSession(100, 160, 30,
+                assumedActualArrivalSeconds: assumedArrival));
+
+        Assert.Equal("assumedActualArrivalSeconds", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    [InlineData(-1)]
+    public void RejectsInvalidSignalDistance(double distance)
+    {
+        var stop = new ActivityPassengerStopSession(100, 130, 30);
+        stop.OnTrainStop(100, isAtStation: true);
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            stop.OnTimer(130, distanceToNextSignalMeters: distance));
+
+        Assert.Equal("distanceToNextSignalMeters", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void RejectsNonFiniteSimulationClock(double clockTime)
+    {
+        var stop = new ActivityPassengerStopSession(100, 160, 30);
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            stop.OnTimer(clockTime));
+
+        Assert.Equal("clockTimeSeconds", exception.ParamName);
+    }
+
 }
