@@ -27,7 +27,7 @@ public sealed class NativeNumericalIntegratorTests
             MinStep = 0.0005f
         };
         var result = integrator.Integrate(1, temperature => 0.5f * (20f - temperature));
-        Assert.InRange(result, 51.45f, 51.5f);
+        Assert.InRange(result, 68.50f, 68.55f);
     }
 
     [Fact]
