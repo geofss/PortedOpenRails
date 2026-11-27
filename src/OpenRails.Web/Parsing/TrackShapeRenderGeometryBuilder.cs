@@ -29,16 +29,21 @@ public sealed class TrackShapeRenderGeometryBuilder
         IEnumerable<TrackShapePlacement> placements,
         int animationClipIndex = -1,
         float animationFrame = 0,
-        Vector3? cameraPosition = null)
+        Vector3? cameraPosition = null,
+        double? elapsedSeconds = null,
+        bool loopAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(placements);
+        if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
         var vertices = new List<Vector3>();
         var indices = new List<int>();
 
         foreach (var placement in placements)
         {
             var mesh = placement.Asset.Mesh;
-            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
+            var frame = ResolveAnimationFrame(mesh.Animations, animationClipIndex, animationFrame, elapsedSeconds, loopAnimation);
+            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
             var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
@@ -77,10 +82,14 @@ public sealed class TrackShapeRenderGeometryBuilder
         string? seasonFolder = null,
         int animationClipIndex = -1,
         float animationFrame = 0,
-        Vector3? cameraPosition = null)
+        Vector3? cameraPosition = null,
+        double? elapsedSeconds = null,
+        bool loopAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(placements);
         ArgumentNullException.ThrowIfNull(loadedTextures);
+        if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
 
         var textureReferences = TrackShapeSeasonTextureSelector.Select(loadedTextures, seasonFolder).ToArray();
         var textureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
@@ -95,7 +104,8 @@ public sealed class TrackShapeRenderGeometryBuilder
         foreach (var placement in placements)
         {
             var mesh = placement.Asset.Mesh;
-            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
+            var frame = ResolveAnimationFrame(mesh.Animations, animationClipIndex, animationFrame, elapsedSeconds, loopAnimation);
+            var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
             var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
@@ -159,6 +169,19 @@ public sealed class TrackShapeRenderGeometryBuilder
                 batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias))
             .ToArray();
         return new TrackShapeTexturedRenderGeometry(Array.AsReadOnly(batches), truncated);
+    }
+
+    private static float ResolveAnimationFrame(
+        IReadOnlyList<TrackShapeAnimationClip>? clips,
+        int clipIndex,
+        float fallbackFrame,
+        double? elapsedSeconds,
+        bool loopAnimation)
+    {
+        if (elapsedSeconds is not { } elapsed || clips is null ||
+            clipIndex < 0 || clipIndex >= clips.Count)
+            return fallbackFrame;
+        return TrackShapeAnimationClock.GetFrame(clips[clipIndex], elapsed, loopAnimation);
     }
 
     private sealed record TrackShapeBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
