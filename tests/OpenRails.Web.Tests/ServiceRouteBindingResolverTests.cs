@@ -11,7 +11,7 @@ public sealed class ServiceRouteBindingResolverTests
         var service = new ServiceMetadata("TRAINS/SERVICES/Express.srv", 1, "Express",
             "ExpressSet", "MainLine", 0.2f, 0.9f, 10);
         var path = new RoutePathDefinition("ROUTES/R/PATHS/MainLine.pat", "MainLine", "Main",
-            "A", "B", 0, Array.Empty<RoutePathPoint>(),
+            "A", "B", 0,
             new[] { new RoutePathPoint(0, 0, 0, 0, 0, 1, 1) },
             new[] { new RoutePathNode(0, uint.MaxValue, uint.MaxValue, 0) },
             Array.Empty<string>());
