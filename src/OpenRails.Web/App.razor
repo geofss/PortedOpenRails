@@ -482,6 +482,7 @@
     private string? routeBuildMessage;
     private RouteLoadResult? loadedRoute;
     private TrackNetworkRoute? traversedRoute;
+    private TrackNetworkRouteProfile? activityRouteProfile;
     private ConsistCatalogResult? consistCatalog;
     private TrainConsistSimulationSetup? simulationSetup;
     private BrowserTrainDrivingController? drivingController;
@@ -680,6 +681,7 @@
         if (loadedRoute is null)
         {
             traversedRoute = null;
+            activityRouteProfile = null;
             InitializeSimulationSetup();
             return;
         }
@@ -692,6 +694,7 @@
                     loadedRoute.TrackNetwork, selectedTrackNodeIndex,
                     startReversed: reverseRouteStart,
                     preferredNextTrackNodeIndices: selectedBranchTrackNodeIndices);
+            activityRouteProfile = traversedRoute is null ? null : TrackNetworkRouteProfile.Build(traversedRoute);
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
                 (traversedRoute is null
                     ? " No two-ended vector path was available for connected traversal."
@@ -700,6 +703,7 @@
         catch (Exception exception) when (exception is ArgumentException || exception is InvalidDataException)
         {
             traversedRoute = null;
+            activityRouteProfile = null;
             routeBuildMessage = $"Connected route traversal failed: {exception.Message}";
         }
 
@@ -1114,8 +1118,16 @@
             var elapsed = Math.Max(0, simulationTime - lastActivitySimulationTime);
             lastActivitySimulationTime = simulationTime;
             if (elapsed > 0 && state.Cars.Count > 0)
-                activityExecution.Advance(elapsed,
-                    new ActivityPlayerState(state.Cars[0].SpeedMetersPerSecond));
+                {
+                    var leadCar = state.Cars[0];
+                    var position = activityRouteProfile is null
+                        ? null
+                        : ActivityLocationResolver.Resolve(activityRouteProfile.Sample(leadCar.DistanceMeters).Position);
+                    activityExecution.Advance(elapsed, position is null
+                        ? new ActivityPlayerState(leadCar.SpeedMetersPerSecond)
+                        : new ActivityPlayerState(leadCar.SpeedMetersPerSecond,
+                            position.TileX, position.TileZ, position.X, position.Z));
+                }
         }
         return Task.CompletedTask;
     }
