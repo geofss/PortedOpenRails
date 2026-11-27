@@ -453,15 +453,22 @@
                             }
                         </div>
                     }
-                    @if (drivingController is not null)
+                    @if (CanDriveLoadedRoute)
                     {
-                        <TrainDrivingControls @key="drivingController"
-                            Controller="drivingController"
-                            Consist="SelectedConsist"
-                            StorageKey="@SimulationSnapshotKey"
-                            AiServiceRoutePlan="(selectedServiceRoutePlan?.SupportsAiPathFollowing == true ? selectedServiceRoutePlan : null)"
-                            AiServiceSignalConstraints="AiServiceSignalConstraints"
-                            MotionChanged="OnTrainMotionChanged" />
+                        <p class="success" role="status">Playable route test ready: track network, connected route, consist physics, and driving controller are initialized.</p>
+                        <div id="driving-controls">
+                            <TrainDrivingControls @key="drivingController"
+                                Controller="drivingController!"
+                                Consist="SelectedConsist"
+                                StorageKey="@SimulationSnapshotKey"
+                                AiServiceRoutePlan="(selectedServiceRoutePlan?.SupportsAiPathFollowing == true ? selectedServiceRoutePlan : null)"
+                                AiServiceSignalConstraints="AiServiceSignalConstraints"
+                                MotionChanged="OnTrainMotionChanged" />
+                        </div>
+                    }
+                    else if (drivingController is not null)
+                    {
+                        <p class="error" role="status">Driving controls are withheld until the route has a usable track network, a connected route, a resolved consist, and an initialized simulation session. The route preview remains available for diagnostics.</p>
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
                         Consist="SelectedConsist"
@@ -677,6 +684,13 @@
                 return new AiServiceSignalConstraint(distance, indication.Aspect,
                     indication.SpeedLimitMetersPerSecond);
             }).Where(constraint => constraint is not null).Cast<AiServiceSignalConstraint>().ToArray();
+
+    private bool CanDriveLoadedRoute =>
+        loadedRoute?.Validation.TrackNetworkUsable == true &&
+        traversedRoute is { Segments.Count: > 0, LengthMeters: > 0 } &&
+        SelectedConsist is not null &&
+        simulationSetup is not null &&
+        drivingController is not null;
 
     private CabViewDefinition? SelectedCabView => SelectedConsist is null
         ? null
