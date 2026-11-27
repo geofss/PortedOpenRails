@@ -25,7 +25,7 @@ public sealed class LocomotiveTractionMetadataReader
             var runUpTimeToMaxForce = -1f;
             var tractionRampUpRate = 0f;
             var tractionRampDownRate = 0f;
-            var tractionRampDownToZeroRate = 0f;
+            var tractionRampDownToZeroRate = -1f;
             InterpolatorDiesel2D? tractionCurves = null;
             var engineFound = false;
 
@@ -67,6 +67,8 @@ public sealed class LocomotiveTractionMetadataReader
                 throw new InvalidDataException($"Locomotive file '{normalized}' contains no Engine block.");
 
             tractionCurves?.HasNegativeValue();
+            if (tractionRampDownToZeroRate < 0)
+                tractionRampDownToZeroRate = tractionRampDownRate;
             if (maxForce > 0 && runUpTimeToMaxForce > 0 &&
                 tractionRampUpRate <= 0 && tractionRampDownRate <= 0 && tractionRampDownToZeroRate <= 0)
             {

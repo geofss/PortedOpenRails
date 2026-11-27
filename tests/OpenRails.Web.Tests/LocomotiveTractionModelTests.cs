@@ -127,6 +127,24 @@ public sealed class LocomotiveTractionModelTests
     }
 
     [Fact]
+    public void DefaultsRampDownToZeroRateToRampDownRateWhenUnspecified()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/Down.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                ORTSTractiveForceRampDownRate ( 20 kN/s )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/Down.eng");
+
+        Assert.Equal(20_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(20_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+    }
+
+    [Fact]
     public void DerivesNativeRampRatesFromRunUpTimeWhenExplicitRatesAreAbsent()
     {
         using var store = CreateStore(("TRAINS/TRAINSET/Test/RunUp.eng", """
