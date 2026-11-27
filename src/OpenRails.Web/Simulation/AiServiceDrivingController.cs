@@ -66,7 +66,7 @@ public sealed class AiServiceDrivingController
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))
-            .Select(signal => signal.SpeedLimitMetersPerSecond!.Value)
+            .Select(signal => (double)signal.SpeedLimitMetersPerSecond!.Value)
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
         var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, approachSpeedLimit);
