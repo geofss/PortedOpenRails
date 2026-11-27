@@ -98,12 +98,29 @@ public sealed class CabViewDefinitionReader
             new("combinedcontrol", () => controls.Add(ReadControl(reader, sourcePath, "combinedcontrol"))),
             new("firebox", () => controls.Add(ReadControl(reader, sourcePath, "firebox"))),
             new("digitalclock", () => controls.Add(ReadControl(reader, sourcePath, "digitalclock"))),
+            new("dialclock", () => controls.AddRange(ReadDialClock(reader, sourcePath))),
             new("screendisplay", () => controls.Add(ReadControl(reader, sourcePath, "screendisplay"))),
             new("ortsanimateddisplay", () => controls.Add(ReadControl(reader, sourcePath, "ortsanimateddisplay")))
         };
         reader.ParseBlock(processors);
         if (controls.Count > declaredCount)
             throw new InvalidDataException($"Cab-view '{sourcePath}' contains {controls.Count} controls but declares {declaredCount}.");
+        return controls;
+    }
+
+    // Open Rails' dialclock container expands into three ordinary dial controls.
+    // Preserve the three controls separately so the browser renderer can bind each
+    // dial to the corresponding clock component without inventing a new control type.
+    private static IReadOnlyList<CabViewControlDefinition> ReadDialClock(STFReader reader, string sourcePath)
+    {
+        var controls = new List<CabViewControlDefinition>();
+        reader.MustMatch("(");
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("hours", () => controls.Add(ReadControl(reader, sourcePath, "dialclock-hours"))),
+            new STFReader.TokenProcessor("minutes", () => controls.Add(ReadControl(reader, sourcePath, "dialclock-minutes"))),
+            new STFReader.TokenProcessor("seconds", () => controls.Add(ReadControl(reader, sourcePath, "dialclock-seconds")))
+        });
         return controls;
     }
 
