@@ -130,17 +130,29 @@ public sealed class SignalInterlockingController
         }
     }
 
-    public void ReleaseRoute(string trainId)
+    /// <summary>
+    /// Releases a route only after the train has cleared every circuit it occupies.
+    /// This preserves the native interlocking safety invariant: a switch must not
+    /// unlock underneath a train merely because its dispatcher requested release.
+    /// </summary>
+    public bool TryReleaseRoute(string trainId)
     {
         ValidateTrainId(trainId);
         lock (gate)
         {
+            if (occupancy.Values.Contains(trainId))
+                return false;
+
             foreach (var circuit in reservations.Where(pair => pair.Value == trainId).Select(pair => pair.Key).ToArray())
                 reservations.Remove(circuit);
             foreach (var junction in junctionLocks.Where(pair => pair.Value == trainId).Select(pair => pair.Key).ToArray())
                 junctionLocks.Remove(junction);
+            return true;
         }
     }
+
+    /// <summary>Compatibility wrapper; a release is deferred while the train occupies track.</summary>
+    public void ReleaseRoute(string trainId) => TryReleaseRoute(trainId);
 
     public SignalInterlockingSnapshot Snapshot()
     {
