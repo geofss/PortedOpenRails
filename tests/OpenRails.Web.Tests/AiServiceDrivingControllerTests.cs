@@ -121,19 +121,6 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
-    public void AppliesZeroSpeedLimitForAnApproachSignal()
-    {
-        var decision = controller.Calculate(Plan(0, 100), 10, 0, 20,
-            signalConstraints: new[]
-            {
-                new AiServiceSignalConstraint(50, RouteSignalAspect.Approach, 0)
-            });
-
-        Assert.Equal(0, decision.TargetSpeedMetersPerSecond);
-        Assert.Equal(0, decision.ThrottlePercent);
-    }
-
-    [Fact]
     public void RejectsInvalidSignalAndRouteWaypointData()
     {
         var route = Plan(0, 100);
@@ -146,6 +133,11 @@ public sealed class AiServiceDrivingControllerTests
             signalConstraints: new[]
             {
                 new AiServiceSignalConstraint(10, RouteSignalAspect.Approach, -1)
+            }));
+        Assert.Throws<ArgumentException>(() => controller.Calculate(route, 0, 0, 10,
+            signalConstraints: new[]
+            {
+                new AiServiceSignalConstraint(10, RouteSignalAspect.Approach, 0)
             }));
         Assert.Throws<ArgumentException>(() => controller.Calculate(
             route with { RouteWaypointDistancesMeters = new[] { 0d, double.PositiveInfinity } },

@@ -54,7 +54,7 @@ public sealed class AiServiceDrivingController
             !double.IsFinite(signal.RouteDistanceMeters) ||
             !Enum.IsDefined(signal.Aspect) ||
             (signal.SpeedLimitMetersPerSecond.HasValue &&
-                (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value < 0))))
+                (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value <= 0))))
             throw new ArgumentException("Signal constraints must contain finite route positions and valid non-negative speed limits.", nameof(signalConstraints));
 
         IReadOnlyList<double> waypoints = route.RouteWaypointDistancesMeters is { Count: > 0 } distances
@@ -107,7 +107,7 @@ public sealed class AiServiceDrivingController
 
         var approachSpeedLimit = signals
             .Where(signal => signal.Aspect == RouteSignalAspect.Approach &&
-                signal.SpeedLimitMetersPerSecond is >= 0 &&
+                signal.SpeedLimitMetersPerSecond is > 0 &&
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))
