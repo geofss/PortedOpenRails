@@ -139,6 +139,34 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(13.9f, indication.SpeedLimitMetersPerSecond);
     }
 
+    [Fact]
+    public void RequiresSelectedBranchAtEveryJunctionEvenWithoutSignalDirectionOverride()
+    {
+        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[] { new SignalAspectDefinition("CLEAR_1", "", 10, false, false, false) });
+        var signal = new RouteSignalHead(9, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3, 4 }, new[] { signal }, new uint[] { 5 }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>()),
+                new SignalTrackCircuit(4, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>> { [5] = new uint[] { 2, 3, 4 } },
+            Array.Empty<string>());
+
+        var noSelection = Assert.Single(network.Evaluate(new HashSet<uint>()));
+        var selected = Assert.Single(network.Evaluate(new HashSet<uint>(),
+            new Dictionary<uint, uint> { [5] = 3 }));
+
+        Assert.Equal(RouteSignalAspect.Stop, noSelection.Aspect);
+        Assert.Equal(RouteSignalAspect.Clear1, selected.Aspect);
+        Assert.Equal((uint)3, selected.NextTrackNodeIndex);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
