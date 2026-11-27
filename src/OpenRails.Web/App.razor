@@ -354,13 +354,9 @@
                     @if (SelectedCabView is { } cabView)
                     {
                         <div class="route-details">
-                            <h3>Original locomotive cab definition</h3>
+                            <h3>Original locomotive cab</h3>
                             <p class="hint">Loaded from @cabView.SourcePath · @cabView.Controls.Count original controls</p>
-                            @if (cabView.Views.Count > 0)
-                            {
-                                <p class="hint">Day cab image: <code>@cabView.Views[0].DayImagePath</code></p>
-                                <p class="hint">Night cab image: <code>@cabView.Views[0].NightImagePath</code></p>
-                            }
+                            <CabViewPanel Store="composite" Definition="cabView" />
                             @foreach (var control in cabView.Controls.Take(24))
                             {
                                 <p>@(string.IsNullOrWhiteSpace(control.Label) ? control.ControlType : control.Label) · @control.Kind · control ID @control.ControlId · @control.X,@control.Y (@control.Width×@control.Height)</p>

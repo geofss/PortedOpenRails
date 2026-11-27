@@ -1,0 +1,50 @@
+@using OpenRails.Web.Content
+@using OpenRails.Web.Parsing
+
+@if (Definition is not null)
+{
+    <div class="or-cab-panel" aria-label="Original Open Rails cab view">
+        @if (!string.IsNullOrWhiteSpace(imageDataUri))
+        {
+            <img src="@imageDataUri" alt="Original locomotive cab view" />
+        }
+        else if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            <p class="hint">@loadError</p>
+        }
+        else
+        {
+            <p class="hint">No supported day cab image is available for this locomotive.</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IVirtualContentStore? Store { get; set; }
+    [Parameter, EditorRequired] public CabViewDefinition? Definition { get; set; }
+
+    private string? imageDataUri;
+    private string? loadError;
+    private string? loadedPath;
+
+    protected override void OnParametersSet()
+    {
+        var path = Definition?.Views.FirstOrDefault()?.DayImagePath;
+        if (string.Equals(path, loadedPath, StringComparison.OrdinalIgnoreCase))
+            return;
+        loadedPath = path;
+        imageDataUri = null;
+        loadError = null;
+        if (Store is null || string.IsNullOrWhiteSpace(path) || !Store.Contains(path))
+            return;
+        try
+        {
+            var texture = new AceTextureReader().Read(Store, path);
+            imageDataUri = AceTexturePngEncoder.EncodeDataUri(texture);
+        }
+        catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException or ArgumentException)
+        {
+            loadError = $"Cab image '{path}' could not be displayed: {exception.Message}";
+        }
+    }
+}

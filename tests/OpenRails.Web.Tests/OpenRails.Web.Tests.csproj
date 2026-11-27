@@ -49,6 +49,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/ShapeFile.cs" Link="Parsing/ShapeFile.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeFileReader.cs" Link="Parsing/TrackShapeFileReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/AceTextureReader.cs" Link="Parsing/AceTextureReader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/AceTexturePngEncoder.cs" Link="Parsing/AceTexturePngEncoder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeMeshBuilder.cs" Link="Parsing/TrackShapeMeshBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapeAssetLoader.cs" Link="Parsing/TrackShapeAssetLoader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackShapePlacementBuilder.cs" Link="Parsing/TrackShapePlacementBuilder.cs" />
