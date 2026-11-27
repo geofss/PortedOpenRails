@@ -120,7 +120,10 @@ export async function inspectArchive(id) {
 
     if (entryCount > MAX_ENTRIES) throw new Error("Archive contains more than " + MAX_ENTRIES + " entries.");
     if (centralSize > MAX_CENTRAL_DIRECTORY_BYTES) throw new Error("ZIP central directory exceeds the 256 MiB indexing limit.");
-    if (centralOffset + centralSize > archiveFile.size) throw new Error("ZIP central directory extends beyond the archive.");
+    const centralEnd = centralOffset + centralSize;
+    if (!Number.isSafeInteger(centralEnd) || centralEnd > archiveFile.size) {
+        throw new Error("ZIP central directory extends beyond the archive or safe offset range.");
+    }
     const centralBytes = new Uint8Array(await archiveFile.slice(centralOffset, centralOffset + centralSize).arrayBuffer());
     const central = new DataView(centralBytes.buffer, centralBytes.byteOffset, centralBytes.byteLength);
     const seen = new Set();
@@ -200,7 +203,9 @@ export async function inspectArchive(id) {
                 throw new Error("Local and central ZIP filenames do not match: " + path);
             }
             const dataOffset = localOffset + 30 + localNameLength + localExtraLength;
-            if (dataOffset > centralOffset || dataOffset + compressedSize > centralOffset) {
+            const dataEnd = dataOffset + compressedSize;
+            if (!Number.isSafeInteger(dataOffset) || !Number.isSafeInteger(dataEnd) ||
+                dataOffset > centralOffset || dataEnd > centralOffset) {
                 throw new Error("ZIP entry data overlaps or extends beyond the central directory: " + path);
             }
             localRecordRanges.push({
