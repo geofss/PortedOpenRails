@@ -1238,8 +1238,14 @@
         {
             var initialSpeed = activityStartingSpeedMetersPerSecond ??
                 serviceBinding?.Service.InitialSpeedMetersPerSecond ?? 0;
+            var serviceStartDistance = serviceBinding is null
+                ? 0
+                : ServiceRoutePositionResolver.Resolve(
+                    serviceBinding.MainTrace!, activityRouteProfile ??
+                    throw new InvalidDataException("The connected route has no usable position profile.")).DistanceMeters;
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
                 consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
+                startDistanceMeters: serviceStartDistance,
                 initialSpeedMetersPerSecond: initialSpeed);
             drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;

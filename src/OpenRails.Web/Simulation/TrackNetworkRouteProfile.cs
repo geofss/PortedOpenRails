@@ -78,6 +78,50 @@ public sealed class TrackNetworkRouteProfile
         return new TrackNetworkRouteProfile(points, cumulative);
     }
 
+    /// <summary>Finds the nearest point on the connected route profile to a world-space location.</summary>
+    public bool TryFindNearestDistance(
+        TrackWorldPosition target,
+        double maximumOffsetMeters,
+        out double routeDistanceMeters,
+        out double offsetMeters)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        if (!double.IsFinite(target.X) || !double.IsFinite(target.Y) || !double.IsFinite(target.Z))
+            throw new ArgumentOutOfRangeException(nameof(target), "Target position must be finite.");
+        if (!double.IsFinite(maximumOffsetMeters) || maximumOffsetMeters < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumOffsetMeters));
+
+        var bestSquared = double.PositiveInfinity;
+        var bestDistance = 0d;
+        for (var index = 1; index < points.Length; index++)
+        {
+            var start = points[index - 1];
+            var end = points[index];
+            var dx = end.X - start.X;
+            var dy = end.Y - start.Y;
+            var dz = end.Z - start.Z;
+            var lengthSquared = dx * dx + dy * dy + dz * dz;
+            var fraction = lengthSquared <= 1e-12
+                ? 0
+                : Math.Clamp(((target.X - start.X) * dx +
+                    (target.Y - start.Y) * dy + (target.Z - start.Z) * dz) / lengthSquared, 0, 1);
+            var offsetX = target.X - (start.X + dx * fraction);
+            var offsetY = target.Y - (start.Y + dy * fraction);
+            var offsetZ = target.Z - (start.Z + dz * fraction);
+            var squared = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
+            if (squared < bestSquared)
+            {
+                bestSquared = squared;
+                bestDistance = cumulativeDistances[index - 1] +
+                    (cumulativeDistances[index] - cumulativeDistances[index - 1]) * fraction;
+            }
+        }
+
+        offsetMeters = Math.Sqrt(bestSquared);
+        routeDistanceMeters = bestDistance;
+        return offsetMeters <= maximumOffsetMeters;
+    }
+
     public TrackRouteProfileSample Sample(double distanceMeters)
     {
         if (!double.IsFinite(distanceMeters))
