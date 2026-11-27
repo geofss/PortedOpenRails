@@ -68,12 +68,32 @@ public sealed class BrowserPackageEntryReadStream(
     IJSStreamReference reference,
     Stream stream) : IAsyncDisposable
 {
+    private bool disposed;
+
     public Stream Stream { get; } = stream ?? throw new ArgumentNullException(nameof(stream));
 
     public async ValueTask DisposeAsync()
     {
-        await Stream.DisposeAsync();
-        await reference.DisposeAsync();
-        await module.DisposeAsync();
+        if (disposed)
+            return;
+        disposed = true;
+
+        // Dispose every owned browser/.NET resource even when an earlier
+        // disposal operation fails, so JS references are not leaked.
+        try
+        {
+            await Stream.DisposeAsync();
+        }
+        finally
+        {
+            try
+            {
+                await reference.DisposeAsync();
+            }
+            finally
+            {
+                await module.DisposeAsync();
+            }
+        }
     }
 }
