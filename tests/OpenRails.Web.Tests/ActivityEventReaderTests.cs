@@ -123,7 +123,7 @@ public sealed class ActivityEventReaderTests
         Assert.Equal(65538u, wagon.UniqueId);
         Assert.Equal(5u, wagon.SidingItemId);
         Assert.Equal("1 - 2", wagon.CarId);
-        Assert.Equal("", wagon.Description); // Native parser constructs the work-order item before its Description token.
+        Assert.Equal("Brake van", wagon.Description);
     }
 
     [Fact]
