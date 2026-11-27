@@ -70,6 +70,58 @@ public sealed class RoutePathFileReaderTests
     }
 
     [Fact]
+    public void TracesMainRouteInLinkedNodeOrderAndStopsAtSentinel()
+    {
+        using var store = CreateStore(("ROUTES/RouteA/PATHS/Trace.pat", """
+            SIMISA@@@@@@@@@@JINX0P0t______
+            TrackPDPs (
+                TrackPDP ( 0 0 0 0 0 1 1 )
+                TrackPDP ( 0 0 10 0 0 1 1 )
+                TrackPDP ( 0 0 20 0 0 1 1 )
+            )
+            TrackPath (
+                TrPathName ( Trace )
+                Name ( Trace )
+                TrPathNodes ( 3
+                    TrPathNode ( 00000000 2 4294967295 0 )
+                    TrPathNode ( 00000000 4294967295 4294967295 1 )
+                    TrPathNode ( 00000000 1 4294967295 2 )
+                )
+            )
+            """));
+
+        var path = new RoutePathFileReader().Read(store, "ROUTES/RouteA/PATHS/Trace.pat");
+        var trace = path.TraceMainRoute();
+
+        Assert.Equal(new[] { 0, 2, 1 }, trace.NodeIndices);
+        Assert.Equal(new[] { 0f, 20f, 10f }, trace.Points.Select(point => point.X));
+        Assert.True(trace.IsComplete);
+    }
+
+    [Fact]
+    public void MainRouteTraceDetectsCyclesInsteadOfLoopingForever()
+    {
+        using var store = CreateStore(("ROUTES/RouteA/PATHS/Cycle.pat", """
+            SIMISA@@@@@@@@@@JINX0P0t______
+            TrackPDPs ( TrackPDP ( 0 0 0 0 0 1 1 ) )
+            TrackPath (
+                TrPathName ( Cycle )
+                Name ( Cycle )
+                TrPathNodes ( 2
+                    TrPathNode ( 00000000 1 4294967295 0 )
+                    TrPathNode ( 00000000 0 4294967295 0 )
+                )
+            )
+            """));
+
+        var trace = new RoutePathFileReader().Read(store, "ROUTES/RouteA/PATHS/Cycle.pat").TraceMainRoute();
+
+        Assert.Equal(new[] { 0, 1 }, trace.NodeIndices);
+        Assert.False(trace.IsComplete);
+        Assert.Contains(trace.Diagnostics, item => item.Contains("cycle"));
+    }
+
+    [Fact]
     public void RejectsDeclaredNodeCountMismatch()
     {
         using var store = CreateStore(("ROUTES/RouteA/PATHS/Short.pat", """

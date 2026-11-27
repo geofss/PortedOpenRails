@@ -151,12 +151,20 @@
                                     <p class="hint">@path.PathId: @diagnostic</p>
                                 }
                             }
-                            @foreach (var service in loadedServices)
+                            @foreach (var binding in serviceRouteBindings)
                             {
-                                <p><strong>@service.Name</strong> · consist @service.TrainConfig · path @service.PathId · initial speed @((service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</p>
-                                @if (!availableRoutePathIds.Contains(service.PathId, StringComparer.OrdinalIgnoreCase))
+                                <p><strong>@binding.Service.Name</strong> · consist @binding.Service.TrainConfig · path @binding.Service.PathId · initial speed @((binding.Service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</p>
+                                @if (binding.Path is null)
                                 {
-                                    <p class="hint">Path file @service.PathId was not found in the selected route's PATHS folder.</p>
+                                    <p class="hint">@binding.Diagnostic</p>
+                                }
+                                else
+                                {
+                                    <p class="hint">Main route trace: @binding.MainTrace.NodeIndices.Count nodes, @binding.MainTrace.Points.Count positioned points</p>
+                                    @foreach (var diagnostic in binding.MainTrace.Diagnostics)
+                                    {
+                                        <p class="hint">@diagnostic</p>
+                                    }
                                 }
                             }
                         </div>
@@ -551,6 +559,7 @@
     private IReadOnlyList<ServiceMetadata> loadedServices = Array.Empty<ServiceMetadata>();
     private IReadOnlyList<string> availableRoutePathIds = Array.Empty<string>();
     private IReadOnlyList<RoutePathDefinition> loadedRoutePaths = Array.Empty<RoutePathDefinition>();
+    private IReadOnlyList<ServiceRouteBinding> serviceRouteBindings = Array.Empty<ServiceRouteBinding>();
     private ActivityMetadata? selectedActivityMetadata;
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
@@ -638,6 +647,7 @@
         loadedServices = Array.Empty<ServiceMetadata>();
         availableRoutePathIds = Array.Empty<string>();
         loadedRoutePaths = Array.Empty<RoutePathDefinition>();
+        serviceRouteBindings = Array.Empty<ServiceRouteBinding>();
         errorMessage = null;
         loadedRoute = null;
         traversedRoute = null;
@@ -681,6 +691,15 @@
                     return null;
                 }
             }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
+        serviceRouteBindings = loadedServices.Select(service =>
+        {
+            var path = loadedRoutePaths.FirstOrDefault(candidate =>
+                string.Equals(candidate.PathId, service.PathId, StringComparison.OrdinalIgnoreCase));
+            if (path is null)
+                return new ServiceRouteBinding(service, null, null,
+                    $"Service {service.Name} references missing route path '{service.PathId}'.");
+            return new ServiceRouteBinding(service, path, path.TraceMainRoute(), null);
+        }).ToArray();
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
     }

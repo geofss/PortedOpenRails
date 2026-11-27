@@ -142,4 +142,54 @@ public sealed record RoutePathDefinition(
     IReadOnlyList<string> Diagnostics)
 {
     public bool IsPlayerPath => (Flags & 0x20) == 0;
+
+    /// <summary>Follows the native main-node links beginning at TrPathNodes[0].</summary>
+    public RoutePathTrace TraceMainRoute() => Trace(useSidingLinks: false);
+
+    /// <summary>Follows siding links where present, falling back to main links.</summary>
+    public RoutePathTrace TraceSidingRoute() => Trace(useSidingLinks: true);
+
+    private RoutePathTrace Trace(bool useSidingLinks)
+    {
+        var ordered = new List<int>();
+        var visited = new HashSet<uint>();
+        var diagnostics = new List<string>();
+        uint current = 0;
+        while (current != uint.MaxValue)
+        {
+            if (current >= Nodes.Count)
+            {
+                diagnostics.Add($"Path link points to missing node {current}.");
+                break;
+            }
+            if (!visited.Add(current))
+            {
+                diagnostics.Add($"Path link cycle detected at node {current}.");
+                break;
+            }
+
+            ordered.Add((int)current);
+            var node = Nodes[(int)current];
+            if (node.FromPdpIndex >= TrackPoints.Count)
+                diagnostics.Add($"Node {current} cannot be positioned because TrackPDP {node.FromPdpIndex} is missing.");
+            var next = useSidingLinks && node.HasNextSidingNode
+                ? node.NextSidingNode
+                : node.NextMainNode;
+            current = next;
+        }
+
+        return new RoutePathTrace(
+            Array.AsReadOnly(ordered.ToArray()),
+            Array.AsReadOnly(ordered.Where(index => Nodes[index].FromPdpIndex < TrackPoints.Count)
+                .Select(index => TrackPoints[(int)Nodes[index].FromPdpIndex]).ToArray()),
+            Array.AsReadOnly(diagnostics.ToArray()));
+    }
+}
+
+public sealed record RoutePathTrace(
+    IReadOnlyList<int> NodeIndices,
+    IReadOnlyList<RoutePathPoint> Points,
+    IReadOnlyList<string> Diagnostics)
+{
+    public bool IsComplete => Diagnostics.Count == 0;
 }
