@@ -23,7 +23,7 @@ public static class LocomotiveTractionRamp
 
         var increasingMagnitude = Math.Abs(targetForceNewtons) > Math.Abs(currentForceNewtons);
         float rate;
-        if (targetForceNewtons == 0 || Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons))
+        if (targetForceNewtons == 0 || (currentForceNewtons != 0 && Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons)))
             rate = metadata.TractionForceRampDownToZeroNewtonsPerSecond;
         else if (increasingMagnitude)
             rate = metadata.TractionForceRampUpNewtonsPerSecond;
