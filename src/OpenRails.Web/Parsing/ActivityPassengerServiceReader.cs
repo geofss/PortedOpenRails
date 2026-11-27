@@ -64,6 +64,7 @@ public sealed class ActivityPassengerServiceReader
 
     private static ActivityPassengerServiceDefinition ReadPlayerTraffic(STFReader reader, string serviceName)
     {
+        reader.MustMatch("(");
         var startTimeSeconds = (int)reader.ReadFloat(STFReader.UNITS.Time, null);
         var arrivalSeconds = 0d;
         var departureSeconds = 0d;
