@@ -34,7 +34,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
         IEnumerable<LoadedWorldSceneryTile> tiles,
         string? seasonFolder = null,
         int animationClipIndex = -1,
-        float animationFrame = 0)
+        float animationFrame = 0,
+        Vector3? cameraPosition = null)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         var textureAssets = new List<LoadedTrackShapeTexture>();
@@ -70,7 +71,9 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 var worldTransform = BuildWorldTransform(placement);
                 var mesh = asset.Mesh;
                 var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, animationFrame);
-                var lod = mesh.Lods.FirstOrDefault();
+                var lodDistance = cameraPosition is { } camera
+                    ? Vector3.Distance(camera, worldTransform.Translation) : 0;
+                var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
                 if (lod is null) continue;
 
                 foreach (var subObject in lod.SubObjects)
