@@ -43,17 +43,27 @@ public static class LocomotiveAxleDriveRamp
         var toZero = Math.Sign(currentForceNewtons) != Math.Sign(targetForceNewtons);
         if (axleSpeedMetersPerSecond != 0)
         {
-            var power = currentForceNewtons * (float)previousAxleSpeedMetersPerSecond;
-            var targetPower = targetForceNewtons * (float)axleSpeedMetersPerSecond;
+            var power = (double)currentForceNewtons * previousAxleSpeedMetersPerSecond;
+            var targetPower = (double)targetForceNewtons * axleSpeedMetersPerSecond;
+            if (!double.IsFinite(power) || !double.IsFinite(targetPower))
+                throw new ArgumentOutOfRangeException(nameof(axleSpeedMetersPerSecond),
+                    "Axle power calculation exceeded the finite simulation range.");
             var powerUp = (targetPower > power) ^ (power < 0);
             var powerRate = powerUp ? powerRampUpWattsPerSecond :
                 toZero ? powerRampDownToZeroWattsPerSecond : powerRampDownWattsPerSecond;
             if (powerRate > 0)
             {
-                var maximumPowerChange = powerRate * (float)elapsedSeconds * tractiveForceFraction;
+                var maximumPowerChange = (double)powerRate * elapsedSeconds * tractiveForceFraction;
+                if (!double.IsFinite(maximumPowerChange))
+                    throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                        "Axle power ramp exceeded the finite simulation range.");
                 targetPower = Math.Clamp(targetPower,
                     power - maximumPowerChange, power + maximumPowerChange);
-                targetForceNewtons = targetPower / (float)axleSpeedMetersPerSecond;
+                var adjustedForce = targetPower / axleSpeedMetersPerSecond;
+                if (!double.IsFinite(adjustedForce) || adjustedForce > float.MaxValue || adjustedForce < -float.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(axleSpeedMetersPerSecond),
+                        "Power-limited axle force exceeded the finite simulation range.");
+                targetForceNewtons = (float)adjustedForce;
             }
         }
 
@@ -63,9 +73,16 @@ public static class LocomotiveAxleDriveRamp
         if (forceRate <= 0)
             return targetForceNewtons;
 
-        var maximumForceChange = forceRate * (float)elapsedSeconds * tractiveForceFraction;
-        return Math.Clamp(targetForceNewtons,
+        var maximumForceChange = (double)forceRate * elapsedSeconds * tractiveForceFraction;
+        if (!double.IsFinite(maximumForceChange))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Axle force ramp exceeded the finite simulation range.");
+        var nextForce = Math.Clamp((double)targetForceNewtons,
             currentForceNewtons - maximumForceChange,
             currentForceNewtons + maximumForceChange);
+        if (!double.IsFinite(nextForce) || nextForce > float.MaxValue || nextForce < -float.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds),
+                "Axle force state exceeded the finite simulation range.");
+        return (float)nextForce;
     }
 }

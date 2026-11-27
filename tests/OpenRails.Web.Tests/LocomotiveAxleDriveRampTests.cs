@@ -58,6 +58,24 @@ public sealed class LocomotiveAxleDriveRampTests
     }
 
     [Fact]
+    public void RejectsOverflowingAxlePowerCalculation()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            LocomotiveAxleDriveRamp.Advance(
+                0, 0, double.MaxValue, 10_000, 20_000, 1, 1,
+                powerRampUpWattsPerSecond: 10_000));
+    }
+
+    [Fact]
+    public void RejectsOverflowingAxleForceRampCalculation()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            LocomotiveAxleDriveRamp.Advance(
+                0, 0, 0, 10_000, 20_000, 1, double.MaxValue,
+                forceRampUpNewtonsPerSecond: float.MaxValue));
+    }
+
+    [Fact]
     public void RejectsInvalidAxleRampInputs()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
