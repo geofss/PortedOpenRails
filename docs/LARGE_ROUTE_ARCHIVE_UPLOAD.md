@@ -20,16 +20,35 @@ or a JavaScript `ArrayBuffer`.
   The 30 GB value is a maximum accepted archive size, not a guarantee that every device has
   30 GB available.
 
+## Current staged-route integration
+
+For archives above 300 MiB, the app now:
+
+1. Streams the compressed ZIP into OPFS without buffering the whole archive.
+2. Parses the ZIP central directory, including ZIP64 metadata, and persists an entry index.
+3. Opens individual entries from OPFS as streams, verifies declared size and CRC-32, and parses
+   each route `.trk` metadata file with the upstream STF reader.
+4. Offers a **Load route into simulator** action. The current synchronous route pipeline is fed by
+   a bounded compatibility store populated entry-by-entry from OPFS.
+
+The compatibility store currently has a **2 GiB aggregate expanded-content ceiling** and a
+**512 MiB per-entry ceiling**. It materializes expanded files in WebAssembly memory before invoking
+the existing synchronous route readers. This is an integration bridge, not a genuinely lazy,
+disk-backed runtime content store. Large archives whose expanded size exceeds the ceiling can be
+uploaded and indexed, but cannot yet be loaded through the route pipeline.
+
 ## Explicit remaining work
 
-Large archives are **staged only** at this point. The current synchronous `IVirtualContentStore`
-and `ZipArchive` parser still expect a seekable in-process stream and are not connected to OPFS.
-The next required step is an asynchronous, disk-backed ZIP index and lazy entry reader, followed by
-async route metadata, terrain, scenery, and rolling-stock asset access. A successfully staged large
-ZIP is not yet a loaded or playable route.
+- Replace the bounded in-memory compatibility bridge with async/lazy content access across route,
+  track, terrain, WORLD scenery, shape, texture, activity, consist, and rolling-stock readers.
+- Validate ZIP64, decompression, CRC checks, quota behavior, cancellation, and recovery in desktop
+  browsers with multi-GB archives.
+- Run the authorized Demo Model 1 archive through the browser file picker and record the actual
+  route-load validation report. Automated fixtures and CI do not substitute for this test.
 
 ## Validation
 
-The .NET tests assert the 30 GB configured ceiling and keep the existing in-memory parser limit
-separate. CI validates compilation and route regression tests; real-browser uploads at multi-GB
-sizes still require desktop browser integration testing with sufficient OPFS quota.
+The .NET tests assert the 30 GB configured ceiling, preserve the separate 300 MiB in-memory ZIP
+threshold, and exercise route parser/asset-pipeline fixtures. CI validates compilation, JavaScript
+syntax, and route regression tests. It does not prove that Demo Model 1 or a multi-GB archive has
+been loaded successfully in a real browser.
