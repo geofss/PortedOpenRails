@@ -17,11 +17,15 @@
         }
         @if (HasNightImage)
         {
-            <button type="button" @onclick="ToggleLighting">@(showNight ? "Show day cab" : "Show night cab")</button>
+            <button type="button" aria-pressed="@showNight" @onclick="ToggleLighting">@(showNight ? "Show day cab" : "Show night cab")</button>
         }
         @if (!string.IsNullOrWhiteSpace(imageDataUri))
         {
-            <img src="@imageDataUri" alt="Original locomotive cab view" />
+            <img src="@imageDataUri" alt="Original locomotive cab view" decoding="async" />
+        }
+        @if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            <p class="error" role="alert">@loadError</p>
         }
         @if (Controller is not null && Definition.Controls.Count > 0)
         {
@@ -34,18 +38,18 @@
                         @if (binding == CabViewControlBinding.ThrottleLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
                         {
                             <label>Throttle · @Controller.ThrottlePercent.ToString("N0")%</label>
-                            <input type="range" min="0" max="100" step="1" value="@Controller.ThrottlePercent"
+                            <input type="range" min="0" max="100" step="1" value="@Controller.ThrottlePercent" aria-label="Cab throttle"
                                    disabled="@(Controller.LeftDoorsOpen || Controller.RightDoorsOpen)" @oninput="ChangeThrottle" />
                         }
                         else if (binding == CabViewControlBinding.TrainBrakeLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
                         {
                             <label>Train brake · @Controller.BrakePercent.ToString("N0")%</label>
-                            <input type="range" min="0" max="100" step="1" value="@Controller.BrakePercent" @oninput="ChangeBrake" />
+                            <input type="range" min="0" max="100" step="1" value="@Controller.BrakePercent" aria-label="Cab train brake" @oninput="ChangeBrake" />
                         }
                         else if (binding == CabViewControlBinding.DirectionLever && control.Kind.Equals("lever", StringComparison.OrdinalIgnoreCase))
                         {
                             <label>Direction</label>
-                            <select value="@((int)Controller.ReverserPosition)" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
+                            <select value="@((int)Controller.ReverserPosition)" aria-label="Cab direction" disabled="@(!Controller.CanChangeReverser)" @onchange="ChangeReverser">
                                 <option value="1">Forward</option>
                                 <option value="0">Neutral</option>
                                 <option value="-1">Reverse</option>
@@ -53,19 +57,15 @@
                         }
                         else
                         {
-                            <output>@GetLiveValue(binding)</output>
+                            <output aria-live="polite">@GetLiveValue(binding)</output>
                         }
                     </div>
                 }
             </div>
         }
-        else if (!string.IsNullOrWhiteSpace(loadError))
-        {
-            <p class="hint">@loadError</p>
-        }
         else
         {
-            <p class="hint">No supported day cab image is available for this locomotive.</p>
+            <p class="hint">No supported cab controls are available for this locomotive.</p>
         }
     </div>
 }
