@@ -4,8 +4,8 @@ namespace OpenRails.Web.Parsing;
 
 /// <summary>
 /// Converts native shape animation controllers into portable clip/keyframe data.
-/// Sampling is available to the browser runtime; this does not yet apply sampled
-/// transforms to rendered matrix hierarchies.
+/// The sampler supports linear position and TCB quaternion rotation; pose evaluation
+/// applies sampled transforms to track-shape and WORLD render hierarchies.
 /// </summary>
 public static class TrackShapeAnimationBuilder
 {
