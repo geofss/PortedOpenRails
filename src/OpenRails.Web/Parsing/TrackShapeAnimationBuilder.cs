@@ -91,7 +91,7 @@ public sealed record TrackShapeAnimationKey(
     float? In,
     float? Out);
 
-/// <summary>Samples position/rotation controllers between native keyframes.</summary>
+/// <summary>Samples native linear-position and rotation controllers between keyframes, including TCB quaternion interpolation.</summary>
 public static class TrackShapeAnimationSampler
 {
     public static Vector3 SamplePosition(TrackShapeAnimationController controller, float frame)
@@ -115,8 +115,92 @@ public static class TrackShapeAnimationSampler
         if (keys.Length == 0) return Quaternion.Identity;
         var (left, right, amount) = FindInterval(keys, frame);
         if (left == right) return left.Rotation!.Value;
+        if (keys.Any(key => key.Tension.HasValue || key.Continuity.HasValue || key.Bias.HasValue))
+            return SampleTcbRotation(keys, Array.IndexOf(keys, left), amount);
         return Quaternion.Normalize(Quaternion.Slerp(left.Rotation!.Value, right.Rotation!.Value, amount));
     }
+
+    private static Quaternion SampleTcbRotation(TrackShapeAnimationKey[] keys, int leftIndex, float amount)
+    {
+        var rightIndex = Math.Min(leftIndex + 1, keys.Length - 1);
+        var start = NormalizeRotation(keys[leftIndex].Rotation!.Value);
+        var end = NormalizeRotation(keys[rightIndex].Rotation!.Value);
+        if (Quaternion.Dot(start, end) < 0)
+            end = Negate(end);
+
+        var startControl = BuildTcbControl(keys, leftIndex, outgoing: true);
+        var endControl = BuildTcbControl(keys, rightIndex, outgoing: false);
+        if (Quaternion.Dot(startControl, start) < 0) startControl = Negate(startControl);
+        if (Quaternion.Dot(endControl, end) < 0) endControl = Negate(endControl);
+
+        var direct = Quaternion.Normalize(Quaternion.Slerp(start, end, amount));
+        var tangent = Quaternion.Normalize(Quaternion.Slerp(startControl, endControl, amount));
+        return Quaternion.Normalize(Quaternion.Slerp(direct, tangent, 2 * amount * (1 - amount)));
+    }
+
+    private static Quaternion BuildTcbControl(TrackShapeAnimationKey[] keys, int index, bool outgoing)
+    {
+        var current = NormalizeRotation(keys[index].Rotation!.Value);
+        if (index == 0 || index == keys.Length - 1)
+            return current;
+
+        var previous = NormalizeRotation(keys[index - 1].Rotation!.Value);
+        var next = NormalizeRotation(keys[index + 1].Rotation!.Value);
+        if (Quaternion.Dot(current, previous) < 0) previous = Negate(previous);
+        if (Quaternion.Dot(current, next) < 0) next = Negate(next);
+
+        var previousLog = QuaternionLog(Quaternion.Normalize(Quaternion.Multiply(Quaternion.Conjugate(current), previous)));
+        var nextLog = QuaternionLog(Quaternion.Normalize(Quaternion.Multiply(Quaternion.Conjugate(current), next)));
+        var previousSpan = Math.Max(1, keys[index].Frame - keys[index - 1].Frame);
+        var nextSpan = Math.Max(1, keys[index + 1].Frame - keys[index].Frame);
+        var segmentSpan = outgoing ? nextSpan : previousSpan;
+
+        var tension = keys[index].Tension ?? 0;
+        var continuity = keys[index].Continuity ?? 0;
+        var bias = keys[index].Bias ?? 0;
+        var previousWeight = outgoing
+            ? (1 - tension) * (1 + continuity) * (1 + bias)
+            : (1 - tension) * (1 - continuity) * (1 + bias);
+        var nextWeight = outgoing
+            ? (1 - tension) * (1 - continuity) * (1 - bias)
+            : (1 - tension) * (1 + continuity) * (1 - bias);
+
+        var tangent = -0.25f * segmentSpan *
+            (previousLog * (previousWeight / previousSpan) +
+             nextLog * (nextWeight / nextSpan));
+        var control = Quaternion.Normalize(Quaternion.Multiply(current, QuaternionExp(tangent)));
+        return control;
+    }
+
+    private static Vector3 QuaternionLog(Quaternion value)
+    {
+        value = NormalizeRotation(value);
+        var vector = new Vector3(value.X, value.Y, value.Z);
+        var length = vector.Length();
+        if (length < 1e-7f) return Vector3.Zero;
+        var angle = MathF.Atan2(length, Math.Clamp(value.W, -1f, 1f));
+        return vector * (angle / length);
+    }
+
+    private static Quaternion QuaternionExp(Vector3 value)
+    {
+        var angle = value.Length();
+        if (angle < 1e-7f)
+            return Quaternion.Normalize(new Quaternion(value, 1));
+        var scale = MathF.Sin(angle) / angle;
+        return Quaternion.Normalize(new Quaternion(value * scale, MathF.Cos(angle)));
+    }
+
+    private static Quaternion NormalizeRotation(Quaternion value)
+    {
+        var length = value.LengthSquared();
+        return length > 1e-12f && float.IsFinite(length)
+            ? Quaternion.Normalize(value)
+            : Quaternion.Identity;
+    }
+
+    private static Quaternion Negate(Quaternion value) =>
+        new(-value.X, -value.Y, -value.Z, -value.W);
 
     private static (TrackShapeAnimationKey Left, TrackShapeAnimationKey Right, float Amount)
         FindInterval(TrackShapeAnimationKey[] keys, float frame)
