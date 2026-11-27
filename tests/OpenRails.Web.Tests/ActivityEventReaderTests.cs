@@ -9,6 +9,43 @@ namespace OpenRails.Web.Tests;
 public sealed class ActivityEventReaderTests
 {
     [Fact]
+    public void RejectsMissingOutcomeReferencesBeforeSessionCanMutate()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(1, "First", ActivityEventKind.Time,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "", "", "",
+                new ActivityEventOutcomes(new[] { 99 }, Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<int>(), false, null, null))
+        });
+
+        var error = Assert.Throws<InvalidDataException>(() =>
+            new ActivityExecutionSession(definition));
+
+        Assert.Contains("event 1", error.Message);
+        Assert.Contains("missing event ID 99", error.Message);
+    }
+
+    [Fact]
+    public void ValidatesEveryOutcomeReferenceEvenWhenEarlierReferencesExist()
+    {
+        var definition = new ActivityEventSet("activity.act", new[]
+        {
+            new ActivityEventDefinition(1, "First", ActivityEventKind.Time,
+                1, 0, true, 0, 0, 0, 0, 0, 0, "", "", "",
+                new ActivityEventOutcomes(new[] { 2 }, new[] { 2 },
+                    new[] { 2 }, new[] { 404 }, false, null, null)),
+            new ActivityEventDefinition(2, "Second", ActivityEventKind.Time,
+                0, 10, true, 0, 0, 0, 0, 0, 0, "", "", "", ActivityEventOutcomes.Empty)
+        });
+
+        var error = Assert.Throws<InvalidDataException>(() =>
+            new ActivityExecutionSession(definition));
+
+        Assert.Contains("missing event ID 404", error.Message);
+    }
+
+    [Fact]
     public void AllStopsActionWaitsForEveryNativePathWaitingPoint()
     {
         var definition = new ActivityEventSet("activity.act", new[]

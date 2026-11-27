@@ -208,6 +208,27 @@ public sealed class ActivityExecutionSession
         events = definition.Events.Select(item => new RuntimeEvent(item)).ToList();
         if (events.Select(item => item.Definition.Id).Distinct().Count() != events.Count)
             throw new InvalidDataException("Activity event IDs must be unique.");
+
+        // Validate the complete outcome graph before execution begins. Applying an
+        // outcome must never partially mutate activation levels and then fail because
+        // a later reference points to a missing event.
+        var eventIds = events.Select(item => item.Definition.Id).ToHashSet();
+        foreach (var item in events)
+        {
+            var outcomes = item.Definition.Outcomes ??
+                throw new InvalidDataException($"Activity event {item.Definition.Id} has no outcomes block.");
+            var references = outcomes.ActivateEventIds
+                .Concat(outcomes.RestoreActivationLevelEventIds)
+                .Concat(outcomes.DecrementActivationLevelEventIds)
+                .Concat(outcomes.IncrementActivationLevelEventIds);
+            foreach (var targetId in references)
+            {
+                if (!eventIds.Contains(targetId))
+                    throw new InvalidDataException(
+                        $"Activity event {item.Definition.Id} outcome references missing event ID {targetId}.");
+            }
+        }
+
         UnsupportedEvents = Array.AsReadOnly(events
             .Where(item => item.Definition.Kind == ActivityEventKind.Action &&
                 item.Definition.ActionType is not ("ReachSpeed" or "AllStops"))
