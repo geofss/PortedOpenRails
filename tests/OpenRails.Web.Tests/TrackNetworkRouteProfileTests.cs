@@ -90,6 +90,24 @@ public sealed class TrackNetworkRouteProfileTests
     }
 
     [Fact]
+    public void MapsSignalDistanceUsingCumulativeOffsetAcrossConnectedVectorNodes()
+    {
+        var first = CreateSlopePath(100, 0, trackNodeIndex: 1, endpointNodes: new[] { 2, 3 });
+        var second = CreateSlopePath(100, 0, startZ: 100, trackNodeIndex: 2,
+            endpointNodes: new[] { 3, 4 });
+        var profile = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
+            new[]
+            {
+                new TrackNetworkRouteSegment(first, false),
+                new TrackNetworkRouteSegment(second, false)
+            },
+            Array.Empty<string>(), 200), 5);
+
+        Assert.True(profile.TryGetRouteDistanceForTrackNode(2, 25, out var distance));
+        Assert.Equal(125, distance, 3);
+    }
+
+    [Fact]
     public void DoesNotMapSignalsFromVectorNodesOutsideTheConnectedRoute()
     {
         var profile = TrackNetworkRouteProfile.Build(new TrackNetworkRoute(
