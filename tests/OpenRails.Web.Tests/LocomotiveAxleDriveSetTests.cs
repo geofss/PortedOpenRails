@@ -38,6 +38,19 @@ public sealed class LocomotiveAxleDriveSetTests
     }
 
     [Fact]
+    public void FailedMultiAxleAdvanceDoesNotPartiallyChangeEarlierAxles()
+    {
+        var drive = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });
+        drive.SetAxleSpeeds(new[] { 0d, double.MaxValue });
+        var before = drive.ForceByAxle.ToArray();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => drive.Advance(
+            1, 10_000, 20_000, powerRampUpWattsPerSecond: 10_000));
+
+        Assert.Equal(before, drive.ForceByAxle);
+    }
+
+    [Fact]
     public void CapturesAndRestoresForceAndWheelSpeedHistory()
     {
         var drive = new LocomotiveAxleDriveSet(new[] { 0.5f, 0.5f });

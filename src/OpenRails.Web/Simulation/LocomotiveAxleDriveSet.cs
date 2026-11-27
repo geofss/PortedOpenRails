@@ -81,6 +81,7 @@ public sealed class LocomotiveAxleDriveSet
             throw new ArgumentException("Individual slip-control targets must contain one finite value per driven axle.",
                 nameof(individualAxleTargetForceNewtons));
 
+        var nextForceByAxle = new float[AxleCount];
         for (var i = 0; i < AxleCount; i++)
         {
             var fraction = tractiveForceFractions[i];
@@ -88,7 +89,7 @@ public sealed class LocomotiveAxleDriveSet
                 ? targetTotalForceNewtons * fraction
                 : individualAxleTargetForceNewtons[i];
             var axleMaximum = maximumTotalForceNewtons * fraction;
-            forceByAxle[i] = LocomotiveAxleDriveRamp.Advance(
+            nextForceByAxle[i] = LocomotiveAxleDriveRamp.Advance(
                 forceByAxle[i],
                 previousSpeedByAxle[i],
                 speedByAxle[i],
@@ -104,6 +105,7 @@ public sealed class LocomotiveAxleDriveSet
                 powerRampDownToZeroWattsPerSecond);
         }
 
+        Array.Copy(nextForceByAxle, forceByAxle, AxleCount);
         return TotalDriveForceNewtons;
     }
 
