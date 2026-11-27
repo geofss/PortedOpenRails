@@ -1,6 +1,6 @@
 # Milestone 2F — Route track network and terrain data pipeline
 
-**Status:** Browser-safe route data pipeline and structural validation report implemented. Synthetic-fixture coverage is present; real Demo Model 1 validation and full browser rendering remain pending.
+**Status:** Browser-safe route data pipeline and structural validation report implemented. Dedicated CI acceptance against the authorized Demo Model 1 package passed on 2026-11-27; full browser ZIP-picker import, visual review, and playable-session validation remain pending.
 
 ## What is implemented
 
@@ -28,7 +28,7 @@ The route loader now joins the original MSTS/Open Rails data layers:
 20. Decode ACE textures into RGBA mip data or preserve raw DXT/BGR GPU payloads, including compressed SIMISA streams and one-bit alpha masks.
 21. Resolve original shape primitive image references against route `Textures` and seasonal folders.
 
-The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, terrain tile discovery results, and a structural `RouteValidationReport` aggregating track-network diagnostics and missing/failed terrain, track-shape, and WORLD assets. The viewer displays this report with a bounded issue list. Validation currently remains fixture-based; the authorized Demo Model 1 package has not yet been run through this report in the current CI environment.
+The browser UI now calls the shared `RouteLoader` service when a user selects an imported route. It reports TDB node count, connected vector path count, total parsed track length, terrain tile discovery results, and a structural `RouteValidationReport` aggregating track-network diagnostics and missing/failed terrain, track-shape, and WORLD assets. The viewer displays this report with a bounded issue list. The dedicated real-route acceptance workflow now exercises the production RouteLoader against the authorized Demo Model 1 package. This validates route parsing and selected asset/geometry pipelines in CI; it does not validate browser ZIP-picker import or visual parity.
 
 ## Upstream behavior references
 
@@ -71,9 +71,9 @@ The tests use synthetic fixtures. They do not yet establish compatibility with e
 
 ## Deliberately not claimed as complete
 
-- TDB `TrItemTable` payloads such as signals, platforms, sidings, speed posts, and sound regions are not yet parsed.
+- TDB `TrItemTable` payloads such as signals, platforms, sidings, speed posts, and sound regions are not yet parsed. The route-acceptance job's signal-circuit topology assertion does not imply complete native signal-position circuits.
 - Road database (`.rdb`) support is not included.
-- Terrain patch mesh generation and texture/material asset loading are implemented as data pipelines; browser GPU rendering, patch LOD selection, and full visual parity remain incomplete.
+- Terrain patch mesh generation and texture/material asset loading are implemented as data pipelines; browser GPU rendering, full route tile coverage/LOD selection, and visual parity remain incomplete.
 - Original `.s` shape structures are parsed and converted to portable mesh data, and WORLD scenery assembly resolves meshes and texture assets. Full browser GPU submission/rendering, forests, signals, and complete building/scenery parity remain incomplete.
 - The route network, terrain patches, track-shape meshes, and WORLD scenery are loaded as browser-side data; a complete, visually faithful 3D route renderer is still pending.
 - No route asset is bundled or redistributed as part of this milestone.
