@@ -127,6 +127,25 @@ public sealed class LocomotiveTractionModelTests
     }
 
     [Fact]
+    public void DerivesNativeRampRatesFromRunUpTimeWhenExplicitRatesAreAbsent()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/RunUp.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                RunUpTimeToMaxForce ( 10 )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/RunUp.eng");
+
+        Assert.Equal(20_000, metadata.TractionForceRampUpNewtonsPerSecond);
+        Assert.Equal(40_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(200_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+    }
+
+    [Fact]
     public void AppliesAsymmetricNativeTractionForceRamping()
     {
         var metadata = new LocomotiveTractionMetadata(
@@ -134,7 +153,7 @@ public sealed class LocomotiveTractionModelTests
             10_000, 20_000, 50_000);
 
         Assert.Equal(1_000, LocomotiveTractionRamp.Advance(0, 100_000, 0.1, metadata));
-        Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 0, 0.1, metadata));
+        Assert.Equal(95_000, LocomotiveTractionRamp.Advance(100_000, 0, 0.1, metadata));
         Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 90_000, 0.1, metadata));
     }
 

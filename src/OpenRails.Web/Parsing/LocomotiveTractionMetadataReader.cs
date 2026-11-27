@@ -22,6 +22,7 @@ public sealed class LocomotiveTractionMetadataReader
             var maxPower = 0f;
             var maxSpeed = 1_000f;
             var unloadingSpeed = 0f;
+            var runUpTimeToMaxForce = -1f;
             var tractionRampUpRate = 0f;
             var tractionRampDownRate = 0f;
             var tractionRampDownToZeroRate = 0f;
@@ -46,6 +47,8 @@ public sealed class LocomotiveTractionMetadataReader
                             maxSpeed = reader.ReadFloatBlock(STFReader.UNITS.Speed, null)),
                         new STFReader.TokenProcessor("ortsunloadingspeed", () =>
                             unloadingSpeed = reader.ReadFloatBlock(STFReader.UNITS.Speed, null)),
+                        new STFReader.TokenProcessor("runuptimetomaxforce", () =>
+                            runUpTimeToMaxForce = reader.ReadFloatBlock(STFReader.UNITS.Time, null)),
                         new STFReader.TokenProcessor("ortstractiveforcerampuprate", () =>
                             tractionRampUpRate = reader.ReadFloatBlock(STFReader.UNITS.ForceRate, null)),
                         new STFReader.TokenProcessor("ortstractiveforcerampdownrate", () =>
@@ -64,6 +67,13 @@ public sealed class LocomotiveTractionMetadataReader
                 throw new InvalidDataException($"Locomotive file '{normalized}' contains no Engine block.");
 
             tractionCurves?.HasNegativeValue();
+            if (maxForce > 0 && runUpTimeToMaxForce > 0 &&
+                tractionRampUpRate <= 0 && tractionRampDownRate <= 0 && tractionRampDownToZeroRate <= 0)
+            {
+                tractionRampUpRate = maxForce / runUpTimeToMaxForce;
+                tractionRampDownRate = 2 * tractionRampUpRate;
+                tractionRampDownToZeroRate = 10 * tractionRampUpRate;
+            }
             return new LocomotiveTractionMetadata(
                 Path.GetFileNameWithoutExtension(normalized),
                 maxForce,
