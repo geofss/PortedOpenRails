@@ -69,7 +69,9 @@
 
     protected override void OnParametersSet()
     {
-        var view = Definition?.Views.FirstOrDefault();
+        if (Definition is not null && viewIndex >= Definition.Views.Count)
+            viewIndex = 0;
+        var view = SelectedView;
         var path = view is null ? null : showNight && HasNightImage ? view.NightImagePath : view.DayImagePath;
         if (string.Equals(path, loadedPath, StringComparison.OrdinalIgnoreCase))
             return;
