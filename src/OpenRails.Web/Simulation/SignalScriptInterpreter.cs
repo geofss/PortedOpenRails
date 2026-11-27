@@ -346,6 +346,12 @@ public sealed class SignalScriptInterpreter
             {
                 var inner = ParseCondition();
                 Expect(")");
+                if (inner is Truthy truthy &&
+                    Current.Text is ">" or ">=" or "<" or "<=" or "==" or "!=" or "::")
+                {
+                    var op = Advance().Text;
+                    return new Comparison(truthy.Value, op, ParseExpression());
+                }
                 return inner;
             }
             var left = ParseExpression();

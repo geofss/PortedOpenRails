@@ -33,6 +33,25 @@ public sealed class SignalScriptInterpreterTests
     }
 
     [Fact]
+    public void SupportsParenthesizedArithmeticOnComparisonLeftSide()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            IF (STATE + 1) == 3 {
+                STATE = 6;
+            } ELSE {
+                STATE = 0;
+            }
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(2, 0, false, 0, true));
+
+        Assert.True(result.Success, result.Diagnostic);
+        Assert.Equal(6, result.State);
+    }
+
+    [Fact]
     public void ReadsNativeBlockStateAndRouteSetFunctions()
     {
         var script = Script("""
