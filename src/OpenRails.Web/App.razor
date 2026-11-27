@@ -137,6 +137,21 @@
                             </select>
                         </div>
                     }
+                    @if (serviceChoices.Count > 0)
+                    {
+                        <div class="route-details">
+                            <h3>Original service definitions</h3>
+                            <p class="hint">@loadedServices.Count service definitions parsed from TRAINS/SERVICES</p>
+                            @foreach (var service in loadedServices)
+                            {
+                                <p><strong>@service.Name</strong> · consist @service.TrainConfig · path @service.PathId · initial speed @((service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</p>
+                                @if (!availableRoutePathIds.Contains(service.PathId, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <p class="hint">Path file @service.PathId was not found in the selected route's PATHS folder.</p>
+                                }
+                            }
+                        </div>
+                    }
                     @if (ActivityChoices.Count > 0)
                     {
                         <div class="route-details">
@@ -523,6 +538,9 @@
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
     private string? selectedActivityPath;
+    private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
+    private IReadOnlyList<ServiceMetadata> loadedServices = Array.Empty<ServiceMetadata>();
+    private IReadOnlyList<string> availableRoutePathIds = Array.Empty<string>();
     private ActivityMetadata? selectedActivityMetadata;
     private string? activityParseError;
     private ActivityEventSet? selectedActivityEvents;
@@ -606,6 +624,20 @@
         selectedDefault = true;
         selectedRoute = null;
         selectedActivityPath = null;
+        serviceChoices = ServiceFileLocator.FindServices(composite?.Paths ?? Array.Empty<string>());
+        loadedServices = serviceChoices.Select(path =>
+        {
+            try { return new ServiceMetadataReader().Read(composite!, path); }
+            catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+            {
+                routeDiagnostics.Add($"Service {path}: {exception.Message}");
+                return null;
+            }
+        }).Where(service => service is not null).Cast<ServiceMetadata>().ToArray();
+        availableRoutePathIds = ServiceFileLocator.FindPaths(composite?.Paths ?? Array.Empty<string>(),
+            selectedRoute?.MetadataFile ?? string.Empty)
+            .Select(path => System.IO.Path.GetFileNameWithoutExtension(path))
+            .ToArray();
         errorMessage = null;
         loadedRoute = null;
         traversedRoute = null;
