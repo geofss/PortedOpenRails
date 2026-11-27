@@ -105,6 +105,39 @@ public sealed class LocomotiveTractionModelTests
         Assert.Equal(0, model.CalculateTractiveForce(100, 51));
     }
 
+    [Fact]
+    public void ReadsNativeTractionForceRampRates()
+    {
+        using var store = CreateStore(("TRAINS/TRAINSET/Test/Ramp.eng", """
+            SIMISA@@@@@@@@@@JINX0t1t
+            Engine (
+                MaxForce ( 200000 )
+                ORTSTractiveForceRampUpRate ( 10000 )
+                ORTSTractiveForceRampDownRate ( 20000 )
+                ORTSTractiveForceRampDownToZeroRate ( 50000 )
+            )
+            """));
+
+        var metadata = new LocomotiveTractionMetadataReader().Read(
+            store, "TRAINS/TRAINSET/Test/Ramp.eng");
+
+        Assert.Equal(10_000, metadata.TractionForceRampUpNewtonsPerSecond);
+        Assert.Equal(20_000, metadata.TractionForceRampDownNewtonsPerSecond);
+        Assert.Equal(50_000, metadata.TractionForceRampDownToZeroNewtonsPerSecond);
+    }
+
+    [Fact]
+    public void AppliesAsymmetricNativeTractionForceRamping()
+    {
+        var metadata = new LocomotiveTractionMetadata(
+            "Ramp", 200_000, 150_000, 2_000_000, 120, 0, null, "ramp.eng",
+            10_000, 20_000, 50_000);
+
+        Assert.Equal(1_000, LocomotiveTractionRamp.Advance(0, 100_000, 0.1, metadata));
+        Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 0, 0.1, metadata));
+        Assert.Equal(98_000, LocomotiveTractionRamp.Advance(100_000, 90_000, 0.1, metadata));
+    }
+
     private static LocomotiveTractionMetadata CreateCurveMetadata(float maxPower)
     {
         var zeroThrottle = new Orts.Parsers.Msts.Interpolator(2);

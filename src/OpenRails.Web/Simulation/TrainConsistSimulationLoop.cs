@@ -121,4 +121,5 @@ public sealed record TrainConsistSimulationSnapshot(
     FixedStepSchedulerSnapshot ClockState,
     TrainBrakePipeState? BrakePipeState = null,
     TrainBrakeCylinderState? BrakeCylinderState = null,
-    TrainBrakeDistributorState? BrakeDistributorState = null);
+    TrainBrakeDistributorState? BrakeDistributorState = null,
+    IReadOnlyList<float>? AppliedTractionForceNewtonsByCar = null);

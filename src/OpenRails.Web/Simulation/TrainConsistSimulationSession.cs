@@ -12,7 +12,9 @@ public sealed class TrainConsistSimulationSession
 {
     private readonly TrainConsistSimulationLoop loop;
     private readonly IReadOnlyList<LocomotiveTractionModel?> tractionModels;
+    private readonly IReadOnlyList<LocomotiveTractionMetadata?> tractionMetadataByCar;
     private readonly IReadOnlyList<LocomotiveThrottleResponse> throttleResponses;
+    private readonly float[] appliedTractionForceByCar;
     private readonly TrainPneumaticBrakeSystem pneumaticBrakes;
     private static readonly TrainCarAdhesionModel AdhesionModel = new();
 
@@ -42,9 +44,11 @@ public sealed class TrainConsistSimulationSession
             throw new ArgumentException("Each car must have a matching locomotive metadata slot.", nameof(locomotiveMetadataByCar));
         if (brakeProfilesByCar is not null && brakeProfilesByCar.Count != initialState.Cars.Count)
             throw new ArgumentException("Each car must have a matching brake profile.", nameof(brakeProfilesByCar));
+        tractionMetadataByCar = locomotiveMetadataByCar.ToArray();
         this.tractionModels = locomotiveMetadataByCar
             .Select(metadata => metadata is null ? null : new LocomotiveTractionModel(metadata))
             .ToArray();
+        appliedTractionForceByCar = new float[initialState.Cars.Count];
         this.throttleResponses = throttleResponses?.ToArray() ??
             Enumerable.Repeat(LocomotiveThrottleResponse.Linear, initialState.Cars.Count).ToArray();
         if (this.throttleResponses.Count != initialState.Cars.Count)
@@ -170,12 +174,7 @@ public sealed class TrainConsistSimulationSession
             {
                 var resistance = resistanceProvider(i, state.Cars[i]) ??
                     throw new InvalidOperationException($"Resistance provider returned null for car {i}.");
-                var motiveForce = tractionModels[i]?.CalculateTractiveForce(
-                    throttlePercentByCar[i],
-                    (float)state.Cars[i].SpeedMetersPerSecond,
-                    throttleResponses[i],
-                    powerReduction,
-                    averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var motiveForce = appliedTractionForceByCar[i];
                 var adhesionCoefficient = adhesionCoefficientByCar is null
                     ? TrainCarAdhesionModel.DefaultAdhesionCoefficient
                     : adhesionCoefficientByCar[i];
@@ -195,7 +194,26 @@ public sealed class TrainConsistSimulationSession
                     resistance.TunnelResistanceForceNewtons);
             }
             return new TrainConsistForceFrame(forces, activeCouplerForces);
-        }, beforeSimulationStep);
+        }, stepSeconds =>
+        {
+            beforeSimulationStep?.Invoke(stepSeconds);
+            var currentState = State;
+            for (var i = 0; i < carCount; i++)
+            {
+                var targetForce = tractionDirection == 0 ? 0 :
+                    tractionModels[i]?.CalculateTractiveForce(
+                        throttlePercentByCar[i],
+                        (float)currentState.Cars[i].SpeedMetersPerSecond,
+                        throttleResponses[i],
+                        powerReduction,
+                        averageForceByCar is null ? 0 : averageForceByCar[i]) ?? 0;
+                var metadata = tractionModels[i] is null ? null : tractionMetadataByCar[i];
+                appliedTractionForceByCar[i] = metadata is null
+                    ? 0
+                    : LocomotiveTractionRamp.Advance(
+                        appliedTractionForceByCar[i], targetForce, stepSeconds, metadata);
+            }
+        });
     }
 
     /// <summary>
@@ -464,6 +482,7 @@ public sealed class TrainConsistSimulationSession
         var snapshot = loop.CaptureState();
         return snapshot with
         {
+            AppliedTractionForceNewtonsByCar = appliedTractionForceByCar.ToArray(),
             BrakePipeState = new TrainBrakePipeState(pneumaticBrakes.PipeState.PressuresKPa),
             BrakeCylinderState = new TrainBrakeCylinderState(pneumaticBrakes.CylinderState.PressuresKPa),
             BrakeDistributorState = new TrainBrakeDistributorState(
@@ -482,9 +501,18 @@ public sealed class TrainConsistSimulationSession
         if (snapshot.BrakePipeState is not null)
             pneumaticBrakes.ValidateSnapshot(snapshot.BrakePipeState, snapshot.BrakeCylinderState!, snapshot.BrakeDistributorState);
 
+        if (snapshot.AppliedTractionForceNewtonsByCar is not null &&
+            (snapshot.AppliedTractionForceNewtonsByCar.Count != State.Cars.Count ||
+             snapshot.AppliedTractionForceNewtonsByCar.Any(value => !float.IsFinite(value))))
+            throw new ArgumentException("Traction-ramp snapshot must contain one finite force per vehicle.", nameof(snapshot));
+
         // Restore the loop first: its motion and clock validation is atomic.
         // Pneumatic state has already been fully validated and cannot fail here.
         loop.RestoreState(snapshot);
+        Array.Clear(appliedTractionForceByCar);
+        if (snapshot.AppliedTractionForceNewtonsByCar is not null)
+            for (var i = 0; i < appliedTractionForceByCar.Length; i++)
+                appliedTractionForceByCar[i] = snapshot.AppliedTractionForceNewtonsByCar[i];
         if (snapshot.BrakePipeState is null)
             pneumaticBrakes.Reset();
         else
@@ -496,6 +524,7 @@ public sealed class TrainConsistSimulationSession
     public void Reset(TrainConsistMotionState initialState)
     {
         loop.Reset(initialState);
+        Array.Clear(appliedTractionForceByCar);
         pneumaticBrakes.Reset();
     }
 }
