@@ -12,6 +12,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
     private readonly RouteTileStreamingCache<string, TerrainTileStreamAsset> cache;
     private readonly long estimatedBytesPerTile;
     private readonly long maximumResidentBytes;
+    private readonly long maximumEstimatedGpuBytes;
     private readonly int maximumVisibleTiles;
     private readonly double seamHaloMeters;
 
@@ -20,7 +21,8 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         long maximumResidentBytes = 512L * 1024 * 1024,
         int maximumConcurrentLoads = 2,
         long estimatedBytesPerTile = 32L * 1024 * 1024,
-        double seamHaloMeters = RouteViewportTileSelector.TileSizeMeters)
+        double seamHaloMeters = RouteViewportTileSelector.TileSizeMeters,
+        long maximumEstimatedGpuBytes = 384L * 1024 * 1024)
     {
         if (estimatedBytesPerTile < 1)
             throw new ArgumentOutOfRangeException(nameof(estimatedBytesPerTile));
@@ -30,8 +32,11 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(maximumResidentTiles));
         if (maximumResidentBytes < 1)
             throw new ArgumentOutOfRangeException(nameof(maximumResidentBytes));
+        if (maximumEstimatedGpuBytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumEstimatedGpuBytes));
         this.estimatedBytesPerTile = estimatedBytesPerTile;
         this.maximumResidentBytes = maximumResidentBytes;
+        this.maximumEstimatedGpuBytes = maximumEstimatedGpuBytes;
         maximumVisibleTiles = (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile);
         this.seamHaloMeters = seamHaloMeters;
         cache = new RouteTileStreamingCache<string, TerrainTileStreamAsset>(
@@ -94,6 +99,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         var orderedMeshes = new List<LoadedRouteTerrainTileMesh>();
         var failures = new List<RouteTerrainTileIssue>();
         long visibleMeshBytes = 0;
+        long estimatedGpuMeshBytes = 0;
         foreach (var reference in selectedReferences)
         {
             if (!visible.TryGetValue(reference.Path, out var asset))
@@ -105,10 +111,13 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
                 continue;
             }
             var bytes = EstimateResidentBytes(asset.Loaded);
-            if (bytes > maximumResidentBytes - visibleMeshBytes)
+            var gpuBytes = EstimateGpuBytes(asset.Loaded);
+            if (bytes > maximumResidentBytes - visibleMeshBytes ||
+                gpuBytes > maximumEstimatedGpuBytes - estimatedGpuMeshBytes)
                 continue;
             orderedMeshes.Add(asset.Loaded);
             visibleMeshBytes += bytes;
+            estimatedGpuMeshBytes += gpuBytes;
         }
 
         var loadedContent = orderedMeshes.Select(mesh => mesh.Content).ToArray();
@@ -119,7 +128,8 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         foreach (var texture in decodedTextures.Loaded)
         {
             var bytes = texture.Texture.MipLevels.Sum(mip => (long)mip.Length);
-            if (bytes > maximumResidentBytes - visibleMeshBytes - textureBytes)
+            if (bytes > maximumResidentBytes - visibleMeshBytes - textureBytes ||
+                bytes > maximumEstimatedGpuBytes - estimatedGpuMeshBytes - textureBytes)
                 continue;
             visibleTextures.Add(texture);
             textureBytes += bytes;
@@ -132,8 +142,15 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
             textures,
             Array.AsReadOnly(failures.ToArray()),
             checked(visibleMeshBytes + textureBytes),
-            cache.Count);
+            cache.Count,
+            checked(estimatedGpuMeshBytes + textureBytes));
     }
+
+    private static long EstimateGpuBytes(LoadedRouteTerrainTileMesh tile) =>
+        tile.LodMeshes.Aggregate(0L, (total, lod) =>
+            checked(total + lod.Patches.Aggregate(0L, (patchTotal, patch) =>
+                checked(patchTotal + (long)patch.Vertices.Count * 32 +
+                    (long)patch.Indices.Count * sizeof(int)))));
 
     private static long EstimateResidentBytes(LoadedRouteTerrainTileMesh tile)
     {
@@ -165,4 +182,5 @@ public sealed record RouteTerrainViewportSnapshot(
     TerrainTextureAssetLoadResult Textures,
     IReadOnlyList<RouteTerrainTileIssue> Failed,
     long ResidentBytes,
-    int ResidentTileCount);
+    int ResidentTileCount,
+    long EstimatedGpuBytes = 0);
