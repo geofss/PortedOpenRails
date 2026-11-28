@@ -7,7 +7,12 @@ public sealed class TerrainTextureAssetLoader
 {
     public TerrainTextureAssetLoadResult Load(
         IVirtualContentStore store,
-        TerrainTextureAssetDiscovery discovery)
+        TerrainTextureAssetDiscovery discovery) => Load(store, discovery, CancellationToken.None);
+
+    public TerrainTextureAssetLoadResult Load(
+        IVirtualContentStore store,
+        TerrainTextureAssetDiscovery discovery,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(discovery);
@@ -18,6 +23,7 @@ public sealed class TerrainTextureAssetLoader
 
         foreach (var asset in discovery.Found)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 loaded.Add(new LoadedTerrainTextureAsset(asset, reader.Read(store, asset.Path)));
