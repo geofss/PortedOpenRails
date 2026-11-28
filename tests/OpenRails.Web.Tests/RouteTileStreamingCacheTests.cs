@@ -145,4 +145,22 @@ public sealed class RouteTileStreamingCacheTests
         Assert.Equal(0, cache.Count);
         Assert.Equal(0, cache.ResidentBytes);
     }
+
+    [Fact]
+    public void ViewportSelectorRetainsMultipleTerrainZoomAssetsAtTheSameTileCoordinate()
+    {
+        var available = new[]
+        {
+            new TerrainTileReference(0, 0, "TILES/zoom-small.t", "TILES/zoom-small_y.raw", null),
+            new TerrainTileReference(0, 0, "TILES/zoom-large.t", "TILES/zoom-large_y.raw", null)
+        };
+
+        var visible = RouteViewportTileSelector.SelectTerrainTiles(
+            available, cameraX: 0, cameraZ: 0, radiusMeters: 100);
+
+        Assert.Equal(2, visible.Count);
+        Assert.Equal(
+            new[] { "TILES/zoom-small.t", "TILES/zoom-large.t" },
+            visible.Select(request => request.Key.Path).ToArray());
+    }
 }
