@@ -127,6 +127,54 @@ public sealed class SignalInterlockingControllerTests
     }
 
     [Fact]
+    public void ReplacesRouteAtomicallyAndReleasesOnlyOldUnoccupiedCircuits()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.TryReserveRoute("AI-1", new uint[] { 10, 11 },
+            new Dictionary<uint, uint> { [100] = 11 }));
+
+        Assert.True(interlocking.TryReplaceRoute("AI-1", new uint[] { 10, 12, 13 },
+            new Dictionary<uint, uint> { [100] = 12 }));
+
+        var state = interlocking.Snapshot();
+        Assert.Equal(new uint[] { 10, 12, 13 }, state.ReservedCircuits.Keys.Order().ToArray());
+        Assert.Equal((uint)12, state.SelectedJunctionBranches[100]);
+        Assert.Equal("AI-1", state.JunctionLocks[100]);
+    }
+
+    [Fact]
+    public void FailedRouteReplacementPreservesOldReservationAndSwitchLock()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.TryReserveRoute("AI-1", new uint[] { 10, 11 },
+            new Dictionary<uint, uint> { [100] = 11 }));
+        Assert.True(interlocking.TryReserveRoute("AI-2", new uint[] { 13 },
+            new Dictionary<uint, uint>()));
+
+        Assert.False(interlocking.TryReplaceRoute("AI-1", new uint[] { 10, 12, 13 },
+            new Dictionary<uint, uint> { [100] = 12 }));
+
+        var state = interlocking.Snapshot();
+        Assert.Equal(new uint[] { 10, 11 }, state.ReservedCircuits.Keys.Order().ToArray());
+        Assert.Equal((uint)11, state.SelectedJunctionBranches[100]);
+        Assert.Equal("AI-1", state.JunctionLocks[100]);
+    }
+
+    [Fact]
+    public void RouteReplacementCannotDropCircuitStillOccupiedByTrailingVehicle()
+    {
+        var interlocking = Create();
+        Assert.True(interlocking.TryReserveRoute("AI-1", new uint[] { 10, 11, 12 },
+            new Dictionary<uint, uint>()));
+        Assert.True(interlocking.SetOccupiedCircuits("AI-1", new HashSet<uint> { 10, 11 }));
+
+        Assert.False(interlocking.TryReplaceRoute("AI-1", new uint[] { 12, 13 },
+            new Dictionary<uint, uint>()));
+        Assert.Equal("AI-1", interlocking.Snapshot().ReservedCircuits[10]);
+        Assert.Equal("AI-1", interlocking.Snapshot().OccupiedCircuits[11]);
+    }
+
+    [Fact]
     public void RejectsInvalidCircuitTopology()
     {
         Assert.Throws<ArgumentException>(() => new SignalInterlockingController(
