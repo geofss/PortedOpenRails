@@ -11,9 +11,12 @@ public sealed class WorldSceneryTileLoader
     public LoadedWorldSceneryTile Load(
         IVirtualContentStore store,
         string routeRoot,
-        WorldTileReference reference)
+        WorldTileReference reference,
+        long maximumTextureBytes = 128L * 1024 * 1024)
     {
         ArgumentNullException.ThrowIfNull(store);
+        if (maximumTextureBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumTextureBytes));
         var worldTile = new WorldTileContentLoader().Load(store, reference);
         var shapeDiscovery = new WorldShapeAssetLocator().Locate(store, routeRoot, new[] { worldTile });
         var shapeMeshes = new List<TrackShapeAssetMesh>();
@@ -39,10 +42,16 @@ public sealed class WorldSceneryTileLoader
         }
 
         var textureDiscovery = new TrackShapeTextureAssetLocator().Locate(store, routeRoot, shapeMeshes);
-        var textures = new TrackShapeTextureAssetLoader().Load(store, textureDiscovery);
+        var textureLoader = new TrackShapeTextureAssetLoader();
+        var textures = textureLoader.Load(store, textureDiscovery, maximumTextureBytes);
+        var retainedShapeTextureBytes = textures.Loaded.Aggregate(0L, (total, asset) =>
+            checked(total + asset.Texture.MipLevels.Aggregate(0L,
+                (mipTotal, mip) => checked(mipTotal + mip.LongLength))));
+        var remainingTextureBytes = maximumTextureBytes - retainedShapeTextureBytes;
+
         var placements = new WorldObjectPlacementBuilder().Build(worldTile);
         var forestTextureDiscovery = new ForestTextureAssetLocator().Locate(store, routeRoot, placements);
-        var forestTextures = new TrackShapeTextureAssetLoader().Load(store, forestTextureDiscovery);
+        var forestTextures = textureLoader.Load(store, forestTextureDiscovery, remainingTextureBytes);
 
         return new LoadedWorldSceneryTile(
             worldTile,
