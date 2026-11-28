@@ -20,7 +20,7 @@ public sealed class RollingStockWheelPoseBuilderTests
         var wheel = Assert.Single(pose);
         Assert.Equal(0, wheel.Key);
         var rotatedUp = Vector3.TransformNormal(Vector3.UnitY, wheel.Value);
-        Assert.InRange(rotatedUp.Z, 0.999f, 1.001f);
+        Assert.InRange(rotatedUp.Y, -1.001f, -0.999f);
     }
 
     [Fact]

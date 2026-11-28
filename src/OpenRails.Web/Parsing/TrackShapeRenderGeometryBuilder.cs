@@ -31,8 +31,7 @@ public sealed class TrackShapeRenderGeometryBuilder
         float animationFrame = 0,
         Vector3? cameraPosition = null,
         double? elapsedSeconds = null,
-        bool loopAnimation = true,
-        Func<TrackShapePlacement, IReadOnlyDictionary<int, Matrix4x4>?>? matrixOverridesProvider = null)
+        bool loopAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(placements);
         if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
@@ -45,7 +44,6 @@ public sealed class TrackShapeRenderGeometryBuilder
             var mesh = placement.Asset.Mesh;
             var frame = ResolveAnimationFrame(mesh.Animations, animationClipIndex, animationFrame, elapsedSeconds, loopAnimation);
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
-            var matrixOverrides = matrixOverridesProvider?.Invoke(placement);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
             var lods = TrackShapeLodSelector.SelectAll(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
@@ -56,7 +54,7 @@ public sealed class TrackShapeRenderGeometryBuilder
             foreach (var primitive in subObject.Primitives)
             {
                 if (primitive.Indices.Count < 3) continue;
-                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose, matrixOverrides);
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                 var worldTransform = localTransform * placement.WorldTransform;
 
                 if (vertices.Count + subObject.Vertices.Count > maximumVertices ||
@@ -87,7 +85,8 @@ public sealed class TrackShapeRenderGeometryBuilder
         float animationFrame = 0,
         Vector3? cameraPosition = null,
         double? elapsedSeconds = null,
-        bool loopAnimation = true)
+        bool loopAnimation = true,
+        Func<TrackShapePlacement, IReadOnlyDictionary<int, Matrix4x4>?>? matrixOverridesProvider = null)
     {
         ArgumentNullException.ThrowIfNull(placements);
         ArgumentNullException.ThrowIfNull(loadedTextures);
@@ -109,6 +108,7 @@ public sealed class TrackShapeRenderGeometryBuilder
             var mesh = placement.Asset.Mesh;
             var frame = ResolveAnimationFrame(mesh.Animations, animationClipIndex, animationFrame, elapsedSeconds, loopAnimation);
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
+            var matrixOverrides = matrixOverridesProvider?.Invoke(placement);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
             var lods = TrackShapeLodSelector.SelectAll(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
@@ -145,7 +145,7 @@ public sealed class TrackShapeRenderGeometryBuilder
                     batchBuilders.Add(key, batch);
                 }
 
-                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose, matrixOverrides);
                 var worldTransform = localTransform * placement.WorldTransform;
                 var baseIndex = batch.Vertices.Count / 5;
                 var channelCount = subObject.Vertices.Count == 0 ? 0 :
