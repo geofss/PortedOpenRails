@@ -149,7 +149,7 @@ export async function deleteArchive(id) {
     const safeId = validateArchiveId(id);
     const root = await navigator.storage.getDirectory();
     const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
-    for (const suffix of [".zip", ".json"]) {
+    for (const suffix of [".zip", ".json", ".index.json"]) {
         try {
             await directory.removeEntry(`${safeId}${suffix}`);
         } catch (error) {
