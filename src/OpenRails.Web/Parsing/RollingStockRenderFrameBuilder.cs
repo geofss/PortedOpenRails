@@ -35,6 +35,15 @@ public sealed class RollingStockRenderFrameBuilder
 
         var placements = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
             consist, carAssets, meshesByUid, routePath, motionState, maximumSegmentLengthMeters);
+        IReadOnlyDictionary<int, Matrix4x4>? WheelOverrides(TrackShapePlacement placement)
+        {
+            if (placement.VehicleUid is not { } uid) return null;
+            var car = consist.Cars.FirstOrDefault(item => item.Uid == uid);
+            var reference = carAssets.FirstOrDefault(item => item.Uid == uid &&
+                string.Equals(item.ConsistName, consist.Name, StringComparison.OrdinalIgnoreCase));
+            return RollingStockWheelPoseBuilder.Build(placement.Asset.Mesh, reference?.Metadata,
+                car?.IsEngine ?? false, placement.RouteDistanceMeters);
+        }
         var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
             placements.Placements,
             textures,
@@ -42,7 +51,8 @@ public sealed class RollingStockRenderFrameBuilder
             animationClipIndex: animationClipIndex,
             cameraPosition: cameraPosition,
             elapsedSeconds: simulationTimeSeconds,
-            loopAnimation: loopAnimations);
+            loopAnimation: loopAnimations,
+            matrixOverridesProvider: WheelOverrides);
 
         return new RollingStockRenderFrame(placements, geometry, simulationTimeSeconds);
     }

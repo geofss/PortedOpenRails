@@ -31,7 +31,8 @@ public sealed class TrackShapeRenderGeometryBuilder
         float animationFrame = 0,
         Vector3? cameraPosition = null,
         double? elapsedSeconds = null,
-        bool loopAnimation = true)
+        bool loopAnimation = true,
+        Func<TrackShapePlacement, IReadOnlyDictionary<int, Matrix4x4>?>? matrixOverridesProvider = null)
     {
         ArgumentNullException.ThrowIfNull(placements);
         if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
@@ -44,6 +45,7 @@ public sealed class TrackShapeRenderGeometryBuilder
             var mesh = placement.Asset.Mesh;
             var frame = ResolveAnimationFrame(mesh.Animations, animationClipIndex, animationFrame, elapsedSeconds, loopAnimation);
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
+            var matrixOverrides = matrixOverridesProvider?.Invoke(placement);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
             var lods = TrackShapeLodSelector.SelectAll(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
@@ -54,7 +56,7 @@ public sealed class TrackShapeRenderGeometryBuilder
             foreach (var primitive in subObject.Primitives)
             {
                 if (primitive.Indices.Count < 3) continue;
-                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
+                var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose, matrixOverrides);
                 var worldTransform = localTransform * placement.WorldTransform;
 
                 if (vertices.Count + subObject.Vertices.Count > maximumVertices ||
@@ -238,7 +240,8 @@ public sealed class TrackShapeRenderGeometryBuilder
         IReadOnlyList<TrackShapeMatrix> matrices,
         int matrixIndex,
         IReadOnlyList<int> hierarchy,
-        IReadOnlyDictionary<int, Matrix4x4>? animatedPose = null)
+        IReadOnlyDictionary<int, Matrix4x4>? animatedPose = null,
+        IReadOnlyDictionary<int, Matrix4x4>? matrixOverrides = null)
     {
         var transform = Matrix4x4.Identity;
         var node = matrixIndex;
@@ -257,7 +260,9 @@ public sealed class TrackShapeRenderGeometryBuilder
                 throw new InvalidDataException("Track-shape matrix hierarchy contains a cycle.");
 
             var nodeTransform = ToOpenRailsMatrix(matrices[node]);
-            if (animatedPose is not null && animatedPose.TryGetValue(node, out var animationTransform))
+            if (matrixOverrides is not null && matrixOverrides.TryGetValue(node, out var matrixOverride))
+                nodeTransform = matrixOverride;
+            else if (animatedPose is not null && animatedPose.TryGetValue(node, out var animationTransform))
                 nodeTransform *= animationTransform;
             transform *= nodeTransform;
             node = hierarchy[node];

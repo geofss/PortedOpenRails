@@ -27,7 +27,9 @@ public sealed record RollingStockMetadata(
     float? MaxHandBrakeForceN = null,
     float? MaxBrakeShoeForceN = null,
     int? NumberCarBrakeShoes = null,
-    string? BrakeShoeType = null);
+    string? BrakeShoeType = null,
+    float? WheelRadiusM = null,
+    float? DriverWheelRadiusM = null);
 
 /// <summary>Reads the shared Wagon block of upstream .wag/.eng files through virtual content.</summary>
 public sealed class RollingStockMetadataReader
@@ -48,6 +50,8 @@ public sealed class RollingStockMetadataReader
             var lengthM = 40f;
             int? numberAxles = null;
             float? numberWheels = null;
+            float? wheelRadiusM = null;
+            float? driverWheelRadiusM = null;
             string? brakeSystemType = null;
             string? brakeEquipmentType = null;
             float? maxBrakeForceN = null;
@@ -79,6 +83,8 @@ public sealed class RollingStockMetadataReader
                         new STFReader.TokenProcessor("size", () => ReadSize(reader, value => widthM = value, value => heightM = value, value => lengthM = value)),
                         new STFReader.TokenProcessor("ortsnumberaxles", () => numberAxles = reader.ReadIntBlock(null)),
                         new STFReader.TokenProcessor("numwheels", () => numberWheels = reader.ReadFloatBlock(STFReader.UNITS.None, null)),
+                        new STFReader.TokenProcessor("wheelradius", () => wheelRadiusM = reader.ReadFloatBlock(STFReader.UNITS.Distance, null)),
+                        new STFReader.TokenProcessor("engine", () => driverWheelRadiusM = ReadEngineWheelRadius(reader)),
                         new STFReader.TokenProcessor("brakesystemtype", () => brakeSystemType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("brakeequipmenttype", () => brakeEquipmentType = reader.ReadStringBlock(null)),
                         new STFReader.TokenProcessor("maxbrakeforce", () => maxBrakeForceN = reader.ReadFloatBlock(STFReader.UNITS.Force, null)),
@@ -99,8 +105,21 @@ public sealed class RollingStockMetadataReader
                 brakeSystemType, brakeEquipmentType, maxBrakeForceN, virtualPath, shapeFileName,
                 minCouplerStrengthN, davisAForceN, davisBResistance, davisCResistance,
                 Average(couplerStiffnessValues), Average(couplerDampingValues), Average(couplerSlackValues),
-                maxHandBrakeForceN, maxBrakeShoeForceN, numberCarBrakeShoes, brakeShoeType);
+                maxHandBrakeForceN, maxBrakeShoeForceN, numberCarBrakeShoes, brakeShoeType,
+                wheelRadiusM, driverWheelRadiusM);
         }
+    }
+
+    private static float? ReadEngineWheelRadius(STFReader reader)
+    {
+        float? radius = null;
+        reader.MustMatch("(");
+        reader.ParseBlock(new[]
+        {
+            new STFReader.TokenProcessor("wheelradius", () =>
+                radius = reader.ReadFloatBlock(STFReader.UNITS.Distance, null))
+        });
+        return radius;
     }
 
     private static string ReadBrakeShoeType(STFReader reader)
