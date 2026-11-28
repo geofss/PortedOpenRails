@@ -38,7 +38,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         this.estimatedBytesPerTile = estimatedBytesPerTile;
         this.maximumResidentBytes = maximumResidentBytes;
         this.maximumEstimatedGpuBytes = maximumEstimatedGpuBytes;
-        maximumVisibleTiles = (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile);
+        maximumVisibleTiles = Math.Max(1, (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile));
         this.seamHaloMeters = seamHaloMeters;
         cache = new RouteTileStreamingCache<string, TerrainTileStreamAsset>(
             maximumResidentTiles, maximumResidentBytes, maximumConcurrentLoads);
