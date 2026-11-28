@@ -127,7 +127,7 @@
             var discoveries = new TrackShapeTextureAssetDiscovery(
                 textureDiscoveries.SelectMany(discovery => discovery.Found),
                 textureDiscoveries.SelectMany(discovery => discovery.Missing));
-            var textures = new TrackShapeTextureAssetLoader().Load(Store, discoveries);
+            var textures = new TrackShapeTextureAssetLoader().Load(Store, discoveries, maximumDecodedBytes: 256L * 1024 * 1024);
             var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(placements, textures.Loaded);
             var shapePixels = textures.Loaded
                 .Where(texture => texture.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && texture.Texture.MipLevels.Count > 0)
@@ -161,7 +161,7 @@
                 $"{geometry.Batches.Count:N0} total material batch(es) · {geometry.Batches.Sum(batch => batch.Vertices.Count / 5):N0} vertices · " +
                 $"{geometry.Batches.Sum(batch => batch.Indices.Count):N0} indices" +
                 (geometry.WasTruncated ? " · geometry limit reached" : "");
-            status += $" · {textures.Loaded.Count} ACE texture(s) decoded";
+            status += $" · {textures.Loaded.Count} ACE texture(s) retained within the 256 MiB preview budget";
             if (textures.Missing.Count > 0 || textures.Failed.Count > 0)
                 status += $" · {textures.Missing.Count + textures.Failed.Count} texture issue(s)";
             failures.AddRange(textures.Missing.Select(issue => $"{issue.ImageName}: {issue.Reason}"));

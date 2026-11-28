@@ -96,6 +96,40 @@ public sealed class AceTextureReaderTests
     }
 
     [Fact]
+    public void RollingStockTextureLoaderRetainsOnlyTexturesWithinDecodedByteBudget()
+    {
+        const string firstPath = "TRAINS/TRAINSET/Test/first.ace";
+        const string secondPath = "TRAINS/TRAINSET/Test/second.ace";
+        var discovery = new TrackShapeTextureAssetDiscovery(
+            new[]
+            {
+                new TrackShapeTextureAssetReference(1, "first.ace", null, firstPath),
+                new TrackShapeTextureAssetReference(2, "second.ace", null, secondPath)
+            },
+            Array.Empty<TrackShapeTextureAssetIssue>());
+        var ace = CreateAceFile(CreateStructuredPayload(), compressed: false);
+        using var store = CreateStore((firstPath, ace), (secondPath, ace));
+
+        var result = new TrackShapeTextureAssetLoader().Load(store, discovery, maximumDecodedBytes: 8);
+
+        Assert.Equal(firstPath, Assert.Single(result.Loaded).Reference.Path);
+        var skipped = Assert.Single(result.Failed);
+        Assert.Equal(secondPath, skipped.Path);
+        Assert.Contains("remaining rolling-stock texture budget", skipped.Reason);
+    }
+
+    [Fact]
+    public void RollingStockTextureLoaderRejectsNegativeDecodedByteBudget()
+    {
+        var discovery = new TrackShapeTextureAssetDiscovery(
+            Array.Empty<TrackShapeTextureAssetReference>(), Array.Empty<TrackShapeTextureAssetIssue>());
+        using var store = CreateStore();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrackShapeTextureAssetLoader().Load(store, discovery, maximumDecodedBytes: -1));
+    }
+
+    [Fact]
     public void LoadsShapeReferencedAceTexturesAndReportsUnsupportedDds()
     {
         const string acePath = "ROUTES/Test/TEXTURES/rail.ace";
