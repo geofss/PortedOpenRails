@@ -48,6 +48,44 @@ public sealed class AiTimetableDispatcherTests
     }
 
     [Fact]
+    public void TracksPendingDispatchedCompletedAndCancelledServiceLifecycle()
+    {
+        var interlocking = CreateInterlocking();
+        var session = new AiServiceInterlockingSession("AI-LIFECYCLE", interlocking);
+        var timetable = new AiTimetableDispatcher();
+        timetable.AddService("Departing", 0, session, new uint[] { 10, 11 },
+            new Dictionary<uint, uint> { [100] = 11 });
+        timetable.AddService("Cancelled", 100, new AiServiceInterlockingSession("AI-CANCEL", interlocking),
+            new uint[] { 12 }, new Dictionary<uint, uint>());
+
+        Assert.Equal(AiTimetableServiceStatus.Pending, timetable.GetServiceStatus("Departing"));
+        Assert.True(timetable.TryCancelService("Cancelled"));
+        Assert.False(timetable.TryCancelService("Departing"));
+        Assert.Equal(new[] { "Departing" }, timetable.Advance(0));
+        Assert.Equal(AiTimetableServiceStatus.Dispatched, timetable.GetServiceStatus("Departing"));
+
+        Assert.True(session.TryComplete());
+        Assert.Empty(timetable.Advance(0));
+        Assert.Equal(AiTimetableServiceStatus.Completed, timetable.GetServiceStatus("Departing"));
+        Assert.Equal(AiTimetableServiceStatus.Cancelled, timetable.GetServiceStatus("Cancelled"));
+    }
+
+    [Fact]
+    public void DispatchesSameTimeServicesInStableIdentityOrder()
+    {
+        var interlocking = CreateInterlocking();
+        var timetable = new AiTimetableDispatcher();
+        timetable.AddService("Z-Service", 0,
+            new AiServiceInterlockingSession("AI-Z", interlocking), new uint[] { 10 },
+            new Dictionary<uint, uint>());
+        timetable.AddService("A-Service", 0,
+            new AiServiceInterlockingSession("AI-A", interlocking), new uint[] { 11 },
+            new Dictionary<uint, uint>());
+
+        Assert.Equal(new[] { "A-Service", "Z-Service" }, timetable.Advance(0));
+    }
+
+    [Fact]
     public void RejectsNativeTimetableServiceWithInvalidStartTime()
     {
         var timetable = new AiTimetableDispatcher();
