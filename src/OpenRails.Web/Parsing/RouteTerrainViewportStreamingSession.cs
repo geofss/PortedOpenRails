@@ -15,6 +15,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
     private readonly long maximumEstimatedGpuBytes;
     private readonly int maximumVisibleTiles;
     private readonly double seamHaloMeters;
+    private long estimatedGpuBytes;
 
     public RouteTerrainViewportStreamingSession(
         int maximumResidentTiles = 64,
@@ -45,6 +46,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
 
     public long ResidentBytes => cache.ResidentBytes;
     public int ResidentTileCount => cache.Count;
+    public long EstimatedGpuBytes => Interlocked.Read(ref estimatedGpuBytes);
 
     public async Task<RouteTerrainViewportSnapshot> UpdateCameraAsync(
         IVirtualContentStore store,
@@ -136,6 +138,8 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         }
         var textures = new TerrainTextureAssetLoadResult(
             visibleTextures, decodedTextures.Missing, decodedTextures.Failed);
+        var currentGpuBytes = checked(estimatedGpuMeshBytes + textureBytes);
+        Interlocked.Exchange(ref estimatedGpuBytes, currentGpuBytes);
 
         return new RouteTerrainViewportSnapshot(
             Array.AsReadOnly(orderedMeshes.ToArray()),
@@ -143,7 +147,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
             Array.AsReadOnly(failures.ToArray()),
             checked(visibleMeshBytes + textureBytes),
             cache.Count,
-            checked(estimatedGpuMeshBytes + textureBytes));
+            currentGpuBytes);
     }
 
     private static long EstimateGpuBytes(LoadedRouteTerrainTileMesh tile) =>
@@ -172,7 +176,11 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         LoadedRouteTerrainTileMesh? Loaded,
         RouteTerrainTileIssue? Failure);
 
-    public ValueTask ClearAsync() => cache.ClearAsync();
+    public async ValueTask ClearAsync()
+    {
+        Interlocked.Exchange(ref estimatedGpuBytes, 0);
+        await cache.ClearAsync().ConfigureAwait(false);
+    }
 
     public ValueTask DisposeAsync() => cache.DisposeAsync();
 }
