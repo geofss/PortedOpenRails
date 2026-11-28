@@ -46,8 +46,8 @@
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
-        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @ActiveTerrainMeshes.Count</dd>
-        <dt>Terrain textures loaded / failed</dt><dd>@ActiveTerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
+        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @ActiveTerrainMeshes.Count (failed @((terrainViewport?.Failed.Count) ?? Route.TerrainMeshes.Failed.Count))</dd>
+        <dt>Terrain textures loaded / failed</dt><dd>@ActiveTerrainTextures.Loaded.Count / @ActiveTerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
         <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + ActiveWorldScenery.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
