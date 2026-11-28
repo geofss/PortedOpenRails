@@ -21,7 +21,7 @@ Remaining:
 - Parse TDB `TrItemTable`: signals, platforms, sidings, speed posts, sound regions, and their native position/direction metadata.
 - Add road database (`.rdb`) support and route object families not yet covered.
 - Validate every relevant SCE terrain/WORLD tile, missing asset diagnostics, texture variants, route boundaries, and malformed-neighbor recovery.
-- Complete terrain/track/scenery LOD, material/shader, seasonal texture, forest, and visual placement parity.
+- Complete terrain/track/scenery LOD, material/shader, seasonal texture, forest, and visual placement parity. Terrain viewport streaming now exposes an independent estimated GPU working-set budget in addition to decoded/cache CPU bytes; it remains an estimate (not browser GPU telemetry), and texture decode peak memory is still not fully bounded before post-decode filtering.
 - Run manual desktop browser preview, real consist placement, and end-to-end route driving. CI RouteLoader acceptance is not a playable-session test.
 
 ## 3. Signals, track circuits, switches, interlocking
@@ -81,7 +81,7 @@ The upstream port audit explicitly states that migration is not complete. The cu
 - GitHub Pages deployment is not established by a successful PR preview artifact. Production deployment remains a separate acceptance gate.
 - Required final acceptance: browser ZIP import, full real-route diagnostics, visual route review, real consist placement, playable single-player activity/timetable, original UI workflow, and sustained desktop browser performance.
 
-## Primary evidence
+## Current bulk-port checkpoint\n\n- Signal interlocking wait-for cycle detection: implemented in this checkpoint; cycle and chain regression tests added. Native deadlock recovery integration remains open.\n- Terrain viewport working set: added independent estimated GPU-byte cap and usage reporting. CPU cache budget remains separate; peak texture decoding and actual GPU resource telemetry are not yet bounded/verified.\n- AI timetable dispatcher: pending departures retry when reservations free, stable same-time order, service lifecycle tracking, route conflict/following controls exist; full native dispatcher parity and multi-service route acceptance remain open.\n- Latest checkpoint before this bulk-port wave: route regressions and Demo Model 1 acceptance passed, controller regressions passed, and WebAssembly build/publish passed on `ccbe2f7`. The new GPU budget and deadlock-cycle changes are pending CI.\n\n## Primary evidence
 
 - [Upstream port audit](UPSTREAM_PORT_AUDIT.md)
 - [Upstream source provenance](UPSTREAM_SOURCE_PROVENANCE.md)
