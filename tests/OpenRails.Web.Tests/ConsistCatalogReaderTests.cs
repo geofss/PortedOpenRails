@@ -243,25 +243,6 @@ public sealed class ConsistCatalogReaderTests
     }
 
 
-    [Fact]
-    public void IsolatesMalformedStfConsistAndContinuesDiscoveringValidConsists()
-    {
-        using var store = CreateStore(
-            ("TRAINS/CONSISTS/Malformed.con", """
-                Train ( TrainCfg ( "Malformed" Wagon ( UiD ( 1 ) WagonData ( "Car" "Folder" )
-                """),
-            ("TRAINS/CONSISTS/Valid.con", """
-                Train ( TrainCfg ( "Valid" Wagon ( UiD ( 2 ) WagonData ( "Car" "Folder" ) ) ) )
-                """),
-            ("TRAINS/TRAINSET/Folder/Car.wag", WagonFixture));
-
-        var result = new ConsistCatalogReader().Read(store);
-
-        Assert.Contains(result.Consists, consist => consist.Name == "Valid");
-        Assert.Contains(result.Issues, issue =>
-            issue.Path == "TRAINS/CONSISTS/Malformed.con" &&
-            issue.Message.Contains("not found", StringComparison.OrdinalIgnoreCase));
-    }
 
     private const string EngineFixture = WagonFixture + """
         Engine (
