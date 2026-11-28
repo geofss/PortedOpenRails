@@ -563,6 +563,77 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(RouteSignalAspect.Clear1, most.Aspect);
     }
 
+
+    [Fact]
+    public void ResolvesNativeDistanceMultiSignalAspectAggregation()
+    {
+        SignalTypeDefinition Definition(string script, string function, int clearAhead) =>
+            new("signal", script, function, "", "", clearAhead,
+                new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+                new Dictionary<string, SignalDrawStateDefinition>(),
+                new[]
+                {
+                    new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                    new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false),
+                    new SignalAspectDefinition("CLEAR_2", "", 12, false, false, false)
+                });
+
+        var currentMost = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("distance-most", "NORMAL", 1));
+        var currentLeast = new RouteSignalHead(23, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("distance-least", "NORMAL", 1));
+        var firstDistanceMost = new RouteSignalHead(32, "distance", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", "DISTANCE", 1));
+        var firstDistanceLeast = new RouteSignalHead(32, "distance", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", "DISTANCE", 2));
+        var secondDistance = new RouteSignalHead(33, "distance", "", 0, 0, 4, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", "DISTANCE", 2));
+        var endNormal = new RouteSignalHead(40, "main", "", 0, 0, 5, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", "NORMAL", 1));
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition>
+            {
+                ["main"] = Definition("", "NORMAL", 1),
+                ["distance"] = Definition("", "DISTANCE", 1)
+            },
+            new Dictionary<string, string>
+            {
+                ["NORMAL"] = "NORMAL",
+                ["DISTANCE"] = "DISTANCE"
+            },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentMost, currentLeast }),
+                new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { firstDistanceMost, firstDistanceLeast }),
+                new SignalTrackCircuit(4, 100, new uint[] { 5 }, new[] { secondDistance }),
+                new SignalTrackCircuit(5, 100, new uint[] { 6 }, new[] { endNormal }),
+                new SignalTrackCircuit(6, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        SignalScriptDefinition Script(string name, string expression) =>
+            new(name, new[] { "EXTERN FLOAT STATE;", $"STATE = {expression};" },
+                Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition>
+            {
+                ["distance-most"] = Script("distance-most", "DIST_MULTI_SIG_MR(DISTANCE, NORMAL)"),
+                ["distance-least"] = Script("distance-least", "DIST_MULTI_SIG_MR_OF_LR(DISTANCE, NORMAL)")
+            },
+            Array.Empty<string>());
+
+        var indications = network.Evaluate(new HashSet<uint>(), scripts: library);
+        var most = Assert.Single(indications.Where(item => item.Signal.TrackItemIndex == 21));
+        var least = Assert.Single(indications.Where(item => item.Signal.TrackItemIndex == 23));
+
+        Assert.Equal(RouteSignalAspect.Clear1, most.Aspect);
+        Assert.Equal(RouteSignalAspect.Clear2, least.Aspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
