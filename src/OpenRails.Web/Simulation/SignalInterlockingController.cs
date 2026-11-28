@@ -113,6 +113,65 @@ public sealed class SignalInterlockingController
         }
     }
 
+    /// <summary>
+    /// Atomically replaces a train's reserved route. Existing reservations are
+    /// retained if any new circuit or junction conflicts, and a replacement may
+    /// never discard a circuit still occupied by any vehicle in the consist.
+    /// </summary>
+    public bool TryReplaceRoute(
+        string trainId,
+        IReadOnlyList<uint> routeCircuitIds,
+        IReadOnlyDictionary<uint, uint> requiredJunctionBranches)
+    {
+        ValidateTrainId(trainId);
+        ArgumentNullException.ThrowIfNull(routeCircuitIds);
+        ArgumentNullException.ThrowIfNull(requiredJunctionBranches);
+        if (routeCircuitIds.Count == 0 || routeCircuitIds.Any(id => !circuits.Contains(id)) ||
+            routeCircuitIds.Distinct().Count() != routeCircuitIds.Count)
+            return false;
+
+        lock (gate)
+        {
+            var replacement = routeCircuitIds.ToHashSet();
+            if (occupancy.Any(pair => pair.Value == trainId && !replacement.Contains(pair.Key)))
+                return false;
+
+            foreach (var circuit in replacement)
+            {
+                if (occupancy.TryGetValue(circuit, out var occupant) && occupant != trainId)
+                    return false;
+                if (reservations.TryGetValue(circuit, out var owner) && owner != trainId)
+                    return false;
+            }
+
+            foreach (var (junction, branch) in requiredJunctionBranches)
+            {
+                if (!junctionBranches.TryGetValue(junction, out var options) || !options.Contains(branch) ||
+                    !replacement.Contains(branch))
+                    return false;
+                if (junctionLocks.TryGetValue(junction, out var lockOwner) && lockOwner != trainId)
+                    return false;
+            }
+
+            foreach (var circuit in reservations.Where(pair => pair.Value == trainId && !replacement.Contains(pair.Key))
+                .Select(pair => pair.Key).ToArray())
+                reservations.Remove(circuit);
+            foreach (var junction in junctionLocks.Where(pair => pair.Value == trainId &&
+                !requiredJunctionBranches.ContainsKey(pair.Key)).Select(pair => pair.Key).ToArray())
+                junctionLocks.Remove(junction);
+
+            foreach (var circuit in replacement)
+                reservations[circuit] = trainId;
+            foreach (var (junction, branch) in requiredJunctionBranches)
+            {
+                junctionLocks[junction] = trainId;
+                selectedBranches[junction] = branch;
+            }
+            waitsFor.Remove(trainId);
+            return true;
+        }
+    }
+
     public bool SetOccupied(string trainId, uint circuitId, bool isOccupied)
     {
         ValidateTrainId(trainId);
