@@ -157,7 +157,7 @@ public sealed class DemoModel1AcceptanceTests
             .Sum(car =>
             {
                 var length = consistCatalog.CarAssets.First(asset =>
-                    asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM ?? 0f;
+                    asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM;
                 return (double)(float.IsFinite(length) && length > 0 ? length : 10f);
             });
         var drivingPath = route.TrackNetwork.VectorPaths
