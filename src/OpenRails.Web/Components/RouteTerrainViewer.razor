@@ -66,7 +66,7 @@
         <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
         <dt>Forest objects / generated tree billboards</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
         <dt>Forest textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
-        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
+        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @ActiveTerrainMeshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
@@ -595,7 +595,7 @@
         // around the current camera rather than on whichever tiles happened to
         // appear first in the archive's directory order.
         var candidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch, float DistanceSquared)>();
-        foreach (var loaded in Route.TerrainMeshes.Meshes)
+        foreach (var loaded in ActiveTerrainMeshes)
         {
             var reference = loaded.Content.Reference;
             var tileCenter = new Vector3(reference.TileX * 2048f + 1024f,
@@ -622,12 +622,12 @@
                 continue;
             var tileXOffset = loaded.Content.Reference.TileX * 2048f;
             var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
-            var primaryAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
+            var primaryAsset = patch.Material is null ? null : ActiveTerrainTextures.Loaded.FirstOrDefault(asset =>
                 asset.Reference.SeasonFolder is null &&
                 asset.Reference.TextureSlotIndex == 0 &&
                 string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(asset.Reference.FileName, patch.Material.PrimaryTextureFileName, StringComparison.OrdinalIgnoreCase));
-            var overlayAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
+            var overlayAsset = patch.Material is null ? null : ActiveTerrainTextures.Loaded.FirstOrDefault(asset =>
                 asset.Reference.SeasonFolder is null &&
                 asset.Reference.TextureSlotIndex == 1 &&
                 string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
