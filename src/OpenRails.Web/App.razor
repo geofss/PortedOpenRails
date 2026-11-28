@@ -1763,7 +1763,7 @@
 
     private async Task MovePackageAsync(PackageLayer layer, int offset)
     {
-        if (isLoading)
+        if (isLoading || isBuildingRoute)
             return;
 
         var index = layers.IndexOf(layer);
@@ -1771,41 +1771,61 @@
         if (index < 0 || targetIndex < 0 || targetIndex >= layers.Count)
             return;
 
-        layers.RemoveAt(index);
-        layers.Insert(targetIndex, layer);
-        RebuildComposite();
+        isLoading = true;
+        try
+        {
+            layers.RemoveAt(index);
+            layers.Insert(targetIndex, layer);
+            RebuildComposite();
 
-        if (selectedRoute is not null)
-            await BuildRouteNetworkAsync(selectedRoute);
+            if (selectedRoute is not null)
+                await BuildRouteNetworkAsync(selectedRoute);
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task RemovePackageAsync(PackageLayer layer)
     {
-        if (isLoading)
+        if (isLoading || isBuildingRoute)
             return;
 
-        var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
-        layers.Remove(layer);
-        foreach (var stagedId in loadedStagedPackageNames.Where(pair =>
-            pair.Value.Equals(layer.Name, StringComparison.OrdinalIgnoreCase)).Select(pair => pair.Key).ToArray())
-            loadedStagedPackageNames.Remove(stagedId);
-        DisposePackageStore(layer.Store);
+        var index = layers.IndexOf(layer);
+        if (index < 0)
+            return;
 
-        routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
-        if (removedSelectedRoute)
+        isLoading = true;
+        try
         {
-            selectedRoute = null;
-            loadedRoute = null;
-            traversedRoute = null;
-            selectedTrackNodeIndex = 0;
-            reverseRouteStart = false;
-            routeBuildMessage = null;
+            var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
+            layers.RemoveAt(index);
+            foreach (var stagedId in loadedStagedPackageNames.Where(pair =>
+                pair.Value.Equals(layer.Name, StringComparison.OrdinalIgnoreCase)).Select(pair => pair.Key).ToArray())
+                loadedStagedPackageNames.Remove(stagedId);
+            DisposePackageStore(layer.Store);
+
+            routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
+            if (removedSelectedRoute)
+            {
+                selectedRoute = null;
+                loadedRoute = null;
+                traversedRoute = null;
+                selectedTrackNodeIndex = 0;
+                reverseRouteStart = false;
+                routeBuildMessage = null;
+            }
+
+            RebuildComposite();
+
+            if (selectedRoute is not null)
+                await BuildRouteNetworkAsync(selectedRoute);
         }
-
-        RebuildComposite();
-
-        if (selectedRoute is not null)
-            await BuildRouteNetworkAsync(selectedRoute);
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void RebuildComposite()
