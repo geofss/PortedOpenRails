@@ -42,7 +42,7 @@ public sealed class RollingStockRenderFrameBuilder
             var reference = carAssets.FirstOrDefault(item => item.Uid == uid &&
                 string.Equals(item.ConsistName, consist.Name, StringComparison.OrdinalIgnoreCase));
             return RollingStockWheelPoseBuilder.Build(placement.Asset.Mesh, reference?.Metadata,
-                car?.IsEngine ?? false, placement.RouteDistanceMeters);
+                car?.IsEngine ?? false, placement.RouteDistanceMeters, placement.RuntimeMatrixOverrides);
         }
         var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
             placements.Placements,

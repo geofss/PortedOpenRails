@@ -700,7 +700,7 @@
         var reference = CarAssets.FirstOrDefault(item => item.Uid == uid &&
             string.Equals(item.ConsistName, Consist.Name, StringComparison.OrdinalIgnoreCase));
         return RollingStockWheelPoseBuilder.Build(placement.Asset.Mesh, reference?.Metadata,
-            car?.IsEngine ?? false, placement.RouteDistanceMeters);
+            car?.IsEngine ?? false, placement.RouteDistanceMeters, placement.RuntimeMatrixOverrides);
     }
 
     private RollingStockTrackPlacementResult? BuildRollingStockPlacement()

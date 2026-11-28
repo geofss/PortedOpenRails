@@ -90,7 +90,8 @@ public sealed class RollingStockTrackPlacementBuilder
                 asset,
                 rotation * translation,
                 car.Uid,
-                centerDistance));
+                centerDistance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, centerDistance, heading, car.Flipped)));
         }
 
         return new RollingStockTrackPlacementResult(
@@ -173,7 +174,8 @@ public sealed class RollingStockTrackPlacementBuilder
                 asset,
                 rotation * translation,
                 car.Uid,
-                distance));
+                distance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);
@@ -359,7 +361,8 @@ public sealed class RollingStockTrackPlacementBuilder
                 asset,
                 rotation * translation,
                 car.Uid,
-                distance));
+                distance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);

@@ -15,7 +15,8 @@ public static class RollingStockWheelPoseBuilder
         TrackShapeMesh mesh,
         RollingStockMetadata? metadata,
         bool isEngine,
-        double routeDistanceMeters)
+        double routeDistanceMeters,
+        IReadOnlyDictionary<int, Matrix4x4>? baseOverrides = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         if (!double.IsFinite(routeDistanceMeters) || routeDistanceMeters < 0)
@@ -32,7 +33,9 @@ public static class RollingStockWheelPoseBuilder
             return new Dictionary<int, Matrix4x4>();
 
         var rotation = Matrix4x4.CreateRotationX((float)(-routeDistanceMeters / radius));
-        var overrides = new Dictionary<int, Matrix4x4>();
+        var overrides = baseOverrides is null
+            ? new Dictionary<int, Matrix4x4>()
+            : new Dictionary<int, Matrix4x4>(baseOverrides);
         var count = Math.Min(mesh.Matrices.Count, hierarchy.Count);
         for (var index = 0; index < count; index++)
         {
