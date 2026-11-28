@@ -4,8 +4,7 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest implementation checkpoint: a467d8c765b19414d4c24977fa716fa7933c1de3
-Latest fully verified implementation checkpoint: 3c40aae6b87805b5f3541a8bb1e86772db6ffa23
+Latest verified implementation checkpoint: a467d8c765b19414d4c24977fa716fa7933c1de3
 
 ## Project rules
 
@@ -91,18 +90,19 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 
 ## Verification policy and latest evidence
 
-- Latest implementation checkpoint: `a467d8c765b19414d4c24977fa716fa7933c1de3` (adds trailing-edge camera callback flushing; CI is running).
-- Latest fully verified implementation checkpoint: `3c40aae6b87805b5f3541a8bb1e86772db6ffa23`.
-- WebAssembly build/publish and downloadable branch preview: run 46089782629 — success.
+- Latest verified implementation checkpoint: `a467d8c765b19414d4c24977fa716fa7933c1de3`.
+- WebAssembly build/publish and downloadable branch preview: run 46089953902 — success.
   - Controller regression suite: 711 passed, 0 failed.
   - JavaScript renderer syntax validation: passed.
   - WebAssembly app publish: passed.
   - Branch preview artifact upload: passed.
-- Route pipeline: run 46089787348 — success.
+- Route pipeline: run 46089953875 — success.
   - Route, terrain, scenery, LOD and rolling-stock regression suite: 147 passed, 0 failed.
   - Authorized Demo Model 1 / Scottish Capital Express load-and-validation acceptance: passed.
-- The verified checkpoint includes camera-driven terrain/track/WORLD LOD, native bounding-sphere and multi-control LOD selection, live simulation-time rolling-stock rendering, wheel rotation and route-curvature-driven bogie yaw.
-- The trailing-edge camera callback commit `a467d8c` is a small performance/correctness follow-up so the final camera position is not lost when input stops inside the throttle interval. Its own CI result must be checked before treating it as verified.
+- The verified checkpoint includes camera-driven terrain/track/WORLD LOD, native bounding-sphere and multi-control LOD selection, live simulation-time rolling-stock rendering, wheel rotation, route-curvature-driven bogie yaw, and a trailing-edge camera callback so the final camera position is not lost inside the throttle interval.
+- Test totals at this checkpoint: 711 controller/build regressions and 147 route/terrain/scenery/LOD/rolling-stock regressions, all passing.
+- Authorized Demo Model 1 / Scottish Capital Express load-and-validation acceptance passed.
+- Preview artifacts: [desktop app preview](https://github.com/geofss/PortedOpenRails/actions/runs/46089953902/artifacts/15240379262) and [Demo Model 1 desktop preview bundle](https://github.com/geofss/PortedOpenRails/actions/runs/46089953902/artifacts/15240408928).
 - Automated route acceptance proves that the authorized route loads and validates. It does not establish browser visual parity at every LOD, stable performance on the full route, full wheel-slip/suspension/coupler behavior, native sound, or a complete driving session.
 - The current environment can inspect and update GitHub source but cannot execute dotnet or browser end-to-end tests directly.
 - Do not claim any subsystem complete until the authorized Demo Model 1 route and real rolling stock run through the browser runtime with visible/operational acceptance evidence.
