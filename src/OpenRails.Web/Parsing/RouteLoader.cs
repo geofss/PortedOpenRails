@@ -38,7 +38,7 @@ public sealed class RouteLoader
         var trackItemPlacements = new RouteTrackItemPlacementBuilder().Build(network);
         var terrainTiles = new RouteTerrainTileLocator().Locate(store, assets.RouteRoot, network);
         var trackShapeAssets = new TrackShapeAssetLocator().Locate(store, assets.RouteRoot, network);
-        var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
+        var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets, options.MaximumTrackShapeTextureBytes);
         var trackShapePlacements = new TrackShapePlacementBuilder().Build(network, trackShapeMeshes.LoadedMeshes);
         var worldTiles = new RouteWorldTileLocator().Locate(store, assets.RouteRoot, network);
         var terrainMeshes = options.LoadTerrainMeshes
@@ -146,10 +146,16 @@ public sealed class RouteWorldSceneryLoadResult
 /// <summary>Loads original track-shape meshes and their referenced route textures.</summary>
 public sealed class RouteTrackShapeMeshLoader
 {
-    public RouteTrackShapeMeshLoadResult Load(IVirtualContentStore store, string routeRoot, TrackShapeAssetDiscovery discovery)
+    public RouteTrackShapeMeshLoadResult Load(
+        IVirtualContentStore store,
+        string routeRoot,
+        TrackShapeAssetDiscovery discovery,
+        long maximumTextureBytes = long.MaxValue)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(discovery);
+        if (maximumTextureBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumTextureBytes));
         var meshes = new List<TrackShapeAssetMesh>();
         var failed = new List<RouteTrackShapeMeshIssue>();
         foreach (var reference in discovery.Found)
@@ -158,7 +164,7 @@ public sealed class RouteTrackShapeMeshLoader
             catch (Exception exception) { failed.Add(new RouteTrackShapeMeshIssue(reference.ShapeIndex, reference.Path, exception.Message)); }
         }
         var textureDiscovery = new TrackShapeTextureAssetLocator().Locate(store, routeRoot, meshes);
-        var textures = new TrackShapeTextureAssetLoader().Load(store, textureDiscovery);
+        var textures = new TrackShapeTextureAssetLoader().Load(store, textureDiscovery, maximumTextureBytes);
         return new RouteTrackShapeMeshLoadResult(meshes, discovery.Missing, failed, textureDiscovery, textures);
     }
 }
@@ -185,6 +191,9 @@ public sealed record RouteLoadOptions(
     bool LoadTerrainTextures = true,
     bool LoadWorldScenery = true)
 {
+    /// <summary>Maximum decoded route track-shape texture bytes retained by the route load.</summary>
+    public long MaximumTrackShapeTextureBytes { get; init; } = 512L * 1024 * 1024;
+
     public static RouteLoadOptions Eager { get; } = new();
     public static RouteLoadOptions ViewportStreaming { get; } = new(
         LoadTerrainMeshes: false,
