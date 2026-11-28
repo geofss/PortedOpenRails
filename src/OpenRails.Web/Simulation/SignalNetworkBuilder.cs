@@ -397,6 +397,13 @@ public sealed class SignalNetwork
                     ResolveThisSignalAspect(next, arguments[0], true, baselineBySignal);
             }
 
+            if ((name.Equals("DIST_MULTI_SIG_MR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("DIST_MULTI_SIG_MR_OF_LR", StringComparison.OrdinalIgnoreCase)) &&
+                arguments.Count == 2)
+                return ResolveDistanceMultiSignalAspect(signal, arguments[0], arguments[1],
+                    name.EndsWith("_OF_LR", StringComparison.OrdinalIgnoreCase),
+                    selectedBranches, baselineBySignal);
+
             return null;
         }
 
@@ -493,6 +500,82 @@ public sealed class SignalNetwork
                 .FirstOrDefault();
             if (candidate is not null)
                 return candidate;
+            previous = current;
+            current = next.Value;
+        }
+        return null;
+    }
+
+    private int ResolveDistanceMultiSignalAspect(
+        RouteSignalHead currentSignal,
+        int firstFunctionId,
+        int endFunctionId,
+        bool leastRestrictiveHead,
+        IReadOnlyDictionary<uint, uint>? selectedBranches,
+        IReadOnlyDictionary<RouteSignalHead, (RouteSignalIndication Baseline, int BlockState)> baselineBySignal)
+    {
+        var current = currentSignal;
+        var foundFirst = false;
+        var foundState = 7; // Native CLEAR_2 is the least restrictive starting bound.
+        for (var visited = 0; visited < blocks.Count * 2; visited++)
+        {
+            var next = FindNextSignalOfEither(current, firstFunctionId, endFunctionId, selectedBranches);
+            if (next is null)
+                return 0; // Native function returns STOP if the end signal is not found.
+            if (next.Value.FunctionId == endFunctionId)
+                return foundFirst ? foundState : 0;
+            if (next.Value.FunctionId == firstFunctionId)
+            {
+                var aspect = ResolveThisSignalAspect(next.Value.Signal, firstFunctionId,
+                    leastRestrictiveHead, baselineBySignal);
+                if (aspect >= 0)
+                {
+                    foundFirst = true;
+                    foundState = Math.Min(foundState, aspect);
+                }
+                current = next.Value.Signal;
+            }
+        }
+        return 0;
+    }
+
+    private (RouteSignalHead Signal, int FunctionId)? FindNextSignalOfEither(
+        RouteSignalHead currentSignal,
+        int firstFunctionId,
+        int endFunctionId,
+        IReadOnlyDictionary<uint, uint>? selectedBranches)
+    {
+        if (!blocks.TryGetValue(currentSignal.TrackNodeIndex, out var currentBlock))
+            return null;
+
+        var directionSign = currentSignal.Direction == 0 ? 1d : -1d;
+        var sameBlock = currentBlock.Signals
+            .Where(candidate => candidate.TrackItemIndex != currentSignal.TrackItemIndex &&
+                candidate.Direction == currentSignal.Direction &&
+                (GetSignalFunctionId(candidate) is int functionId) &&
+                (functionId == firstFunctionId || functionId == endFunctionId) &&
+                (candidate.DistanceMeters - currentSignal.DistanceMeters) * directionSign > 0)
+            .OrderBy(candidate => (candidate.DistanceMeters - currentSignal.DistanceMeters) * directionSign)
+            .FirstOrDefault();
+        if (sameBlock is not null)
+            return (sameBlock, GetSignalFunctionId(sameBlock)!.Value);
+
+        var current = currentSignal.TrackNodeIndex;
+        uint? previous = null;
+        for (var visited = 0; visited < blocks.Count; visited++)
+        {
+            var next = ResolveNextBlock(current, visited == 0 ? currentSignal : null,
+                selectedBranches, previous);
+            if (next is null || !blocks.TryGetValue(next.Value, out var nextBlock))
+                return null;
+            var candidate = nextBlock.Signals
+                .Where(item => item.Direction == currentSignal.Direction &&
+                    (GetSignalFunctionId(item) is int functionId) &&
+                    (functionId == firstFunctionId || functionId == endFunctionId))
+                .OrderBy(item => currentSignal.Direction == 0 ? item.DistanceMeters : -item.DistanceMeters)
+                .FirstOrDefault();
+            if (candidate is not null)
+                return (candidate, GetSignalFunctionId(candidate)!.Value);
             previous = current;
             current = next.Value;
         }
