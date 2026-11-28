@@ -538,7 +538,8 @@ public sealed class SignalNetworkBuilderTests
                 new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentSignal }),
                 new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { firstNextSignal }),
                 new SignalTrackCircuit(4, 100, new uint[] { 5 }, new[] { secondNextLeast, secondNextMost }),
-                new SignalTrackCircuit(5, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+                new SignalTrackCircuit(5, 100, new uint[] { 6 }, Array.Empty<RouteSignalHead>()),
+                new SignalTrackCircuit(6, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
             },
             new Dictionary<uint, IReadOnlyList<uint>>(),
             Array.Empty<string>(),
