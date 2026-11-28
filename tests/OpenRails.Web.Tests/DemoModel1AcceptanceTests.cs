@@ -1,5 +1,6 @@
 using OpenRails.Web.Content;
 using OpenRails.Web.Parsing;
+using OpenRails.Web.Simulation;
 using Xunit;
 
 namespace OpenRails.Web.Tests;
