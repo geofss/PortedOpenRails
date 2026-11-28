@@ -77,6 +77,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainTileLocator.cs" Link="Parsing/RouteTerrainTileLocator.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/Upstream/TerrainFile.cs" Link="Parsing/Upstream/TerrainFile.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RouteTerrainMeshLoader.cs" Link="Parsing/RouteTerrainMeshLoader.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RouteTileStreamingCache.cs" Link="Parsing/RouteTileStreamingCache.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/StfReaderAccess.cs" Link="Parsing/StfReaderAccess.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/TrackSectionGeometryReader.cs" Link="Parsing/TrackSectionGeometryReader.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/ActivityFileLocator.cs" Link="Parsing/ActivityFileLocator.cs" />
