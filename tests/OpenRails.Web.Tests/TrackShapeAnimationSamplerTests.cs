@@ -43,7 +43,7 @@ public sealed class TrackShapeAnimationSamplerTests
     }
 
     [Fact]
-    public void TcbRotationUsesNeighborTangentsInsteadOfPlainSlerp()
+    public void TcbRotationMatchesUpstreamAdjacentKeySlerp()
     {
         var controller = new TrackShapeAnimationController(
             TrackShapeAnimationControllerKind.Rotation,
@@ -61,7 +61,7 @@ public sealed class TrackShapeAnimationSamplerTests
 
         Assert.True(float.IsFinite(sampled.LengthSquared()));
         Assert.InRange(sampled.LengthSquared(), 0.999f, 1.001f);
-        Assert.True(MathF.Abs(Quaternion.Dot(sampled, linear)) < 0.99999f);
+        Assert.InRange(MathF.Abs(Quaternion.Dot(sampled, linear)), 0.99999f, 1.00001f);
     }
 
     [Fact]
