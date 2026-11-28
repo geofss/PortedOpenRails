@@ -3,7 +3,7 @@ namespace OpenRails.Web.Parsing;
 /// <summary>
 /// Camera-driven bounded cache for route tiles and decoded assets. Each visibility
 /// update supersedes the previous generation, cancels obsolete work, and evicts
-/// least-recently-used entries until both entry and byte budgets are respected.
+/// obsolete entries and retains only assets that fit the configured entry and byte budgets.
 /// </summary>
 public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
     where TKey : notnull
@@ -34,7 +34,8 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
     /// <summary>
     /// Loads the requested visible tiles in descending priority. Calling again
     /// cancels the prior generation; tiles no longer requested are unloaded.
-    /// A tile larger than the entire budget is returned to the caller but not cached.
+    /// Assets that cannot fit alongside the currently visible set are returned uncached;
+    /// the caller owns and must dispose those transient assets.
     /// </summary>
     public async Task<IReadOnlyDictionary<TKey, TAsset>> UpdateVisibleAsync(
         IEnumerable<RouteTileStreamRequest<TKey>> requests,
@@ -59,7 +60,7 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
             generation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             current = generation;
             var keep = ordered.Select(request => request.Key).ToHashSet();
-            unload = entries.Where(pair => !keep.Contains(pair.Key)).Select(pair => pair.Value.Asset).ToList();
+            unload = [];
             foreach (var key in entries.Keys.Where(key => !keep.Contains(key)).ToArray())
                 if (RemoveEntry(key, out var removedAsset))
                     unload.Add(removedAsset);
