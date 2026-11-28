@@ -37,4 +37,25 @@ public static class TrackShapeLodSelector
 
         return ordered[^1];
     }
+
+    /// <summary>
+    /// Selects one distance level independently for every native LOD control.
+    /// Multiple controls are separate shape sub-hierarchies and must not be
+    /// flattened into a single global distance-level choice.
+    /// </summary>
+    public static IReadOnlyList<TrackShapeLodMesh> SelectAll(
+        IReadOnlyList<TrackShapeLodMesh> levels,
+        float distance,
+        float viewSphereRadius = 0,
+        float lodBias = 1)
+    {
+        ArgumentNullException.ThrowIfNull(levels);
+        return Array.AsReadOnly(levels
+            .GroupBy(level => level.ControlIndex)
+            .OrderBy(group => group.Key)
+            .Select(group => Select(group.ToArray(), distance, viewSphereRadius, lodBias))
+            .Where(level => level is not null)
+            .Cast<TrackShapeLodMesh>()
+            .ToArray());
+    }
 }

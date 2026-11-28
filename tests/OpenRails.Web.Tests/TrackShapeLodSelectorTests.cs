@@ -30,8 +30,26 @@ public sealed class TrackShapeLodSelectorTests
     }
 
     [Fact]
+    public void SelectsEachNativeLodControlIndependently()
+    {
+        var levels = new[]
+        {
+            new TrackShapeLodMesh(100, Array.Empty<int>(), Array.Empty<TrackShapeSubObjectMesh>(), 0),
+            new TrackShapeLodMesh(400, Array.Empty<int>(), Array.Empty<TrackShapeSubObjectMesh>(), 0),
+            new TrackShapeLodMesh(50, Array.Empty<int>(), Array.Empty<TrackShapeSubObjectMesh>(), 1),
+            new TrackShapeLodMesh(200, Array.Empty<int>(), Array.Empty<TrackShapeSubObjectMesh>(), 1)
+        };
+
+        var selected = TrackShapeLodSelector.SelectAll(levels, 150);
+
+        Assert.Equal(new[] { 400f, 200f }, selected.Select(level => level.ViewingDistance));
+        Assert.Equal(new[] { 0, 1 }, selected.Select(level => level.ControlIndex));
+    }
+
+    [Fact]
     public void EmptyLevelsReturnNull()
     {
         Assert.Null(TrackShapeLodSelector.Select(Array.Empty<TrackShapeLodMesh>(), 10));
+        Assert.Empty(TrackShapeLodSelector.SelectAll(Array.Empty<TrackShapeLodMesh>(), 10));
     }
 }

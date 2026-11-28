@@ -28,8 +28,8 @@ public sealed class TrackShapeMeshBuilder
         var totalVertices = 0L;
         var totalIndices = 0L;
 
-        foreach (var lodControl in source.lod_controls)
-        foreach (var distanceLevel in lodControl.distance_levels)
+        for (var controlIndex = 0; controlIndex < source.lod_controls.Count; controlIndex++)
+        foreach (var distanceLevel in source.lod_controls[controlIndex].distance_levels)
         {
             var subObjects = new List<TrackShapeSubObjectMesh>();
             foreach (var subObject in distanceLevel.sub_objects)
@@ -59,7 +59,8 @@ public sealed class TrackShapeMeshBuilder
             lods.Add(new TrackShapeLodMesh(
                 distanceLevel.distance_level_header.dlevel_selection,
                 distanceLevel.distance_level_header.hierarchy.ToArray(),
-                subObjects));
+                subObjects,
+                controlIndex));
         }
 
         var lightMaterials = source.light_materials.Select(material => new TrackShapeLightMaterial(
@@ -264,7 +265,8 @@ public sealed record TrackShapeSubObjectMesh(
 public sealed record TrackShapeLodMesh(
     float ViewingDistance,
     IReadOnlyList<int> Hierarchy,
-    IReadOnlyList<TrackShapeSubObjectMesh> SubObjects);
+    IReadOnlyList<TrackShapeSubObjectMesh> SubObjects,
+    int ControlIndex = 0);
 
 public sealed record TrackShapeMesh(
     uint Flags1,
