@@ -59,7 +59,12 @@ public sealed class RouteLoader
                 Array.Empty<LoadedTerrainTextureAsset>(),
                 terrainTextureAssets.Missing,
                 Array.Empty<TerrainTextureLoadIssue>());
-        var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
+        var worldScenery = options.LoadWorldScenery
+            ? new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles)
+            : new RouteWorldSceneryLoadResult(
+                Array.Empty<LoadedWorldSceneryTile>(),
+                worldTiles.Missing,
+                Array.Empty<RouteWorldSceneryIssue>());
         var validation = RouteValidationReport.Build(database, network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures, trackItemPlacements);
 
         return new RouteLoadResult(
@@ -177,10 +182,12 @@ public sealed class RouteTrackShapeMeshLoadResult
 /// </summary>
 public sealed record RouteLoadOptions(
     bool LoadTerrainMeshes = true,
-    bool LoadTerrainTextures = true)
+    bool LoadTerrainTextures = true,
+    bool LoadWorldScenery = true)
 {
     public static RouteLoadOptions Eager { get; } = new();
     public static RouteLoadOptions ViewportStreaming { get; } = new(
         LoadTerrainMeshes: false,
-        LoadTerrainTextures: false);
+        LoadTerrainTextures: false,
+        LoadWorldScenery: false);
 }
