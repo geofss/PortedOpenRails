@@ -45,6 +45,8 @@ public sealed class AiTimetableSimulationRuntime
         {
             if (string.IsNullOrWhiteSpace(train.ServiceId) || string.IsNullOrWhiteSpace(train.RouteId))
                 throw new ArgumentException("Timetable runtime services require service and route identities.", nameof(trains));
+            if (train.Route.Direction is not (1 or -1))
+                throw new ArgumentException($"Timetable service '{train.ServiceId}' has an invalid route direction.", nameof(trains));
             if (!double.IsFinite(train.TargetSpeedMetersPerSecond) || train.TargetSpeedMetersPerSecond < 0)
                 throw new ArgumentOutOfRangeException(nameof(trains), "AI target speeds must be finite and non-negative.");
             ArgumentNullException.ThrowIfNull(train.Session);
