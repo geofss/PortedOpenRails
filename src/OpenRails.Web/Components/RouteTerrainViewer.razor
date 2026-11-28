@@ -46,8 +46,8 @@
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
-        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
-        <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
+        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @ActiveTerrainMeshes.Count</dd>
+        <dt>Terrain textures loaded / failed</dt><dd>@ActiveTerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
         <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
@@ -172,15 +172,24 @@
     private readonly Dictionary<string, int> terrainTextureIndexes = new(StringComparer.OrdinalIgnoreCase);
     private float[] routeTrackLines = Array.Empty<float>();
     private Vector3? cameraPosition;
+    private RouteTerrainViewportStreamingSession? terrainStreaming;
+    private RouteTerrainViewportSnapshot? terrainViewport;
+    private IReadOnlyList<LoadedRouteTerrainTileMesh> ActiveTerrainMeshes =>
+        terrainViewport?.Meshes ?? Route.TerrainMeshes.Meshes;
+    private TerrainTextureAssetLoadResult ActiveTerrainTextures =>
+        terrainViewport?.Textures ?? Route.TerrainTextures;
     private DotNetObjectReference<RouteTerrainViewer>? cameraCallback;
     private bool sceneGeometryUpdatePending;
     private double lastSimulationTimeSeconds = double.NaN;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (!ReferenceEquals(lastRoute, Route) || !ReferenceEquals(lastMotionRoute, MotionRoute) || !ReferenceEquals(lastStore, Store) ||
             !ReferenceEquals(lastConsist, Consist))
         {
+            if (terrainStreaming is not null)
+                await terrainStreaming.ClearAsync();
+            terrainViewport = null;
             lastRoute = Route;
             lastMotionRoute = MotionRoute;
             lastStore = Store;
@@ -211,19 +220,38 @@
     }
 
     [JSInvokable]
-    public Task OnCameraChanged(double x, double y, double z)
+    public async Task OnCameraChanged(double x, double y, double z)
     {
         if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
-            return Task.CompletedTask;
+            return;
         var next = new Vector3((float)x, (float)y, (float)z);
         if (cameraPosition is { } previous && Vector3.DistanceSquared(previous, next) < 64)
-            return Task.CompletedTask;
+            return;
         cameraPosition = next;
         if (!hasDrawn)
-            return Task.CompletedTask;
+            return;
+        if (Store is not null)
+        {
+            try { await UpdateTerrainViewportAsync(next); }
+            catch (OperationCanceledException) { return; }
+            catch (Exception exception) { renderError = $"Terrain streaming failed: {exception.Message}"; }
+        }
         sceneGeometryUpdatePending = true;
         motionUpdatePending = false;
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateTerrainViewportAsync(Vector3 camera)
+    {
+        if (Store is null) return;
+        terrainStreaming ??= new RouteTerrainViewportStreamingSession(
+            maximumResidentTiles: 64,
+            maximumResidentBytes: 1024L * 1024 * 1024,
+            maximumConcurrentLoads: 2,
+            estimatedBytesPerTile: 32L * 1024 * 1024);
+        terrainViewport = await terrainStreaming.UpdateCameraAsync(
+            Store, Route.Assets.RouteRoot, Route.TerrainTiles,
+            camera.X, camera.Z, radiusMeters: 12_000);
     }
     private ElementReference canvas;
     private IJSObjectReference? module;
@@ -301,6 +329,13 @@
         {
             try
             {
+                var initialCamera = await module.InvokeAsync<double[]?>("getCameraWorldPosition");
+                if (initialCamera is { Length: 3 } && initialCamera.All(double.IsFinite))
+                {
+                    cameraPosition = new Vector3((float)initialCamera[0], (float)initialCamera[1], (float)initialCamera[2]);
+                    if (Store is not null)
+                        await UpdateTerrainViewportAsync(cameraPosition.Value);
+                }
                 var terrainSelection = BuildTerrainPatches();
                 // BuildTerrainPatches now materializes only the textures referenced
                 // by the selected camera-visible terrain LODs, not every route texture.
@@ -799,6 +834,11 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (terrainStreaming is not null)
+        {
+            await terrainStreaming.DisposeAsync();
+            terrainStreaming = null;
+        }
         cameraCallback?.Dispose();
         cameraCallback = null;
         if (module is not null)
