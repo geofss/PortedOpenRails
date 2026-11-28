@@ -38,7 +38,7 @@ public sealed class DemoModel1AcceptanceTests
         Assert.False(metadata.Electrified);
         Assert.Equal(new RouteStartCoordinates(-6144, 15144, 877.176, -869.309), metadata.RouteStart);
 
-        var route = new RouteLoader().Load(store, routePath, metadata);
+        var route = new RouteLoader().Load(store, routePath, metadata, RouteLoadOptions.ViewportStreaming);
 
         Assert.True(route.TrackDatabase.NodeCount > 1000,
             $"Expected the real SCE track database, got {route.TrackDatabase.NodeCount} nodes.");
@@ -51,7 +51,7 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(route.TerrainTiles.Found.Count > 0, "No SCE terrain tiles were discovered.");
         Assert.True(route.TrackShapeAssets.Found.Count > 0, "No SCE track-shape assets were discovered.");
         Assert.True(route.WorldTiles.Found.Count > 0, "No SCE WORLD tiles were discovered.");
-        Assert.True(route.TerrainMeshes.Meshes.Count > 0, "No SCE terrain meshes were built.");
+        Assert.Empty(route.TerrainMeshes.Meshes); // Terrain mesh decoding is deferred to the camera viewport session.
         Assert.True(route.WorldScenery.Loaded.Count > 0, "No SCE WORLD scenery tiles were parsed.");
 
         // Exercise camera-scoped terrain source loading against the real route.
