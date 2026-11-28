@@ -446,7 +446,7 @@ public sealed class SignalNetwork
         IReadOnlyDictionary<RouteSignalHead, (RouteSignalIndication Baseline, int BlockState)> baselineBySignal)
     {
         if (!blocks.TryGetValue(signal.TrackNodeIndex, out var block))
-            return 0;
+            return -1;
         var aspects = block.Signals
             .Where(candidate => candidate.TrackItemIndex == signal.TrackItemIndex &&
                 candidate.Direction == signal.Direction &&
@@ -455,7 +455,7 @@ public sealed class SignalNetwork
             .Select(candidate => NativeAspectValue(baselineBySignal[candidate].Baseline.NativeAspect) ?? 0)
             .ToArray();
         if (aspects.Length == 0)
-            return 0;
+            return -1;
         return leastRestrictive ? aspects.Max() : aspects.Min();
     }
 
