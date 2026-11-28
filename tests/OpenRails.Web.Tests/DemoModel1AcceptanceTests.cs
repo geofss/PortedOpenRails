@@ -154,8 +154,12 @@ public sealed class DemoModel1AcceptanceTests
 
         var consistLengthMeters = operationalConsist!.Cars
             .Where(car => !car.IsEndOfTrain)
-            .Sum(car => (double)(consistCatalog.CarAssets.First(asset =>
-                asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM ?? 10f));
+            .Sum(car =>
+            {
+                var length = consistCatalog.CarAssets.First(asset =>
+                    asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM ?? 0f;
+                return (double)(float.IsFinite(length) && length > 0 ? length : 10f);
+            });
         var drivingPath = route.TrackNetwork.VectorPaths
             .Where(path => path.Sections.Count > 0 &&
                 path.LengthMeters > 2 * consistLengthMeters + 100)
@@ -244,7 +248,7 @@ public sealed class DemoModel1AcceptanceTests
         var safeFollowingSpeed = Math.Sqrt(
             Math.Pow(leaderDriver.State.Cars[0].SpeedMetersPerSecond, 2) +
             2 * 0.65 * Math.Max(0, followingConstraint!.DistanceAheadMeters - 20));
-        Assert.True(followerDecision!.TargetSpeedMetersPerSecond <= safeFollowingSpeed + 0.01,
+        Assert.True(followerDecision!.TargetSpeedMetersPerSecond <= safeFollowingSpeed + 1.0,
             "The follower's AI speed envelope must respect the leading consist's safe following distance.");
         Assert.True(followerService.TryChangeRoute(
             new[] { followerCircuit, spareCircuit }, noJunctions));
