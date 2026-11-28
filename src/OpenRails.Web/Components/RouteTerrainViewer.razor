@@ -415,7 +415,8 @@
                         $"{issue.Path}: {issue.Reason}"));
                     rollingStockGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit).BuildTextured(
                         rollingStockPlacements, rollingStockTextureAssets, animationClipIndex: 0,
-                        cameraPosition: cameraPosition, elapsedSeconds: SimulationTimeSeconds);
+                        cameraPosition: cameraPosition, elapsedSeconds: SimulationTimeSeconds,
+                        matrixOverridesProvider: BuildWheelOverrides);
 
                     var placementRouteDescription = MotionRoute is null
                         ? $"TrackNode {selectedTrackPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedTrackPath?.LengthMeters.ToString("N0") ?? "0"} m path)"
@@ -626,7 +627,7 @@
             : new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
                 .BuildTextured(rollingPlacement.Placements, rollingStockTextureAssets,
                     animationClipIndex: 0, cameraPosition: cameraPosition,
-                    elapsedSeconds: SimulationTimeSeconds);
+                    elapsedSeconds: SimulationTimeSeconds, matrixOverridesProvider: BuildWheelOverrides);
 
         var combinedTextures = new List<LoadedTrackShapeTexture>();
         var pathIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -689,6 +690,17 @@
         }
         motionUpdatePending = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyDictionary<int, Matrix4x4>? BuildWheelOverrides(TrackShapePlacement placement)
+    {
+        if (Consist is null || placement.VehicleUid is not { } uid)
+            return null;
+        var car = Consist.Cars.FirstOrDefault(item => item.Uid == uid);
+        var reference = CarAssets.FirstOrDefault(item => item.Uid == uid &&
+            string.Equals(item.ConsistName, Consist.Name, StringComparison.OrdinalIgnoreCase));
+        return RollingStockWheelPoseBuilder.Build(placement.Asset.Mesh, reference?.Metadata,
+            car?.IsEngine ?? false, placement.RouteDistanceMeters);
     }
 
     private RollingStockTrackPlacementResult? BuildRollingStockPlacement()
