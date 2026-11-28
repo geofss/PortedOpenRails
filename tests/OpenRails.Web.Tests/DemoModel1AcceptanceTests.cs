@@ -52,7 +52,7 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(route.TrackShapeAssets.Found.Count > 0, "No SCE track-shape assets were discovered.");
         Assert.True(route.WorldTiles.Found.Count > 0, "No SCE WORLD tiles were discovered.");
         Assert.Empty(route.TerrainMeshes.Meshes); // Terrain mesh decoding is deferred to the camera viewport session.
-        Assert.True(route.WorldScenery.Loaded.Count > 0, "No SCE WORLD scenery tiles were parsed.");
+        Assert.Empty(route.WorldScenery.Loaded); // WORLD decoding is deferred to the camera viewport session.
 
         // Exercise camera-scoped terrain source loading against the real route.
         // Moving outside the route must evict the previous CPU-side tile working set.
@@ -76,6 +76,29 @@ public sealed class DemoModel1AcceptanceTests
         Assert.Empty(outsideRoute.Meshes);
         Assert.Equal(0, terrainStreaming.ResidentTileCount);
         Assert.Equal(0, terrainStreaming.ResidentBytes);
+
+        // Exercise viewport-scoped WORLD parsing, shape/texture decoding and eviction
+        // against the authorized SCE WORLD archive entries.
+        var worldAnchor = route.WorldTiles.Found[0];
+        await using var worldStreaming = new RouteWorldViewportStreamingSession(
+            maximumResidentTiles: 16,
+            maximumResidentBytes: 2L * 1024 * 1024 * 1024,
+            estimatedBytesPerTile: 16L * 1024 * 1024);
+        var streamedWorld = await worldStreaming.UpdateCameraAsync(
+            store, route.Assets.RouteRoot, route.WorldTiles,
+            worldAnchor.TileX * RouteViewportTileSelector.TileSizeMeters,
+            worldAnchor.TileZ * RouteViewportTileSelector.TileSizeMeters,
+            radiusMeters: 0);
+        Assert.NotEmpty(streamedWorld.Loaded);
+        Assert.True(streamedWorld.ResidentBytes <= 2L * 1024 * 1024 * 1024);
+        Assert.True(streamedWorld.ResidentTileCount <= 16);
+
+        var outsideWorld = await worldStreaming.UpdateCameraAsync(
+            store, route.Assets.RouteRoot, route.WorldTiles,
+            cameraX: 10_000_000, cameraZ: 10_000_000, radiusMeters: 0);
+        Assert.Empty(outsideWorld.Loaded);
+        Assert.Equal(0, worldStreaming.ResidentTileCount);
+        Assert.Equal(0, worldStreaming.ResidentBytes);
 
         // Exercise the production interlocking and timetable together on real SCE
         // track-circuit IDs. Two services request the same block at the same
@@ -118,7 +141,7 @@ public sealed class DemoModel1AcceptanceTests
             $"Demo Model 1 acceptance: nodes={route.TrackDatabase.NodeCount}; " +
             $"paths={route.TrackNetwork.VectorPathCount}; length={route.TrackNetwork.TotalTrackLengthMeters:N0}m; " +
             $"terrain={route.TerrainMeshes.Meshes.Count}; trackShapes={route.TrackShapeMeshes.LoadedMeshes.Count}; " +
-            $"world={route.WorldScenery.Loaded.Count}; signalCircuits={route.Signalling.TrackCircuits.Count}; " +
+            $"world={streamedWorld.Loaded.Count}; signalCircuits={route.Signalling.TrackCircuits.Count}; " +
             $"signalHeads={route.Signalling.TrackCircuits.Sum(circuit => circuit.Signals.Count)}; " +
             $"signalDiagnostics={route.Signalling.Diagnostics.Count}; validationIssues={route.Validation.Issues.Count}; " +
             $"trackNetworkUsable={route.Validation.TrackNetworkUsable}.");
