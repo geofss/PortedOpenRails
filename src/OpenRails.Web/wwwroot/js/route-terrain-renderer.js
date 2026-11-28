@@ -5,6 +5,7 @@ const activePointers = new Map();
 let renderScale = 1;
 let cameraChangeCallback = null, cameraNotifyFrame = 0;
 let lastSceneCameraPosition = null, lastNotifiedCameraPosition = null;
+let lastSceneSpan = 1, lastCameraNotifyAt = 0;
 const qualityStorageKey = "ported-openrails-preview-quality";
 const supportedQualityPresets = new Set(["low", "medium", "high"]);
 
@@ -87,7 +88,11 @@ function notifyCameraChanged() {
       const dx = next[0] - lastNotifiedCameraPosition[0];
       const dy = next[1] - lastNotifiedCameraPosition[1];
       const dz = next[2] - lastNotifiedCameraPosition[2];
-      if (dx*dx + dy*dy + dz*dz < 64) return;
+      const movement = Math.hypot(dx, dy, dz);
+      if (movement < Math.max(8, lastSceneSpan * 0.002)) return;
+      const now = performance.now();
+      if (now - lastCameraNotifyAt < 250) return;
+      lastCameraNotifyAt = now;
     }
     lastNotifiedCameraPosition = [...next];
     cameraChangeCallback.invokeMethodAsync("OnCameraChanged", next[0], next[1], next[2]).catch(() => {});
@@ -188,6 +193,7 @@ export function cleanup() {
   if (cameraNotifyFrame) cancelAnimationFrame(cameraNotifyFrame);
   cameraNotifyFrame = 0; cameraChangeCallback = null;
   lastSceneCameraPosition = lastNotifiedCameraPosition = null;
+  lastSceneSpan = 1; lastCameraNotifyAt = 0;
   rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
   renderScale = 1;
 }
@@ -313,6 +319,7 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   }
   const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,centerZ=(minZ+maxZ)/2;
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
+  lastSceneSpan = span;
   const cos=Math.cos(rotation),sin=Math.sin(rotation);
   const cameraDistance=span*1.35/zoom,near=span*0.015,far=span*20,focal=cameraDistance*0.85;
   const cameraRadius=cameraDistance*Math.cos(pitch);
