@@ -32,6 +32,7 @@ public sealed class RollingStockTrackPlacementBuilder
             throw new ArgumentOutOfRangeException(nameof(startDistanceMeters));
 
         var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         if (centerline.Count < 2)
             return new RollingStockTrackPlacementResult(
                 Array.Empty<TrackShapePlacement>(),
@@ -91,7 +92,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 rotation * translation,
                 car.Uid,
                 centerDistance,
-                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, centerDistance, heading, car.Flipped)));
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, centerDistance, heading, car.Flipped)));
         }
 
         return new RollingStockTrackPlacementResult(

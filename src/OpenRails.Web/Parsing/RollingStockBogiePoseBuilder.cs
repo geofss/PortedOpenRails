@@ -10,7 +10,7 @@ public static class RollingStockBogiePoseBuilder
 {
     public static IReadOnlyDictionary<int, Matrix4x4> Build(
         TrackShapeMesh mesh,
-        IReadOnlyList<TrackWorldPosition> centerline,
+        IReadOnlyList<Vector3> centerline,
         IReadOnlyList<double> cumulativeDistances,
         double routeDistanceMeters,
         double vehicleHeadingRadians,

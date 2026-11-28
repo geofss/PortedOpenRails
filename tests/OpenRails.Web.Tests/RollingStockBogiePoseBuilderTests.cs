@@ -18,9 +18,9 @@ public sealed class RollingStockBogiePoseBuilderTests
             new[] { new TrackShapeLodMesh(500, new[] { -1, -1 }, Array.Empty<TrackShapeSubObjectMesh>()) });
         var points = new[]
         {
-            new TrackWorldPosition(0, 0, 0),
-            new TrackWorldPosition(0, 0, 10),
-            new TrackWorldPosition(10, 0, 10)
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, 10),
+            new Vector3(10, 0, 10)
         };
 
         var poses = RollingStockBogiePoseBuilder.Build(mesh, points, new[] { 0d, 10d, 20d },
@@ -41,8 +41,8 @@ public sealed class RollingStockBogiePoseBuilderTests
             new[] { new TrackShapeLodMesh(500, new[] { -1 }, Array.Empty<TrackShapeSubObjectMesh>()) });
         var points = new[]
         {
-            new TrackWorldPosition(0, 0, 0),
-            new TrackWorldPosition(0, 0, 100)
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, 100)
         };
 
         Assert.Empty(RollingStockBogiePoseBuilder.Build(mesh, points, new[] { 0d, 100d }, 50, 0));
