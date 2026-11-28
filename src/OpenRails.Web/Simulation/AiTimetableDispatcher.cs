@@ -37,7 +37,11 @@ public sealed class AiTimetableDispatcher
                 throw new ArgumentException($"Duplicate timetable service '{serviceId}'.", nameof(serviceId));
             services.Add(new ScheduledAiService(serviceId, departureSeconds, session,
                 routeCircuitIds.ToArray(), new Dictionary<uint, uint>(requiredJunctionBranches)));
-            services.Sort((left, right) => left.DepartureSeconds.CompareTo(right.DepartureSeconds));
+            services.Sort((left, right) =>
+            {
+                var time = left.DepartureSeconds.CompareTo(right.DepartureSeconds);
+                return time != 0 ? time : StringComparer.Ordinal.Compare(left.ServiceId, right.ServiceId);
+            });
         }
     }
 
@@ -69,11 +73,13 @@ public sealed class AiTimetableDispatcher
             var dispatched = new List<string>();
             foreach (var service in services)
             {
-                if (service.IsDispatched || service.DepartureSeconds > elapsedSeconds)
+                if (service.Status == AiTimetableServiceStatus.Dispatched && !service.Session.IsDispatched)
+                    service.Status = AiTimetableServiceStatus.Completed;
+                if (service.Status != AiTimetableServiceStatus.Pending || service.DepartureSeconds > elapsedSeconds)
                     continue;
                 if (service.Session.TryDispatch(service.RouteCircuitIds, service.RequiredJunctionBranches))
                 {
-                    service.IsDispatched = true;
+                    service.Status = AiTimetableServiceStatus.Dispatched;
                     dispatched.Add(service.ServiceId);
                 }
             }
@@ -84,8 +90,39 @@ public sealed class AiTimetableDispatcher
     public IReadOnlyList<string> PendingServices()
     {
         lock (gate)
-            return services.Where(item => !item.IsDispatched)
+            return services.Where(item => item.Status == AiTimetableServiceStatus.Pending)
                 .Select(item => item.ServiceId).ToArray();
+    }
+
+    /// <summary>Removes a not-yet-dispatched service from the active timetable.</summary>
+    public bool TryCancelService(string serviceId)
+    {
+        if (string.IsNullOrWhiteSpace(serviceId))
+            return false;
+        lock (gate)
+        {
+            var service = services.FirstOrDefault(item =>
+                string.Equals(item.ServiceId, serviceId, StringComparison.Ordinal));
+            if (service is null || service.Status != AiTimetableServiceStatus.Pending)
+                return false;
+            service.Status = AiTimetableServiceStatus.Cancelled;
+            return true;
+        }
+    }
+
+    public AiTimetableServiceStatus? GetServiceStatus(string serviceId)
+    {
+        if (string.IsNullOrWhiteSpace(serviceId)) return null;
+        lock (gate)
+            return services.FirstOrDefault(item =>
+                string.Equals(item.ServiceId, serviceId, StringComparison.Ordinal))?.Status;
+    }
+
+    public IReadOnlyDictionary<string, AiTimetableServiceStatus> SnapshotStatuses()
+    {
+        lock (gate)
+            return new System.Collections.ObjectModel.ReadOnlyDictionary<string, AiTimetableServiceStatus>(
+                services.ToDictionary(item => item.ServiceId, item => item.Status, StringComparer.Ordinal));
     }
 
     private sealed class ScheduledAiService(
@@ -97,6 +134,14 @@ public sealed class AiTimetableDispatcher
         public AiServiceInterlockingSession Session { get; } = session;
         public IReadOnlyList<uint> RouteCircuitIds { get; } = routeCircuitIds;
         public IReadOnlyDictionary<uint, uint> RequiredJunctionBranches { get; } = requiredJunctionBranches;
-        public bool IsDispatched { get; set; }
+        public AiTimetableServiceStatus Status { get; set; } = AiTimetableServiceStatus.Pending;
     }
+}
+
+public enum AiTimetableServiceStatus
+{
+    Pending,
+    Dispatched,
+    Completed,
+    Cancelled
 }
