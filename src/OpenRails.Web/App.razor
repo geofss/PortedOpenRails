@@ -1335,7 +1335,7 @@
             if (composite is null)
                 throw new InvalidDataException("No route content package is loaded.");
 
-            loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
+            loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata, RouteLoadOptions.ViewportStreaming);
             var traversalStart = RouteStartOptions.FirstOrDefault();
             selectedTrackNodeIndex = traversalStart?.TrackNodeIndex ?? 0;
             reverseRouteStart = traversalStart is not null &&
