@@ -113,6 +113,8 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         return checked(rawGridBytes + meshBytes + patchMetadataBytes + 64 * 1024);
     }
 
+    public ValueTask ClearAsync() => cache.ClearAsync();
+
     public ValueTask DisposeAsync() => cache.DisposeAsync();
 }
 
