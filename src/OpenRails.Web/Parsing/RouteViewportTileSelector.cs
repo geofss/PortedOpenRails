@@ -16,7 +16,7 @@ public static class RouteViewportTileSelector
         long estimatedBytesPerTile = 8 * 1024 * 1024)
     {
         ArgumentNullException.ThrowIfNull(available);
-        return Select(available, tile => tile.TileX, tile => tile.TileZ,
+        return Select(available, tile => tile.Path, tile => tile.TileX, tile => tile.TileZ,
             cameraX, cameraZ, radiusMeters, estimatedBytesPerTile);
     }
 
@@ -34,6 +34,7 @@ public static class RouteViewportTileSelector
 
     private static IReadOnlyList<RouteTileStreamRequest<TTile>> Select<TTile>(
         IEnumerable<TTile> available,
+        Func<TTile, string> identity,
         Func<TTile, int> tileX,
         Func<TTile, int> tileZ,
         double cameraX,
@@ -51,13 +52,13 @@ public static class RouteViewportTileSelector
 
         var radiusSquared = radiusMeters * radiusMeters;
         var requests = new List<RouteTileStreamRequest<TTile>>();
-        var seen = new HashSet<(int X, int Z)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var tile in available)
         {
             var x = tileX(tile);
             var z = tileZ(tile);
-            if (!seen.Add((x, z)))
+            if (!seen.Add(identity(tile)))
                 continue;
 
             var dx = x * TileSizeMeters - cameraX;
