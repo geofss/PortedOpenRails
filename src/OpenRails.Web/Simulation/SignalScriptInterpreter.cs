@@ -4,7 +4,7 @@ namespace OpenRails.Web.Simulation;
 
 /// <summary>
 /// Executes the deterministic core of the native MSTS SIGSCR language: declared
-/// local/external integers, assignments, arithmetic, IF/ELSEIF/ELSE, comparisons,
+/// local/external floating-point values, assignments, arithmetic, IF/ELSEIF/ELSE, comparisons,
 /// logical operators and RETURN. Unsupported native signal-topology functions fail
 /// closed so the caller can retain a restrictive indication.
 /// </summary>
@@ -47,8 +47,8 @@ public sealed class SignalScriptInterpreter
         private readonly SignalScriptDefinition script;
         private readonly SignalScriptExecutionContext context;
         private readonly int budget;
-        private readonly Dictionary<string, int> locals;
-        private readonly Dictionary<string, int> external;
+        private readonly Dictionary<string, double> locals;
+        private readonly Dictionary<string, double> external;
         public int State { get; private set; }
         public int DrawState { get; private set; }
         public bool Returned { get; private set; }
@@ -62,8 +62,8 @@ public sealed class SignalScriptInterpreter
             this.budget = budget;
             State = context.InitialState;
             DrawState = context.InitialDrawState;
-            locals = script.LocalFloats.ToDictionary(name => name, _ => 0, StringComparer.OrdinalIgnoreCase);
-            external = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            locals = script.LocalFloats.ToDictionary(name => name, _ => 0d, StringComparer.OrdinalIgnoreCase);
+            external = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
             {
                 ["STATE"] = State,
                 ["DRAW_STATE"] = DrawState,
@@ -101,7 +101,7 @@ public sealed class SignalScriptInterpreter
             }
         }
 
-        public int Read(string name)
+        public double Read(string name)
         {
             if (locals.TryGetValue(name, out var local)) return local;
             if (external.TryGetValue(name, out var value)) return value;
@@ -124,7 +124,7 @@ public sealed class SignalScriptInterpreter
             throw new NotSupportedException($"Native SIGSCR function '{name}' is not available in the browser signal context.");
         }
 
-        private void Assign(string name, int value)
+        private void Assign(string name, double value)
         {
             if (locals.ContainsKey(name))
             {
@@ -133,21 +133,32 @@ public sealed class SignalScriptInterpreter
             }
             if (name.Equals("STATE", StringComparison.OrdinalIgnoreCase))
             {
-                State = value;
-                external[name] = value;
+                State = ToInteger(value);
+                external[name] = State;
                 return;
             }
             if (name.Equals("DRAW_STATE", StringComparison.OrdinalIgnoreCase))
             {
-                DrawState = value;
+                DrawState = ToInteger(value);
                 DrawStateWasAssigned = true;
-                external[name] = value;
+                external[name] = DrawState;
                 return;
             }
             if (external.ContainsKey(name))
                 throw new InvalidDataException($"SIGSCR cannot assign to read-only external float '{name}'.");
             throw new InvalidDataException($"SIGSCR assigns to undeclared variable '{name}'.");
         }
+
+        public static int ToInteger(double value)
+        {
+            if (!double.IsFinite(value) || value < int.MinValue || value > int.MaxValue)
+                throw new OverflowException("SIGSCR integer state is outside the supported range.");
+            return (int)Math.Truncate(value);
+        }
+
+        public static double EnsureFinite(double value) =>
+            double.IsFinite(value) ? value :
+                throw new OverflowException("SIGSCR arithmetic produced a non-finite value.");
 
         private void Tick()
         {
@@ -165,51 +176,51 @@ public sealed class SignalScriptInterpreter
 
     private abstract record Expression
     {
-        public abstract int Evaluate(Runtime runtime);
+        public abstract double Evaluate(Runtime runtime);
     }
-    private sealed record Constant(int Value) : Expression
+    private sealed record Constant(double Value) : Expression
     {
-        public override int Evaluate(Runtime runtime) => Value;
+        public override double Evaluate(Runtime runtime) => Value;
     }
     private sealed record Variable(string Name) : Expression
     {
-        public override int Evaluate(Runtime runtime) => runtime.Read(Name);
+        public override double Evaluate(Runtime runtime) => runtime.Read(Name);
     }
     private sealed record FunctionCall(string Name, IReadOnlyList<Expression> Arguments) : Expression
     {
-        public override int Evaluate(Runtime runtime) => runtime.Call(Name, Arguments.Select(argument => argument.Evaluate(runtime)).ToArray());
+        public override double Evaluate(Runtime runtime) => runtime.Call(Name, Arguments.Select(argument => Runtime.ToInteger(argument.Evaluate(runtime))).ToArray());
     }
     private sealed record Unary(string Operator, Expression Operand) : Expression
     {
-        public override int Evaluate(Runtime runtime)
+        public override double Evaluate(Runtime runtime)
         {
             var value = Operand.Evaluate(runtime);
             return Operator switch
             {
-                "-" => checked(-value),
+                "-" => Runtime.EnsureFinite(-value),
                 "+" => value,
-                "!" => value == 0 ? 1 : 0,
+                "!" => value == 0 ? 1d : 0d,
                 _ => throw new InvalidDataException($"Unsupported unary operator '{Operator}'.")
             };
         }
     }
     private sealed record Binary(Expression Left, string Operator, Expression Right) : Expression
     {
-        public override int Evaluate(Runtime runtime)
+        public override double Evaluate(Runtime runtime)
         {
             var left = Left.Evaluate(runtime);
             if (Operator.Equals("&&", StringComparison.OrdinalIgnoreCase) || Operator.Equals("AND", StringComparison.OrdinalIgnoreCase))
-                return left != 0 && Right.Evaluate(runtime) != 0 ? 1 : 0;
+                return left != 0 && Right.Evaluate(runtime) != 0 ? 1d : 0d;
             if (Operator.Equals("||", StringComparison.OrdinalIgnoreCase) || Operator.Equals("OR", StringComparison.OrdinalIgnoreCase))
-                return left != 0 || Right.Evaluate(runtime) != 0 ? 1 : 0;
+                return left != 0 || Right.Evaluate(runtime) != 0 ? 1d : 0d;
             var right = Right.Evaluate(runtime);
             return Operator switch
             {
-                "+" => checked(left + right),
-                "-" => checked(left - right),
-                "*" => checked(left * right),
-                "/" => right == 0 ? throw new DivideByZeroException("SIGSCR division by zero.") : left / right,
-                "%" => right == 0 ? throw new DivideByZeroException("SIGSCR remainder by zero.") : left % right,
+                "+" => Runtime.EnsureFinite(left + right),
+                "-" => Runtime.EnsureFinite(left - right),
+                "*" => Runtime.EnsureFinite(left * right),
+                "/" => right == 0 ? throw new DivideByZeroException("SIGSCR division by zero.") : Runtime.EnsureFinite(left / right),
+                "%" => right == 0 ? throw new DivideByZeroException("SIGSCR remainder by zero.") : Runtime.EnsureFinite(left % right),
                 _ => throw new InvalidDataException($"Unsupported arithmetic operator '{Operator}'.")
             };
         }
@@ -403,7 +414,12 @@ public sealed class SignalScriptInterpreter
                 return value;
             }
             if (Current.Kind == TokenKind.Number)
-                return new Constant(int.Parse(Advance().Text, System.Globalization.CultureInfo.InvariantCulture));
+            {
+                if (!double.TryParse(Advance().Text, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number))
+                    throw Error("Invalid floating-point numeric literal.");
+                return new Constant(number);
+            }
             if (Current.Kind != TokenKind.Identifier)
                 throw Error($"Expected value, found '{Current.Text}'.");
             var name = Advance().Text;
@@ -476,10 +492,25 @@ public sealed class SignalScriptInterpreter
                     result.Add(new Token(TokenKind.Identifier, source[start..index], line));
                     continue;
                 }
-                if (char.IsDigit(character))
+                if (char.IsDigit(character) || character == '.' &&
+                    index + 1 < source.Length && char.IsDigit(source[index + 1]))
                 {
-                    var start = index++;
+                    var start = index;
                     while (index < source.Length && char.IsDigit(source[index])) index++;
+                    if (index < source.Length && source[index] == '.')
+                    {
+                        index++;
+                        while (index < source.Length && char.IsDigit(source[index])) index++;
+                    }
+                    if (index < source.Length && source[index] is 'e' or 'E')
+                    {
+                        index++;
+                        if (index < source.Length && source[index] is '+' or '-') index++;
+                        var exponentStart = index;
+                        while (index < source.Length && char.IsDigit(source[index])) index++;
+                        if (index == exponentStart)
+                            throw new InvalidDataException($"SIGSCR line {line}: malformed numeric exponent.");
+                    }
                     result.Add(new Token(TokenKind.Number, source[start..index], line));
                     continue;
                 }
@@ -512,8 +543,8 @@ public sealed record SignalScriptExecutionContext(
     bool Enabled,
     int BlockState,
     bool RouteSet,
-    int? ApproachControlRequiredPosition = null,
-    int? ApproachControlRequiredSpeed = null,
+    double? ApproachControlRequiredPosition = null,
+    double? ApproachControlRequiredSpeed = null,
     Func<int, int?>? DrawStateResolver = null,
     Func<string, IReadOnlyList<int>, int?>? FunctionResolver = null,
     Func<string, int?>? SymbolResolver = null);
