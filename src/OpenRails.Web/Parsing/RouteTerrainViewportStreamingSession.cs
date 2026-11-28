@@ -9,7 +9,7 @@ namespace OpenRails.Web.Parsing;
 /// </summary>
 public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
 {
-    private readonly RouteTileStreamingCache<string, LoadedRouteTerrainTileMesh> cache;
+    private readonly RouteTileStreamingCache<string, TerrainTileStreamAsset> cache;
     private readonly long estimatedBytesPerTile;
     private readonly long maximumResidentBytes;
     private readonly int maximumVisibleTiles;
@@ -34,7 +34,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         this.maximumResidentBytes = maximumResidentBytes;
         maximumVisibleTiles = (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile);
         this.seamHaloMeters = seamHaloMeters;
-        cache = new RouteTileStreamingCache<string, LoadedRouteTerrainTileMesh>(
+        cache = new RouteTileStreamingCache<string, TerrainTileStreamAsset>(
             maximumResidentTiles, maximumResidentBytes, maximumConcurrentLoads);
     }
 
@@ -80,26 +80,34 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
                 if (mesh is null)
                 {
                     var issue = seamAwareBatch.Failed.FirstOrDefault(candidate =>
-                        string.Equals(candidate.Path, reference.Path, StringComparison.OrdinalIgnoreCase));
-                    throw new InvalidDataException(issue is null
-                        ? $"Terrain tile '{reference.Path}' did not produce a mesh."
-                        : $"Terrain tile '{reference.Path}' failed: {issue.Reason}");
+                        string.Equals(candidate.Path, reference.Path, StringComparison.OrdinalIgnoreCase)) ??
+                        new RouteTerrainTileIssue(reference.TileX, reference.TileZ, reference.Path,
+                            "The tile did not produce a terrain mesh.");
+                    return Task.FromResult(new RouteTileStreamAsset<TerrainTileStreamAsset>(
+                        new TerrainTileStreamAsset(null, issue), 1024));
                 }
 
-                return Task.FromResult(new RouteTileStreamAsset<LoadedRouteTerrainTileMesh>(
-                    mesh, EstimateResidentBytes(mesh)));
+                return Task.FromResult(new RouteTileStreamAsset<TerrainTileStreamAsset>(
+                    new TerrainTileStreamAsset(mesh, null), EstimateResidentBytes(mesh)));
             }, cancellationToken);
 
         var orderedMeshes = new List<LoadedRouteTerrainTileMesh>();
+        var failures = new List<RouteTerrainTileIssue>();
         long visibleMeshBytes = 0;
         foreach (var reference in selectedReferences)
         {
-            if (!visible.TryGetValue(reference.Path, out var mesh))
+            if (!visible.TryGetValue(reference.Path, out var asset))
                 continue;
-            var bytes = EstimateResidentBytes(mesh);
+            if (asset.Loaded is null)
+            {
+                if (asset.Failure is not null)
+                    failures.Add(asset.Failure);
+                continue;
+            }
+            var bytes = EstimateResidentBytes(asset.Loaded);
             if (bytes > maximumResidentBytes - visibleMeshBytes)
                 continue;
-            orderedMeshes.Add(mesh);
+            orderedMeshes.Add(asset.Loaded);
             visibleMeshBytes += bytes;
         }
 
@@ -118,7 +126,6 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         }
         var textures = new TerrainTextureAssetLoadResult(
             visibleTextures, decodedTextures.Missing, decodedTextures.Failed);
-        var failures = seamAwareBatch?.Failed ?? Array.Empty<RouteTerrainTileIssue>();
 
         return new RouteTerrainViewportSnapshot(
             Array.AsReadOnly(orderedMeshes.ToArray()),
@@ -143,6 +150,10 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
         var patchMetadataBytes = checked((long)tile.Content.Terrain.PatchSets.Sum(set => set.Patches.Count) * 128);
         return checked(rawGridBytes + meshBytes + patchMetadataBytes + 64 * 1024);
     }
+
+    private sealed record TerrainTileStreamAsset(
+        LoadedRouteTerrainTileMesh? Loaded,
+        RouteTerrainTileIssue? Failure);
 
     public ValueTask ClearAsync() => cache.ClearAsync();
 
