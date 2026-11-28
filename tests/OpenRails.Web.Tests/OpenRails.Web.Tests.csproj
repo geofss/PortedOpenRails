@@ -111,6 +111,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTrainFollowingResolver.cs" Link="Simulation/AiTrainFollowingResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiServiceInterlockingSession.cs" Link="Simulation/AiServiceInterlockingSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTimetableDispatcher.cs" Link="Simulation/AiTimetableDispatcher.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/AiTimetableSimulationRuntime.cs" Link="Simulation/AiTimetableSimulationRuntime.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/NativeTimetableDispatcherBuilder.cs" Link="Simulation/NativeTimetableDispatcherBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityStationStopTracker.cs" Link="Simulation/ActivityStationStopTracker.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityPassengerPlatformBinding.cs" Link="Simulation/ActivityPassengerPlatformBinding.cs" />
