@@ -417,6 +417,48 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(RouteSignalAspect.Clear1, owningTrain.Aspect);
     }
 
+
+    [Fact]
+    public void ResolvesConfiguredSignalFunctionSymbolsInNativeThisSignalCalls()
+    {
+        var definition = new SignalTypeDefinition("main", "this-signal", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var signal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = definition },
+            new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        var script = new SignalScriptDefinition("this-signal",
+            new[] { "EXTERN FLOAT STATE;", "STATE = THIS_SIG_LR(NORMAL);" },
+            Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["this-signal"] = script },
+            Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(new HashSet<uint>(), scripts: library));
+
+        Assert.Equal(RouteSignalAspect.Clear1, indication.Aspect);
+        Assert.Equal("CLEAR_1", indication.NativeAspect);
+        Assert.Contains("executed", indication.Reason);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
