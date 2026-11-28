@@ -102,10 +102,11 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
                 {
                     while (entries.Count >= maximumEntries || residentBytes > maximumBytes - loaded.ResidentBytes)
                     {
-                        var oldest = entries
+                        var evictionCandidates = entries
                             .Where(pair => !pinnedKeys.Contains(pair.Key))
-                            .MinBy(pair => pair.Value.LastUse);
-                        if (oldest.Value is null) break;
+                            .ToArray();
+                        if (evictionCandidates.Length == 0) break;
+                        var oldest = evictionCandidates.MinBy(pair => pair.Value.LastUse);
                         if (RemoveEntry(oldest.Key, out var evictedAsset))
                             evicted.Add(evictedAsset);
                     }
