@@ -10,6 +10,21 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldSceneryTileLoaderTests
 {
     [Fact]
+    public void CancelsWorldTileLoadingBeforeReadingContent()
+    {
+        using var store = CreateStore();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new WorldSceneryTileLoader().Load(
+                store,
+                "ROUTES/Test",
+                new WorldTileReference(0, 0, "ROUTES/Test/WORLD/W+000000+000000.w"),
+                cancellationToken: cancellation.Token));
+    }
+
+    [Fact]
     public void RejectsNegativePerTileTextureBudgetBeforeReadingWorldContent()
     {
         using var store = CreateStore();

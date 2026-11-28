@@ -63,7 +63,7 @@ public sealed class RouteWorldViewportStreamingSession : IAsyncDisposable
                     throw new InvalidDataException($"Viewport requested unknown WORLD tile '{path}'.");
                 try
                 {
-                    var tile = new WorldSceneryTileLoader().Load(store, routeRoot, reference);
+                    var tile = new WorldSceneryTileLoader().Load(store, routeRoot, reference, cancellationToken: token);
                     token.ThrowIfCancellationRequested();
                     return Task.FromResult(new RouteTileStreamAsset<WorldTileStreamAsset>(
                         new WorldTileStreamAsset(tile, null), EstimateResidentBytes(tile)));
