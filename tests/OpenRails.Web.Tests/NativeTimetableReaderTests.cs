@@ -110,8 +110,8 @@ public sealed class NativeTimetableReaderTests
         var waitingPoints = new NativeTimetableWaitingPointResolver()
             .Resolve(timetable.Trains[0], timetableRoute, 8 * 60 * 60);
         Assert.Equal(2, waitingPoints.ReleaseTimesSeconds.Count);
-        Assert.Equal(5 * 60, waitingPoints.ReleaseTimesSeconds[1]);
-        Assert.Equal(10 * 60, waitingPoints.ReleaseTimesSeconds[3]);
+        Assert.Equal(8 * 60 * 60 + 5 * 60, waitingPoints.ReleaseTimesSeconds[1]);
+        Assert.Equal(8 * 60 * 60 + 10 * 60, waitingPoints.ReleaseTimesSeconds[3]);
         Assert.Empty(waitingPoints.Diagnostics);
 
         var interlocking = new SignalInterlockingController(
