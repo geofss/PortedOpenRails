@@ -169,6 +169,9 @@ public sealed class AiServiceInterlockingSession
         return Drive(train, route, targetSpeedMetersPerSecond, constraints, speedRestrictions, otherTrains);
     }
 
+    /// <summary>Releases a native timetable waiting point after its scheduled departure time.</summary>
+    public void ReleaseWaitingPoint(int waypointIndex) => driver.ReleaseWaitingPoint(waypointIndex);
+
     /// <summary>Completes dispatch only after all occupied circuits have cleared.</summary>
     public bool TryComplete()
     {
