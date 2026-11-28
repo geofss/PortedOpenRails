@@ -1034,10 +1034,32 @@
         showOptionsDialog = false;
     }
 
-    private void HandleOptionsDialogKeyDown(KeyboardEventArgs args)
+    private async Task HandleOptionsDialogKeyDown(KeyboardEventArgs args)
     {
         if (args.Key.Equals("Escape", StringComparison.OrdinalIgnoreCase))
-            _ = CancelOptionsDialog();
+        {
+            await CancelOptionsDialog();
+            return;
+        }
+
+        if (OptionTabs.Length == 0)
+            return;
+
+        var currentIndex = Array.IndexOf(OptionTabs, selectedOptionsTab);
+        if (currentIndex < 0)
+            currentIndex = 0;
+
+        var nextIndex = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => (currentIndex + 1) % OptionTabs.Length,
+            "ArrowLeft" or "ArrowUp" => (currentIndex - 1 + OptionTabs.Length) % OptionTabs.Length,
+            "Home" => 0,
+            "End" => OptionTabs.Length - 1,
+            _ => currentIndex
+        };
+
+        if (nextIndex != currentIndex)
+            selectedOptionsTab = OptionTabs[nextIndex];
     }
 
     private void SelectOptionsTab(string tab)
