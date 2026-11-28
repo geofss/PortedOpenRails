@@ -42,7 +42,7 @@ public sealed class RouteTileStreamingCacheTests
     }
 
     [Fact]
-    public async Task EvictsLeastRecentlyUsedTilesToRespectByteBudget()
+    public async Task LeavesOverBudgetVisibleTilesTransientWithoutGrowingResidentMemory()
     {
         await using var cache = new RouteTileStreamingCache<int, string>(4, 60);
         await cache.UpdateVisibleAsync(
