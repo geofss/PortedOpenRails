@@ -22,6 +22,8 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 - AI speed governor combines signal-configured limits and track speedpost chainage limits into a single distance-aware braking envelope, with reverse-route and invalid-input coverage.
 - Track speedpost limits remain active after the train passes the marker and are superseded by the next route-direction speedpost. Validate native warning-board / advance-warning behavior and speedpost direction/track applicability against upstream.
 - Route cache coverage includes camera-generation cancellation, visible-set unload, bounded resident bytes and entry count, transient uncached assets when all visible entries are pinned, and IAsyncDisposable cleanup. The viewport loader still needs to own actual decoded terrain/WORLD tile assets and connect their lifetimes to this cache.
+- Terrain viewer now constructs and uploads only the ACE textures referenced by camera-selected terrain patches. Replacing the selected texture set deletes the previous WebGL texture objects. This bounds duplicate GPU terrain texture residency to the current selection; decoded ACE source data is still eagerly retained by the route result.
+- Multi-train AI following resolves the nearest train ahead along the active .pat direction, including reverse direction, and supplies the resulting gap/leader speed to the service governor. It still requires end-to-end acceptance with several moving consists sharing the real Demo Model 1 network.
 - Route-wide acceptance must exercise the authorized Demo Model 1 content, not only fixtures.
 
 ## Terrain and scenery parity closure
