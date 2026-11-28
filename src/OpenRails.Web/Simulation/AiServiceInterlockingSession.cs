@@ -125,8 +125,9 @@ public sealed class AiServiceInterlockingSession
             train.SetBrake(100);
             return new AiServiceControlDecision(0, 100, 0, -1, false, 0);
         }
-        var trainAhead = otherTrains is null ? null : AiTrainFollowingResolver.Resolve(
-            trainId, train.State.Cars[0].DistanceMeters, route.Direction, otherTrains);
+        var trainAhead = otherTrains is null || train.State.Cars.Count == 0 ? null :
+            AiTrainFollowingResolver.Resolve(trainId, train.State.Cars[0].DistanceMeters,
+                route.Direction, otherTrains);
         return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints,
             speedRestrictions, trainAhead);
     }
