@@ -20,6 +20,8 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 - Signal interlocking now supports atomic route replacement for a dispatched service. It refuses conflicting circuits/junctions without mutating the current reservation, retains all occupied consist circuits, and releases only obsolete unoccupied reservations. Multi-train reservation, active replan, and trailing-vehicle lock retention have targeted regressions.
 - Timetable runtime now tracks Pending / Dispatched / Completed / Cancelled states, permits pre-departure cancellation, retries blocked departures, recognizes completion after route release, and uses deterministic ordering for simultaneous departures.
 - AI speed governor combines signal-configured limits and track speedpost chainage limits into a single distance-aware braking envelope, with reverse-route and invalid-input coverage.
+- Track speedpost limits remain active after the train passes the marker and are superseded by the next route-direction speedpost. Validate native warning-board / advance-warning behavior and speedpost direction/track applicability against upstream.
+- Route cache coverage includes camera-generation cancellation, visible-set unload, bounded resident bytes and entry count, transient uncached assets when all visible entries are pinned, and IAsyncDisposable cleanup. The viewport loader still needs to own actual decoded terrain/WORLD tile assets and connect their lifetimes to this cache.
 - Route-wide acceptance must exercise the authorized Demo Model 1 content, not only fixtures.
 
 ## Terrain and scenery parity closure
