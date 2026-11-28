@@ -4,7 +4,7 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest recorded commit: 3f1b7ab013e74cb98807f6ca8eb2678f0947eefc
+Latest implementation checkpoint: 353c8bcf4d9e531f1f361790b708c9662fecf372
 
 ## Project rules
 
@@ -59,6 +59,10 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Track-shape and WORLD geometry builders accept elapsed simulation time.
 - Rolling-stock render-frame builder connects consist motion state, route placement, simulation time, shape animation, season selection and camera-distance LOD.
 - Distance-based LOD selector integrated into track-shape and WORLD scenery geometry builders.
+- Route viewer now receives the WebGL camera's world position through a JS-to-.NET callback. Camera movement rebuilds selected terrain patchsets, track-shape LODs and WORLD scenery LODs instead of leaving the initial LOD frozen.
+- Terrain LOD selection chooses the source patchset whose distance threshold contains the camera-to-tile distance; a dedicated regression suite covers unordered levels, nearest-threshold selection, empty inputs and invalid distances.
+- The live browser simulation clock is passed from BrowserTrainDrivingController into RouteTerrainViewer. Rolling-stock render updates now use RollingStockRenderFrameBuilder for connected routes, simulation-time animation and camera-distance LOD.
+- Render batch payloads now carry per-slot texture indexes, every retained UV channel and material descriptors through initial draw and live rolling-stock updates.
 - Track-shape and WORLD render batches carry full UV-channel arrays, per-slot texture indexes and primitive material descriptors; material-state differences are split into separate batches.
 - The WebGL2 renderer consumes up to four UV channels and four texture slots per batch, supports copy/uniform-scale/nonuniform-scale UV operations, per-stage addressing/filter settings, alpha test and the available Z-buffer write state.
 - Rolling-stock render-frame builder has an overload that accepts the live TrainConsistSimulationSession and reads its simulation time/state directly.
@@ -75,33 +79,40 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - TrackDatabaseReader currently recognizes crossover, signal, speedpost, platform, sound-region, empty, level-crossing, siding, hazard and pickup records, and preserves multiple item references/metadata.
 - TrackNetworkBuilder and TrackNetworkRouteBuilder build vector paths and connected route traversal; ambiguous junction continuations are surfaced rather than guessed.
 - Terrain and WORLD mesh pipelines exist, with seasonal texture selection.
-- Not complete: route-wide operational and visual parity, complete track-item consumers, all signalling behavior, route-scale streaming, and visual acceptance over the authorized route.
+- Not complete: route-wide operational and visual parity, complete track-item consumers, all signalling behavior, route-scale asynchronous tile/asset streaming and unload/reload, and visual acceptance over the authorized route.
 
 ### Rolling-stock foundations
 - Native ENG/WAG metadata and consist readers, shared shape loader, route placement and motion-state placement exist.
 - Simulation foundations include fixed-step consist motion, traction, resistance, adhesion, coupler force/slack and pneumatic brake models.
 - A render-frame orchestrator now links motion-state placement to animated textured geometry.
-- Not complete: native vehicle/material parity, dynamic wheel/bogie/suspension behavior, full train-specific controls, cab/audio runtime binding, and complete Demo Model 1 browser operation.
+- Not complete: native vehicle/material parity, dynamic wheel/bogie/suspension behavior, train-specific animation-controller binding beyond the shape's time-based clips, full native cab controls, native rolling-stock audio assets, and complete Demo Model 1 browser operation.
 
 ## Verification policy and latest evidence
 
-- Previous checkpoint at commit f0cf1eab89b3cb08c61205f3ecac5346633e855a had successful reported workflows:
-  - WebAssembly build: run 46083452284
-  - Route pipeline regression: run 46083452283
-- Those workflow results predate the later upstream-aligned tcb_rot slerp, LOD, material-preservation, route-item placement and rolling-stock render-frame changes. The first multi-material batch regression revealed unnecessary per-shape batch splitting; the latest commits removed that key so compatible assets share batches again. A new CI run is required to verify this correction. A later run on commit b5d9351705ca90a2d9e05f2d71f77d96e1d16448 failed at compile time due to a variable-scope collision in the WORLD animation builder; that collision was fixed in commit 3afa3b2dd06d3143980a4ec7de9711b13c722003. The subsequent code additions have not yet been verified by a successful run.
-- The current environment can inspect and update GitHub source but cannot execute dotnet or a browser end-to-end test directly.
+- Implementation checkpoint before this status refresh: `353c8bcf4d9e531f1f361790b708c9662fecf372`.
+- The first build attempt on `d79ee7e32c874bfd43e2095e01b05152b6628256` failed because the Razor component lacked the `System.Numerics` import for `Vector3`; the import was added immediately afterward.
+- Corrected checkpoint `282cc08721ca901a326355fc2604b4819ad7c0ce`:
+  - WebAssembly publish and branch preview: run 46087463225 — success.
+  - Duplicate WebAssembly publish run: 46087458752 — success.
+  - Route regression suite: run 46087463217 — success.
+  - Authorized Demo Model 1 route acceptance: run 46087463217 was still in progress when this record was refreshed.
+- Current implementation checkpoint `353c8bcf4d9e531f1f361790b708c9662fecf372`:
+  - WebAssembly workflow: run 46087581405 — in progress at last check.
+  - Route workflow: run 46087581409 — in progress at last check.
+- The route regression workflow now explicitly includes `TerrainLodSelectorTests`.
+- These automated results do not establish visual parity at all LOD distances, stable performance on the full route, real locomotive/wagon animation parity, cab/audio acceptance, or async route-scale streaming.
+- The current environment can inspect and update GitHub source but cannot execute dotnet or browser end-to-end tests directly.
 - Do not claim current tests/builds pass until CI reports success for the current commit.
-- Do not claim any of the three systems complete until the authorized Demo Model 1 route and real rolling stock run through the browser runtime with visible/operational acceptance evidence.
+- Do not claim any system complete until the authorized Demo Model 1 route and real rolling stock run through the browser runtime with visible/operational acceptance evidence.
 
 ## Next bulk integration work
 
-1. Finish rendering the retained material/UV data: expand material batching and GPU vertex layout without silently dropping additional texture slots or UV channels; implement supported UV operations and native render-state mapping.
-2. Bind the application render loop's simulation clock and camera to the rolling-stock/WORLD render-frame APIs; connect clip selection to actual vehicle/scenery states and wheel/cab controllers.
-3. Compare TCB interpolation against upstream Open Rails implementation/reference samples; cover irregular frame spacing, quaternion sign flips, endpoint behavior and degenerate keys.
-4. Make LOD selection and route streaming operate at tile/asset lifecycle level, not only per-mesh geometry selection; add cancellation and unload/reload.
-5. Complete route item-to-runtime bindings for junctions, signals, platforms, sidings, crossings, restrictions, sound regions, pickups and hazards.
-6. Complete rolling-stock native model, physics, cab and audio integration and exercise a real locomotive-plus-coach consist on the authorized route.
-7. Run all CI checks and the Demo Model 1 browser acceptance flow; update this file with exact commit and run IDs.
+1. Validate camera-driven terrain/track/WORLD LOD in a desktop browser at close, medium and far distances; profile rebuild cost and avoid redundant geometry work.
+2. Implement route-scale async tile/asset streaming, cancellation, unload/reload and bounded GPU/CPU memory.
+3. Complete native shape material behavior: reflection-map UV operations, shader variants, lighting/light-material evaluation, border colors, mip bias, full Z-buffer modes and GPU reference-image parity.
+4. Complete rolling-stock-specific runtime behavior: wheel/bogie/suspension controllers, native cab control animation, native sound definitions/assets and representative locomotive-plus-coach acceptance.
+5. Continue route, signal/interlocking, AI, simulation and original Open Rails UI closure tracks.
+6. Run full Demo Model 1 browser acceptance and record exact browser/runtime evidence; CI parser acceptance alone is insufficient.
 
 ## Continuity instruction
 
