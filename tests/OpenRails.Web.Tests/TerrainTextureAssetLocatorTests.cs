@@ -9,6 +9,21 @@ namespace OpenRails.Web.Tests;
 public sealed class TerrainTextureAssetLocatorTests
 {
     [Fact]
+    public void TextureLoaderHonorsCancellationBeforeDecodingNextAsset()
+    {
+        var discovery = new TerrainTextureAssetDiscovery(
+            new[] { new TerrainTextureAssetReference("shader", 0, "texture.ace", null, "ROUTES/Test/TERRTEX/texture.ace", false) },
+            Array.Empty<TerrainTextureAssetIssue>());
+        using var store = CreateStore();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new TerrainTextureAssetLoader().Load(store, discovery, cancellation.Token));
+    }
+
+
+    [Fact]
     public void ResolvesTerrainTexturesFromDefaultAndSeasonalTerrTexFolders()
     {
         var tile = CreateTile(new TerrainShaderDefinition(
