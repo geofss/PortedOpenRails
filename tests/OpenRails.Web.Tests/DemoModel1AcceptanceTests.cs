@@ -216,19 +216,24 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(followerService.IsDispatched);
         Assert.True(leaderService.IsDispatched);
 
+        var aiRuntime = new AiTimetableSimulationRuntime(multiTrainTimetable,
+            new[]
+            {
+                new AiTimetableTrainRuntimeBinding(
+                    "SCE-consist-follower", "SCE-main", followerService,
+                    followerDriver, followerRoute, TargetSpeedMetersPerSecond: 60),
+                new AiTimetableTrainRuntimeBinding(
+                    "SCE-consist-leader", "SCE-main", leaderService,
+                    leaderDriver, leaderRoute, TargetSpeedMetersPerSecond: 8)
+            });
         AiServiceControlDecision? followerDecision = null;
         for (var step = 0; step < 120; step++)
         {
-            leaderService.Drive(leaderDriver, leaderRoute, targetSpeedMetersPerSecond: 8);
-            leaderDriver.Advance(1d / 30d);
-            var leaderState = new AiServiceTrainState(
-                "SCE-consist-leader",
-                leaderDriver.State.Cars[0].DistanceMeters,
-                Math.Max(0, leaderDriver.State.Cars[0].SpeedMetersPerSecond));
-            followerDecision = followerService.Drive(
-                followerDriver, followerRoute, targetSpeedMetersPerSecond: 60,
-                otherTrains: new[] { leaderState });
-            followerDriver.Advance(1d / 30d);
+            var tick = aiRuntime.Advance(1d / 30d);
+            var followerDecisionIndex = tick.DecisionServiceIds
+                .ToList().FindIndex(serviceId => serviceId == "SCE-consist-follower");
+            if (followerDecisionIndex >= 0)
+                followerDecision = tick.Decisions[followerDecisionIndex];
         }
 
         Assert.True(leaderDriver.State.Cars[0].DistanceMeters > leaderInitialDistance);
