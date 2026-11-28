@@ -81,7 +81,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
                 if (!referencesByPath.TryGetValue(path, out var reference))
                     throw new InvalidDataException($"Viewport requested unknown terrain tile '{path}'.");
                 seamAwareBatch ??= new RouteTerrainMeshLoader().Load(
-                    store, new RouteTerrainTileDiscovery(selectedReferences, Array.Empty<(int, int, string)>()), token;
+                    store, new RouteTerrainTileDiscovery(selectedReferences, Array.Empty<(int, int, string)>()), token);
                 var mesh = seamAwareBatch.Meshes.FirstOrDefault(candidate =>
                     string.Equals(candidate.Content.Reference.Path, reference.Path, StringComparison.OrdinalIgnoreCase));
                 if (mesh is null)
