@@ -12,8 +12,14 @@ export async function storeArchive(streamReference, originalName, expectedBytes,
     if (!("storage" in navigator) || typeof navigator.storage.getDirectory !== "function") {
         throw new Error("This browser does not support the Origin Private File System (OPFS) required for large route archives.");
     }
-    if (!Number.isSafeInteger(expectedBytes) || expectedBytes <= 0 || expectedBytes > maxBytes) {
-        throw new Error("The selected archive exceeds the 30 GB upload limit or has an invalid size.");
+    if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 ||
+        !Number.isSafeInteger(quotaMarginBytes) || quotaMarginBytes < 0 ||
+        !Number.isSafeInteger(expectedBytes) || expectedBytes <= 0 ||
+        expectedBytes > maxBytes || !Number.isSafeInteger(expectedBytes + quotaMarginBytes)) {
+        throw new Error("The selected archive size or storage limit is invalid.");
+    }
+    if (!progress || typeof progress.invokeMethodAsync !== "function") {
+        throw new Error("Upload progress reporting is unavailable. Refresh the application and retry.");
     }
 
     const estimate = await navigator.storage.estimate();
@@ -88,9 +94,16 @@ export async function storeArchive(streamReference, originalName, expectedBytes,
             persistentStorageGranted
         };
         const metadataHandle = await packageDirectory.getFileHandle(metadataName, { create: true });
-        const metadataWriter = await metadataHandle.createWritable();
-        await metadataWriter.write(JSON.stringify(metadata));
-        await metadataWriter.close();
+        let metadataWriter;
+        try {
+            metadataWriter = await metadataHandle.createWritable();
+            await metadataWriter.write(JSON.stringify(metadata));
+            await metadataWriter.close();
+            metadataWriter = null;
+        } catch (error) {
+            try { if (metadataWriter) await metadataWriter.abort(); } catch { /* preserve the write failure */ }
+            throw error;
+        }
         completed = true;
         await progress.invokeMethodAsync("Report", transferred, expectedBytes);
 
