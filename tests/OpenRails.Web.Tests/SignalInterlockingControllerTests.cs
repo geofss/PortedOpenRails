@@ -13,6 +13,42 @@ public sealed class SignalInterlockingControllerTests
         });
 
     [Fact]
+    public void DetectsAndCanonicalizesAiWaitForCycles()
+    {
+        var interlocking = new SignalInterlockingController(
+            new uint[] { 10, 11, 12 },
+            new Dictionary<uint, IReadOnlyCollection<uint>>());
+
+        Assert.True(interlocking.TryReserveRoute("AI-A", new uint[] { 10 },
+            new Dictionary<uint, uint>()));
+        Assert.True(interlocking.TryReserveRoute("AI-B", new uint[] { 11 },
+            new Dictionary<uint, uint>()));
+        Assert.False(interlocking.TryReserveRoute("AI-A", new uint[] { 11 },
+            new Dictionary<uint, uint>()));
+        Assert.False(interlocking.TryReserveRoute("AI-B", new uint[] { 10 },
+            new Dictionary<uint, uint>()));
+
+        var cycles = interlocking.SnapshotDeadlockCycles();
+        var cycle = Assert.Single(cycles);
+        Assert.Equal(new[] { "AI-A", "AI-B" }, cycle);
+    }
+
+    [Fact]
+    public void DoesNotReportWaitForChainWithoutCycleAsDeadlock()
+    {
+        var interlocking = new SignalInterlockingController(
+            new uint[] { 10, 11, 12 },
+            new Dictionary<uint, IReadOnlyCollection<uint>>());
+
+        Assert.True(interlocking.TryReserveRoute("AI-A", new uint[] { 10 },
+            new Dictionary<uint, uint>()));
+        Assert.False(interlocking.TryReserveRoute("AI-B", new uint[] { 10 },
+            new Dictionary<uint, uint>()));
+
+        Assert.Empty(interlocking.SnapshotDeadlockCycles());
+    }
+
+    [Fact]
     public void ReservesWholeRouteAndLocksSelectedJunctionAtomically()
     {
         var interlocking = Create();
