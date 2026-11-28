@@ -67,7 +67,7 @@ public static class RouteViewportTileSelector
                 continue;
 
             // Higher priority means nearer to the camera. The cache sorts descending.
-            var priority = -Math.Sqrt(distanceSquared);
+            var priority = 1d / (1d + Math.Sqrt(distanceSquared));
             requests.Add(new RouteTileStreamRequest<TTile>(tile, priority, estimatedBytesPerTile));
         }
 
