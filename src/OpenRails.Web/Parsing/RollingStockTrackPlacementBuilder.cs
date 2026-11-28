@@ -41,7 +41,6 @@ public sealed class RollingStockTrackPlacementBuilder
 
         var cumulative = BuildTrackChainage(path, maximumSegmentLengthMeters, centerline.Count);
         var availableLength = cumulative[^1];
-        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
         var cursor = startDistanceMeters;
@@ -310,6 +309,7 @@ public sealed class RollingStockTrackPlacementBuilder
             cumulative[i] = cumulative[i - 1] + TrackDistance(centerline[i - 1], centerline[i]);
 
         var availableLength = cumulative[^1];
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
         var minimumDistance = double.PositiveInfinity;
