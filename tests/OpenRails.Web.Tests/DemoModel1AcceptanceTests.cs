@@ -12,7 +12,7 @@ namespace OpenRails.Web.Tests;
 public sealed class DemoModel1AcceptanceTests
 {
     [Fact]
-    public void LoadsScottishCapitalExpressFromTheAuthorizedRoutePackage()
+    public async Task LoadsScottishCapitalExpressFromTheAuthorizedRoutePackage()
     {
         var root = Environment.GetEnvironmentVariable("DEMO_MODEL1_ROOT");
         // Other CI jobs compile and run the shared test project without downloading
@@ -53,6 +53,29 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(route.WorldTiles.Found.Count > 0, "No SCE WORLD tiles were discovered.");
         Assert.True(route.TerrainMeshes.Meshes.Count > 0, "No SCE terrain meshes were built.");
         Assert.True(route.WorldScenery.Loaded.Count > 0, "No SCE WORLD scenery tiles were parsed.");
+
+        // Exercise camera-scoped terrain source loading against the real route.
+        // Moving outside the route must evict the previous CPU-side tile working set.
+        var terrainAnchor = route.TerrainTiles.Found[0];
+        await using var terrainStreaming = new RouteTerrainViewportStreamingSession(
+            maximumResidentTiles: 16,
+            maximumResidentBytes: 1024L * 1024 * 1024,
+            estimatedBytesPerTile: 64L * 1024 * 1024);
+        var streamedTerrain = await terrainStreaming.UpdateCameraAsync(
+            store, route.Assets.RouteRoot, route.TerrainTiles,
+            terrainAnchor.TileX * RouteViewportTileSelector.TileSizeMeters,
+            terrainAnchor.TileZ * RouteViewportTileSelector.TileSizeMeters,
+            radiusMeters: 0);
+        Assert.NotEmpty(streamedTerrain.Meshes);
+        Assert.True(streamedTerrain.ResidentTileCount <= 16);
+        Assert.True(streamedTerrain.ResidentBytes <= 1024L * 1024 * 1024);
+
+        var outsideRoute = await terrainStreaming.UpdateCameraAsync(
+            store, route.Assets.RouteRoot, route.TerrainTiles,
+            cameraX: 10_000_000, cameraZ: 10_000_000, radiusMeters: 0);
+        Assert.Empty(outsideRoute.Meshes);
+        Assert.Equal(0, terrainStreaming.ResidentTileCount);
+        Assert.Equal(0, terrainStreaming.ResidentBytes);
 
         // Exercise the production interlocking and timetable together on real SCE
         // track-circuit IDs. Two services request the same block at the same
