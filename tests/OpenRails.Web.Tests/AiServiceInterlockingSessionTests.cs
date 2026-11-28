@@ -54,11 +54,12 @@ public sealed class AiServiceInterlockingSessionTests
         var route = new ServiceRouteStartPosition(0, 0,
             new TrackWorldPosition(0, 0, 0), new[] { 0d, 500d }, 1);
 
+        var currentDistance = train.State.Cars[0].DistanceMeters;
         var free = session.Drive(train, route, 25);
         var following = session.Drive(train, route, 25, otherTrains: new[]
         {
-            new AiServiceTrainState("PLAYER", 25, 0),
-            new AiServiceTrainState("AI-2", 100, 10)
+            new AiServiceTrainState("PLAYER", currentDistance + 25, 0),
+            new AiServiceTrainState("AI-2", currentDistance + 100, 10)
         });
 
         Assert.True(following.TargetSpeedMetersPerSecond < free.TargetSpeedMetersPerSecond);
