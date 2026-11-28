@@ -130,7 +130,7 @@ public sealed class TrackShapeRenderGeometryBuilder
                     textureIndexes.TryGetValue((placement.Asset.ShapeIndex, binding.ImageName), out var slot)
                         ? slot : -1).ToArray() ?? (textureIndex >= 0 ? new[] { textureIndex } : Array.Empty<int>());
                 var key = new TrackShapeBatchKey(
-                    placement.Asset.ShapeIndex, primitive.PrimitiveStateIndex, textureIndex,
+                    primitive.PrimitiveStateIndex, textureIndex,
                     string.Join(",", textureSlotIndexes), primitive.ShaderName,
                     primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
                     primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.AlphaTest,
@@ -205,7 +205,7 @@ public sealed class TrackShapeRenderGeometryBuilder
     }
 
     private sealed record TrackShapeBatchKey(
-        uint ShapeIndex, int PrimitiveStateIndex, int TextureIndex, string TextureSlotKey, string ShaderName,
+        int PrimitiveStateIndex, int TextureIndex, string TextureSlotKey, string ShaderName,
         int LightMaterialIndex, int LightConfigurationIndex, int TextureFilterMode,
         float MipMapLodBias, bool AlphaTest, int TextureAddressMode, float ZBias, int ZBufferMode);
     private sealed class TrackShapeBatchBuilder
