@@ -75,6 +75,36 @@ public sealed class NativeTimetableReaderTests
             new NativeTimetableReader().Read(invalidStore, "invalid.timetable"));
     }
 
+
+    [Fact]
+    public void BindsNativeTimetableServicesToDispatcherAtTheirDeclaredStartTimes()
+    {
+        using var store = CreateStore("ROUTES/SCE/TIMETABLES/weekday.timetable",
+            ",Train A,,Train C,#comment\n" +
+            "#comment,,,,Weekday service\n" +
+            "#path,Main,,Branch,\n" +
+            "#consist,Express.con,,Local.con,\n" +
+            "#direction,Up,,Down,\n" +
+            "#start,08:00,,08:15,\n");
+
+        var timetable = new NativeTimetableDefinitionReader()
+            .Read(store, "ROUTES/SCE/TIMETABLES/weekday.timetable");
+        var interlocking = new SignalInterlockingController(
+            new uint[] { 2, 3 },
+            new Dictionary<uint, IReadOnlyCollection<uint>>());
+        var built = new NativeTimetableDispatcherBuilder().Build(timetable, train =>
+            new NativeTimetableServiceRegistration(
+                new AiServiceInterlockingSession(train.Train, interlocking),
+                train.Train == "Train A" ? new uint[] { 2 } : new uint[] { 3 },
+                new Dictionary<uint, uint>()));
+
+        Assert.Equal(new[] { "Train A", "Train C" }, built.RegisteredServiceIds);
+        Assert.Empty(built.Issues);
+        Assert.Empty(built.Dispatcher.Advance(7 * 60 * 60));
+        Assert.Equal(new[] { "Train A" }, built.Dispatcher.Advance(60 * 60));
+        Assert.Equal(new[] { "Train C" }, built.Dispatcher.Advance(15 * 60));
+    }
+
     private static ZipContentStore CreateStore(string path, string text)
     {
         var memory = new MemoryStream();
