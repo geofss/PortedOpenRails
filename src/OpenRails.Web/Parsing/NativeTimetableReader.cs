@@ -107,8 +107,19 @@ public sealed class NativeTimetableDefinitionReader
                 foreach (var train in trains) train.StartTime = Cell(row, train.Column);
         }
 
+        foreach (var train in trains)
+        {
+            train.Stops = Array.AsReadOnly(rows
+                .Where(row => row.Count > 0 &&
+                    !row[0].StartsWith("#", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(Cell(row, train.Column)))
+                .Select(row => new NativeTimetableStopDefinition(
+                    row[0], Cell(row, train.Column), train.Column))
+                .ToArray());
+        }
+
         return new NativeTimetableDefinition(grid.SourcePath, description, briefing,
-            Array.AsReadOnly(trains.ToArray()));
+            Array.AsReadOnly(trains.ToArray()), Array.AsReadOnly(rows));
     }
 
     private static string Cell(IReadOnlyList<string> row, int column) =>
@@ -119,7 +130,23 @@ public sealed record NativeTimetableDefinition(
     string SourcePath,
     string Description,
     string Briefing,
-    IReadOnlyList<NativeTimetableTrainDefinition> Trains);
+    IReadOnlyList<NativeTimetableTrainDefinition> Trains,
+    IReadOnlyList<IReadOnlyList<string>>? Rows = null);
+
+public sealed record NativeTimetableStopDefinition(string Location, string Value, int Column)
+{
+    public bool TryGetTimeSeconds(out double seconds)
+    {
+        if (TimeSpan.TryParse(Value, System.Globalization.CultureInfo.InvariantCulture, out var time) &&
+            time >= TimeSpan.Zero && time.TotalSeconds <= int.MaxValue)
+        {
+            seconds = time.TotalSeconds;
+            return true;
+        }
+        seconds = 0;
+        return false;
+    }
+}
 
 public sealed class NativeTimetableTrainDefinition(int column, string train)
 {
@@ -130,6 +157,8 @@ public sealed class NativeTimetableTrainDefinition(int column, string train)
     public string Direction { get; internal set; } = string.Empty;
     public string StartTime { get; internal set; } = string.Empty;
     public string Briefing { get; internal set; } = string.Empty;
+    public IReadOnlyList<NativeTimetableStopDefinition> Stops { get; internal set; } =
+        Array.Empty<NativeTimetableStopDefinition>();
 
     public bool TryGetDepartureSeconds(out double seconds)
     {
