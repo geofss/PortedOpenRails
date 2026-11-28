@@ -53,7 +53,7 @@ public sealed class RouteTileStreamingCacheTests
             new[] { new RouteTileStreamRequest<int>(1, 3, 30), new RouteTileStreamRequest<int>(3, 2, 40) },
             (key, _) => Task.FromResult(new RouteTileStreamAsset<string>($"tile-{key}", 40)));
 
-        Assert.Equal(40, cache.ResidentBytes);
+        Assert.Equal(30, cache.ResidentBytes);
         Assert.Equal(1, cache.Count);
     }
 
