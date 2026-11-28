@@ -509,8 +509,8 @@ public sealed class SignalNetworkBuilderTests
     [Fact]
     public void ResolvesNativeNthMostRestrictiveNextSignalAspect()
     {
-        SignalTypeDefinition Definition(int clearAhead) =>
-            new("main", "", "NORMAL", "", "", clearAhead,
+        SignalTypeDefinition Definition(int clearAhead, string script = "") =>
+            new("main", script, "NORMAL", "", "", clearAhead,
                 new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
                 new Dictionary<string, SignalDrawStateDefinition>(),
                 new[]
@@ -520,7 +520,7 @@ public sealed class SignalNetworkBuilderTests
                     new SignalAspectDefinition("CLEAR_2", "", 12, false, false, false)
                 });
         var currentSignal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
-            Array.Empty<TrackSignalDirection>(), Definition(1));
+            Array.Empty<TrackSignalDirection>(), Definition(1, "nth-next"));
         var firstNextSignal = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
             Array.Empty<TrackSignalDirection>(), Definition(1));
         var secondNextLeast = new RouteSignalHead(23, "main", "", 0, 0, 4, 0,
