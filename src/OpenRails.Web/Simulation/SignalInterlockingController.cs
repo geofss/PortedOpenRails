@@ -42,6 +42,58 @@ public sealed class SignalInterlockingController
         junctionBranches = new ReadOnlyDictionary<uint, HashSet<uint>>(branchMap);
     }
 
+    /// <summary>
+    /// Returns deterministic wait-for cycles among AI route reservations. A cycle
+    /// indicates that every train in the returned chain is blocked by another
+    /// member; callers can feed this into native deadlock path selection/replanning.
+    /// </summary>
+    public IReadOnlyList<IReadOnlyList<string>> SnapshotDeadlockCycles()
+    {
+        lock (gate)
+        {
+            var cycles = new List<IReadOnlyList<string>>();
+            var canonical = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var start in waitsFor.Keys.OrderBy(id => id, StringComparer.Ordinal))
+            {
+                var path = new List<string>();
+                var positions = new Dictionary<string, int>(StringComparer.Ordinal);
+                Explore(start);
+                void Explore(string current)
+                {
+                    if (positions.TryGetValue(current, out var cycleStart))
+                    {
+                        var cycle = path.Skip(cycleStart).ToArray();
+                        if (cycle.Length < 2) return;
+                        var normalized = Normalize(cycle);
+                        if (canonical.Add(string.Join("\\0", normalized)))
+                            cycles.Add(Array.AsReadOnly(normalized));
+                        return;
+                    }
+                    if (path.Count >= waitsFor.Count) return;
+                    positions[current] = path.Count;
+                    path.Add(current);
+                    if (waitsFor.TryGetValue(current, out var blockers))
+                        foreach (var next in blockers.OrderBy(id => id, StringComparer.Ordinal))
+                            if (waitsFor.ContainsKey(next))
+                                Explore(next);
+                    path.RemoveAt(path.Count - 1);
+                    positions.Remove(current);
+                }
+            }
+            return Array.AsReadOnly(cycles.ToArray());
+        }
+    }
+
+    private static string[] Normalize(IReadOnlyList<string> cycle)
+    {
+        var best = 0;
+        for (var index = 1; index < cycle.Count; index++)
+            if (StringComparer.Ordinal.Compare(cycle[index], cycle[best]) < 0)
+                best = index;
+        return Enumerable.Range(0, cycle.Count).Select(offset =>
+            cycle[(best + offset) % cycle.Count]).ToArray();
+    }
+
     public bool TrySetJunctionBranch(uint junctionId, uint branchCircuitId)
     {
         lock (gate)
