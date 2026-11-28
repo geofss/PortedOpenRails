@@ -131,9 +131,11 @@ export function initialize(canvas) {
     if (activePointers.size >= 2) {
       const points = [...activePointers.values()];
       const distance = pointerDistance(points[0], points[1]);
-      if (pinchStartDistance > 0)
-        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance)); activeCameraPreset = "custom";
-      redraw();
+      if (pinchStartDistance > 0) {
+        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance));
+        activeCameraPreset = "custom";
+        redraw();
+      }
     } else if (dragging) {
       rotation += (e.clientX-lastX)*0.008;
       pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006));

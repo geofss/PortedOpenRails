@@ -27,7 +27,7 @@ public sealed class RouteWorldViewportStreamingSession : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(estimatedBytesPerTile));
         this.maximumResidentBytes = maximumResidentBytes;
         this.estimatedBytesPerTile = estimatedBytesPerTile;
-        maximumVisibleTiles = (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile);
+        maximumVisibleTiles = Math.Max(1, (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile));
         cache = new RouteTileStreamingCache<string, WorldTileStreamAsset>(
             maximumResidentTiles, maximumResidentBytes, maximumConcurrentLoads);
     }

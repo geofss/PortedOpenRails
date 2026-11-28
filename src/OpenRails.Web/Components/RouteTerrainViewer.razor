@@ -28,7 +28,7 @@
     <div class="route-preview-quality">
         <label for="route-preview-quality">Graphics quality</label>
         <select id="route-preview-quality" value="@qualityPreset" @onchange="ChangeQuality">
-            <option value="low">Low · mobile-friendly</option>
+            <option value="low">Low · reduced detail</option>
             <option value="medium">Medium</option>
             <option value="high">High · maximum preview detail</option>
         </select>
@@ -67,6 +67,8 @@
         <dt>Forest objects / generated tree billboards</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(ActiveWorldScenery.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
         <dt>Forest textures loaded / missing / failed</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
         <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @ActiveTerrainMeshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
+        <dt>Terrain CPU / GPU working set</dt><dd>@((terrainStreaming?.ResidentBytes ?? 0) / (1024d * 1024):N0) / @((terrainStreaming?.EstimatedGpuBytes ?? 0) / (1024d * 1024):N0) MiB</dd>
+        <dt>WORLD CPU working set</dt><dd>@((worldStreaming?.ResidentBytes ?? 0) / (1024d * 1024):N0) MiB · @ActiveWorldScenery.Count visible tile(s)</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
