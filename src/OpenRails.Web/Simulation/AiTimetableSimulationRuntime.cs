@@ -12,7 +12,8 @@ public sealed record AiTimetableTrainRuntimeBinding(
     ServiceRouteStartPosition Route,
     double TargetSpeedMetersPerSecond,
     TrackNetworkRoute? OccupancyRoute = null,
-    Func<BrowserTrainDrivingController, IReadOnlyList<TrainCarRouteOccupancy>>? OccupancyResolver = null);
+    Func<BrowserTrainDrivingController, IReadOnlyList<TrainCarRouteOccupancy>>? OccupancyResolver = null,
+    IReadOnlyDictionary<int, double>? WaitingPointReleaseTimesSeconds = null);
 
 public sealed record AiTimetableSimulationTickResult(
     double ElapsedSeconds,
@@ -55,6 +56,10 @@ public sealed class AiTimetableSimulationRuntime
             ArgumentNullException.ThrowIfNull(train.Route);
             if (train.OccupancyResolver is not null && train.OccupancyRoute is null)
                 throw new ArgumentException($"Timetable service '{train.ServiceId}' requires an occupancy route.", nameof(trains));
+            if (train.WaitingPointReleaseTimesSeconds is not null &&
+                train.WaitingPointReleaseTimesSeconds.Any(pair => pair.Key < 0 ||
+                    !double.IsFinite(pair.Value) || pair.Value < 0))
+                throw new ArgumentException($"Timetable service '{train.ServiceId}' has invalid waiting-point release times.", nameof(trains));
             if (train.Driver.State.Cars.Count == 0)
                 throw new ArgumentException($"Timetable service '{train.ServiceId}' has no consist vehicles.", nameof(trains));
         }
@@ -66,6 +71,12 @@ public sealed class AiTimetableSimulationRuntime
             throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
 
         var dispatched = dispatcher.Advance(deltaSeconds).ToArray();
+        foreach (var train in trains)
+            if (train.WaitingPointReleaseTimesSeconds is not null)
+                foreach (var (waypointIndex, releaseTime) in train.WaitingPointReleaseTimesSeconds)
+                    if (dispatcher.ElapsedSeconds >= releaseTime)
+                        train.Session.ReleaseWaitingPoint(waypointIndex);
+
         var active = trains.Where(train => train.Session.IsDispatched)
             .GroupBy(train => train.RouteId, StringComparer.OrdinalIgnoreCase)
             .SelectMany(group => group.OrderByDescending(train =>
