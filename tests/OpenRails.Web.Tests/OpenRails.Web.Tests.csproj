@@ -113,6 +113,7 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTimetableDispatcher.cs" Link="Simulation/AiTimetableDispatcher.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTimetableSimulationRuntime.cs" Link="Simulation/AiTimetableSimulationRuntime.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/NativeTimetableDispatcherBuilder.cs" Link="Simulation/NativeTimetableDispatcherBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Simulation/NativeTimetableWaitingPointResolver.cs" Link="Simulation/NativeTimetableWaitingPointResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityStationStopTracker.cs" Link="Simulation/ActivityStationStopTracker.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityPassengerPlatformBinding.cs" Link="Simulation/ActivityPassengerPlatformBinding.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityPassengerStopTiming.cs" Link="Simulation/ActivityPassengerStopTiming.cs" />
