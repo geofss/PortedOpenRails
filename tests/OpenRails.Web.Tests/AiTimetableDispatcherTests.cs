@@ -60,9 +60,9 @@ public sealed class AiTimetableDispatcherTests
 
         Assert.Equal(AiTimetableServiceStatus.Pending, timetable.GetServiceStatus("Departing"));
         Assert.True(timetable.TryCancelService("Cancelled"));
-        Assert.False(timetable.TryCancelService("Departing"));
         Assert.Equal(new[] { "Departing" }, timetable.Advance(0));
         Assert.Equal(AiTimetableServiceStatus.Dispatched, timetable.GetServiceStatus("Departing"));
+        Assert.False(timetable.TryCancelService("Departing"));
 
         Assert.True(session.TryComplete());
         Assert.Empty(timetable.Advance(0));
