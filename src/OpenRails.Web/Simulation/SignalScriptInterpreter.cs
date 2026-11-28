@@ -152,7 +152,7 @@ public sealed class SignalScriptInterpreter
         public static int ToInteger(double value)
         {
             if (!double.IsFinite(value) || value < int.MinValue || value > int.MaxValue)
-                throw new OverflowException("SIGSCR integer state is outside the supported range.");
+                throw new OverflowException("SIGSCR integer overflow: state is outside the supported range.");
             return (int)Math.Truncate(value);
         }
 
