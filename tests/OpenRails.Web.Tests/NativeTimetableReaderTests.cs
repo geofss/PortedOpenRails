@@ -96,6 +96,23 @@ public sealed class NativeTimetableReaderTests
         Assert.Equal("Edinburgh", timetable.Trains[0].Stops[0].Location);
         Assert.True(timetable.Trains[0].Stops[0].TryGetTimeSeconds(out var firstStopSeconds));
         Assert.Equal(8 * 60 * 60 + 5 * 60, firstStopSeconds);
+        var timetableRoute = new ServiceRouteStartPosition(
+            0, 0, new TrackWorldPosition(0, 0, 0),
+            new double[] { 0, 100, 200, 300, 400 }, 1,
+            new[]
+            {
+                new ServiceRouteWaypoint(0, false, false),
+                new ServiceRouteWaypoint(100, true, false),
+                new ServiceRouteWaypoint(200, false, false),
+                new ServiceRouteWaypoint(300, true, false),
+                new ServiceRouteWaypoint(400, false, false)
+            });
+        var waitingPoints = new NativeTimetableWaitingPointResolver()
+            .Resolve(timetable.Trains[0], timetableRoute, 8 * 60 * 60);
+        Assert.Equal(2, waitingPoints.ReleaseTimesSeconds.Count);
+        Assert.Equal(5 * 60, waitingPoints.ReleaseTimesSeconds[1]);
+        Assert.Equal(10 * 60, waitingPoints.ReleaseTimesSeconds[3]);
+        Assert.Empty(waitingPoints.Diagnostics);
 
         var interlocking = new SignalInterlockingController(
             new uint[] { 2, 3 },
