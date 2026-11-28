@@ -75,6 +75,20 @@ public sealed class AiServiceInterlockingSession
     }
 
     /// <summary>
+    /// Replans an active AI service without releasing its current route first.
+    /// The replacement is committed atomically and cannot drop trailing-car
+    /// occupancy or steal another service's reservations.
+    /// </summary>
+    public bool TryChangeRoute(
+        IReadOnlyList<uint> routeCircuitIds,
+        IReadOnlyDictionary<uint, uint> requiredJunctionBranches)
+    {
+        ArgumentNullException.ThrowIfNull(routeCircuitIds);
+        ArgumentNullException.ThrowIfNull(requiredJunctionBranches);
+        return dispatched && interlocking.TryReplaceRoute(trainId, routeCircuitIds, requiredJunctionBranches);
+    }
+
+    /// <summary>
     /// Rebuilds occupied track circuits from every car body on the selected
     /// connected TDB route, so trailing vehicles retain block and switch locks.
     /// </summary>
