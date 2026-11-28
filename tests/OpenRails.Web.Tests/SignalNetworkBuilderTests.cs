@@ -382,6 +382,41 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal("STOP", conflicting.NativeAspect);
     }
 
+    [Fact]
+    public void TreatsAnotherTrainsReservedCircuitAsUnavailableButKeepsOwnRouteAvailable()
+    {
+        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var signal = new RouteSignalHead(20, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { signal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 2 }, Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>());
+        var state = new SignalInterlockingSnapshot(
+            new Dictionary<uint, string> { [3] = "AI-1" },
+            new Dictionary<uint, string>(),
+            new Dictionary<uint, string>(),
+            new Dictionary<uint, uint>());
+
+        var otherTrain = Assert.Single(network.Evaluate(state, enabledTrainId: "AI-2"));
+        var owningTrain = Assert.Single(network.Evaluate(state, enabledTrainId: "AI-1"));
+
+        Assert.Equal(RouteSignalAspect.Stop, otherTrain.Aspect);
+        Assert.Contains("reserved by another train", otherTrain.Reason);
+        Assert.Equal(RouteSignalAspect.Clear1, owningTrain.Aspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
