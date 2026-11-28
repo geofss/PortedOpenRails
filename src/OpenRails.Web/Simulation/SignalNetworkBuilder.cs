@@ -360,9 +360,10 @@ public sealed class SignalNetwork
                  name.Equals("THIS_SIG_MR", StringComparison.OrdinalIgnoreCase)) &&
                 arguments.Count == 1 && signal.Definition is not null)
             {
-                var currentFunction = configuration?.SignalFunctions.TryGetValue(
-                    signal.Definition.Function, out var currentBase) == true
-                    ? currentBase : signal.Definition.Function;
+                var currentFunction = signal.Definition.Function;
+                if (configuration is not null &&
+                    configuration.SignalFunctions.TryGetValue(signal.Definition.Function, out var currentBase))
+                    currentFunction = currentBase;
                 return Enum.TryParse<MstsSignalFunction>(currentFunction, true, out var current) &&
                     (int)current == arguments[0] ? initialState : -1;
             }
