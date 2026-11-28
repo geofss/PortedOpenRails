@@ -509,23 +509,27 @@ public sealed class SignalNetworkBuilderTests
     [Fact]
     public void ResolvesNativeNthMostRestrictiveNextSignalAspect()
     {
-        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,
-            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
-            new Dictionary<string, SignalDrawStateDefinition>(),
-            new[]
-            {
-                new SignalAspectDefinition("STOP", "", -1, false, false, false),
-                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
-            });
+        SignalTypeDefinition Definition(int clearAhead) =>
+            new("main", "", "NORMAL", "", "", clearAhead,
+                new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+                new Dictionary<string, SignalDrawStateDefinition>(),
+                new[]
+                {
+                    new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                    new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false),
+                    new SignalAspectDefinition("CLEAR_2", "", 12, false, false, false)
+                });
         var currentSignal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
-            Array.Empty<TrackSignalDirection>(), definition);
+            Array.Empty<TrackSignalDirection>(), Definition(1));
         var firstNextSignal = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
-            Array.Empty<TrackSignalDirection>(), definition);
-        var secondNextSignal = new RouteSignalHead(23, "main", "", 0, 0, 4, 0,
-            Array.Empty<TrackSignalDirection>(), definition);
+            Array.Empty<TrackSignalDirection>(), Definition(1));
+        var secondNextLeast = new RouteSignalHead(23, "main", "", 0, 0, 4, 0,
+            Array.Empty<TrackSignalDirection>(), Definition(1));
+        var secondNextMost = new RouteSignalHead(23, "main", "", 0, 0, 4, 0,
+            Array.Empty<TrackSignalDirection>(), Definition(2));
         var configuration = new SignalConfigurationDefinition(
             "sigcfg.dat",
-            new Dictionary<string, SignalTypeDefinition> { ["main"] = definition },
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = Definition(1) },
             new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
             Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
         var network = new SignalNetwork(
@@ -533,7 +537,7 @@ public sealed class SignalNetworkBuilderTests
             {
                 new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentSignal }),
                 new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { firstNextSignal }),
-                new SignalTrackCircuit(4, 100, new uint[] { 5 }, new[] { secondNextSignal }),
+                new SignalTrackCircuit(4, 100, new uint[] { 5 }, new[] { secondNextLeast, secondNextMost }),
                 new SignalTrackCircuit(5, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
             },
             new Dictionary<uint, IReadOnlyList<uint>>(),
