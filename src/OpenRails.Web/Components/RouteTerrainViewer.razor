@@ -380,13 +380,9 @@
                     }
                 }
                 routeTrackLines = trackLines.ToArray();
-                var trackTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
-                    .Where(asset => asset.Reference.SeasonFolder is null &&
-                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                        asset.Texture.MipLevels.Count > 0)
-                    .ToArray();
+                var trackTextureAssets = TrackShapeSeasonTextureSelector.Select(Route.TrackShapeMeshes.Textures.Loaded).ToArray();
                 var trackShapeGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-                    .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded,
+                    .BuildTextured(Route.TrackShapePlacements, trackTextureAssets,
                         cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
                 var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
                     .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
@@ -457,8 +453,9 @@
                     var textureDiscovery = new TrackShapeTextureAssetDiscovery(
                         textureDiscoveries.SelectMany(discovery => discovery.Found),
                         textureDiscoveries.SelectMany(discovery => discovery.Missing));
-                    var textureLoad = new TrackShapeTextureAssetLoader().Load(Store, textureDiscovery);
-                    rollingStockTextureAssets = textureLoad.Loaded;
+                    var textureLoad = new TrackShapeTextureAssetLoader().Load(Store, textureDiscovery,
+                        maximumDecodedBytes: 256L * 1024 * 1024);
+                    rollingStockTextureAssets = TrackShapeSeasonTextureSelector.Select(textureLoad.Loaded);
                     rollingStockIssues.AddRange(textureLoad.Missing.Select(issue =>
                         $"{issue.ImageName}: {issue.Reason}"));
                     rollingStockIssues.AddRange(textureLoad.Failed.Select(issue =>
@@ -489,11 +486,7 @@
                 }
                 var trackTextureIndexes = trackTextureAssets.Select(AddTexture).ToArray();
                 var worldTextureIndexes = worldShapeGeometry.Textures.Select(AddTexture).ToArray();
-                rollingStockTextureIndexes = rollingStockTextureAssets
-                    .Where(asset => asset.Reference.SeasonFolder is null &&
-                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                        asset.Texture.MipLevels.Count > 0)
-                    .Select(AddTexture).ToArray();
+                rollingStockTextureIndexes = rollingStockTextureAssets.Select(AddTexture).ToArray();
                 int RemapTexture(int index, IReadOnlyList<int> map) => index < 0 || index >= map.Count ? -1 : map[index];
                 int[] RemapTextureSlots(IReadOnlyList<int>? indexes, IReadOnlyList<int> map) =>
                     indexes?.Select(index => RemapTexture(index, map)).ToArray() ?? Array.Empty<int>();
@@ -692,13 +685,9 @@
         if (module is null) return;
 
         var terrainSelection = BuildTerrainPatches();
-        var trackTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
-            .Where(asset => asset.Reference.SeasonFolder is null &&
-                asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                asset.Texture.MipLevels.Count > 0)
-            .ToArray();
+        var trackTextureAssets = TrackShapeSeasonTextureSelector.Select(Route.TrackShapeMeshes.Textures.Loaded).ToArray();
         var trackGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-            .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded,
+            .BuildTextured(Route.TrackShapePlacements, trackTextureAssets,
                 cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
         var worldGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
             .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
@@ -724,11 +713,7 @@
         }
         var trackMap = trackTextureAssets.Select(AddTexture).ToArray();
         var worldMap = worldGeometry.Textures.Select(AddTexture).ToArray();
-        rollingStockTextureIndexes = rollingStockTextureAssets
-            .Where(asset => asset.Reference.SeasonFolder is null &&
-                asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                asset.Texture.MipLevels.Count > 0)
-            .Select(AddTexture).ToArray();
+        rollingStockTextureIndexes = rollingStockTextureAssets.Select(AddTexture).ToArray();
         int Remap(int index, IReadOnlyList<int> map) =>
             index < 0 || index >= map.Count ? -1 : map[index];
         int[] RemapSlots(IReadOnlyList<int>? slots, IReadOnlyList<int> map) =>

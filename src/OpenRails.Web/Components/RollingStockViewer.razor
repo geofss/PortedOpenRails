@@ -128,9 +128,9 @@
                 textureDiscoveries.SelectMany(discovery => discovery.Found),
                 textureDiscoveries.SelectMany(discovery => discovery.Missing));
             var textures = new TrackShapeTextureAssetLoader().Load(Store, discoveries, maximumDecodedBytes: 256L * 1024 * 1024);
-            var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(placements, textures.Loaded);
-            var shapePixels = textures.Loaded
-                .Where(texture => texture.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && texture.Texture.MipLevels.Count > 0)
+            var renderTextures = TrackShapeSeasonTextureSelector.Select(textures.Loaded);
+            var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(placements, renderTextures);
+            var shapePixels = renderTextures
                 .Select(texture => new
                 {
                     width = texture.Texture.Width,
