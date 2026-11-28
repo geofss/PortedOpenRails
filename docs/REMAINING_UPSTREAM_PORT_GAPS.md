@@ -21,7 +21,7 @@ Remaining:
 - Parse TDB `TrItemTable`: signals, platforms, sidings, speed posts, sound regions, and their native position/direction metadata.
 - Add road database (`.rdb`) support and route object families not yet covered.
 - Validate every relevant SCE terrain/WORLD tile, missing asset diagnostics, texture variants, route boundaries, and malformed-neighbor recovery.
-- Complete terrain/track/scenery LOD, material/shader, seasonal texture, forest, and visual placement parity. Terrain viewport streaming now exposes an independent estimated GPU working-set budget in addition to decoded/cache CPU bytes; it remains an estimate (not browser GPU telemetry), and texture decode peak memory is still not fully bounded before post-decode filtering.
+- Complete terrain/track/scenery LOD, material/shader, seasonal texture, forest, and visual placement parity. Terrain viewport streaming now exposes an independent estimated GPU working-set budget in addition to decoded/cache CPU bytes, and camera-generation cancellation is propagated into terrain mesh batches and texture iteration with cancellation checkpoints. This is not preemptive cancellation inside a single synchronous ACE decode; GPU values remain estimates (not browser telemetry), and texture decode peak memory is still not fully bounded before post-decode filtering.
 - Run manual desktop browser preview, real consist placement, and end-to-end route driving. CI RouteLoader acceptance is not a playable-session test.
 
 ## 3. Signals, track circuits, switches, interlocking
