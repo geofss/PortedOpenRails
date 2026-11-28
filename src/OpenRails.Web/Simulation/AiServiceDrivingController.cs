@@ -5,14 +5,18 @@ namespace OpenRails.Web.Simulation;
 
 /// <summary>
 /// Path-following controller for one selected native service. It follows the
-/// projected .pat waypoint order and brakes for the path end. Target speed is
-/// supplied by the operator because native speed restrictions and timetables
-/// are not yet available to this browser controller.
+/// projected .pat waypoint order and builds braking envelopes for signal and
+/// track speed restrictions while respecting the service end and train ahead.
 /// </summary>
 public sealed record AiServiceSignalConstraint(
     double RouteDistanceMeters,
     RouteSignalAspect Aspect,
     float? SpeedLimitMetersPerSecond);
+
+/// <summary>Route-chainage speed restriction derived from a native speedpost or activity limit.</summary>
+public sealed record AiServiceSpeedRestriction(
+    double RouteDistanceMeters,
+    double SpeedLimitMetersPerSecond);
 
 /// <summary>Leading train state used by the native-style following-distance governor.</summary>
 public sealed record AiTrainFollowingConstraint(
@@ -32,7 +36,8 @@ public sealed class AiServiceDrivingController
         double stoppingBufferMeters = 2,
         IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
         IReadOnlySet<int>? releasedWaitingPointIndices = null,
-        AiTrainFollowingConstraint? trainAhead = null)
+        AiTrainFollowingConstraint? trainAhead = null,
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
     {
         ArgumentNullException.ThrowIfNull(route);
         if (!double.IsFinite(currentDistanceMeters))
@@ -78,6 +83,14 @@ public sealed class AiServiceDrivingController
             (signal.SpeedLimitMetersPerSecond.HasValue &&
                 (!float.IsFinite(signal.SpeedLimitMetersPerSecond.Value) || signal.SpeedLimitMetersPerSecond.Value <= 0))))
             throw new ArgumentException("Signal constraints must contain finite route positions and valid positive speed limits.", nameof(signalConstraints));
+
+        var restrictions = speedRestrictions ?? Array.Empty<AiServiceSpeedRestriction>();
+        if (restrictions.Any(restriction => restriction is null ||
+            !double.IsFinite(restriction.RouteDistanceMeters) ||
+            !double.IsFinite(restriction.RouteDistanceMeters - currentDistanceMeters) ||
+            !double.IsFinite(restriction.SpeedLimitMetersPerSecond) ||
+            restriction.SpeedLimitMetersPerSecond <= 0))
+            throw new ArgumentException("Track speed restrictions must contain finite route positions and positive finite limits.", nameof(speedRestrictions));
 
         IReadOnlyList<double> waypoints = route.RouteWaypointDistancesMeters is { Count: > 0 } distances
             ? distances : new[] { route.DistanceMeters };
@@ -151,18 +164,26 @@ public sealed class AiServiceDrivingController
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))
-            .Select(signal =>
+            .Select(signal => (Distance: signal.RouteDistanceMeters,
+                Limit: (double)signal.SpeedLimitMetersPerSecond!.Value));
+        var trackSpeedEnvelope = restrictions
+            .Where(restriction => direction > 0
+                ? restriction.RouteDistanceMeters > currentDistanceMeters
+                : restriction.RouteDistanceMeters < currentDistanceMeters)
+            .Select(restriction => (Distance: restriction.RouteDistanceMeters,
+                Limit: restriction.SpeedLimitMetersPerSecond));
+        var speedEnvelope = signalSpeedEnvelope.Concat(trackSpeedEnvelope)
+            .Select(restriction =>
             {
                 var distanceAhead = direction > 0
-                    ? signal.RouteDistanceMeters - currentDistanceMeters
-                    : currentDistanceMeters - signal.RouteDistanceMeters;
-                var limit = (double)signal.SpeedLimitMetersPerSecond!.Value;
-                return Math.Sqrt(limit * limit +
+                    ? restriction.Distance - currentDistanceMeters
+                    : currentDistanceMeters - restriction.Distance;
+                return Math.Sqrt(restriction.Limit * restriction.Limit +
                     2 * serviceDecelerationMetersPerSecondSquared * distanceAhead);
             })
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
-        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, signalSpeedEnvelope);
+        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, speedEnvelope);
         if (trainAhead is not null)
         {
             // Preserve a configurable stand-off distance and never command a
@@ -201,7 +222,8 @@ public sealed class AiServiceDrivingController
         BrowserTrainDrivingController controller,
         ServiceRouteStartPosition route,
         double targetSpeedMetersPerSecond,
-        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null)
+        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
     {
         ArgumentNullException.ThrowIfNull(controller);
         ArgumentNullException.ThrowIfNull(route);
@@ -234,7 +256,8 @@ public sealed class AiServiceDrivingController
             releasedSnapshot = new HashSet<int>(releasedWaitingPoints);
         var decision = Calculate(route, lead.DistanceMeters, lead.SpeedMetersPerSecond,
             targetSpeedMetersPerSecond, signalConstraints: signalConstraints,
-            releasedWaitingPointIndices: releasedSnapshot);
+            releasedWaitingPointIndices: releasedSnapshot,
+            speedRestrictions: speedRestrictions);
         controller.SetThrottle((float)decision.ThrottlePercent);
         controller.SetBrake(decision.BrakePercent);
         return decision;
