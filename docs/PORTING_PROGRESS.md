@@ -4,7 +4,8 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest verified implementation checkpoint: 9ea6da9360d09a0985a6fed91f7d1be94e3c91b0
+Latest implementation checkpoint: a467d8c765b19414d4c24977fa716fa7933c1de3
+Latest fully verified implementation checkpoint: 3c40aae6b87805b5f3541a8bb1e86772db6ffa23
 
 ## Project rules
 
@@ -62,7 +63,7 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Route viewer now receives the WebGL camera's world position through a JS-to-.NET callback. Camera movement rebuilds selected terrain patchsets, track-shape LODs and WORLD scenery LODs instead of leaving the initial LOD frozen.
 - Terrain LOD selection chooses the source patchset whose distance threshold contains the camera-to-tile distance; a dedicated regression suite covers unordered levels, nearest-threshold selection, empty inputs and invalid distances.
 - The live browser simulation clock is passed from BrowserTrainDrivingController into RouteTerrainViewer. Rolling-stock render updates use RollingStockRenderFrameBuilder for connected routes, simulation-time shape animation and camera-distance LOD.
-- Rolling-stock placement now retains consist vehicle UID and route chainage. Native `.wag`/`.eng` wheel-radius values are parsed, and WHEELS matrix nodes are rotated from travelled route distance using the native wheel-radius convention. Wheel poses are included in initial rendering, camera-driven geometry rebuilds and live simulation updates.
+- Rolling-stock placement now retains consist vehicle UID and route chainage. Native `.wag`/`.eng` wheel-radius values are parsed, and WHEELS matrix nodes rotate from travelled route distance. BOGIE/BOGIE1/BOGIE2 pivots yaw to the local route tangent at their longitudinal offsets, including flipped cars. Wheel and bogie poses are included in initial rendering, camera-driven geometry rebuilds and live simulation updates.
 - Render batch payloads now carry per-slot texture indexes, every retained UV channel and material descriptors through initial draw and live rolling-stock updates.
 - Track-shape and WORLD render batches carry full UV-channel arrays, per-slot texture indexes and primitive material descriptors; material-state differences are split into separate batches.
 - The WebGL2 renderer consumes up to four UV channels and four texture slots per batch, supports copy/uniform-scale/nonuniform-scale UV operations, per-stage addressing/filter settings, alpha test and the available Z-buffer write state.
@@ -86,31 +87,33 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Native ENG/WAG metadata and consist readers, shared shape loader, route placement and motion-state placement exist.
 - Simulation foundations include fixed-step consist motion, traction, resistance, adhesion, coupler force/slack and pneumatic brake models.
 - A render-frame orchestrator now links motion-state placement to animated textured geometry.
-- Remaining vehicle-fidelity work: driven axle angular state and wheel-slip parity, bogie pivot/articulation, coupler/air-hose articulation, freight and control-driven shape animation, native sound definition/playback, and visual acceptance of representative locomotive-plus-coach consists. Cab bitmap/control binding foundations exist but still need full native behavior.
+- Remaining vehicle-fidelity work is narrower: driven axle angular state and wheel-slip parity, suspension, coupler/air-hose articulation, freight/control-driven animation, native sound definition/playback, and visual acceptance of representative locomotive-plus-coach consists. Cab bitmap/control binding foundations exist but full native behavior belongs with the remaining simulation/UI closure work.
 
 ## Verification policy and latest evidence
 
-- Latest verified implementation checkpoint: `9ea6da9360d09a0985a6fed91f7d1be94e3c91b0`.
-- WebAssembly build, publish and branch preview: run 46088883005 — success.
-  - Controller regression suite: 709 passed, 0 failed.
-  - JavaScript syntax validation: passed.
-  - Demo Model 1 ready-to-import bundle: assembled and uploaded.
-- Route pipeline: run 46088882978 — success.
-  - Route/terrain/scenery regression suite: 145 passed, 0 failed.
+- Latest implementation checkpoint: `a467d8c765b19414d4c24977fa716fa7933c1de3` (adds trailing-edge camera callback flushing; CI is running).
+- Latest fully verified implementation checkpoint: `3c40aae6b87805b5f3541a8bb1e86772db6ffa23`.
+- WebAssembly build/publish and downloadable branch preview: run 46089782629 — success.
+  - Controller regression suite: 711 passed, 0 failed.
+  - JavaScript renderer syntax validation: passed.
+  - WebAssembly app publish: passed.
+  - Branch preview artifact upload: passed.
+- Route pipeline: run 46089787348 — success.
+  - Route, terrain, scenery, LOD and rolling-stock regression suite: 147 passed, 0 failed.
   - Authorized Demo Model 1 / Scottish Capital Express load-and-validation acceptance: passed.
-- Earlier compile failures in commits `37dec863`, `c0079012` and `0b1a229f` were corrected before this verified checkpoint. The final checkpoint above includes the corrected geometry override API and wheel metadata/pose implementation.
-- Automated route acceptance proves that the authorized route loads and validates. It does not establish visual parity at every LOD, full rolling-stock fidelity, GPU reference-image parity, route-scale async streaming, or a complete driving session.
+- The verified checkpoint includes camera-driven terrain/track/WORLD LOD, native bounding-sphere and multi-control LOD selection, live simulation-time rolling-stock rendering, wheel rotation and route-curvature-driven bogie yaw.
+- The trailing-edge camera callback commit `a467d8c` is a small performance/correctness follow-up so the final camera position is not lost when input stops inside the throttle interval. Its own CI result must be checked before treating it as verified.
+- Automated route acceptance proves that the authorized route loads and validates. It does not establish browser visual parity at every LOD, stable performance on the full route, full wheel-slip/suspension/coupler behavior, native sound, or a complete driving session.
 - The current environment can inspect and update GitHub source but cannot execute dotnet or browser end-to-end tests directly.
-- Do not claim a subsystem complete until its browser runtime behavior has been visually and operationally accepted.
+- Do not claim any subsystem complete until the authorized Demo Model 1 route and real rolling stock run through the browser runtime with visible/operational acceptance evidence.
 
-## Next bulk integration work
+## Remaining major closure tracks
 
-1. Desktop-browser validation of camera-driven terrain, track and WORLD LOD at close, medium and far distances; profile and tune rebuild costs.
-2. Route-scale asynchronous tile/asset streaming, cancellation, unload/reload and bounded GPU/CPU memory.
-3. Complete rolling-stock native behavior: driven axle state, wheel slip, bogie articulation, couplers, freight/control-driven animations and native sound playback.
-4. Complete remaining native material behavior: reflection-map UV operations, shader variants, lighting, border colors, mip bias, full Z-buffer modes and GPU reference-image parity.
-5. Continue signal/interlocking, terrain, AI, simulation and original Open Rails UI closure tracks.
-6. Run full Demo Model 1 browser driving acceptance with a locomotive and coaches; record the visual/runtime evidence.
+1. Signal systems and interlocking.
+2. Terrain systems, including route-scale async tile/asset streaming and memory eviction.
+3. AI systems and dispatcher behavior.
+4. Simulation systems, including remaining native vehicle physics, sound and activity runtime.
+5. Original Open Rails UI port and full cab/control parity.
 
 ## Continuity instruction
 
