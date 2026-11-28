@@ -67,6 +67,9 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Track-shape and WORLD render batches carry full UV-channel arrays, per-slot texture indexes and primitive material descriptors; material-state differences are split into separate batches.
 - The WebGL2 renderer consumes up to four UV channels and four texture slots per batch, supports copy/uniform-scale/nonuniform-scale UV operations, per-stage addressing/filter settings, alpha test and the available Z-buffer write state.
 - Rolling-stock render-frame builder has an overload that accepts the live TrainConsistSimulationSession and reads its simulation time/state directly.
+- AI service speed control now converts every upcoming SIGCFG speed limit into a distance-aware braking envelope. Distant low-speed restrictions no longer force premature crawling; the controller begins limiting speed according to the configured service deceleration and remaining distance, for both forward and reverse services.
+- Signal aspect evaluation now treats circuits reserved by a different train as unavailable before physical occupancy, while retaining the evaluating train's own reservations for native ENABLED / ROUTE_SET script behavior. This closes a permissive-aspect gap between dispatcher route reservations and signal evaluation.
+- Terrain patch selection now sorts candidate patches by camera-to-tile distance before applying the geometry vertex budget, with deterministic tile-coordinate tie-breaking. This prevents archive directory order from consuming the preview budget on distant tiles before nearby terrain. This is render-budget prioritization, not yet route-scale asset streaming or CPU/GPU eviction.
 
 ### Shape material and UV preservation
 - Every source vertex UV channel is retained in portable mesh data.
