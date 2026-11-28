@@ -136,6 +136,112 @@ public sealed class DemoModel1AcceptanceTests
         Assert.Equal(new[] { "SCE-service-B" }, retryDispatch);
         Assert.Equal(AiTimetableServiceStatus.Dispatched,
             timetable.GetServiceStatus("SCE-service-B"));
+        Assert.True(secondService.TryComplete());
+
+        // Build two real rolling-stock consists from the authorized package and
+        // drive them through the AI dispatcher, physics runtime and train-following
+        // governor on an actual SCE vector path.
+        var consistCatalog = new ConsistCatalogReader().Read(store);
+        var operationalConsist = consistCatalog.Consists.FirstOrDefault(consist =>
+            consist.Cars.Any(car => car.IsEngine && !car.IsEndOfTrain) &&
+            consist.Cars.Where(car => !car.IsEndOfTrain).All(car =>
+                consistCatalog.CarAssets.Any(asset => asset.ConsistName == consist.Name &&
+                    asset.Uid == car.Uid && asset.Metadata is not null)));
+        Assert.NotNull(operationalConsist);
+        Assert.Contains(consistCatalog.CarAssets, asset =>
+            asset.ConsistName == operationalConsist!.Name && asset.IsEngine &&
+            asset.TractionMetadata is not null);
+
+        var consistLengthMeters = operationalConsist!.Cars
+            .Where(car => !car.IsEndOfTrain)
+            .Sum(car => (double)(consistCatalog.CarAssets.First(asset =>
+                asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM));
+        var drivingPath = route.TrackNetwork.VectorPaths
+            .Where(path => path.Sections.Count > 0 &&
+                path.LengthMeters > 2 * consistLengthMeters + 100)
+            .OrderByDescending(path => path.LengthMeters)
+            .FirstOrDefault();
+        Assert.NotNull(drivingPath);
+        var selectedPath = drivingPath!;
+        var motionRoute = new TrackNetworkRoute(
+            new[] { new TrackNetworkRouteSegment(selectedPath, IsReversed: false) },
+            Array.Empty<string>(), selectedPath.LengthMeters);
+        var pathStart = selectedPath.Sections[0].Start;
+        var setupBuilder = new TrainConsistSimulationSetupBuilder();
+        var followerSetup = setupBuilder.Build(
+            operationalConsist, consistCatalog.CarAssets, selectedPath.LengthMeters,
+            startDistanceMeters: 0);
+        var leaderSetup = setupBuilder.Build(
+            operationalConsist, consistCatalog.CarAssets, selectedPath.LengthMeters,
+            startDistanceMeters: consistLengthMeters + 40);
+        var followerDriver = new BrowserTrainDrivingController(followerSetup, route: motionRoute);
+        var leaderDriver = new BrowserTrainDrivingController(leaderSetup, route: motionRoute);
+        var followerInitialDistance = followerDriver.State.Cars[0].DistanceMeters;
+        var leaderInitialDistance = leaderDriver.State.Cars[0].DistanceMeters;
+        Assert.True(leaderInitialDistance > followerInitialDistance);
+
+        ServiceRouteStartPosition MakeServicePosition(double distance) =>
+            new(distance, 0, pathStart,
+                new[] { distance, selectedPath.LengthMeters }, 1,
+                new[]
+                {
+                    new ServiceRouteWaypoint(distance, false, false),
+                    new ServiceRouteWaypoint(selectedPath.LengthMeters, false, false)
+                });
+        var followerRoute = MakeServicePosition(followerInitialDistance);
+        var leaderRoute = MakeServicePosition(leaderInitialDistance);
+
+        var multiTrainInterlocking = route.Signalling.CreateInterlockingController();
+        var multiTrainCircuits = route.Signalling.TrackCircuits
+            .Select(circuit => circuit.TrackNodeIndex).Distinct().ToArray();
+        Assert.True(multiTrainCircuits.Length >= 3);
+        var followerCircuit = multiTrainCircuits[0];
+        var leaderCircuit = multiTrainCircuits.First(circuit => circuit != followerCircuit);
+        var spareCircuit = multiTrainCircuits.First(circuit =>
+            circuit != followerCircuit && circuit != leaderCircuit);
+        var followerService = new AiServiceInterlockingSession("SCE-consist-follower", multiTrainInterlocking);
+        var leaderService = new AiServiceInterlockingSession("SCE-consist-leader", multiTrainInterlocking);
+        var multiTrainTimetable = new AiTimetableDispatcher();
+        var noJunctions = new Dictionary<uint, uint>();
+        multiTrainTimetable.AddService("SCE-consist-follower", 0, followerService,
+            new[] { followerCircuit }, noJunctions);
+        multiTrainTimetable.AddService("SCE-consist-leader", 0, leaderService,
+            new[] { leaderCircuit }, noJunctions);
+        var multiDispatch = multiTrainTimetable.Advance(0);
+        Assert.Equal(2, multiDispatch.Count);
+        Assert.True(followerService.IsDispatched);
+        Assert.True(leaderService.IsDispatched);
+
+        AiServiceControlDecision? followerDecision = null;
+        for (var step = 0; step < 120; step++)
+        {
+            leaderService.Drive(leaderDriver, leaderRoute, targetSpeedMetersPerSecond: 8);
+            leaderDriver.Advance(1d / 30d);
+            var leaderState = new AiServiceTrainState(
+                "SCE-consist-leader",
+                leaderDriver.State.Cars[0].DistanceMeters,
+                Math.Max(0, leaderDriver.State.Cars[0].SpeedMetersPerSecond));
+            followerDecision = followerService.Drive(
+                followerDriver, followerRoute, targetSpeedMetersPerSecond: 30,
+                otherTrains: new[] { leaderState });
+            followerDriver.Advance(1d / 30d);
+        }
+
+        Assert.True(leaderDriver.State.Cars[0].DistanceMeters > leaderInitialDistance);
+        Assert.True(followerDriver.State.Cars[0].DistanceMeters > followerInitialDistance);
+        Assert.NotNull(followerDecision);
+        Assert.True(followerDecision!.TargetSpeedMetersPerSecond < 30,
+            "The following consist should receive a speed limit from the leading consist.");
+        Assert.True(followerService.TryChangeRoute(
+            new[] { followerCircuit, spareCircuit }, noJunctions));
+        Assert.True(followerService.TryComplete());
+        Assert.True(leaderService.TryComplete());
+        multiTrainTimetable.Advance(0);
+        Assert.Equal(AiTimetableServiceStatus.Completed,
+            multiTrainTimetable.GetServiceStatus("SCE-consist-follower"));
+        Assert.Equal(AiTimetableServiceStatus.Completed,
+            multiTrainTimetable.GetServiceStatus("SCE-consist-leader"));
+        Assert.Empty(multiTrainInterlocking.GetDeadlockedTrainIds());
 
         Console.WriteLine(
             $"Demo Model 1 acceptance: nodes={route.TrackDatabase.NodeCount}; " +
