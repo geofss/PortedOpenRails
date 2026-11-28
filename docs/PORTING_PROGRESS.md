@@ -4,7 +4,7 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest verified implementation checkpoint: a467d8c765b19414d4c24977fa716fa7933c1de3
+Latest verified branch checkpoint: b81452773b1291324d5c861367e2e06921b10d8f (includes the c82c9bc implementation and the SCE acceptance namespace fix)
 
 ## Project rules
 
@@ -101,6 +101,14 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Simulation foundations include fixed-step consist motion, traction, resistance, adhesion, coupler force/slack and pneumatic brake models.
 - A render-frame orchestrator now links motion-state placement to animated textured geometry.
 - Remaining vehicle-fidelity work is narrower: driven axle angular state and wheel-slip parity, suspension, coupler/air-hose articulation, freight/control-driven animation, native sound definition/playback, and visual acceptance of representative locomotive-plus-coach consists. Cab bitmap/control binding foundations exist but full native behavior belongs with the remaining simulation/UI closure work.
+
+## Latest branch verification (2026-11-28)
+
+- PR #4 head: `b81452773b1291324d5c861367e2e06921b10d8f`.
+- The head commit adds the simulation namespace import required by the Demo Model 1 multi-service acceptance test.
+- Controller/build workflow run 46095340889: completed successfully.
+- Route/Demo Model 1 workflow run 46095340997: completed successfully.
+- These latest runs validate the current branch head, but they do not close the three systems: the terrain source loader remains eager; full native signal parity is not yet demonstrated; and multi-consist AI still lacks end-to-end browser runtime acceptance.
 
 ## Verification policy and latest evidence
 
