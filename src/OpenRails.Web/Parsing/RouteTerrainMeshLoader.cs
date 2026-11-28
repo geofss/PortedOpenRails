@@ -19,6 +19,7 @@ public sealed class RouteTerrainMeshLoader
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(discovery);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var loaded = new List<TerrainTileContent>();
         var failed = new List<RouteTerrainTileIssue>();
