@@ -459,6 +459,52 @@ public sealed class SignalNetworkBuilderTests
         Assert.Contains("executed", indication.Reason);
     }
 
+
+    [Fact]
+    public void ResolvesNextSignalAspectAcrossSelectedTrackCircuits()
+    {
+        var definition = new SignalTypeDefinition("main", "next-signal", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var currentSignal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var nextSignal = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = definition },
+            new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentSignal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { nextSignal }),
+                new SignalTrackCircuit(4, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        var script = new SignalScriptDefinition("next-signal",
+            new[] { "EXTERN FLOAT STATE;", "STATE = NEXT_SIG_LR(NORMAL);" },
+            Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["next-signal"] = script },
+            Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(new HashSet<uint>(), scripts: library)
+            .Where(item => item.TrackItemIndex == 21));
+
+        Assert.Equal(RouteSignalAspect.Clear1, indication.Aspect);
+        Assert.Equal("CLEAR_1", indication.NativeAspect);
+        Assert.Contains("executed", indication.Reason);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
