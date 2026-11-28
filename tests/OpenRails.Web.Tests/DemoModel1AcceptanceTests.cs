@@ -184,16 +184,31 @@ public sealed class DemoModel1AcceptanceTests
         var leaderInitialDistance = leaderDriver.State.Cars[0].DistanceMeters;
         Assert.True(leaderInitialDistance > followerInitialDistance);
 
-        ServiceRouteStartPosition MakeServicePosition(double distance) =>
-            new(distance, 0, pathStart,
-                new[] { distance, selectedPath.LengthMeters }, 1,
+        ServiceRouteStartPosition MakeServicePosition(double distance, bool includeTimedStop = false)
+        {
+            if (!includeTimedStop)
+                return new ServiceRouteStartPosition(distance, 0, pathStart,
+                    new[] { distance, selectedPath.LengthMeters }, 1,
+                    new[]
+                    {
+                        new ServiceRouteWaypoint(distance, false, false),
+                        new ServiceRouteWaypoint(selectedPath.LengthMeters, false, false)
+                    });
+
+            var waitDistance = distance + 10;
+            Assert.True(waitDistance < selectedPath.LengthMeters);
+            return new ServiceRouteStartPosition(distance, 0, pathStart,
+                new[] { distance, waitDistance, selectedPath.LengthMeters }, 1,
                 new[]
                 {
                     new ServiceRouteWaypoint(distance, false, false),
+                    new ServiceRouteWaypoint(waitDistance, true, false),
                     new ServiceRouteWaypoint(selectedPath.LengthMeters, false, false)
                 });
+        }
         var followerRoute = MakeServicePosition(followerInitialDistance);
-        var leaderRoute = MakeServicePosition(leaderInitialDistance);
+        var leaderRoute = MakeServicePosition(leaderInitialDistance, includeTimedStop: true);
+        var leaderWaitDistance = leaderInitialDistance + 10;
 
         var multiTrainInterlocking = route.Signalling.CreateInterlockingController();
         var multiTrainCircuits = route.Signalling.TrackCircuits
@@ -224,19 +239,28 @@ public sealed class DemoModel1AcceptanceTests
                     followerDriver, followerRoute, TargetSpeedMetersPerSecond: 60),
                 new AiTimetableTrainRuntimeBinding(
                     "SCE-consist-leader", "SCE-main", leaderService,
-                    leaderDriver, leaderRoute, TargetSpeedMetersPerSecond: 8)
+                    leaderDriver, leaderRoute, TargetSpeedMetersPerSecond: 8,
+                    WaitingPointReleaseTimesSeconds: new Dictionary<int, double> { [1] = 10 })
             });
         AiServiceControlDecision? followerDecision = null;
-        for (var step = 0; step < 120; step++)
+        var leaderWaitObserved = false;
+        for (var step = 0; step < 450; step++)
         {
             var tick = aiRuntime.Advance(1d / 30d);
             var followerDecisionIndex = tick.DecisionServiceIds
                 .ToList().FindIndex(serviceId => serviceId == "SCE-consist-follower");
             if (followerDecisionIndex >= 0)
                 followerDecision = tick.Decisions[followerDecisionIndex];
+            var leaderDecisionIndex = tick.DecisionServiceIds
+                .ToList().FindIndex(serviceId => serviceId == "SCE-consist-leader");
+            if (leaderDecisionIndex >= 0 && tick.Decisions[leaderDecisionIndex].IsWaitingAtWaypoint)
+                leaderWaitObserved = true;
         }
 
-        Assert.True(leaderDriver.State.Cars[0].DistanceMeters > leaderInitialDistance);
+        Assert.True(leaderWaitObserved,
+            "The leader should stop at its native timetable waiting point before the scheduled release.");
+        Assert.True(leaderDriver.State.Cars[0].DistanceMeters > leaderWaitDistance + 1,
+            "The leader should depart the waiting point when its timetable release time is reached.");
         Assert.True(followerDriver.State.Cars[0].DistanceMeters > followerInitialDistance);
         Assert.NotNull(followerDecision);
         var followingConstraint = AiTrainFollowingResolver.Resolve(
