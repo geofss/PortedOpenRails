@@ -12,6 +12,7 @@ const UINT32_MAX = 0xffffffff;
 // A route import opens thousands of entries. Cache the validated directory index,
 // lookup map, metadata, and immutable OPFS File so each entry is O(1) to locate.
 const archiveContextCache = new Map();
+const MAX_CACHED_ARCHIVE_CONTEXTS = 2;
 
 function validateId(id) {
     if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) {
@@ -261,7 +262,13 @@ export async function inspectArchive(id) {
 // need to rescan a potentially multi-gigabyte archive.
 async function readStoredIndex(directory, id) {
     const cached = archiveContextCache.get(id);
-    if (cached) return cached;
+    if (cached) {
+        // Refresh insertion order so the least recently used route index is
+        // evicted first when the bounded context cache is full.
+        archiveContextCache.delete(id);
+        archiveContextCache.set(id, cached);
+        return cached;
+    }
 
     const handle = await directory.getFileHandle(id + ".index.json");
     const index = JSON.parse(await (await handle.getFile()).text());
@@ -299,7 +306,23 @@ async function readStoredIndex(directory, id) {
 
     const context = { index, entriesByPath, archiveFile };
     archiveContextCache.set(id, context);
+    while (archiveContextCache.size > MAX_CACHED_ARCHIVE_CONTEXTS) {
+        const oldestId = archiveContextCache.keys().next().value;
+        if (oldestId === undefined) break;
+        archiveContextCache.delete(oldestId);
+    }
     return context;
+}
+
+/** Releases the in-memory ZIP index and File reference for an imported route. */
+export function releaseArchiveContext(id) {
+    validateId(id);
+    return archiveContextCache.delete(id);
+}
+
+/** Clears all cached route index contexts, for application shutdown or route reset. */
+export function clearArchiveContextCache() {
+    archiveContextCache.clear();
 }
 
 export async function listEntries(id) {
