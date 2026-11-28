@@ -53,7 +53,7 @@ public static class RollingStockBogiePoseBuilder
     }
 
     private static double HeadingAt(
-        IReadOnlyList<TrackWorldPosition> points,
+        IReadOnlyList<Vector3> points,
         IReadOnlyList<double> cumulative,
         double distance)
     {
