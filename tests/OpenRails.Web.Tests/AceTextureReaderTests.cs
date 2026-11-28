@@ -65,6 +65,37 @@ public sealed class AceTextureReaderTests
     }
 
     [Fact]
+    public void TerrainTextureLoaderRetainsOnlyTexturesWithinDecodedByteBudget()
+    {
+        const string firstPath = "ROUTES/Test/TERRTEX/first.ace";
+        const string secondPath = "ROUTES/Test/TERRTEX/second.ace";
+        var first = new TerrainTextureAssetReference("First", 0, "first.ace", null, firstPath, false);
+        var second = new TerrainTextureAssetReference("Second", 0, "second.ace", null, secondPath, false);
+        var discovery = new TerrainTextureAssetDiscovery(
+            new[] { first, second }, Array.Empty<TerrainTextureAssetIssue>());
+        var ace = CreateAceFile(CreateStructuredPayload(), compressed: false);
+        using var store = CreateStore((firstPath, ace), (secondPath, ace));
+
+        var result = new TerrainTextureAssetLoader().Load(store, discovery, maximumDecodedBytes: 8);
+
+        Assert.Equal(firstPath, Assert.Single(result.Loaded).Reference.Path);
+        var skipped = Assert.Single(result.Failed);
+        Assert.Equal(secondPath, skipped.Path);
+        Assert.Contains("remaining viewport texture budget", skipped.Reason);
+    }
+
+    [Fact]
+    public void TerrainTextureLoaderRejectsNegativeDecodedByteBudget()
+    {
+        var discovery = new TerrainTextureAssetDiscovery(
+            Array.Empty<TerrainTextureAssetReference>(), Array.Empty<TerrainTextureAssetIssue>());
+        using var store = CreateStore();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TerrainTextureAssetLoader().Load(store, discovery, maximumDecodedBytes: -1));
+    }
+
+    [Fact]
     public void LoadsShapeReferencedAceTexturesAndReportsUnsupportedDds()
     {
         const string acePath = "ROUTES/Test/TEXTURES/rail.ace";
