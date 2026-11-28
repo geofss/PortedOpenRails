@@ -10,6 +10,19 @@ namespace OpenRails.Web.Tests;
 public sealed class WorldSceneryTileLoaderTests
 {
     [Fact]
+    public void RejectsNegativePerTileTextureBudgetBeforeReadingWorldContent()
+    {
+        using var store = CreateStore();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new WorldSceneryTileLoader().Load(
+                store,
+                "ROUTES/Test",
+                new WorldTileReference(0, 0, "ROUTES/Test/WORLD/W+000000+000000.w"),
+                maximumTextureBytes: -1));
+    }
+
+    [Fact]
     public void LoadsWorldPlacementsAndIsolatesInvalidShapeAssetFailures()
     {
         var staticObject = Block(TokenID.Static, Concat(
