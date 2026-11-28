@@ -546,20 +546,32 @@
         var selectedVertices = 0;
         var selectedPatches = 0;
         var selectedTiles = new HashSet<(int TileX, int TileZ)>();
-        var candidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch)>();
+        // Select the closest route tiles first so the geometry budget is spent
+        // around the current camera rather than on whichever tiles happened to
+        // appear first in the archive's directory order.
+        var candidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch, float DistanceSquared)>();
         foreach (var loaded in Route.TerrainMeshes.Meshes)
         {
             var reference = loaded.Content.Reference;
             var tileCenter = new Vector3(reference.TileX * 2048f + 1024f,
                 loaded.Content.Terrain.Samples.Floor, reference.TileZ * 2048f + 1024f);
-            var distance = cameraPosition is { } camera ? Vector3.Distance(camera, tileCenter) : 0;
-            var lod = TerrainLodSelector.Select(loaded.LodMeshes, distance);
+            var distanceSquared = cameraPosition is { } camera
+                ? Vector3.DistanceSquared(camera, tileCenter) : 0;
+            var lod = TerrainLodSelector.Select(loaded.LodMeshes, MathF.Sqrt(distanceSquared));
             if (lod is null) continue;
             foreach (var patch in lod.Patches)
-                candidates.Add((loaded, patch));
+                candidates.Add((loaded, patch, distanceSquared));
         }
 
-        foreach (var (loaded, patch) in candidates)
+        candidates.Sort((left, right) =>
+        {
+            var distance = left.DistanceSquared.CompareTo(right.DistanceSquared);
+            if (distance != 0) return distance;
+            var z = left.Tile.Content.Reference.TileZ.CompareTo(right.Tile.Content.Reference.TileZ);
+            return z != 0 ? z : left.Tile.Content.Reference.TileX.CompareTo(right.Tile.Content.Reference.TileX);
+        });
+
+        foreach (var (loaded, patch, _) in candidates)
         {
             if (selectedVertices + patch.Vertices.Count > TerrainVertexLimit)
                 continue;
