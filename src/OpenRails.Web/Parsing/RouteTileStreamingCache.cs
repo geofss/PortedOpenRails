@@ -61,7 +61,8 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
             var keep = ordered.Select(request => request.Key).ToHashSet();
             unload = entries.Where(pair => !keep.Contains(pair.Key)).Select(pair => pair.Value.Asset).ToList();
             foreach (var key in entries.Keys.Where(key => !keep.Contains(key)).ToArray())
-                RemoveEntry(key);
+                if (RemoveEntry(key, out var removedAsset))
+                    unload.Add(removedAsset);
         }
         await DisposeAssetsAsync(unload).ConfigureAwait(false);
 
@@ -91,6 +92,8 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
             }
 
             var retained = false;
+            var evicted = new List<TAsset>();
+            var pinnedKeys = ordered.Select(item => item.Key).ToHashSet();
             lock (gate)
             {
                 if (!disposed && ReferenceEquals(generation, current) && !current.IsCancellationRequested &&
@@ -98,14 +101,22 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
                 {
                     while (entries.Count >= maximumEntries || residentBytes > maximumBytes - loaded.ResidentBytes)
                     {
-                        var oldest = entries.MinBy(pair => pair.Value.LastUse);
-                        RemoveEntry(oldest.Key);
+                        var oldest = entries
+                            .Where(pair => !pinnedKeys.Contains(pair.Key))
+                            .MinBy(pair => pair.Value.LastUse);
+                        if (oldest.Value is null) break;
+                        if (RemoveEntry(oldest.Key, out var evictedAsset))
+                            evicted.Add(evictedAsset);
                     }
-                    entries[request.Key] = new CacheEntry(loaded.Asset, loaded.ResidentBytes, ++clock);
-                    residentBytes += loaded.ResidentBytes;
-                    retained = true;
+                    if (entries.Count < maximumEntries && residentBytes <= maximumBytes - loaded.ResidentBytes)
+                    {
+                        entries[request.Key] = new CacheEntry(loaded.Asset, loaded.ResidentBytes, ++clock);
+                        residentBytes += loaded.ResidentBytes;
+                        retained = true;
+                    }
                 }
             }
+            await DisposeAssetsAsync(evicted).ConfigureAwait(false);
             if (!retained && current.IsCancellationRequested)
             {
                 await DisposeAssetAsync(loaded.Asset).ConfigureAwait(false);
@@ -133,11 +144,16 @@ public sealed class RouteTileStreamingCache<TKey, TAsset> : IAsyncDisposable
         await DisposeAssetsAsync(unload).ConfigureAwait(false);
     }
 
-    private void RemoveEntry(TKey key)
+    private bool RemoveEntry(TKey key, out TAsset asset)
     {
-        if (!entries.Remove(key, out var entry)) return;
+        if (!entries.Remove(key, out var entry))
+        {
+            asset = default!;
+            return false;
+        }
         residentBytes -= entry.ResidentBytes;
-        _ = DisposeAssetAsync(entry.Asset);
+        asset = entry.Asset;
+        return true;
     }
 
     private static async ValueTask DisposeAssetsAsync(IEnumerable<TAsset> assets)
