@@ -45,6 +45,28 @@ public sealed class AiServiceInterlockingSessionTests
     }
 
     [Fact]
+    public void LiveAIServiceAppliesNearestTrainFollowingConstraint()
+    {
+        var interlocking = CreateInterlocking();
+        var session = new AiServiceInterlockingSession("AI-1", interlocking);
+        Assert.True(session.TryDispatch(new uint[] { 10, 11 }, new Dictionary<uint, uint> { [100] = 11 }));
+        var train = CreateTrain();
+        var route = new ServiceRouteStartPosition(0, 0,
+            new TrackWorldPosition(0, 0, 0), new[] { 0d, 500d }, 1);
+
+        var free = session.Drive(train, route, 25);
+        var following = session.Drive(train, route, 25, otherTrains: new[]
+        {
+            new AiServiceTrainState("PLAYER", 25, 0),
+            new AiServiceTrainState("AI-2", 100, 10)
+        });
+
+        Assert.True(following.TargetSpeedMetersPerSecond < free.TargetSpeedMetersPerSecond);
+        Assert.Equal(0, following.ThrottlePercent);
+        Assert.Equal(100, following.BrakePercent);
+    }
+
+    [Fact]
     public void AITrainOccupancyKeepsSwitchLockedUntilRouteIsClear()
     {
         var interlocking = CreateInterlocking();
