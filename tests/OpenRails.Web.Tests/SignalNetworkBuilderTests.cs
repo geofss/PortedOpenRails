@@ -507,6 +507,54 @@ public sealed class SignalNetworkBuilderTests
 
 
     [Fact]
+    public void ResolvesNativeNthMostRestrictiveNextSignalAspect()
+    {
+        var definition = new SignalTypeDefinition("main", "", "NORMAL", "", "", 1,
+            new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+            new Dictionary<string, SignalDrawStateDefinition>(),
+            new[]
+            {
+                new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+            });
+        var currentSignal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var firstNextSignal = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var secondNextSignal = new RouteSignalHead(23, "main", "", 0, 0, 4, 0,
+            Array.Empty<TrackSignalDirection>(), definition);
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = definition },
+            new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentSignal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { firstNextSignal }),
+                new SignalTrackCircuit(4, 100, new uint[] { 5 }, new[] { secondNextSignal }),
+                new SignalTrackCircuit(5, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        var script = new SignalScriptDefinition("nth-next",
+            new[] { "EXTERN FLOAT STATE;", "STATE = NEXT_NSIG_MR(NORMAL, 2);" },
+            Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["nth-next"] = script },
+            Array.Empty<string>());
+
+        var indication = Assert.Single(network.Evaluate(new HashSet<uint>(), scripts: library)
+            .Where(item => item.Signal.TrackItemIndex == 21));
+
+        Assert.Equal(RouteSignalAspect.Clear1, indication.Aspect);
+        Assert.Equal("CLEAR_1", indication.NativeAspect);
+        Assert.Contains("executed", indication.Reason);
+    }
+
+    [Fact]
     public void NextSignalLeastAndMostRestrictiveQueriesAggregateAllMatchingHeads()
     {
         SignalTypeDefinition Definition(string script, int clearAhead) =>
