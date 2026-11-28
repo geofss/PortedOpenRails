@@ -61,6 +61,33 @@ public sealed class AiServiceInterlockingSession
         return true;
     }
 
+    /// <summary>
+    /// Recovers a service participating in a detected wait-for cycle by selecting
+    /// a native-style alternate deadlock path and atomically replacing its route.
+    /// The old route remains reserved if replacement cannot be committed.
+    /// </summary>
+    public bool TryRecoverDeadlock(
+        IReadOnlyList<AiDeadlockRouteOption> availableRoutes,
+        AiDeadlockRouteOption ownRoute)
+    {
+        ArgumentNullException.ThrowIfNull(availableRoutes);
+        ArgumentNullException.ThrowIfNull(ownRoute);
+        if (!dispatched)
+            return false;
+        var cycles = interlocking.SnapshotDeadlockCycles();
+        if (!cycles.Any(cycle => cycle.Contains(trainId, StringComparer.Ordinal)))
+            return false;
+        var selection = new NativeDeadlockPathSelector().SelectPath(
+            availableRoutes.Select(route => route.Path).ToArray(), ownRoute.Path, deadlockActive: true);
+        var selectedRoute = availableRoutes.FirstOrDefault(route => route.Path.PathIndex == selection.PathIndex)
+            ?? (ownRoute.Path.PathIndex == selection.PathIndex ? ownRoute : null);
+        if (selectedRoute is null || !TryChangeRoute(selectedRoute.RouteCircuitIds,
+            selectedRoute.RequiredJunctionBranches))
+            return false;
+        SelectedDeadlockPath = selection;
+        return true;
+    }
+
     /// <summary>Atomically claims every route circuit and required junction branch before movement.</summary>
     public bool TryDispatch(
         IReadOnlyList<uint> routeCircuitIds,
