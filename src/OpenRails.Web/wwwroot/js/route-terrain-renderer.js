@@ -68,6 +68,10 @@ export function setCameraPreset(name) {
 }
 export function getCameraPreset() { return activeCameraPreset; }
 
+export function getCameraWorldPosition() {
+  return lastSceneCameraPosition ? [...lastSceneCameraPosition] : null;
+}
+
 export function setCameraChangeCallback(callback) {
   cameraChangeCallback = callback || null;
   notifyCameraChanged();

@@ -498,6 +498,9 @@
                 terrainVerticesSent = terrainSelection.Vertices;
                 await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, routeTrackLines,
                     null, shapeBatches, shapeTextures, rollingStockBatches);
+                var camera = await module.InvokeAsync<double[]?>("getCameraWorldPosition");
+                if (camera is { Length: 3 } && camera.All(double.IsFinite))
+                    cameraPosition = new Vector3((float)camera[0], (float)camera[1], (float)camera[2]);
                 hasDrawn = true;
                 motionUpdatePending = false;
                 if (cameraPosition is not null)
