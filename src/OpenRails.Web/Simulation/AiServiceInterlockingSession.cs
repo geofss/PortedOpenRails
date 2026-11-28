@@ -114,7 +114,8 @@ public sealed class AiServiceInterlockingSession
         ServiceRouteStartPosition route,
         double targetSpeedMetersPerSecond,
         IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
-        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null,
+        IReadOnlyList<AiServiceTrainState>? otherTrains = null)
     {
         ArgumentNullException.ThrowIfNull(train);
         ArgumentNullException.ThrowIfNull(route);
@@ -124,7 +125,10 @@ public sealed class AiServiceInterlockingSession
             train.SetBrake(100);
             return new AiServiceControlDecision(0, 100, 0, -1, false, 0);
         }
-        return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints, speedRestrictions);
+        var trainAhead = otherTrains is null ? null : AiTrainFollowingResolver.Resolve(
+            trainId, train.State.Cars[0].DistanceMeters, route.Direction, otherTrains);
+        return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints,
+            speedRestrictions, trainAhead);
     }
 
     /// <summary>
@@ -157,10 +161,11 @@ public sealed class AiServiceInterlockingSession
         SignalNetwork signalNetwork,
         IReadOnlyDictionary<int, double> signalRouteDistancesMeters,
         SignalScriptLibrary? scripts = null,
-        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null,
+        IReadOnlyList<AiServiceTrainState>? otherTrains = null)
     {
         var constraints = ResolveSignalConstraints(signalNetwork, signalRouteDistancesMeters, scripts);
-        return Drive(train, route, targetSpeedMetersPerSecond, constraints, speedRestrictions);
+        return Drive(train, route, targetSpeedMetersPerSecond, constraints, speedRestrictions, otherTrains);
     }
 
     /// <summary>Completes dispatch only after all occupied circuits have cleared.</summary>
