@@ -85,10 +85,17 @@ public sealed class NativeTimetableReaderTests
             "#path,Main,,Branch,\n" +
             "#consist,Express.con,,Local.con,\n" +
             "#direction,Up,,Down,\n" +
-            "#start,08:00,,08:15,\n");
+            "#start,08:00,,08:15,\n" +
+            "Edinburgh,08:05,,08:20,\n" +
+            "Haymarket,08:10,,08:25,\n");
 
         var timetable = new NativeTimetableDefinitionReader()
             .Read(store, "ROUTES/SCE/TIMETABLES/weekday.timetable");
+        Assert.Equal(2, timetable.Trains[0].Stops.Count);
+        Assert.Equal("Edinburgh", timetable.Trains[0].Stops[0].Location);
+        Assert.True(timetable.Trains[0].Stops[0].TryGetTimeSeconds(out var firstStopSeconds));
+        Assert.Equal(8 * 60 * 60 + 5 * 60, firstStopSeconds);
+
         var interlocking = new SignalInterlockingController(
             new uint[] { 2, 3 },
             new Dictionary<uint, IReadOnlyCollection<uint>>());
