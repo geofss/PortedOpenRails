@@ -83,7 +83,15 @@ public sealed class NativeTimetableDispatcherBuilder
                     registration.RouteCircuitIds, registration.RequiredJunctionBranches);
                 registered.Add(train.Train);
                 if (registration.RuntimeBinding is { } binding)
-                    runtimeBindings.Add(binding);
+                {
+                    var waitingPoints = new NativeTimetableWaitingPointResolver()
+                        .Resolve(train, binding.Route, departureSeconds);
+                    foreach (var diagnostic in waitingPoints.Diagnostics)
+                        issues.Add(new NativeTimetableDispatchIssue(train.Train, diagnostic));
+                    runtimeBindings.Add(binding.WaitingPointReleaseTimesSeconds is null
+                        ? binding with { WaitingPointReleaseTimesSeconds = waitingPoints.ReleaseTimesSeconds }
+                        : binding);
+                }
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidDataException or
                 InvalidOperationException or KeyNotFoundException)
