@@ -138,6 +138,7 @@
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockTrackPlacementBuilder.cs" Link="Parsing/RollingStockTrackPlacementBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockRenderFrameBuilder.cs" Link="Parsing/RollingStockRenderFrameBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockWheelPoseBuilder.cs" Link="Parsing/RollingStockWheelPoseBuilder.cs" />
+    <Compile Include="../../src/OpenRails.Web/Parsing/RollingStockBogiePoseBuilder.cs" Link="Parsing/RollingStockBogiePoseBuilder.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/FixedStepSimulationScheduler.cs" Link="Simulation/FixedStepSimulationScheduler.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/Upstream/NativeNumericalIntegrator.cs" Link="Simulation/Upstream/NativeNumericalIntegrator.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/TrainCarMotionIntegrator.cs" Link="Simulation/TrainCarMotionIntegrator.cs" />
