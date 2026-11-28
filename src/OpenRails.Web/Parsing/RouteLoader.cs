@@ -12,10 +12,12 @@ public sealed class RouteLoader
     public RouteLoadResult Load(
         IVirtualContentStore store,
         string routeFilePath,
-        RouteMetadata metadata)
+        RouteMetadata metadata,
+        RouteLoadOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(metadata);
+        options ??= RouteLoadOptions.Eager;
 
         var assets = new RouteAssetLocator().Locate(store, routeFilePath, metadata);
         var database = new TrackDatabaseReader().Read(store, assets.TrackDatabasePath);
@@ -39,9 +41,24 @@ public sealed class RouteLoader
         var trackShapeMeshes = new RouteTrackShapeMeshLoader().Load(store, assets.RouteRoot, trackShapeAssets);
         var trackShapePlacements = new TrackShapePlacementBuilder().Build(network, trackShapeMeshes.LoadedMeshes);
         var worldTiles = new RouteWorldTileLocator().Locate(store, assets.RouteRoot, network);
-        var terrainMeshes = new RouteTerrainMeshLoader().Load(store, terrainTiles);
-        var terrainTextureAssets = new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles);
-        var terrainTextures = new TerrainTextureAssetLoader().Load(store, terrainTextureAssets);
+        var terrainMeshes = options.LoadTerrainMeshes
+            ? new RouteTerrainMeshLoader().Load(store, terrainTiles)
+            : new RouteTerrainMeshLoadResult(
+                Array.Empty<TerrainTileContent>(),
+                Array.Empty<LoadedRouteTerrainTileMesh>(),
+                terrainTiles.Missing,
+                Array.Empty<RouteTerrainTileIssue>());
+        var terrainTextureAssets = options.LoadTerrainTextures
+            ? new TerrainTextureAssetLocator().Locate(store, assets.RouteRoot, terrainMeshes.LoadedTiles)
+            : new TerrainTextureAssetDiscovery(
+                Array.Empty<TerrainTextureAssetReference>(),
+                Array.Empty<TerrainTextureAssetIssue>());
+        var terrainTextures = options.LoadTerrainTextures
+            ? new TerrainTextureAssetLoader().Load(store, terrainTextureAssets)
+            : new TerrainTextureAssetLoadResult(
+                Array.Empty<LoadedTerrainTextureAsset>(),
+                terrainTextureAssets.Missing,
+                Array.Empty<TerrainTextureLoadIssue>());
         var worldScenery = new RouteWorldSceneryLoader().Load(store, assets.RouteRoot, worldTiles);
         var validation = RouteValidationReport.Build(database, network, terrainTiles, terrainMeshes, trackShapeAssets, trackShapeMeshes, worldTiles, worldScenery, terrainTextures, trackItemPlacements);
 
@@ -151,4 +168,19 @@ public sealed class RouteTrackShapeMeshLoadResult
     public TrackShapeTextureAssetLoadResult Textures { get; }
     public RouteTrackShapeMeshLoadResult(IEnumerable<TrackShapeAssetMesh> loadedMeshes, IEnumerable<TrackShapeAssetIssue> missingMeshes, IEnumerable<RouteTrackShapeMeshIssue> failedMeshes, TrackShapeTextureAssetDiscovery textureDiscovery, TrackShapeTextureAssetLoadResult textures)
     { LoadedMeshes = Array.AsReadOnly(loadedMeshes.ToArray()); MissingMeshes = Array.AsReadOnly(missingMeshes.ToArray()); FailedMeshes = Array.AsReadOnly(failedMeshes.ToArray()); TextureDiscovery = textureDiscovery; Textures = textures; }
+}
+
+
+/// <summary>
+/// Controls whether route-wide visual assets are decoded during structural route
+/// loading or deferred to the viewport streaming sessions.
+/// </summary>
+public sealed record RouteLoadOptions(
+    bool LoadTerrainMeshes = true,
+    bool LoadTerrainTextures = true)
+{
+    public static RouteLoadOptions Eager { get; } = new();
+    public static RouteLoadOptions ViewportStreaming { get; } = new(
+        LoadTerrainMeshes: false,
+        LoadTerrainTextures: false);
 }
