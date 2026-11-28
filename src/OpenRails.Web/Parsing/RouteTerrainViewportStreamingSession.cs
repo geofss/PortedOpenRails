@@ -11,6 +11,8 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
 {
     private readonly RouteTileStreamingCache<string, LoadedRouteTerrainTileMesh> cache;
     private readonly long estimatedBytesPerTile;
+    private readonly long maximumResidentBytes;
+    private readonly int maximumVisibleTiles;
     private readonly double seamHaloMeters;
 
     public RouteTerrainViewportStreamingSession(
@@ -24,7 +26,13 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(estimatedBytesPerTile));
         if (!double.IsFinite(seamHaloMeters) || seamHaloMeters < 0)
             throw new ArgumentOutOfRangeException(nameof(seamHaloMeters));
+        if (maximumResidentTiles < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumResidentTiles));
+        if (maximumResidentBytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(maximumResidentBytes));
         this.estimatedBytesPerTile = estimatedBytesPerTile;
+        this.maximumResidentBytes = maximumResidentBytes;
+        maximumVisibleTiles = (int)Math.Min(maximumResidentTiles, maximumResidentBytes / estimatedBytesPerTile);
         this.seamHaloMeters = seamHaloMeters;
         cache = new RouteTileStreamingCache<string, LoadedRouteTerrainTileMesh>(
             maximumResidentTiles, maximumResidentBytes, maximumConcurrentLoads);
@@ -48,8 +56,10 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(radiusMeters));
 
         var selected = RouteViewportTileSelector.SelectTerrainTiles(
-            discovery.Found, cameraX, cameraZ, checked(radiusMeters + seamHaloMeters),
-            estimatedBytesPerTile);
+                discovery.Found, cameraX, cameraZ, checked(radiusMeters + seamHaloMeters),
+                estimatedBytesPerTile)
+            .Take(maximumVisibleTiles)
+            .ToArray();
         var selectedReferences = selected.Select(request => request.Key).ToArray();
         var referencesByPath = selectedReferences.ToDictionary(
             reference => reference.Path, StringComparer.OrdinalIgnoreCase);
@@ -80,20 +90,41 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
                     mesh, EstimateResidentBytes(mesh)));
             }, cancellationToken);
 
-        var orderedMeshes = selectedReferences
-            .Where(reference => visible.ContainsKey(reference.Path))
-            .Select(reference => visible[reference.Path])
-            .ToArray();
+        var orderedMeshes = new List<LoadedRouteTerrainTileMesh>();
+        long visibleMeshBytes = 0;
+        foreach (var reference in selectedReferences)
+        {
+            if (!visible.TryGetValue(reference.Path, out var mesh))
+                continue;
+            var bytes = EstimateResidentBytes(mesh);
+            if (bytes > maximumResidentBytes - visibleMeshBytes)
+                continue;
+            orderedMeshes.Add(mesh);
+            visibleMeshBytes += bytes;
+        }
+
         var loadedContent = orderedMeshes.Select(mesh => mesh.Content).ToArray();
         var textureDiscovery = new TerrainTextureAssetLocator().Locate(store, routeRoot, loadedContent);
-        var textures = new TerrainTextureAssetLoader().Load(store, textureDiscovery);
+        var decodedTextures = new TerrainTextureAssetLoader().Load(store, textureDiscovery);
+        var visibleTextures = new List<LoadedTerrainTextureAsset>();
+        long textureBytes = 0;
+        foreach (var texture in decodedTextures.Loaded)
+        {
+            var bytes = texture.Texture.MipLevels.Sum(mip => (long)mip.Length);
+            if (bytes > maximumResidentBytes - visibleMeshBytes - textureBytes)
+                continue;
+            visibleTextures.Add(texture);
+            textureBytes += bytes;
+        }
+        var textures = new TerrainTextureAssetLoadResult(
+            visibleTextures, decodedTextures.Missing, decodedTextures.Failed);
         var failures = seamAwareBatch?.Failed ?? Array.Empty<RouteTerrainTileIssue>();
 
         return new RouteTerrainViewportSnapshot(
-            Array.AsReadOnly(orderedMeshes),
+            Array.AsReadOnly(orderedMeshes.ToArray()),
             textures,
             Array.AsReadOnly(failures.ToArray()),
-            cache.ResidentBytes,
+            checked(visibleMeshBytes + textureBytes),
             cache.Count);
     }
 
