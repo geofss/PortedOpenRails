@@ -12,23 +12,49 @@ public sealed class TerrainTextureAssetLoader
     public TerrainTextureAssetLoadResult Load(
         IVirtualContentStore store,
         TerrainTextureAssetDiscovery discovery,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        Load(store, discovery, long.MaxValue, cancellationToken);
+
+    /// <summary>
+    /// Decodes textures in discovery order while retaining no more than the supplied
+    /// decoded-byte budget. A single texture is decoded before its mip footprint is
+    /// known, but rejected textures are not retained in the result.
+    /// </summary>
+    public TerrainTextureAssetLoadResult Load(
+        IVirtualContentStore store,
+        TerrainTextureAssetDiscovery discovery,
+        long maximumDecodedBytes,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(discovery);
+        if (maximumDecodedBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumDecodedBytes));
 
         var loaded = new List<LoadedTerrainTextureAsset>();
         var failed = new List<TerrainTextureLoadIssue>();
         var reader = new AceTextureReader();
+        long retainedBytes = 0;
 
         foreach (var asset in discovery.Found)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                loaded.Add(new LoadedTerrainTextureAsset(asset, reader.Read(store, asset.Path)));
+                var texture = reader.Read(store, asset.Path);
+                var textureBytes = texture.MipLevels.Aggregate(0L,
+                    (total, mip) => checked(total + mip.LongLength));
+                if (textureBytes > maximumDecodedBytes - retainedBytes)
+                {
+                    failed.Add(new TerrainTextureLoadIssue(asset.Path,
+                        $"Decoded texture exceeds the remaining viewport texture budget ({maximumDecodedBytes - retainedBytes} bytes remain)."));
+                    continue;
+                }
+
+                loaded.Add(new LoadedTerrainTextureAsset(asset, texture));
+                retainedBytes += textureBytes;
             }
-            catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or OverflowException)
             {
                 failed.Add(new TerrainTextureLoadIssue(asset.Path, exception.Message));
             }
