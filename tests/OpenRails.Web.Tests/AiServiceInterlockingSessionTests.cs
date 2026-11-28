@@ -28,6 +28,35 @@ public sealed class AiServiceInterlockingSessionTests
     }
 
     [Fact]
+    public void DetectsWaitCycleAndAutomaticallyReplansToPassingAlternative()
+    {
+        var interlocking = new SignalInterlockingController(new uint[] { 10, 11, 12, 13 },
+            new Dictionary<uint, IReadOnlyCollection<uint>>());
+        var first = new AiServiceInterlockingSession("AI-1", interlocking);
+        var second = new AiServiceInterlockingSession("AI-2", interlocking);
+        Assert.True(first.TryDispatch(new uint[] { 10 }, new Dictionary<uint, uint>()));
+        Assert.True(second.TryDispatch(new uint[] { 11 }, new Dictionary<uint, uint>()));
+
+        Assert.False(interlocking.TryReserveRoute("AI-1", new uint[] { 11 }, new Dictionary<uint, uint>()));
+        Assert.False(interlocking.TryReserveRoute("AI-2", new uint[] { 10 }, new Dictionary<uint, uint>()));
+        Assert.Contains(interlocking.SnapshotDeadlockCycles(), cycle =>
+            cycle.Contains("AI-1", StringComparer.Ordinal) && cycle.Contains("AI-2", StringComparer.Ordinal));
+
+        var own = new AiDeadlockRouteOption(
+            new NativeDeadlockPathCandidate(1, "OWN", false, 101),
+            new uint[] { 10 }, new Dictionary<uint, uint>());
+        var passing = new AiDeadlockRouteOption(
+            new NativeDeadlockPathCandidate(2, "PASS", true, 102),
+            new uint[] { 12 }, new Dictionary<uint, uint>());
+        Assert.True(first.TryRecoverDeadlock(new[] { own, passing }, own));
+        Assert.Equal(2, first.SelectedDeadlockPath?.PathIndex);
+        Assert.Equal("AI-1", interlocking.Snapshot().ReservedCircuits[12]);
+        Assert.DoesNotContain(10u, interlocking.Snapshot().ReservedCircuits.Keys);
+        Assert.Equal("AI-2", interlocking.Snapshot().ReservedCircuits[11]);
+        Assert.Empty(interlocking.SnapshotDeadlockCycles());
+    }
+
+    [Fact]
     public void AITrainCannotMoveBeforeItsWholeRouteIsReserved()
     {
         var session = new AiServiceInterlockingSession("AI-1", CreateInterlocking());
