@@ -155,7 +155,7 @@ public sealed class SignalInterlockingControllerTests
             new Dictionary<uint, uint> { [100] = 12 }));
 
         var state = interlocking.Snapshot();
-        Assert.Equal(new uint[] { 10, 11 }, state.ReservedCircuits.Keys.Order().ToArray());
+        Assert.Equal(new uint[] { 10, 11, 13 }, state.ReservedCircuits.Keys.Order().ToArray());
         Assert.Equal((uint)11, state.SelectedJunctionBranches[100]);
         Assert.Equal("AI-1", state.JunctionLocks[100]);
     }
