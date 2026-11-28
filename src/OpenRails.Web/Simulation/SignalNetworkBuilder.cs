@@ -223,70 +223,83 @@ public sealed class SignalNetwork
         IReadOnlySet<uint>? enabledTrackNodeIndices = null)
     {
         ArgumentNullException.ThrowIfNull(occupiedTrackNodeIndices);
-        var result = new List<RouteSignalIndication>();
+        var baselineBySignal = new Dictionary<RouteSignalHead, (RouteSignalIndication Baseline, int BlockState)>(
+            ReferenceEqualityComparer.Instance);
+        foreach (var block in TrackCircuits)
+        foreach (var signal in block.Signals)
+            baselineBySignal[signal] = EvaluateBaseline(signal, occupiedTrackNodeIndices, selectedJunctionBranches);
 
+        var result = new List<RouteSignalIndication>();
         foreach (var block in TrackCircuits)
         foreach (var signal in block.Signals)
         {
-            RouteSignalIndication baseline;
-            var blockState = 0; // Native MSTS MstsBlockState.Clear.
-            if (occupiedTrackNodeIndices.Contains(block.TrackNodeIndex))
-            {
-                blockState = 1; // Occupied.
-                baseline = CreateIndication(signal, RouteSignalAspect.Stop, null, "The signal's own track circuit is occupied.");
-            }
-            else
-            {
-                var requiredClearAhead = signal.Definition?.NumberClearAhead is >= 0 and <= 32
-                    ? Math.Max(1, signal.Definition.NumberClearAhead)
-                    : 2;
-                var current = block.TrackNodeIndex;
-                uint? previous = null;
-                uint? firstNext = null;
-                var clearBlocks = 0;
-                var blocked = false;
-                var unresolved = false;
-                for (var clearIndex = 0; clearIndex < requiredClearAhead; clearIndex++)
-                {
-                    var next = ResolveNextBlock(current, clearIndex == 0 ? signal : null,
-                        selectedJunctionBranches, previous);
-                    if (next is null)
-                    {
-                        unresolved = true;
-                        break;
-                    }
-                    firstNext ??= next;
-                    if (occupiedTrackNodeIndices.Contains(next.Value))
-                    {
-                        blocked = true;
-                        break;
-                    }
-                    clearBlocks++;
-                    previous = current;
-                    current = next.Value;
-                }
-
-                if (blocked) blockState = 1;
-                else if (unresolved) blockState = 2; // Obstructed / route not established.
-
-                if (clearBlocks == 0 && (blocked || unresolved))
-                    baseline = CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
-                        blocked ? "The next track circuit is occupied or reserved by another train." : "No unique, selected route is available beyond this signal.");
-                else if (blocked || unresolved)
-                    baseline = CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
-                        blocked ? "A required track circuit ahead is occupied or reserved by another train." : "The required clear-ahead route is not uniquely established.");
-                else
-                    baseline = CreateIndication(signal,
-                        requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
-                        firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied.");
-            }
-
+            var (baseline, blockState) = baselineBySignal[signal];
             var enabled = enabledTrackNodeIndices?.Contains(block.TrackNodeIndex) == true;
             result.Add(ApplyNativeScript(signal, baseline, blockState, scripts,
-                selectedJunctionBranches, enabled, enabledTrackNodeIndices));
+                selectedJunctionBranches, enabled, enabledTrackNodeIndices,
+                baselineBySignal));
         }
 
         return Array.AsReadOnly(result.ToArray());
+    }
+
+    private (RouteSignalIndication Baseline, int BlockState) EvaluateBaseline(
+        RouteSignalHead signal,
+        IReadOnlySet<uint> occupiedTrackNodeIndices,
+        IReadOnlyDictionary<uint, uint>? selectedJunctionBranches)
+    {
+        if (!blocks.TryGetValue(signal.TrackNodeIndex, out var block))
+            return (CreateIndication(signal, RouteSignalAspect.Stop, null,
+                "The signal's track circuit is missing."), 2);
+
+        var blockState = 0;
+        if (occupiedTrackNodeIndices.Contains(block.TrackNodeIndex))
+            return (CreateIndication(signal, RouteSignalAspect.Stop, null,
+                "The signal's own track circuit is occupied."), 1);
+
+        var requiredClearAhead = signal.Definition?.NumberClearAhead is >= 0 and <= 32
+            ? Math.Max(1, signal.Definition.NumberClearAhead)
+            : 2;
+        var current = block.TrackNodeIndex;
+        uint? previous = null;
+        uint? firstNext = null;
+        var clearBlocks = 0;
+        var blocked = false;
+        var unresolved = false;
+        for (var clearIndex = 0; clearIndex < requiredClearAhead; clearIndex++)
+        {
+            var next = ResolveNextBlock(current, clearIndex == 0 ? signal : null,
+                selectedJunctionBranches, previous);
+            if (next is null)
+            {
+                unresolved = true;
+                break;
+            }
+            firstNext ??= next;
+            if (occupiedTrackNodeIndices.Contains(next.Value))
+            {
+                blocked = true;
+                break;
+            }
+            clearBlocks++;
+            previous = current;
+            current = next.Value;
+        }
+
+        if (blocked) blockState = 1;
+        else if (unresolved) blockState = 2;
+        if (clearBlocks == 0 && (blocked || unresolved))
+            return (CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
+                blocked ? "The next track circuit is occupied or reserved by another train." :
+                    "No unique, selected route is available beyond this signal."), blockState);
+        if (blocked || unresolved)
+            return (CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
+                blocked ? "A required track circuit ahead is occupied or reserved by another train." :
+                    "The required clear-ahead route is not uniquely established."), blockState);
+        return (CreateIndication(signal,
+            requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
+            firstNext, $"The configured {requiredClearAhead}-block clear-ahead requirement is satisfied."),
+            blockState);
     }
 
     private RouteSignalIndication ApplyNativeScript(
@@ -296,7 +309,8 @@ public sealed class SignalNetwork
         SignalScriptLibrary? scripts,
         IReadOnlyDictionary<uint, uint>? selectedBranches,
         bool enabled,
-        IReadOnlySet<uint>? enabledRouteCircuits)
+        IReadOnlySet<uint>? enabledRouteCircuits,
+        IReadOnlyDictionary<RouteSignalHead, (RouteSignalIndication Baseline, int BlockState)> baselineBySignal)
     {
         var scriptName = signal.Definition?.Script;
         if (string.IsNullOrWhiteSpace(scriptName) || scripts is null ||
@@ -354,15 +368,31 @@ public sealed class SignalNetwork
                     selectedBranch == requiredMainNode ? 1 : 0;
             }
 
-            if ((name.Equals("THIS_SIG_LR", StringComparison.OrdinalIgnoreCase) ||
-                 name.Equals("THIS_SIG_MR", StringComparison.OrdinalIgnoreCase)) &&
-                arguments.Count == 1 && signal.Definition is not null)
+            if (arguments.Count == 1 &&
+                (name.Equals("THIS_SIG_LR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("THIS_SIG_MR", StringComparison.OrdinalIgnoreCase)))
+                return ResolveThisSignalAspect(signal, arguments[0], name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase),
+                    baselineBySignal);
+
+            if (arguments.Count == 1 &&
+                (name.Equals("NEXT_SIG_LR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("NEXT_SIG_MR", StringComparison.OrdinalIgnoreCase)))
             {
-                var currentFunction = signal.Definition.Function;
-                if (configuration is not null &&
-                    configuration.SignalFunctions.TryGetValue(signal.Definition.Function, out var currentBase))
-                    currentFunction = currentBase;
-                return NativeSignalFunctionValue(currentFunction) == arguments[0] ? initialState : -1;
+                var next = FindNextSignal(signal, arguments[0], selectedBranches);
+                return next is null ? 0 : ResolveThisSignalAspect(next, arguments[0],
+                    name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase), baselineBySignal);
+            }
+
+            if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 2 && arguments[1] > 0)
+            {
+                var next = signal;
+                for (var index = 0; index < arguments[1]; index++)
+                {
+                    next = FindNextSignal(next, arguments[0], selectedBranches);
+                    if (next is null) return 0;
+                }
+                return ResolveThisSignalAspect(next, arguments[0], true, baselineBySignal);
             }
 
             return null;
@@ -405,6 +435,77 @@ public sealed class SignalNetwork
                 ? signal.Definition!.DrawStates.Values.FirstOrDefault(draw => draw.Index == execution.DrawState)?.Name ?? configured.DrawState
                 : configured.DrawState,
             configured.SpeedMetersPerSecond >= 0 ? configured.SpeedMetersPerSecond : null);
+    }
+
+    private int ResolveThisSignalAspect(
+        RouteSignalHead signal,
+        int functionId,
+        bool leastRestrictive,
+        IReadOnlyDictionary<RouteSignalHead, (RouteSignalIndication Baseline, int BlockState)> baselineBySignal)
+    {
+        if (!blocks.TryGetValue(signal.TrackNodeIndex, out var block))
+            return 0;
+        var aspects = block.Signals
+            .Where(candidate => candidate.TrackItemIndex == signal.TrackItemIndex &&
+                candidate.Direction == signal.Direction &&
+                GetSignalFunctionId(candidate) == functionId &&
+                baselineBySignal.ContainsKey(candidate))
+            .Select(candidate => NativeAspectValue(baselineBySignal[candidate].Baseline.NativeAspect) ?? 0)
+            .ToArray();
+        if (aspects.Length == 0)
+            return 0;
+        return leastRestrictive ? aspects.Max() : aspects.Min();
+    }
+
+    private RouteSignalHead? FindNextSignal(
+        RouteSignalHead currentSignal,
+        int functionId,
+        IReadOnlyDictionary<uint, uint>? selectedBranches)
+    {
+        if (!blocks.TryGetValue(currentSignal.TrackNodeIndex, out var currentBlock))
+            return null;
+
+        var directionSign = currentSignal.Direction == 0 ? 1d : -1d;
+        var sameBlock = currentBlock.Signals
+            .Where(candidate => candidate.TrackItemIndex != currentSignal.TrackItemIndex &&
+                candidate.Direction == currentSignal.Direction &&
+                GetSignalFunctionId(candidate) == functionId &&
+                (candidate.DistanceMeters - currentSignal.DistanceMeters) * directionSign > 0)
+            .OrderBy(candidate => (candidate.DistanceMeters - currentSignal.DistanceMeters) * directionSign)
+            .FirstOrDefault();
+        if (sameBlock is not null)
+            return sameBlock;
+
+        var current = currentSignal.TrackNodeIndex;
+        uint? previous = null;
+        for (var visited = 0; visited < blocks.Count; visited++)
+        {
+            var next = ResolveNextBlock(current, visited == 0 ? currentSignal : null,
+                selectedBranches, previous);
+            if (next is null || !blocks.TryGetValue(next.Value, out var nextBlock))
+                return null;
+            var candidate = nextBlock.Signals
+                .Where(item => item.Direction == currentSignal.Direction &&
+                    GetSignalFunctionId(item) == functionId)
+                .OrderBy(item => currentSignal.Direction == 0 ? item.DistanceMeters : -item.DistanceMeters)
+                .FirstOrDefault();
+            if (candidate is not null)
+                return candidate;
+            previous = current;
+            current = next.Value;
+        }
+        return null;
+    }
+
+    private int? GetSignalFunctionId(RouteSignalHead signal)
+    {
+        var function = signal.Definition?.Function;
+        if (string.IsNullOrWhiteSpace(function))
+            return null;
+        if (configuration is not null &&
+            configuration.SignalFunctions.TryGetValue(function, out var baseFunction))
+            function = baseFunction;
+        return NativeSignalFunctionValue(function);
     }
 
     private static int? NativeSignalFunctionValue(string? name) => name?.ToUpperInvariant() switch
