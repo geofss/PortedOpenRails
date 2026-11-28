@@ -246,7 +246,7 @@ public sealed class DemoModel1AcceptanceTests
         Console.WriteLine(
             $"Demo Model 1 acceptance: nodes={route.TrackDatabase.NodeCount}; " +
             $"paths={route.TrackNetwork.VectorPathCount}; length={route.TrackNetwork.TotalTrackLengthMeters:N0}m; " +
-            $"terrain={route.TerrainMeshes.Meshes.Count}; trackShapes={route.TrackShapeMeshes.LoadedMeshes.Count}; " +
+            $"terrain={streamedTerrain.Meshes.Count}; trackShapes={route.TrackShapeMeshes.LoadedMeshes.Count}; " +
             $"world={streamedWorld.Loaded.Count}; signalCircuits={route.Signalling.TrackCircuits.Count}; " +
             $"signalHeads={route.Signalling.TrackCircuits.Sum(circuit => circuit.Signals.Count)}; " +
             $"signalDiagnostics={route.Signalling.Diagnostics.Count}; validationIssues={route.Validation.Issues.Count}; " +
