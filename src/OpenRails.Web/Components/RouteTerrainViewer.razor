@@ -50,22 +50,22 @@
         <dt>Terrain textures loaded / failed</dt><dd>@ActiveTerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
-        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
+        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + ActiveWorldScenery.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
         <dt>Track/world shape render batches</dt><dd>@trackShapeBatchCount</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
-        <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
-        <dt>WORLD parse diagnostics</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count)</dd>
-        <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
-        <dt>World placements discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count)</dd>
-        <dt>World placements with positions</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
-        <dt>World placements with shape assets</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.FileName is not null && tile.ShapeMeshes.Any(mesh => string.Equals(mesh.FileName, placement.FileName, StringComparison.OrdinalIgnoreCase))))</dd>
-        <dt>World shape mesh load failures</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.FailedShapes.Count)</dd>
-        <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
-        <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
-        <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
-        <dt>Forest objects / generated tree billboards</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
-        <dt>Forest textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
+        <dt>World tiles loaded / missing / failed</dt><dd>@ActiveWorldScenery.Count / @Route.WorldScenery.Missing.Count / @ActiveWorldFailures.Count</dd>
+        <dt>WORLD parse diagnostics</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Tile.Diagnostics.Count)</dd>
+        <dt>World shape meshes loaded</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeMeshes.Count)</dd>
+        <dt>World placements discovered</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count)</dd>
+        <dt>World placements with positions</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
+        <dt>World placements with shape assets</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(placement => placement.FileName is not null && tile.ShapeMeshes.Any(mesh => string.Equals(mesh.FileName, placement.FileName, StringComparison.OrdinalIgnoreCase))))</dd>
+        <dt>World shape mesh load failures</dt><dd>@ActiveWorldScenery.Sum(tile => tile.FailedShapes.Count)</dd>
+        <dt>World shape assets missing</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
+        <dt>World shape assets discovered</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
+        <dt>World shape textures loaded / missing / failed</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Textures.Loaded.Count) / @ActiveWorldScenery.Sum(tile => tile.Textures.Missing.Count) / @ActiveWorldScenery.Sum(tile => tile.Textures.Failed.Count)</dd>
+        <dt>Forest objects / generated tree billboards</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(ActiveWorldScenery.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
+        <dt>Forest textures loaded / missing / failed</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
         <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @ActiveTerrainMeshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
@@ -75,7 +75,7 @@
             {
                 <li>Missing WORLD tile: W@(tile.TileX) @(tile.TileZ)</li>
             }
-            @foreach (var issue in Route.WorldScenery.Failed)
+            @foreach (var issue in ActiveWorldFailures)
             {
                 <li>Failed WORLD tile: @issue.Path — @issue.Reason</li>
             }
@@ -95,7 +95,7 @@
             {
                 <li>Failed track texture: @issue.Path — @issue.Reason</li>
             }
-            @foreach (var tile in Route.WorldScenery.Loaded)
+            @foreach (var tile in ActiveWorldScenery)
             {
                 @foreach (var diagnostic in tile.Tile.Diagnostics)
                 {
@@ -174,6 +174,12 @@
     private Vector3? cameraPosition;
     private RouteTerrainViewportStreamingSession? terrainStreaming;
     private RouteTerrainViewportSnapshot? terrainViewport;
+    private RouteWorldViewportStreamingSession? worldStreaming;
+    private RouteWorldViewportSnapshot? worldViewport;
+    private IReadOnlyList<LoadedWorldSceneryTile> ActiveWorldScenery =>
+        worldViewport?.Loaded ?? Route.WorldScenery.Loaded;
+    private IReadOnlyList<RouteWorldSceneryIssue> ActiveWorldFailures =>
+        worldViewport?.Failed ?? Route.WorldScenery.Failed;
     private IReadOnlyList<LoadedRouteTerrainTileMesh> ActiveTerrainMeshes =>
         terrainViewport?.Meshes ?? Route.TerrainMeshes.Meshes;
     private TerrainTextureAssetLoadResult ActiveTerrainTextures =>
@@ -189,7 +195,10 @@
         {
             if (terrainStreaming is not null)
                 await terrainStreaming.ClearAsync();
+            if (worldStreaming is not null)
+                await worldStreaming.ClearAsync();
             terrainViewport = null;
+            worldViewport = null;
             lastRoute = Route;
             lastMotionRoute = MotionRoute;
             lastStore = Store;
@@ -232,7 +241,7 @@
             return;
         if (Store is not null)
         {
-            try { await UpdateTerrainViewportAsync(next); }
+            try { await Task.WhenAll(UpdateTerrainViewportAsync(next), UpdateWorldViewportAsync(next)); }
             catch (OperationCanceledException) { return; }
             catch (Exception exception) { renderError = $"Terrain streaming failed: {exception.Message}"; }
         }
@@ -251,6 +260,19 @@
             estimatedBytesPerTile: 32L * 1024 * 1024);
         terrainViewport = await terrainStreaming.UpdateCameraAsync(
             Store, Route.Assets.RouteRoot, Route.TerrainTiles,
+            camera.X, camera.Z, radiusMeters: 12_000);
+    }
+
+    private async Task UpdateWorldViewportAsync(Vector3 camera)
+    {
+        if (Store is null) return;
+        worldStreaming ??= new RouteWorldViewportStreamingSession(
+            maximumResidentTiles: 48,
+            maximumResidentBytes: 768L * 1024 * 1024,
+            maximumConcurrentLoads: 2,
+            estimatedBytesPerTile: 16L * 1024 * 1024);
+        worldViewport = await worldStreaming.UpdateCameraAsync(
+            Store, Route.Assets.RouteRoot, Route.WorldTiles,
             camera.X, camera.Z, radiusMeters: 12_000);
     }
     private ElementReference canvas;
@@ -334,7 +356,9 @@
                 {
                     cameraPosition = new Vector3((float)initialCamera[0], (float)initialCamera[1], (float)initialCamera[2]);
                     if (Store is not null)
-                        await UpdateTerrainViewportAsync(cameraPosition.Value);
+                        await Task.WhenAll(
+                            UpdateTerrainViewportAsync(cameraPosition.Value),
+                            UpdateWorldViewportAsync(cameraPosition.Value));
                 }
                 var terrainSelection = BuildTerrainPatches();
                 // BuildTerrainPatches now materializes only the textures referenced
@@ -363,7 +387,7 @@
                     .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded,
                         cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
                 var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-                    .Build(Route.WorldScenery.Loaded, animationClipIndex: 0, cameraPosition: cameraPosition,
+                    .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
                         elapsedSeconds: SimulationTimeSeconds);
 
                 var rollingStockPlacements = new List<TrackShapePlacement>();
@@ -675,7 +699,7 @@
             .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded,
                 cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
         var worldGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-            .Build(Route.WorldScenery.Loaded, animationClipIndex: 0, cameraPosition: cameraPosition,
+            .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
                 elapsedSeconds: SimulationTimeSeconds);
 
         var rollingPlacement = BuildRollingStockPlacement();
@@ -838,6 +862,11 @@
         {
             await terrainStreaming.DisposeAsync();
             terrainStreaming = null;
+        }
+        if (worldStreaming is not null)
+        {
+            await worldStreaming.DisposeAsync();
+            worldStreaming = null;
         }
         cameraCallback?.Dispose();
         cameraCallback = null;
