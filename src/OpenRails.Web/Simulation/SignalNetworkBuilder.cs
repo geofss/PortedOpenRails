@@ -394,6 +394,44 @@ public sealed class SignalNetwork
                         name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase), baselineBySignal);
             }
 
+            if (name.Equals("NEXT_SIG_ID", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 1)
+                return FindNextSignal(signal, arguments[0], selectedBranches)?.TrackItemIndex ?? -1;
+
+            if (name.Equals("NEXT_NSIG_ID", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 2)
+            {
+                if (arguments[1] < 0) return -1;
+                RouteSignalHead? next = signal;
+                for (var index = 0; index <= arguments[1]; index++)
+                {
+                    if (next is null) return -1;
+                    next = FindNextSignal(next, arguments[0], selectedBranches);
+                }
+                return next?.TrackItemIndex ?? -1;
+            }
+
+            if (name.Equals("OPP_SIG_ID", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 1)
+                return FindOppositeSignal(signal, arguments[0], enabledRouteCircuits,
+                    selectedBranches)?.TrackItemIndex ?? -1;
+
+            if (name.Equals("ID_SIG_ENABLED", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 1)
+            {
+                var identified = FindSignalById(arguments[0]);
+                return identified is not null && enabledRouteCircuits?.Contains(identified.TrackNodeIndex) == true
+                    ? 1 : 0;
+            }
+
+            if (name.Equals("ID_SIG_LR", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 2)
+            {
+                var identified = FindSignalById(arguments[0]);
+                return identified is null ? -1 :
+                    ResolveThisSignalAspect(identified, arguments[1], true, baselineBySignal);
+            }
+
             if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
                 arguments.Count == 2)
             {
@@ -476,6 +514,11 @@ public sealed class SignalNetwork
             return -1;
         return leastRestrictive ? aspects.Max() : aspects.Min();
     }
+
+    private RouteSignalHead? FindSignalById(int signalId) =>
+        signalId < 0 ? null : blocks.Values
+            .SelectMany(block => block.Signals)
+            .FirstOrDefault(candidate => candidate.TrackItemIndex == signalId);
 
     private RouteSignalHead? FindNextSignal(
         RouteSignalHead currentSignal,
