@@ -301,21 +301,10 @@
         {
             try
             {
-                terrainTexturePayloads.Clear();
-                terrainTextureIndexes.Clear();
-                foreach (var asset in Route.TerrainTextures.Loaded)
-                {
-                    var texture = asset.Texture;
-                    if (texture.PixelFormat != AceTexturePixelFormat.Rgba8 || texture.MipLevels.Count == 0 || asset.Reference.SeasonFolder is not null)
-                        continue;
-                    if (!terrainTextureIndexes.ContainsKey(asset.Reference.Path))
-                    {
-                        terrainTextureIndexes.Add(asset.Reference.Path, terrainTexturePayloads.Count);
-                        terrainTexturePayloads.Add(new { width = texture.Width, height = texture.Height, pixels = texture.MipLevels[0] });
-                    }
-                }
-                var textures = terrainTexturePayloads;
                 var terrainSelection = BuildTerrainPatches();
+                // BuildTerrainPatches now materializes only the textures referenced
+                // by the selected camera-visible terrain LODs, not every route texture.
+                var textures = terrainTexturePayloads;
                 var patches = terrainSelection.Patches;
                 var trackLines = new List<float>();
                 var tessellator = new TrackGeometryTessellator();
@@ -542,6 +531,27 @@
 
     private (List<object> Patches, int Tiles, int PatchCount, int Vertices) BuildTerrainPatches()
     {
+        terrainTexturePayloads.Clear();
+        terrainTextureIndexes.Clear();
+        int ResolveTerrainTexture(LoadedTerrainTextureAsset? asset)
+        {
+            if (asset is null || asset.Reference.SeasonFolder is not null ||
+                asset.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
+                asset.Texture.MipLevels.Count == 0)
+                return -1;
+            if (terrainTextureIndexes.TryGetValue(asset.Reference.Path, out var existing))
+                return existing;
+            var index = terrainTexturePayloads.Count;
+            terrainTextureIndexes.Add(asset.Reference.Path, index);
+            terrainTexturePayloads.Add(new
+            {
+                width = asset.Texture.Width,
+                height = asset.Texture.Height,
+                pixels = asset.Texture.MipLevels[0]
+            });
+            return index;
+        }
+
         var patches = new List<object>();
         var selectedVertices = 0;
         var selectedPatches = 0;
@@ -587,8 +597,8 @@
                 asset.Reference.TextureSlotIndex == 1 &&
                 string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(asset.Reference.FileName, patch.Material.OverlayTextureFileName, StringComparison.OrdinalIgnoreCase));
-            var textureIndex = primaryAsset is not null && terrainTextureIndexes.TryGetValue(primaryAsset.Reference.Path, out var foundIndex) ? foundIndex : -1;
-            var overlayTextureIndex = overlayAsset is not null && terrainTextureIndexes.TryGetValue(overlayAsset.Reference.Path, out var overlayIndex) ? overlayIndex : -1;
+            var textureIndex = ResolveTerrainTexture(primaryAsset);
+            var overlayTextureIndex = ResolveTerrainTexture(overlayAsset);
             var vertices = new float[patch.Vertices.Count * 5];
             for (var i = 0; i < patch.Vertices.Count; i++)
             {
