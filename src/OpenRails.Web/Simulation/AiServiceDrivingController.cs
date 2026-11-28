@@ -143,17 +143,26 @@ public sealed class AiServiceDrivingController
         }
 
         // SIGCFG speed values are operational limits, not merely an Approach
-        // indication. Apply every valid upcoming native signal speed restriction
-        // regardless of its displayed aspect.
-        var signalSpeedLimit = signals
+        // indication. Build a braking envelope for every upcoming restriction:
+        // a distant low limit must not force the train to crawl prematurely, but
+        // the controller must begin reducing speed early enough to meet it.
+        var signalSpeedEnvelope = signals
             .Where(signal => signal.SpeedLimitMetersPerSecond is > 0 &&
                 (direction > 0
                     ? signal.RouteDistanceMeters > currentDistanceMeters
                     : signal.RouteDistanceMeters < currentDistanceMeters))
-            .Select(signal => (double)signal.SpeedLimitMetersPerSecond!.Value)
+            .Select(signal =>
+            {
+                var distanceAhead = direction > 0
+                    ? signal.RouteDistanceMeters - currentDistanceMeters
+                    : currentDistanceMeters - signal.RouteDistanceMeters;
+                var limit = (double)signal.SpeedLimitMetersPerSecond!.Value;
+                return Math.Sqrt(limit * limit +
+                    2 * serviceDecelerationMetersPerSecondSquared * distanceAhead);
+            })
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
-        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, signalSpeedLimit);
+        var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, signalSpeedEnvelope);
         if (trainAhead is not null)
         {
             // Preserve a configurable stand-off distance and never command a
