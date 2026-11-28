@@ -213,7 +213,7 @@
             </div>
             @if (showOptionsDialog)
             {
-                <section class="or-options-dialog" role="dialog" aria-modal="false" aria-labelledby="or-options-title">
+                <section class="or-options-dialog" role="dialog" aria-modal="true" aria-labelledby="or-options-title" tabindex="-1" @onkeydown="HandleOptionsDialogKeyDown">
                     <header class="or-options-header">
                         <h2 id="or-options-title">Options</h2>
                         <button type="button" @onclick="CancelOptionsDialog" aria-label="Close Options">Close</button>
@@ -221,10 +221,10 @@
                     <nav class="or-options-tabs" role="tablist" aria-label="Options pages">
                         @foreach (var tab in OptionTabs)
                         {
-                            <button type="button" role="tab" aria-selected="@(selectedOptionsTab == tab)" @onclick="() => SelectOptionsTab(tab)">@tab</button>
+                            <button type="button" role="tab" id="@($"or-options-tab-{tab.Replace(" ", "-").ToLowerInvariant()}")" aria-controls="or-options-page" aria-selected="@(selectedOptionsTab == tab)" @onclick="() => SelectOptionsTab(tab)">@tab</button>
                         }
                     </nav>
-                    <div class="or-options-page" role="tabpanel">
+                    <div class="or-options-page" id="or-options-page" role="tabpanel" aria-labelledby="@($"or-options-tab-{selectedOptionsTab.Replace(" ", "-").ToLowerInvariant()}")">
                         @switch (selectedOptionsTab)
                         {
                             case "General":
@@ -1032,6 +1032,12 @@
         browserAudioVolume = optionsSnapshotAudioVolume;
         await SaveBrowserPreferencesAsync();
         showOptionsDialog = false;
+    }
+
+    private void HandleOptionsDialogKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Escape", StringComparison.OrdinalIgnoreCase))
+            _ = CancelOptionsDialog();
     }
 
     private void SelectOptionsTab(string tab)
