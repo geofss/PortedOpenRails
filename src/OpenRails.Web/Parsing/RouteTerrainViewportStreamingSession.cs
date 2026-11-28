@@ -124,7 +124,7 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
 
         var loadedContent = orderedMeshes.Select(mesh => mesh.Content).ToArray();
         var textureDiscovery = new TerrainTextureAssetLocator().Locate(store, routeRoot, loadedContent);
-        var decodedTextures = new TerrainTextureAssetLoader().Load(store, textureDiscovery);
+        var decodedTextures = new TerrainTextureAssetLoader().Load(store, textureDiscovery, cancellationToken);
         var visibleTextures = new List<LoadedTerrainTextureAsset>();
         long textureBytes = 0;
         foreach (var texture in decodedTextures.Loaded)
