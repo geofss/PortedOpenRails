@@ -36,6 +36,32 @@
     private readonly List<string> failures = [];
     private bool initialized;
     private bool drawn;
+    private string? renderKey;
+
+    protected override void OnParametersSet()
+    {
+        if (Store is null || Consist is null)
+            return;
+
+        // The viewer is reused when the selected consist or route package changes.
+        // Rebuild the scene only when its actual source inputs change, not on every
+        // parent render.
+        var nextKey = string.Join("|",
+            System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Store),
+            Consist.Name,
+            string.Join(";", Consist.Cars.Select(car => $"{car.Uid}:{car.Name}:{car.IsEndOfTrain}")),
+            string.Join(";", CarAssets.Select(asset =>
+                $"{asset.ConsistName}:{asset.Uid}:{asset.ShapeAssetPath}:{asset.ShapeFound}")));
+
+        if (renderKey is not null && !string.Equals(renderKey, nextKey, StringComparison.Ordinal))
+        {
+            drawn = false;
+            failures.Clear();
+            status = null;
+        }
+
+        renderKey = nextKey;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
