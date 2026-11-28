@@ -201,6 +201,32 @@ public sealed class SignalScriptInterpreterTests
         Assert.NotNull(result.Diagnostic);
     }
 
+
+    [Fact]
+    public void ResolvesNativeAspectAndSignalFunctionSymbolsInFunctionArguments()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            STATE = SYMBOL_TEST(CLEAR_1, NORMAL);
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(
+                0, 0, false, 0, true,
+                FunctionResolver: (name, arguments) =>
+                    name.Equals("SYMBOL_TEST", StringComparison.OrdinalIgnoreCase) &&
+                    arguments.Count == 2 ? arguments[0] + arguments[1] : null,
+                SymbolResolver: name => name.ToUpperInvariant() switch
+                {
+                    "CLEAR_1" => 6,
+                    "NORMAL" => 0,
+                    _ => null
+                }));
+
+        Assert.True(result.Success, result.Diagnostic);
+        Assert.Equal(6, result.State);
+    }
+
     private static SignalScriptDefinition Script(string source)
     {
         var lines = source.Split('\n').Select(line => line.Trim()).ToArray();
