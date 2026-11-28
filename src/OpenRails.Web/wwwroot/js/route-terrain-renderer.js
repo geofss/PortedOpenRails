@@ -3,6 +3,8 @@ let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0
 let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
 const activePointers = new Map();
 let renderScale = 1;
+let cameraChangeCallback = null, cameraNotifyFrame = 0;
+let lastSceneCameraPosition = null, lastNotifiedCameraPosition = null;
 const qualityStorageKey = "ported-openrails-preview-quality";
 const supportedQualityPresets = new Set(["low", "medium", "high"]);
 
@@ -65,6 +67,28 @@ export function setCameraPreset(name) {
   return true;
 }
 export function getCameraPreset() { return activeCameraPreset; }
+
+export function setCameraChangeCallback(callback) {
+  cameraChangeCallback = callback || null;
+  notifyCameraChanged();
+}
+
+function notifyCameraChanged() {
+  if (!cameraChangeCallback || !lastSceneCameraPosition || cameraNotifyFrame) return;
+  cameraNotifyFrame = requestAnimationFrame(() => {
+    cameraNotifyFrame = 0;
+    if (!cameraChangeCallback || !lastSceneCameraPosition) return;
+    const next = lastSceneCameraPosition;
+    if (lastNotifiedCameraPosition) {
+      const dx = next[0] - lastNotifiedCameraPosition[0];
+      const dy = next[1] - lastNotifiedCameraPosition[1];
+      const dz = next[2] - lastNotifiedCameraPosition[2];
+      if (dx*dx + dy*dy + dz*dz < 64) return;
+    }
+    lastNotifiedCameraPosition = [...next];
+    cameraChangeCallback.invokeMethodAsync("OnCameraChanged", next[0], next[1], next[2]).catch(() => {});
+  });
+}
 
 
 export function initialize(canvas) {
@@ -157,6 +181,9 @@ export function cleanup() {
   storedVertices = storedIndices = storedTrackLines = null;
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
+  if (cameraNotifyFrame) cancelAnimationFrame(cameraNotifyFrame);
+  cameraNotifyFrame = 0; cameraChangeCallback = null;
+  lastSceneCameraPosition = lastNotifiedCameraPosition = null;
   rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
   renderScale = 1;
 }
@@ -284,6 +311,12 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
   const cos=Math.cos(rotation),sin=Math.sin(rotation);
   const cameraDistance=span*1.35/zoom,near=span*0.015,far=span*20,focal=cameraDistance*0.85;
+  const cameraRadius=cameraDistance*Math.cos(pitch);
+  lastSceneCameraPosition=[
+    centerX-Math.sin(rotation)*cameraRadius,
+    centerY+Math.sin(pitch)*cameraDistance,
+    centerZ-Math.cos(rotation)*cameraRadius
+  ];
   const project=(x,z,y=0)=>{
     const dx=x-centerX,dz=z-centerZ,dy=y-centerY;
     const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;
@@ -339,6 +372,12 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   if(trackLines.length) drawTrackOverlay(trackLines,project);
   if(shapeBatches.length || storedRollingStockBatches.length)
     drawTrackShapeBatches([...shapeBatches, ...storedRollingStockBatches],shapePixels,project);
+  notifyCameraChanged();
+}
+
+export function updateSceneGeometry(patches, textures, trackLines = [], trackMesh = null,
+  shapeBatches = [], shapePixels = [], rollingStockBatches = []) {
+  drawTerrainTextured(patches, textures, trackLines, trackMesh, shapeBatches, shapePixels, rollingStockBatches);
 }
 
 export function updateRollingStockBatches(batches = []) {

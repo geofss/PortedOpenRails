@@ -748,7 +748,8 @@
                         Consist="SelectedConsist"
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
                         MotionRoute="traversedRoute"
-                        MotionState="currentMotionState ?? simulationSetup?.InitialState" />
+                        MotionState="currentMotionState ?? simulationSetup?.InitialState"
+                        SimulationTimeSeconds="drivingController?.SimulationTimeSeconds ?? 0" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0 || (traversedRoute?.Diagnostics.Count ?? 0) > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count + (traversedRoute?.Diagnostics.Count ?? 0))</p>

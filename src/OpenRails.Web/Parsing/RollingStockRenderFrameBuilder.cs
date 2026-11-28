@@ -51,6 +51,43 @@ public sealed class RollingStockRenderFrameBuilder
         ConsistMetadata consist,
         IReadOnlyList<ConsistCarAssetReference> carAssets,
         IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
+        TrackNetworkRoute route,
+        TrainConsistMotionState motionState,
+        IReadOnlyList<LoadedTrackShapeTexture> textures,
+        double simulationTimeSeconds,
+        int animationClipIndex = 0,
+        bool loopAnimations = true,
+        string? seasonFolder = null,
+        Vector3? cameraPosition = null,
+        double maximumSegmentLengthMeters = 2)
+    {
+        ArgumentNullException.ThrowIfNull(consist);
+        ArgumentNullException.ThrowIfNull(carAssets);
+        ArgumentNullException.ThrowIfNull(meshesByUid);
+        ArgumentNullException.ThrowIfNull(route);
+        ArgumentNullException.ThrowIfNull(motionState);
+        ArgumentNullException.ThrowIfNull(textures);
+        if (!double.IsFinite(simulationTimeSeconds) || simulationTimeSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(simulationTimeSeconds));
+
+        var placements = new RollingStockTrackPlacementBuilder().BuildAtMotionState(
+            consist, carAssets, meshesByUid, route, motionState, maximumSegmentLengthMeters);
+        var geometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
+            placements.Placements,
+            textures,
+            seasonFolder: seasonFolder,
+            animationClipIndex: animationClipIndex,
+            cameraPosition: cameraPosition,
+            elapsedSeconds: simulationTimeSeconds,
+            loopAnimation: loopAnimations);
+
+        return new RollingStockRenderFrame(placements, geometry, simulationTimeSeconds);
+    }
+
+    public RollingStockRenderFrame Build(
+        ConsistMetadata consist,
+        IReadOnlyList<ConsistCarAssetReference> carAssets,
+        IReadOnlyDictionary<int, TrackShapeAssetMesh> meshesByUid,
         TrackVectorPath routePath,
         TrainConsistSimulationSession simulation,
         IReadOnlyList<LoadedTrackShapeTexture> textures,
