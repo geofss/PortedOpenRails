@@ -11,6 +11,7 @@ public sealed record AiTimetableTrainRuntimeBinding(
     BrowserTrainDrivingController Driver,
     ServiceRouteStartPosition Route,
     double TargetSpeedMetersPerSecond,
+    TrackNetworkRoute? OccupancyRoute = null,
     Func<BrowserTrainDrivingController, IReadOnlyList<TrainCarRouteOccupancy>>? OccupancyResolver = null);
 
 public sealed record AiTimetableSimulationTickResult(
@@ -52,6 +53,8 @@ public sealed class AiTimetableSimulationRuntime
             ArgumentNullException.ThrowIfNull(train.Session);
             ArgumentNullException.ThrowIfNull(train.Driver);
             ArgumentNullException.ThrowIfNull(train.Route);
+            if (train.OccupancyResolver is not null && train.OccupancyRoute is null)
+                throw new ArgumentException($"Timetable service '{train.ServiceId}' requires an occupancy route.", nameof(trains));
             if (train.Driver.State.Cars.Count == 0)
                 throw new ArgumentException($"Timetable service '{train.ServiceId}' has no consist vehicles.", nameof(trains));
         }
@@ -92,8 +95,8 @@ public sealed class AiTimetableSimulationRuntime
             decisionServiceIds.Add(train.ServiceId);
             train.Driver.Advance(deltaSeconds);
 
-            if (train.OccupancyResolver is not null &&
-                !train.Session.UpdateConsistOccupancy(train.Route,
+            if (train.OccupancyResolver is not null && train.OccupancyRoute is not null &&
+                !train.Session.UpdateConsistOccupancy(train.OccupancyRoute,
                     train.OccupancyResolver(train.Driver)))
                 occupancyConflicts.Add(train.ServiceId);
 
