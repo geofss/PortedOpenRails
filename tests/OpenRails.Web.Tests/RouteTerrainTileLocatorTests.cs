@@ -10,6 +10,19 @@ namespace OpenRails.Web.Tests;
 public sealed class RouteTerrainTileLocatorTests
 {
     [Fact]
+    public void TerrainMeshLoaderHonorsCancellationBeforeEmptyBatch()
+    {
+        using var store = CreateStore();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var discovery = new RouteTerrainTileDiscovery(
+            Array.Empty<TerrainTileReference>(), Array.Empty<(int, int, string)>());
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new RouteTerrainMeshLoader().Load(store, discovery, cancellation.Token));
+    }
+
+    [Fact]
     public void UsesUpstreamTileNameEncodingForSmallTerrainTiles()
     {
         var name = TerrainTileName.FromTileXZ(0, 0, TerrainTileZoom.Small);
