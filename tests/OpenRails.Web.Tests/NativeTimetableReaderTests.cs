@@ -130,6 +130,35 @@ public sealed class NativeTimetableReaderTests
         Assert.Equal(new[] { "Train C" }, built.Dispatcher.Advance(15 * 60));
     }
 
+
+    [Fact]
+    public void RollsNativeTimetableWaitingPointTimeAcrossMidnight()
+    {
+        using var store = CreateStore("ROUTES/SCE/TIMETABLES/night.timetable",
+            ",Night Train\n" +
+            "#path,Main\n" +
+            "#consist,Express.con\n" +
+            "#direction,Up\n" +
+            "#start,23:55\n" +
+            "Edinburgh,00:05\n");
+        var train = new NativeTimetableDefinitionReader()
+            .Read(store, "ROUTES/SCE/TIMETABLES/night.timetable").Trains.Single();
+        var route = new ServiceRouteStartPosition(
+            0, 0, new TrackWorldPosition(0, 0, 0),
+            new double[] { 0, 100 }, 1,
+            new[]
+            {
+                new ServiceRouteWaypoint(0, false, false),
+                new ServiceRouteWaypoint(100, true, false)
+            });
+
+        var result = new NativeTimetableWaitingPointResolver()
+            .Resolve(train, route, 23 * 60 * 60 + 55 * 60);
+
+        Assert.Equal(24 * 60 * 60 + 5 * 60, result.ReleaseTimesSeconds[1]);
+        Assert.Empty(result.Diagnostics);
+    }
+
     private static ZipContentStore CreateStore(string path, string text)
     {
         var memory = new MemoryStream();
