@@ -675,9 +675,11 @@ public sealed class SignalNetworkBuilderTests
             Array.Empty<string>());
 
         var routeCircuits = new HashSet<uint> { 2, 3, 4 };
-        var enabled = Assert.Single(network.Evaluate(routeCircuits, scripts: library)
+        var enabled = Assert.Single(network.Evaluate(new HashSet<uint>(),
+            enabledTrackNodeIndices: routeCircuits, scripts: library)
             .Where(item => item.Signal.TrackItemIndex == 21));
-        var withoutRoute = Assert.Single(network.Evaluate(new HashSet<uint> { 2 }, scripts: library)
+        var withoutRoute = Assert.Single(network.Evaluate(new HashSet<uint>(),
+            enabledTrackNodeIndices: new HashSet<uint> { 2 }, scripts: library)
             .Where(item => item.Signal.TrackItemIndex == 21));
 
         Assert.Equal(RouteSignalAspect.Clear1, enabled.Aspect);
