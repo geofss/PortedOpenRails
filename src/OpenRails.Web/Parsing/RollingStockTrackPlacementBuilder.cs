@@ -41,6 +41,7 @@ public sealed class RollingStockTrackPlacementBuilder
 
         var cumulative = BuildTrackChainage(path, maximumSegmentLengthMeters, centerline.Count);
         var availableLength = cumulative[^1];
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
         var cursor = startDistanceMeters;
@@ -126,6 +127,7 @@ public sealed class RollingStockTrackPlacementBuilder
             throw new ArgumentException("The motion state must contain one entry for every non-EOT consist car.", nameof(motionState));
 
         var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         if (centerline.Count < 2)
             return new RollingStockTrackPlacementResult(
                 Array.Empty<TrackShapePlacement>(),
