@@ -432,7 +432,8 @@ public sealed class SignalNetwork
                     ResolveThisSignalAspect(identified, arguments[1], true, baselineBySignal);
             }
 
-            if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
+            if ((name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("NEXT_NSIG_MR", StringComparison.OrdinalIgnoreCase)) &&
                 arguments.Count == 2)
             {
                 if (arguments[1] <= 0) return 0;
@@ -443,7 +444,8 @@ public sealed class SignalNetwork
                     next = FindNextSignal(next, arguments[0], selectedBranches);
                 }
                 return next is null ? 0 :
-                    ResolveThisSignalAspect(next, arguments[0], true, baselineBySignal);
+                    ResolveThisSignalAspect(next, arguments[0],
+                        name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase), baselineBySignal);
             }
 
             if ((name.Equals("DIST_MULTI_SIG_MR", StringComparison.OrdinalIgnoreCase) ||
