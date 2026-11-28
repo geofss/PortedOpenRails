@@ -227,6 +227,31 @@ public sealed class SignalScriptInterpreterTests
         Assert.Equal(6, result.State);
     }
 
+
+    [Fact]
+    public void EvaluatesFractionalNativeFloatsAndApproachControlValues()
+    {
+        var script = Script("""
+            EXTERN FLOAT STATE;
+            EXTERN FLOAT APPROACH_CONTROL_REQ_POSITION;
+            FLOAT position;
+            position = APPROACH_CONTROL_REQ_POSITION + 0.25;
+            IF position >= 10.75 {
+                STATE = 6;
+            } ELSE {
+                STATE = 0;
+            }
+            """);
+
+        var result = interpreter.Execute(script,
+            new SignalScriptExecutionContext(
+                0, 0, false, 0, true,
+                ApproachControlRequiredPosition: 10.5));
+
+        Assert.True(result.Success, result.Diagnostic);
+        Assert.Equal(6, result.State);
+    }
+
     private static SignalScriptDefinition Script(string source)
     {
         var lines = source.Split('\n').Select(line => line.Trim()).ToArray();
