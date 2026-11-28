@@ -235,7 +235,8 @@ public sealed class AiServiceDrivingController
         ServiceRouteStartPosition route,
         double targetSpeedMetersPerSecond,
         IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
-        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null,
+        AiTrainFollowingConstraint? trainAhead = null)
     {
         ArgumentNullException.ThrowIfNull(controller);
         ArgumentNullException.ThrowIfNull(route);
@@ -269,7 +270,8 @@ public sealed class AiServiceDrivingController
         var decision = Calculate(route, lead.DistanceMeters, lead.SpeedMetersPerSecond,
             targetSpeedMetersPerSecond, signalConstraints: signalConstraints,
             releasedWaitingPointIndices: releasedSnapshot,
-            speedRestrictions: speedRestrictions);
+            speedRestrictions: speedRestrictions,
+            trainAhead: trainAhead);
         controller.SetThrottle((float)decision.ThrottlePercent);
         controller.SetBrake(decision.BrakePercent);
         return decision;
