@@ -46,7 +46,7 @@ public sealed class SignalNetworkBuilderTests
             new Dictionary<uint, uint> { [5] = 3 }));
         Assert.True(interlocking.SetOccupied("PLAYER", 3, true));
 
-        var indication = Assert.Single(signalNetwork.Evaluate(interlocking.Snapshot()));
+        var indication = Assert.Single(signalNetwork.Evaluate(interlocking.Snapshot(), enabledTrainId: "PLAYER"));
 
         Assert.Equal(RouteSignalAspect.Stop, indication.Aspect);
         Assert.Contains("next track circuit is occupied", indication.Reason);
