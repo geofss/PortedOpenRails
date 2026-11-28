@@ -28,7 +28,7 @@ public static class RouteViewportTileSelector
         long estimatedBytesPerTile = 4 * 1024 * 1024)
     {
         ArgumentNullException.ThrowIfNull(available);
-        return Select(available, tile => tile.TileX, tile => tile.TileZ,
+        return Select(available, tile => tile.Path, tile => tile.TileX, tile => tile.TileZ,
             cameraX, cameraZ, radiusMeters, estimatedBytesPerTile);
     }
 
