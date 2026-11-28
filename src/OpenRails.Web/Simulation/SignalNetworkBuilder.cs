@@ -383,6 +383,17 @@ public sealed class SignalNetwork
                     name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase), baselineBySignal);
             }
 
+            if ((name.Equals("OPP_SIG_LR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("OPP_SIG_MR", StringComparison.OrdinalIgnoreCase)) &&
+                arguments.Count == 1)
+            {
+                var opposite = FindOppositeSignal(signal, arguments[0],
+                    enabledRouteCircuits, selectedBranches);
+                return opposite is null ? 0 :
+                    ResolveThisSignalAspect(opposite, arguments[0],
+                        name.EndsWith("_LR", StringComparison.OrdinalIgnoreCase), baselineBySignal);
+            }
+
             if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
                 arguments.Count == 2)
             {
@@ -503,6 +514,50 @@ public sealed class SignalNetwork
             previous = current;
             current = next.Value;
         }
+        return null;
+    }
+
+    private RouteSignalHead? FindOppositeSignal(
+        RouteSignalHead currentSignal,
+        int functionId,
+        IReadOnlySet<uint>? enabledRouteCircuits,
+        IReadOnlyDictionary<uint, uint>? selectedBranches)
+    {
+        if (enabledRouteCircuits is null || !enabledRouteCircuits.Contains(currentSignal.TrackNodeIndex))
+            return null;
+
+        var oppositeDirection = currentSignal.Direction == 0 ? 1u : 0u;
+        var visited = new HashSet<uint> { currentSignal.TrackNodeIndex };
+        var frontier = new Queue<uint>();
+        frontier.Enqueue(currentSignal.TrackNodeIndex);
+
+        while (frontier.Count > 0)
+        {
+            var blockId = frontier.Dequeue();
+            if (!blocks.TryGetValue(blockId, out var block))
+                continue;
+
+            var candidate = block.Signals
+                .Where(item => item.Direction == oppositeDirection &&
+                    GetSignalFunctionId(item) == functionId)
+                .OrderBy(item => Math.Abs(item.DistanceMeters - currentSignal.DistanceMeters))
+                .FirstOrDefault();
+            if (candidate is not null)
+                return candidate;
+
+            foreach (var next in block.ConnectedTrackNodeIndices)
+            {
+                if (!enabledRouteCircuits.Contains(next) || !visited.Add(next))
+                    continue;
+                if (block.JunctionNodeIndices is { Count: > 0 } junctions &&
+                    selectedBranches is not null &&
+                    junctions.Any(junction => selectedBranches.TryGetValue(junction, out var selected) &&
+                        selected != next))
+                    continue;
+                frontier.Enqueue(next);
+            }
+        }
+
         return null;
     }
 
