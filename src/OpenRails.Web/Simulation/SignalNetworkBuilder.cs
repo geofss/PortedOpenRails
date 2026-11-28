@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using OpenRails.Web.Parsing;
+using Orts.Formats.Msts;
 
 namespace OpenRails.Web.Simulation;
 
@@ -112,7 +113,7 @@ public sealed class SignalNetworkBuilder
         var immutableJunctionLinks = junctionLinks.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.OrderBy(id => id).ToArray()));
-        return new SignalNetwork(blocks, immutableJunctionLinks, diagnostics);
+        return new SignalNetwork(blocks, immutableJunctionLinks, diagnostics, configuration);
     }
 }
 
@@ -161,6 +162,7 @@ public sealed class SignalNetwork
 {
     private readonly IReadOnlyDictionary<uint, SignalTrackCircuit> blocks;
     private readonly IReadOnlyDictionary<uint, IReadOnlyList<uint>> junctionLinks;
+    private readonly SignalConfigurationDefinition? configuration;
 
     public IReadOnlyList<SignalTrackCircuit> TrackCircuits { get; }
     public IReadOnlyList<string> Diagnostics { get; }
@@ -179,11 +181,13 @@ public sealed class SignalNetwork
     }
 
     internal SignalNetwork(IEnumerable<SignalTrackCircuit> circuits,
-        IReadOnlyDictionary<uint, IReadOnlyList<uint>> junctionLinks, IEnumerable<string> diagnostics)
+        IReadOnlyDictionary<uint, IReadOnlyList<uint>> junctionLinks, IEnumerable<string> diagnostics,
+        SignalConfigurationDefinition? configuration = null)
     {
         TrackCircuits = Array.AsReadOnly(circuits.ToArray());
         blocks = TrackCircuits.ToDictionary(block => block.TrackNodeIndex);
         this.junctionLinks = junctionLinks;
+        this.configuration = configuration;
         Diagnostics = Array.AsReadOnly(diagnostics.ToArray());
     }
 
@@ -286,7 +290,7 @@ public sealed class SignalNetwork
         return Array.AsReadOnly(result.ToArray());
     }
 
-    private static RouteSignalIndication ApplyNativeScript(
+    private RouteSignalIndication ApplyNativeScript(
         RouteSignalHead signal,
         RouteSignalIndication baseline,
         int blockState,
@@ -319,23 +323,51 @@ public sealed class SignalNetwork
                     ? draw.Index : null;
         }
 
+        int? ResolveSymbol(string name)
+        {
+            if (NativeAspectValue(name) is { } aspect)
+                return aspect;
+            if (name.Equals("CLEAR", StringComparison.OrdinalIgnoreCase)) return 0;
+            if (name.Equals("OCCUPIED", StringComparison.OrdinalIgnoreCase)) return 1;
+            if (name.Equals("OBSTRUCTED", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("JN_OBSTRUCTED", StringComparison.OrdinalIgnoreCase)) return 2;
+            if (configuration is null)
+                return null;
+            if (configuration.SignalFunctions.TryGetValue(name, out var baseFunction) &&
+                Enum.TryParse<MstsSignalFunction>(baseFunction, ignoreCase: true, out var function))
+                return (int)function;
+            for (var index = 0; index < configuration.NormalSubtypes.Count; index++)
+                if (configuration.NormalSubtypes[index].Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return index;
+            return null;
+        }
+
         int? ResolveNativeFunction(string name, IReadOnlyList<int> arguments)
         {
-            if (!name.Equals("ROUTE_SET", StringComparison.OrdinalIgnoreCase) ||
-                arguments.Count != 2 || arguments[0] < 0 || arguments[1] < 0)
-                return null;
+            if (name.Equals("ROUTE_SET", StringComparison.OrdinalIgnoreCase) &&
+                arguments.Count == 2 && arguments[0] >= 0 && arguments[1] >= 0)
+            {
+                var requiredMainNode = (uint)arguments[0];
+                var requiredJunctionNode = (uint)arguments[1];
+                if (enabled && enabledRouteCircuits?.Contains(requiredMainNode) == true)
+                    return 1;
+                return selectedBranches is not null &&
+                    selectedBranches.TryGetValue(requiredJunctionNode, out var selectedBranch) &&
+                    selectedBranch == requiredMainNode ? 1 : 0;
+            }
 
-            var requiredMainNode = (uint)arguments[0];
-            var requiredJunctionNode = (uint)arguments[1];
+            if ((name.Equals("THIS_SIG_LR", StringComparison.OrdinalIgnoreCase) ||
+                 name.Equals("THIS_SIG_MR", StringComparison.OrdinalIgnoreCase)) &&
+                arguments.Count == 1 && signal.Definition is not null)
+            {
+                var currentFunction = configuration?.SignalFunctions.TryGetValue(
+                    signal.Definition.Function, out var currentBase) == true
+                    ? currentBase : signal.Definition.Function;
+                return Enum.TryParse<MstsSignalFunction>(currentFunction, true, out var current) &&
+                    (int)current == arguments[0] ? initialState : -1;
+            }
 
-            // Native SignalHead.route_set first checks the enabled train's route,
-            // then follows the selected junction route. The browser adapter maps
-            // those two sources to the train's reserved route and selected branch.
-            if (enabled && enabledRouteCircuits?.Contains(requiredMainNode) == true)
-                return 1;
-            return selectedBranches is not null &&
-                selectedBranches.TryGetValue(requiredJunctionNode, out var selectedBranch) &&
-                selectedBranch == requiredMainNode ? 1 : 0;
+            return null;
         }
 
         var execution = new SignalScriptInterpreter().Execute(script,
@@ -347,7 +379,8 @@ public sealed class SignalNetwork
                 BlockState: blockState,
                 RouteSet: baseline.NextTrackNodeIndex.HasValue,
                 DrawStateResolver: ResolveDrawState,
-                FunctionResolver: ResolveNativeFunction));
+                FunctionResolver: ResolveNativeFunction,
+                SymbolResolver: ResolveSymbol));
         if (!execution.Success)
             return CreateIndication(signal, RouteSignalAspect.Stop, baseline.NextTrackNodeIndex,
                 $"Native SIGSCR '{scriptName}' failed safely: {execution.Diagnostic} Defaulting to Stop.");
