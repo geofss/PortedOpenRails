@@ -498,7 +498,7 @@ public sealed class SignalNetworkBuilderTests
             Array.Empty<string>());
 
         var indication = Assert.Single(network.Evaluate(new HashSet<uint>(), scripts: library)
-            .Where(item => item.TrackItemIndex == 21));
+            .Where(item => item.Signal.TrackItemIndex == 21));
 
         Assert.Equal(RouteSignalAspect.Clear1, indication.Aspect);
         Assert.Equal("CLEAR_1", indication.NativeAspect);
