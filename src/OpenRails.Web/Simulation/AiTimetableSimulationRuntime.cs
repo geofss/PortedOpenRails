@@ -16,6 +16,7 @@ public sealed record AiTimetableTrainRuntimeBinding(
 public sealed record AiTimetableSimulationTickResult(
     double ElapsedSeconds,
     IReadOnlyList<string> DispatchedServiceIds,
+    IReadOnlyList<string> DecisionServiceIds,
     IReadOnlyList<AiServiceControlDecision> Decisions,
     IReadOnlyList<string> CompletedServiceIds,
     IReadOnlyList<string> OccupancyConflicts);
@@ -49,6 +50,8 @@ public sealed class AiTimetableSimulationRuntime
             ArgumentNullException.ThrowIfNull(train.Session);
             ArgumentNullException.ThrowIfNull(train.Driver);
             ArgumentNullException.ThrowIfNull(train.Route);
+            if (train.Driver.State.Cars.Count == 0)
+                throw new ArgumentException($"Timetable service '{train.ServiceId}' has no consist vehicles.", nameof(trains));
         }
     }
 
@@ -64,6 +67,7 @@ public sealed class AiTimetableSimulationRuntime
                 train.Route.Direction * train.Driver.State.Cars[0].DistanceMeters))
             .ToArray();
         var decisions = new List<AiServiceControlDecision>(active.Length);
+        var decisionServiceIds = new List<string>(active.Length);
         var completed = new List<string>();
         var occupancyConflicts = new List<string>();
 
@@ -83,6 +87,7 @@ public sealed class AiTimetableSimulationRuntime
                 train.Driver, train.Route, train.TargetSpeedMetersPerSecond,
                 otherTrains: otherTrains);
             decisions.Add(decision);
+            decisionServiceIds.Add(train.ServiceId);
             train.Driver.Advance(deltaSeconds);
 
             if (train.OccupancyResolver is not null &&
@@ -98,6 +103,7 @@ public sealed class AiTimetableSimulationRuntime
         return new AiTimetableSimulationTickResult(
             dispatcher.ElapsedSeconds,
             Array.AsReadOnly(dispatched),
+            Array.AsReadOnly(decisionServiceIds.ToArray()),
             Array.AsReadOnly(decisions.ToArray()),
             Array.AsReadOnly(completed.ToArray()),
             Array.AsReadOnly(occupancyConflicts.ToArray()));
