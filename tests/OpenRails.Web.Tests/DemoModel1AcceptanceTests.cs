@@ -53,6 +53,43 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(route.TerrainMeshes.Meshes.Count > 0, "No SCE terrain meshes were built.");
         Assert.True(route.WorldScenery.Loaded.Count > 0, "No SCE WORLD scenery tiles were parsed.");
 
+        // Exercise the production interlocking and timetable together on real SCE
+        // track-circuit IDs. Two services request the same block at the same
+        // departure time: exactly one may dispatch, and the other must remain pending.
+        var interlocking = route.Signalling.CreateInterlockingController();
+        var firstCircuit = route.Signalling.TrackCircuits
+            .Select(circuit => circuit.TrackNodeIndex)
+            .First();
+        var firstService = new AiServiceInterlockingSession("SCE-service-A", interlocking);
+        var secondService = new AiServiceInterlockingSession("SCE-service-B", interlocking);
+        var timetable = new AiTimetableDispatcher();
+        var sharedRoute = new[] { firstCircuit };
+        var noJunctionOverrides = new Dictionary<uint, uint>();
+        timetable.AddService("SCE-service-A", 0, firstService, sharedRoute, noJunctionOverrides);
+        timetable.AddService("SCE-service-B", 0, secondService, sharedRoute, noJunctionOverrides);
+
+        var firstDispatch = timetable.Advance(0);
+        Assert.Equal(new[] { "SCE-service-A" }, firstDispatch);
+        Assert.Equal(AiTimetableServiceStatus.Dispatched,
+            timetable.GetServiceStatus("SCE-service-A"));
+        Assert.Equal(AiTimetableServiceStatus.Pending,
+            timetable.GetServiceStatus("SCE-service-B"));
+        Assert.True(firstService.IsDispatched);
+        Assert.False(secondService.IsDispatched);
+
+        // Occupancy is tied to the dispatched train identity; a second train
+        // cannot claim the same real route circuit while the first occupies it.
+        Assert.True(interlocking.SetOccupied("SCE-service-A", firstCircuit, true));
+        Assert.False(interlocking.SetOccupied("SCE-service-B", firstCircuit, true));
+        Assert.False(interlocking.TryReleaseRoute("SCE-service-A"));
+        Assert.True(interlocking.SetOccupied("SCE-service-A", firstCircuit, false));
+        Assert.True(interlocking.TryReleaseRoute("SCE-service-A"));
+
+        var retryDispatch = timetable.Advance(0);
+        Assert.Equal(new[] { "SCE-service-B" }, retryDispatch);
+        Assert.Equal(AiTimetableServiceStatus.Dispatched,
+            timetable.GetServiceStatus("SCE-service-B"));
+
         Console.WriteLine(
             $"Demo Model 1 acceptance: nodes={route.TrackDatabase.NodeCount}; " +
             $"paths={route.TrackNetwork.VectorPathCount}; length={route.TrackNetwork.TotalTrackLengthMeters:N0}m; " +
