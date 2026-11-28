@@ -386,13 +386,14 @@ public sealed class SignalNetwork
             if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
                 arguments.Count == 2 && arguments[1] > 0)
             {
-                var next = signal;
+                RouteSignalHead? next = signal;
                 for (var index = 0; index < arguments[1]; index++)
                 {
-                    next = FindNextSignal(next, arguments[0], selectedBranches);
                     if (next is null) return 0;
+                    next = FindNextSignal(next, arguments[0], selectedBranches);
                 }
-                return ResolveThisSignalAspect(next, arguments[0], true, baselineBySignal);
+                return next is null ? 0 :
+                    ResolveThisSignalAspect(next, arguments[0], true, baselineBySignal);
             }
 
             return null;
