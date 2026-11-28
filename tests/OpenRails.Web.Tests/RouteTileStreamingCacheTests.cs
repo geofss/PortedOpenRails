@@ -81,6 +81,59 @@ public sealed class RouteTileStreamingCacheTests
     }
 
     [Fact]
+    public async Task NewCameraVisibilityCancelsObsoleteTileLoads()
+    {
+        await using var cache = new RouteTileStreamingCache<int, string>(4, 100);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var obsoleteLoad = cache.UpdateVisibleAsync(
+            new[] { new RouteTileStreamRequest<int>(1, 1, 10) },
+            async (_, token) =>
+            {
+                started.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return new RouteTileStreamAsset<string>("obsolete", 10);
+            });
+
+        await started.Task;
+        var currentLoad = cache.UpdateVisibleAsync(
+            new[] { new RouteTileStreamRequest<int>(2, 2, 10) },
+            (key, _) => Task.FromResult(new RouteTileStreamAsset<string>($"tile-{key}", 10)));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => obsoleteLoad);
+        var current = await currentLoad;
+        Assert.Equal(new[] { 2 }, current.Keys.ToArray());
+        Assert.Equal(10, cache.ResidentBytes);
+    }
+
+    [Fact]
+    public async Task DisposesEvictedAsyncAssetsWhenTilesLeaveVisibleSet()
+    {
+        await using var cache = new RouteTileStreamingCache<int, DisposableTile>(4, 100);
+        var tile = new DisposableTile();
+        await cache.UpdateVisibleAsync(
+            new[] { new RouteTileStreamRequest<int>(1, 1, 10) },
+            (_, _) => Task.FromResult(new RouteTileStreamAsset<DisposableTile>(tile, 10)));
+
+        await cache.UpdateVisibleAsync(
+            Array.Empty<RouteTileStreamRequest<int>>(),
+            (_, _) => throw new InvalidOperationException("No tile should load."));
+
+        Assert.True(tile.IsDisposed);
+        Assert.Equal(0, cache.Count);
+        Assert.Equal(0, cache.ResidentBytes);
+    }
+
+    private sealed class DisposableTile : IAsyncDisposable
+    {
+        public bool IsDisposed { get; private set; }
+        public ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task DoesNotCacheAnAssetLargerThanTheWholeBudget()
     {
         await using var cache = new RouteTileStreamingCache<int, string>(2, 20);
