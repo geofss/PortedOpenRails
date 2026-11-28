@@ -105,7 +105,8 @@ public sealed class SignalScriptInterpreter
         {
             if (locals.TryGetValue(name, out var local)) return local;
             if (external.TryGetValue(name, out var value)) return value;
-            throw new InvalidDataException($"SIGSCR references undeclared variable '{name}'.");
+            if (context.SymbolResolver?.Invoke(name) is { } symbol) return symbol;
+            throw new InvalidDataException($"SIGSCR references undeclared variable or unsupported symbol '{name}'.");
         }
 
         public int Call(string name, IReadOnlyList<int> arguments)
@@ -514,7 +515,8 @@ public sealed record SignalScriptExecutionContext(
     int? ApproachControlRequiredPosition = null,
     int? ApproachControlRequiredSpeed = null,
     Func<int, int?>? DrawStateResolver = null,
-    Func<string, IReadOnlyList<int>, int?>? FunctionResolver = null);
+    Func<string, IReadOnlyList<int>, int?>? FunctionResolver = null,
+    Func<string, int?>? SymbolResolver = null);
 
 public sealed record SignalScriptExecutionResult(
     bool Success,
