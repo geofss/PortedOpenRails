@@ -6,6 +6,25 @@ namespace OpenRails.Web.Tests;
 public sealed class RouteTileStreamingCacheTests
 {
     [Fact]
+    public void TerrainViewportSessionRejectsInvalidGpuWorkingSetBudget()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RouteTerrainViewportStreamingSession(maximumEstimatedGpuBytes: 0));
+    }
+
+    [Fact]
+    public void TerrainViewportSessionExposesSeparateGpuBudgetConfiguration()
+    {
+        var session = new RouteTerrainViewportStreamingSession(
+            maximumResidentBytes: 128,
+            estimatedBytesPerTile: 16,
+            maximumEstimatedGpuBytes: 48);
+        Assert.Equal(0, session.ResidentBytes);
+        Assert.Equal(0, session.ResidentTileCount);
+        Assert.Equal(0, session.EstimatedGpuBytes);
+    }
+
+    [Fact]
     public async Task LoadsVisibleTilesAndKeepsResidentBytesWithinBudget()
     {
         await using var cache = new RouteTileStreamingCache<int, string>(
