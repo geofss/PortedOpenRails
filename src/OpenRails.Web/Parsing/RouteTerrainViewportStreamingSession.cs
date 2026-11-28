@@ -124,20 +124,14 @@ public sealed class RouteTerrainViewportStreamingSession : IAsyncDisposable
 
         var loadedContent = orderedMeshes.Select(mesh => mesh.Content).ToArray();
         var textureDiscovery = new TerrainTextureAssetLocator().Locate(store, routeRoot, loadedContent);
-        var decodedTextures = new TerrainTextureAssetLoader().Load(store, textureDiscovery, cancellationToken);
-        var visibleTextures = new List<LoadedTerrainTextureAsset>();
-        long textureBytes = 0;
-        foreach (var texture in decodedTextures.Loaded)
-        {
-            var bytes = texture.Texture.MipLevels.Sum(mip => (long)mip.Length);
-            if (bytes > maximumResidentBytes - visibleMeshBytes - textureBytes ||
-                bytes > maximumEstimatedGpuBytes - estimatedGpuMeshBytes - textureBytes)
-                continue;
-            visibleTextures.Add(texture);
-            textureBytes += bytes;
-        }
-        var textures = new TerrainTextureAssetLoadResult(
-            visibleTextures, decodedTextures.Missing, decodedTextures.Failed);
+        var remainingCpuBytes = Math.Max(0, maximumResidentBytes - visibleMeshBytes);
+        var remainingGpuBytes = Math.Max(0, maximumEstimatedGpuBytes - estimatedGpuMeshBytes);
+        var textureBudgetBytes = Math.Min(remainingCpuBytes, remainingGpuBytes);
+        var textures = new TerrainTextureAssetLoader().Load(
+            store, textureDiscovery, textureBudgetBytes, cancellationToken);
+        var textureBytes = textures.Loaded.Aggregate(0L, (total, texture) =>
+            checked(total + texture.Texture.MipLevels.Aggregate(0L,
+                (mipTotal, mip) => checked(mipTotal + mip.LongLength))));
         var currentGpuBytes = checked(estimatedGpuMeshBytes + textureBytes);
         Interlocked.Exchange(ref estimatedGpuBytes, currentGpuBytes);
 
