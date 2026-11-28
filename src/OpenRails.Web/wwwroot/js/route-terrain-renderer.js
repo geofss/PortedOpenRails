@@ -3,7 +3,7 @@ let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0
 let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
 const activePointers = new Map();
 let renderScale = 1;
-let cameraChangeCallback = null, cameraNotifyFrame = 0;
+let cameraChangeCallback = null, cameraNotifyFrame = 0, cameraNotifyTimer = null;
 let lastSceneCameraPosition = null, lastNotifiedCameraPosition = null;
 let lastSceneSpan = 1, lastCameraNotifyAt = 0;
 const qualityStorageKey = "ported-openrails-preview-quality";
@@ -91,7 +91,15 @@ function notifyCameraChanged() {
       const movement = Math.hypot(dx, dy, dz);
       if (movement < Math.max(8, lastSceneSpan * 0.002)) return;
       const now = performance.now();
-      if (now - lastCameraNotifyAt < 250) return;
+      const remaining = 250 - (now - lastCameraNotifyAt);
+      if (remaining > 0) {
+        if (cameraNotifyTimer) clearTimeout(cameraNotifyTimer);
+        cameraNotifyTimer = setTimeout(() => {
+          cameraNotifyTimer = null;
+          notifyCameraChanged();
+        }, remaining);
+        return;
+      }
       lastCameraNotifyAt = now;
     }
     lastNotifiedCameraPosition = [...next];
@@ -191,7 +199,8 @@ export function cleanup() {
   wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
   activePointers.clear(); pinchStartDistance = 0;
   if (cameraNotifyFrame) cancelAnimationFrame(cameraNotifyFrame);
-  cameraNotifyFrame = 0; cameraChangeCallback = null;
+  if (cameraNotifyTimer) clearTimeout(cameraNotifyTimer);
+  cameraNotifyFrame = 0; cameraNotifyTimer = null; cameraChangeCallback = null;
   lastSceneCameraPosition = lastNotifiedCameraPosition = null;
   lastSceneSpan = 1; lastCameraNotifyAt = 0;
   rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
