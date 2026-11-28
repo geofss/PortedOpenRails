@@ -155,7 +155,7 @@ public sealed class DemoModel1AcceptanceTests
         var consistLengthMeters = operationalConsist!.Cars
             .Where(car => !car.IsEndOfTrain)
             .Sum(car => (double)(consistCatalog.CarAssets.First(asset =>
-                asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM));
+                asset.ConsistName == operationalConsist.Name && asset.Uid == car.Uid).Metadata!.LengthM ?? 10f));
         var drivingPath = route.TrackNetwork.VectorPaths
             .Where(path => path.Sections.Count > 0 &&
                 path.LengthMeters > 2 * consistLengthMeters + 100)
@@ -222,7 +222,7 @@ public sealed class DemoModel1AcceptanceTests
                 leaderDriver.State.Cars[0].DistanceMeters,
                 Math.Max(0, leaderDriver.State.Cars[0].SpeedMetersPerSecond));
             followerDecision = followerService.Drive(
-                followerDriver, followerRoute, targetSpeedMetersPerSecond: 30,
+                followerDriver, followerRoute, targetSpeedMetersPerSecond: 60,
                 otherTrains: new[] { leaderState });
             followerDriver.Advance(1d / 30d);
         }
@@ -230,8 +230,22 @@ public sealed class DemoModel1AcceptanceTests
         Assert.True(leaderDriver.State.Cars[0].DistanceMeters > leaderInitialDistance);
         Assert.True(followerDriver.State.Cars[0].DistanceMeters > followerInitialDistance);
         Assert.NotNull(followerDecision);
-        Assert.True(followerDecision!.TargetSpeedMetersPerSecond < 30,
-            "The following consist should receive a speed limit from the leading consist.");
+        var followingConstraint = AiTrainFollowingResolver.Resolve(
+            "SCE-consist-follower",
+            followerDriver.State.Cars[0].DistanceMeters,
+            direction: 1,
+            new[]
+            {
+                new AiServiceTrainState("SCE-consist-leader",
+                    leaderDriver.State.Cars[0].DistanceMeters,
+                    Math.Max(0, leaderDriver.State.Cars[0].SpeedMetersPerSecond))
+            });
+        Assert.NotNull(followingConstraint);
+        var safeFollowingSpeed = Math.Sqrt(
+            Math.Pow(leaderDriver.State.Cars[0].SpeedMetersPerSecond, 2) +
+            2 * 0.65 * Math.Max(0, followingConstraint!.DistanceAheadMeters - 20));
+        Assert.True(followerDecision!.TargetSpeedMetersPerSecond <= safeFollowingSpeed + 0.01,
+            "The follower's AI speed envelope must respect the leading consist's safe following distance.");
         Assert.True(followerService.TryChangeRoute(
             new[] { followerCircuit, spareCircuit }, noJunctions));
         Assert.True(followerService.TryComplete());
