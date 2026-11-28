@@ -107,7 +107,7 @@ public sealed class ConsistCatalogReader
                         issues.Add(new ConsistCatalogIssue(path, $"End-of-train device at car position {carIndex + 1} is not the final car in consist '{consist.Name}'."));
                 }
             }
-            catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+            catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException or STFException)
             {
                 issues.Add(new ConsistCatalogIssue(path, exception.Message));
             }
