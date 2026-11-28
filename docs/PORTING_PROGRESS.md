@@ -4,7 +4,7 @@ Last updated: 2026-11-28
 Working branch: port/axle-drive-state-hardening
 Draft integration PR: https://github.com/geofss/PortedOpenRails/pull/4
 Related draft PR: https://github.com/geofss/PortedOpenRails/pull/3
-Latest recorded commit: 323db0caaeeebf6cb1f5799b68140a61ba58f6fe
+Latest recorded commit: 3f1b7ab013e74cb98807f6ca8eb2678f0947eefc
 
 ## Project rules
 
@@ -53,7 +53,7 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 
 ### Animation and rendering foundations added
 - Portable native animation clip/node/controller/keyframe extraction, including TCB parameters.
-- Linear-position interpolation and TCB quaternion interpolation using neighboring quaternion logarithms and squad-style controls.
+- Linear-position interpolation and adjacent-key quaternion slerp for tcb_rot, matching the upstream Viewer3D Shapes.cs implementation. TCB key parameters remain preserved, but the native rotation path uses slerp rather than a generic TCB spline.
 - Animation frame clock driven by elapsed simulation seconds, with looping and non-looping behavior.
 - Named animation nodes mapped to shape matrix indices and sampled poses applied in track-shape and WORLD shape hierarchy transforms.
 - Track-shape and WORLD geometry builders accept elapsed simulation time.
@@ -88,7 +88,7 @@ All three systems are to be developed together. A parser, fixture test, audit, o
 - Previous checkpoint at commit f0cf1eab89b3cb08c61205f3ecac5346633e855a had successful reported workflows:
   - WebAssembly build: run 46083452284
   - Route pipeline regression: run 46083452283
-- Those workflow results predate the later TCB, LOD, material-preservation, route-item placement and rolling-stock render-frame changes. A later run on commit b5d9351705ca90a2d9e05f2d71f77d96e1d16448 failed at compile time due to a variable-scope collision in the WORLD animation builder; that collision was fixed in commit 3afa3b2dd06d3143980a4ec7de9711b13c722003. The subsequent code additions have not yet been verified by a successful run.
+- Those workflow results predate the later upstream-aligned tcb_rot slerp, LOD, material-preservation, route-item placement and rolling-stock render-frame changes. A later run on commit b5d9351705ca90a2d9e05f2d71f77d96e1d16448 failed at compile time due to a variable-scope collision in the WORLD animation builder; that collision was fixed in commit 3afa3b2dd06d3143980a4ec7de9711b13c722003. The subsequent code additions have not yet been verified by a successful run.
 - The current environment can inspect and update GitHub source but cannot execute dotnet or a browser end-to-end test directly.
 - Do not claim current tests/builds pass until CI reports success for the current commit.
 - Do not claim any of the three systems complete until the authorized Demo Model 1 route and real rolling stock run through the browser runtime with visible/operational acceptance evidence.
