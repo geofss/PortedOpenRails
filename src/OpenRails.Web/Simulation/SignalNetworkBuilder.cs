@@ -384,8 +384,9 @@ public sealed class SignalNetwork
             }
 
             if (name.Equals("NEXT_NSIG_LR", StringComparison.OrdinalIgnoreCase) &&
-                arguments.Count == 2 && arguments[1] > 0)
+                arguments.Count == 2)
             {
+                if (arguments[1] <= 0) return 0;
                 RouteSignalHead? next = signal;
                 for (var index = 0; index < arguments[1]; index++)
                 {
