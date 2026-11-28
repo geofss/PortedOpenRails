@@ -55,7 +55,7 @@ public sealed class AiServiceDrivingControllerTests
 
         var decision = controller.Calculate(route, 10, 0, 20, signalConstraints: signals);
 
-        Assert.Equal(5, decision.TargetSpeedMetersPerSecond, 3);
+        Assert.Equal(Math.Sqrt(5 * 5 + 2 * 0.65 * 40), decision.TargetSpeedMetersPerSecond, 3);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public sealed class AiServiceDrivingControllerTests
 
         var decision = controller.Calculate(route, 10, 0, 20, signalConstraints: signals);
 
-        Assert.Equal(6, decision.TargetSpeedMetersPerSecond, 3);
+        Assert.Equal(Math.Sqrt(6 * 6 + 2 * 0.65 * 40), decision.TargetSpeedMetersPerSecond, 3);
 }
 
     [Fact]
@@ -285,5 +285,34 @@ public sealed class AiServiceDrivingControllerTests
         Assert.True(following.TargetSpeedMetersPerSecond < free.TargetSpeedMetersPerSecond);
         Assert.Equal(0, following.ThrottlePercent);
         Assert.True(following.BrakePercent > 0);
+    }
+
+    [Fact]
+    public void DistantSpeedRestrictionDoesNotPrematurelyLimitCruisingSpeed()
+    {
+        var route = Plan(0, 2_000);
+        var signals = new[]
+        {
+            new AiServiceSignalConstraint(1_000, RouteSignalAspect.Clear2, 5)
+        };
+
+        var decision = controller.Calculate(route, 10, 0, 20, signalConstraints: signals);
+
+        Assert.Equal(20, decision.TargetSpeedMetersPerSecond, 3);
+    }
+
+    [Fact]
+    public void BuildsSpeedRestrictionEnvelopeForReverseServices()
+    {
+        var route = new ServiceRouteStartPosition(100, 0,
+            new TrackWorldPosition(0, 0, 100), new[] { 100d, 50d, 0d }, -1);
+        var signals = new[]
+        {
+            new AiServiceSignalConstraint(50, RouteSignalAspect.Clear2, 6)
+        };
+
+        var decision = controller.Calculate(route, 90, 0, 20, signalConstraints: signals);
+
+        Assert.Equal(Math.Sqrt(6 * 6 + 2 * 0.65 * 40), decision.TargetSpeedMetersPerSecond, 3);
     }
 }
