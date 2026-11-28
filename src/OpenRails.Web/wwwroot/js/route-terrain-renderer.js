@@ -1,6 +1,6 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
-let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
+let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver, contextLostHandler, contextRestoredHandler;
 const activePointers = new Map();
 let renderScale = 1;
 let cameraChangeCallback = null, cameraNotifyFrame = 0, cameraNotifyTimer = null;
@@ -159,20 +159,27 @@ export function initialize(canvas) {
   if (typeof ResizeObserver !== 'undefined') { resizeObserver = new ResizeObserver(resizeHandler); resizeObserver.observe(canvas); }
   gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
   if (!gl) throw new Error("WebGL2 is not supported by this browser.");
-  const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
-    in vec3 position;
-    in vec3 color;
-    out vec3 vColor;
-    void main(){ gl_Position=vec4(position,1.0); vColor=color; }`);
-  const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
-    precision highp float;
-    in vec3 vColor;
-    out vec4 outColor;
-    void main(){ outColor=vec4(vColor,1.0); }`);
-  program=gl.createProgram(); gl.attachShader(program,vertex); gl.attachShader(program,fragment); gl.linkProgram(program);
-  if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
-  gl.deleteShader(vertex); gl.deleteShader(fragment);
-  gl.enable(gl.DEPTH_TEST);
+  createBaseProgram();
+  contextLostHandler = event => {
+    event.preventDefault();
+    gl = null;
+    program = terrainProgram = shapeProgram = null;
+    terrainTextures = [];
+    shapeTextures = [];
+    uploadedTerrainPixels = uploadedShapePixels = null;
+  };
+  contextRestoredHandler = () => {
+    gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
+    if (!gl) return;
+    createBaseProgram();
+    terrainProgram = shapeProgram = null;
+    terrainTextures = [];
+    shapeTextures = [];
+    uploadedTerrainPixels = uploadedShapePixels = null;
+    redraw();
+  };
+  canvas.addEventListener("webglcontextlost", contextLostHandler, false);
+  canvas.addEventListener("webglcontextrestored", contextRestoredHandler, false);
 }
 export function cleanup() {
   if (canvasRef) {
@@ -183,6 +190,8 @@ export function cleanup() {
     canvasRef.removeEventListener('pointercancel', pointerUpHandler);
   }
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  if (canvasRef && contextLostHandler) canvasRef.removeEventListener('webglcontextlost', contextLostHandler);
+  if (canvasRef && contextRestoredHandler) canvasRef.removeEventListener('webglcontextrestored', contextRestoredHandler);
   if (resizeObserver) resizeObserver.disconnect();
   if (gl) {
     for (const texture of terrainTextures) gl.deleteTexture(texture);
@@ -196,7 +205,7 @@ export function cleanup() {
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = storedShapeBatches = storedShapePixels = uploadedShapePixels = null;
   storedRollingStockBatches = [];
   storedVertices = storedIndices = storedTrackLines = null;
-  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = contextLostHandler = contextRestoredHandler = null;
   activePointers.clear(); pinchStartDistance = 0;
   if (cameraNotifyFrame) cancelAnimationFrame(cameraNotifyFrame);
   if (cameraNotifyTimer) clearTimeout(cameraNotifyTimer);
@@ -205,6 +214,26 @@ export function cleanup() {
   lastSceneSpan = 1; lastCameraNotifyAt = 0;
   rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
   renderScale = 1;
+}
+function createBaseProgram(){
+  const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
+    in vec3 position;
+    in vec3 color;
+    out vec3 vColor;
+    void main(){ gl_Position=vec4(position,1.0); vColor=color; }`);
+  const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
+    in vec3 vColor;
+    out vec4 outColor;
+    void main(){ outColor=vec4(vColor,1.0); }`);
+  program=gl.createProgram();
+  gl.attachShader(program,vertex);
+  gl.attachShader(program,fragment);
+  gl.linkProgram(program);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  gl.enable(gl.DEPTH_TEST);
 }
 function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
 function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
