@@ -66,6 +66,9 @@ export async function storeArchive(streamReference, originalName, expectedBytes,
                     nextProgress = transferred + PROGRESS_INTERVAL_BYTES;
                 }
             }
+        } catch (error) {
+            try { await reader.cancel(error); } catch { /* preserve the original failure */ }
+            throw error;
         } finally {
             reader.releaseLock();
         }
@@ -133,11 +136,15 @@ export async function listArchives() {
             const metadata = JSON.parse(await (await handle.getFile()).text());
             const id = validateArchiveId(metadata.id);
             const archiveName = `${id}.zip`;
-            await directory.getFileHandle(archiveName);
+            const recordedSize = Number(metadata.sizeBytes);
+            if (!Number.isSafeInteger(recordedSize) || recordedSize <= 0) continue;
+            const archiveHandle = await directory.getFileHandle(archiveName);
+            const archiveFile = await archiveHandle.getFile();
+            if (archiveFile.size !== recordedSize) continue;
             packages.push({
                 id,
                 fileName: safeDisplayName(metadata.fileName),
-                sizeBytes: Number(metadata.sizeBytes),
+                sizeBytes: recordedSize,
                 persistentStorageGranted: metadata.persistentStorageGranted === true
             });
         } catch {
