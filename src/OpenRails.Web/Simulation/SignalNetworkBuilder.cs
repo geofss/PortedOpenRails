@@ -199,7 +199,17 @@ public sealed class SignalNetwork
             enabledTrackNodes = interlockingState.ReservedCircuits
                 .Where(pair => string.Equals(pair.Value, enabledTrainId, StringComparison.Ordinal))
                 .Select(pair => pair.Key).ToFrozenSet();
-        return Evaluate(interlockingState.OccupiedCircuits.Keys.ToFrozenSet(),
+        // A route reserved by another train is not available to this signal,
+        // even before that train physically occupies the circuit. Keep the
+        // evaluating train's own reservations available for native ENABLED /
+        // ROUTE_SET script semantics.
+        var unavailableCircuits = interlockingState.OccupiedCircuits.Keys
+            .Concat(interlockingState.ReservedCircuits
+                .Where(pair => string.IsNullOrWhiteSpace(enabledTrainId) ||
+                    !string.Equals(pair.Value, enabledTrainId, StringComparison.Ordinal))
+                .Select(pair => pair.Key))
+            .ToFrozenSet();
+        return Evaluate(unavailableCircuits,
             interlockingState.SelectedJunctionBranches, scripts, enabledTrackNodes);
     }
 
@@ -258,10 +268,10 @@ public sealed class SignalNetwork
 
                 if (clearBlocks == 0 && (blocked || unresolved))
                     baseline = CreateIndication(signal, RouteSignalAspect.Stop, firstNext,
-                        blocked ? "The next track circuit is occupied." : "No unique, selected route is available beyond this signal.");
+                        blocked ? "The next track circuit is occupied or reserved by another train." : "No unique, selected route is available beyond this signal.");
                 else if (blocked || unresolved)
                     baseline = CreateIndication(signal, RouteSignalAspect.Approach, firstNext,
-                        blocked ? "A required track circuit ahead is occupied." : "The required clear-ahead route is not uniquely established.");
+                        blocked ? "A required track circuit ahead is occupied or reserved by another train." : "The required clear-ahead route is not uniquely established.");
                 else
                     baseline = CreateIndication(signal,
                         requiredClearAhead == 1 ? RouteSignalAspect.Clear1 : RouteSignalAspect.Clear2,
