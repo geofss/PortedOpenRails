@@ -1,3 +1,5 @@
+import { releaseArchiveContext } from "./route-package-indexer.js";
+
 const DIRECTORY_NAME = "portedopenrails-packages";
 const PROGRESS_INTERVAL_BYTES = 16 * 1024 * 1024;
 
@@ -147,6 +149,7 @@ export async function listArchives() {
 
 export async function deleteArchive(id) {
     const safeId = validateArchiveId(id);
+    releaseArchiveContext(safeId);
     const root = await navigator.storage.getDirectory();
     const directory = await root.getDirectoryHandle(DIRECTORY_NAME);
     for (const suffix of [".zip", ".json", ".index.json"]) {
