@@ -172,7 +172,7 @@ public sealed class AiServiceDrivingController
                 : restriction.RouteDistanceMeters < currentDistanceMeters)
             .Select(restriction => (Distance: restriction.RouteDistanceMeters,
                 Limit: restriction.SpeedLimitMetersPerSecond));
-        var speedEnvelope = signalSpeedEnvelope.Concat(trackSpeedEnvelope)
+        var upcomingSpeedEnvelope = signalSpeedEnvelope.Concat(trackSpeedEnvelope)
             .Select(restriction =>
             {
                 var distanceAhead = direction > 0
@@ -183,6 +183,18 @@ public sealed class AiServiceDrivingController
             })
             .DefaultIfEmpty(double.PositiveInfinity)
             .Min();
+        // A speedpost establishes the active line limit until the next speedpost.
+        // Keep the most recently passed restriction in force after its marker.
+        var activeTrackLimit = restrictions
+            .Where(restriction => direction > 0
+                ? restriction.RouteDistanceMeters <= currentDistanceMeters
+                : restriction.RouteDistanceMeters >= currentDistanceMeters)
+            .OrderBy(restriction => direction > 0
+                ? currentDistanceMeters - restriction.RouteDistanceMeters
+                : restriction.RouteDistanceMeters - currentDistanceMeters)
+            .Select(restriction => restriction.SpeedLimitMetersPerSecond)
+            .FirstOrDefault(double.PositiveInfinity);
+        var speedEnvelope = Math.Min(upcomingSpeedEnvelope, activeTrackLimit);
         var requestedSpeed = Math.Min(targetSpeedMetersPerSecond, speedEnvelope);
         if (trainAhead is not null)
         {
