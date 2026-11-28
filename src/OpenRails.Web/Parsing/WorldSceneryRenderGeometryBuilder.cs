@@ -81,7 +81,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
                 var lodDistance = cameraPosition is { } camera
                     ? Vector3.Distance(camera, worldTransform.Translation) : 0;
-                var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
+                var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
                 if (lod is null) continue;
 
                 foreach (var subObject in lod.SubObjects)

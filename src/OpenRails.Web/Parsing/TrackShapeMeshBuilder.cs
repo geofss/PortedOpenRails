@@ -65,8 +65,9 @@ public sealed class TrackShapeMeshBuilder
         var lightMaterials = source.light_materials.Select(material => new TrackShapeLightMaterial(
             material.flags, material.DiffColIdx, material.AmbColIdx, material.SpecColIdx,
             material.EmissiveColIdx, material.SpecPower)).ToArray();
+        var viewSphereRadius = source.volumes.Count > 0 ? source.volumes[0].Radius : 100f;
         return new TrackShapeMesh(source.shape_header.flags1, source.shape_header.flags2,
-            matrices, lods, TrackShapeAnimationBuilder.Build(source), Array.AsReadOnly(lightMaterials));
+            matrices, lods, TrackShapeAnimationBuilder.Build(source), Array.AsReadOnly(lightMaterials), viewSphereRadius);
     }
 
     private static IReadOnlyList<TrackShapeMeshVertex> BuildVertices(shape source, sub_object subObject)
@@ -271,4 +272,5 @@ public sealed record TrackShapeMesh(
     IReadOnlyList<TrackShapeMatrix> Matrices,
     IReadOnlyList<TrackShapeLodMesh> Lods,
     IReadOnlyList<TrackShapeAnimationClip>? Animations = null,
-    IReadOnlyList<TrackShapeLightMaterial>? LightMaterials = null);
+    IReadOnlyList<TrackShapeLightMaterial>? LightMaterials = null,
+    float ViewSphereRadius = 100f);
