@@ -505,6 +505,64 @@ public sealed class SignalNetworkBuilderTests
         Assert.Contains("executed", indication.Reason);
     }
 
+
+    [Fact]
+    public void NextSignalLeastAndMostRestrictiveQueriesAggregateAllMatchingHeads()
+    {
+        SignalTypeDefinition Definition(string script, int clearAhead) =>
+            new("main", script, "NORMAL", "", "", clearAhead,
+                new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+                new Dictionary<string, SignalDrawStateDefinition>(),
+                new[]
+                {
+                    new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                    new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false),
+                    new SignalAspectDefinition("CLEAR_2", "", 12, false, false, false)
+                });
+
+        var currentLeast = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("next-least", 1));
+        var currentMost = new RouteSignalHead(23, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("next-most", 1));
+        var nextClearOne = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", 1));
+        var nextClearTwo = new RouteSignalHead(22, "main", "", 0, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("", 2));
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = Definition("", 1) },
+            new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentLeast, currentMost }),
+                new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { nextClearOne, nextClearTwo }),
+                new SignalTrackCircuit(4, 100, new uint[] { 5 }, Array.Empty<RouteSignalHead>()),
+                new SignalTrackCircuit(5, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        SignalScriptDefinition Script(string name, string expression) =>
+            new(name, new[] { "EXTERN FLOAT STATE;", $"STATE = {expression};" },
+                Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition>
+            {
+                ["next-least"] = Script("next-least", "NEXT_SIG_LR(NORMAL)"),
+                ["next-most"] = Script("next-most", "NEXT_SIG_MR(NORMAL)")
+            },
+            Array.Empty<string>());
+
+        var indications = network.Evaluate(new HashSet<uint>(), scripts: library);
+        var least = Assert.Single(indications.Where(item => item.Signal.TrackItemIndex == 21));
+        var most = Assert.Single(indications.Where(item => item.Signal.TrackItemIndex == 23));
+
+        Assert.Equal(RouteSignalAspect.Clear2, least.Aspect);
+        Assert.Equal(RouteSignalAspect.Clear1, most.Aspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
