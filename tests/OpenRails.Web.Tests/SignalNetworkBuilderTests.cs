@@ -634,6 +634,56 @@ public sealed class SignalNetworkBuilderTests
         Assert.Equal(RouteSignalAspect.Clear2, least.Aspect);
     }
 
+
+    [Fact]
+    public void ResolvesOppositeDirectionSignalOnlyAlongEnabledRouteCircuits()
+    {
+        SignalTypeDefinition Definition(string script) =>
+            new("main", script, "NORMAL", "", "", 1,
+                new HashSet<string>(), Array.Empty<SignalLightDefinition>(),
+                new Dictionary<string, SignalDrawStateDefinition>(),
+                new[]
+                {
+                    new SignalAspectDefinition("STOP", "", -1, false, false, false),
+                    new SignalAspectDefinition("CLEAR_1", "", 12, false, false, false)
+                });
+
+        var currentSignal = new RouteSignalHead(21, "main", "", 0, 0, 2, 0,
+            Array.Empty<TrackSignalDirection>(), Definition("opposite-signal"));
+        var oppositeSignal = new RouteSignalHead(22, "main", "", 1, 0, 3, 0,
+            Array.Empty<TrackSignalDirection>(), Definition(""));
+        var configuration = new SignalConfigurationDefinition(
+            "sigcfg.dat",
+            new Dictionary<string, SignalTypeDefinition> { ["main"] = Definition("") },
+            new Dictionary<string, string> { ["NORMAL"] = "NORMAL" },
+            Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+        var network = new SignalNetwork(
+            new[]
+            {
+                new SignalTrackCircuit(2, 100, new uint[] { 3 }, new[] { currentSignal }),
+                new SignalTrackCircuit(3, 100, new uint[] { 4 }, new[] { oppositeSignal }),
+                new SignalTrackCircuit(4, 100, Array.Empty<uint>(), Array.Empty<RouteSignalHead>())
+            },
+            new Dictionary<uint, IReadOnlyList<uint>>(),
+            Array.Empty<string>(),
+            configuration);
+        var script = new SignalScriptDefinition("opposite-signal",
+            new[] { "EXTERN FLOAT STATE;", "STATE = OPP_SIG_LR(NORMAL);" },
+            Array.Empty<string>(), new[] { "STATE" }, 1, Array.Empty<string>());
+        var library = new SignalScriptLibrary(
+            new Dictionary<string, SignalScriptDefinition> { ["opposite-signal"] = script },
+            Array.Empty<string>());
+
+        var routeCircuits = new HashSet<uint> { 2, 3, 4 };
+        var enabled = Assert.Single(network.Evaluate(routeCircuits, scripts: library)
+            .Where(item => item.Signal.TrackItemIndex == 21));
+        var withoutRoute = Assert.Single(network.Evaluate(new HashSet<uint> { 2 }, scripts: library)
+            .Where(item => item.Signal.TrackItemIndex == 21));
+
+        Assert.Equal(RouteSignalAspect.Clear1, enabled.Aspect);
+        Assert.Equal(RouteSignalAspect.Stop, withoutRoute.Aspect);
+    }
+
     private static (TrackDatabase Database, TrackNetwork Network) CreateFixture()
     {
         var nodes = new TrackNode?[]
