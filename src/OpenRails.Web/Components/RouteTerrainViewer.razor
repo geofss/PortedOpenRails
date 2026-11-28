@@ -1,3 +1,4 @@
+@using System.Numerics
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
@@ -65,7 +66,7 @@
         <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
         <dt>Forest objects / generated tree billboards</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
         <dt>Forest textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @Route.WorldScenery.Loaded.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
-        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · first LOD</dd>
+        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
