@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using OpenRails.Web.Parsing;
-using Orts.Formats.Msts;
 
 namespace OpenRails.Web.Simulation;
 
@@ -333,9 +332,8 @@ public sealed class SignalNetwork
                 name.Equals("JN_OBSTRUCTED", StringComparison.OrdinalIgnoreCase)) return 2;
             if (configuration is null)
                 return null;
-            if (configuration.SignalFunctions.TryGetValue(name, out var baseFunction) &&
-                Enum.TryParse<MstsSignalFunction>(baseFunction, ignoreCase: true, out var function))
-                return (int)function;
+            if (configuration.SignalFunctions.TryGetValue(name, out var baseFunction))
+                return NativeSignalFunctionValue(baseFunction);
             for (var index = 0; index < configuration.NormalSubtypes.Count; index++)
                 if (configuration.NormalSubtypes[index].Equals(name, StringComparison.OrdinalIgnoreCase))
                     return index;
@@ -364,8 +362,7 @@ public sealed class SignalNetwork
                 if (configuration is not null &&
                     configuration.SignalFunctions.TryGetValue(signal.Definition.Function, out var currentBase))
                     currentFunction = currentBase;
-                return Enum.TryParse<MstsSignalFunction>(currentFunction, true, out var current) &&
-                    (int)current == arguments[0] ? initialState : -1;
+                return NativeSignalFunctionValue(currentFunction) == arguments[0] ? initialState : -1;
             }
 
             return null;
@@ -409,6 +406,19 @@ public sealed class SignalNetwork
                 : configured.DrawState,
             configured.SpeedMetersPerSecond >= 0 ? configured.SpeedMetersPerSecond : null);
     }
+
+    private static int? NativeSignalFunctionValue(string? name) => name?.ToUpperInvariant() switch
+    {
+        "NORMAL" => 0,
+        "DISTANCE" => 1,
+        "REPEATER" => 2,
+        "SHUNTING" => 3,
+        "INFO" => 4,
+        "SPEED" => 5,
+        "ALERT" => 6,
+        "UNKNOWN" => 7,
+        _ => null
+    };
 
     private static int? NativeAspectValue(string? name) => name?.ToUpperInvariant() switch
     {
