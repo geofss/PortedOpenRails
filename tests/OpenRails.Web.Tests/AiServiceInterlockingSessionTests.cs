@@ -62,6 +62,26 @@ public sealed class AiServiceInterlockingSessionTests
     }
 
     [Fact]
+    public void ActiveAIServiceCanAtomicallyReplanWithoutDroppingOccupiedCircuit()
+    {
+        var interlocking = CreateInterlocking();
+        var session = new AiServiceInterlockingSession("AI-1", interlocking);
+        Assert.True(session.TryDispatch(new uint[] { 10, 11 }, new Dictionary<uint, uint> { [100] = 11 }));
+        Assert.True(session.SetCircuitOccupancy(10, true));
+
+        Assert.False(session.TryChangeRoute(new uint[] { 11, 12 },
+            new Dictionary<uint, uint> { [100] = 12 }));
+        Assert.True(session.TryChangeRoute(new uint[] { 10, 12 },
+            new Dictionary<uint, uint> { [100] = 12 }));
+
+        var state = interlocking.Snapshot();
+        Assert.Equal("AI-1", state.OccupiedCircuits[10]);
+        Assert.Equal("AI-1", state.ReservedCircuits[12]);
+        Assert.DoesNotContain(11u, state.ReservedCircuits.Keys);
+        Assert.True(session.IsDispatched);
+    }
+
+    [Fact]
     public void ConflictingAIServiceCannotAcquireSameJunctionRoute()
     {
         var interlocking = CreateInterlocking();
