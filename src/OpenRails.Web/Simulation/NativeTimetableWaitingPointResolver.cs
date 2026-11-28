@@ -9,8 +9,8 @@ public sealed record NativeTimetableWaitingPointResolution(
 
 /// <summary>
 /// Aligns timetable station timepoints to native .pat waiting-point nodes in route
-/// order. Times are converted from time-of-day to seconds since service departure,
-/// including midnight rollover, for the shared AI simulation clock.
+/// order. Times remain on the timetable's time-of-day clock, including midnight rollover,
+/// so releases align with the dispatcher's absolute departure-time clock.
 /// </summary>
 public sealed class NativeTimetableWaitingPointResolver
 {
@@ -46,8 +46,8 @@ public sealed class NativeTimetableWaitingPointResolver
         var count = Math.Min(waitingIndices.Length, stops.Count);
         for (var index = 0; index < count; index++)
         {
-            var releaseSeconds = stops[index].TimeSeconds - serviceDepartureSeconds;
-            if (releaseSeconds < 0)
+            var releaseSeconds = stops[index].TimeSeconds;
+            if (releaseSeconds < serviceDepartureSeconds)
                 releaseSeconds += 24 * 60 * 60;
             releases[waitingIndices[index]] = releaseSeconds;
         }
