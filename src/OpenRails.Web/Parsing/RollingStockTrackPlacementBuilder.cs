@@ -178,7 +178,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 rotation * translation,
                 car.Uid,
                 distance,
-                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, distance, heading, car.Flipped)));
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);
@@ -365,7 +365,7 @@ public sealed class RollingStockTrackPlacementBuilder
                 rotation * translation,
                 car.Uid,
                 distance,
-                RollingStockBogiePoseBuilder.Build(asset.Mesh, centerline, cumulative, distance, heading, car.Flipped)));
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);
