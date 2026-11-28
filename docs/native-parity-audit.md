@@ -17,6 +17,9 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 - Verify all TrItem types and metadata are represented and consumed: signal aspects/scripts and junction directions, speed restriction and warning/milepost variants, platform/station facilities, siding links, road-crossing gates/road database, sound regions, pickup/hazard/event items, and route-specific extensions.
 - Check topology invariants, pin directionality, junction state/shape, crossover geometry, path/route connectivity, and link resolution.
 - Ensure route asset resolver handles case-insensitive paths, aliases, relative references, texture variants, and missing-asset diagnostics consistently.
+- Signal interlocking now supports atomic route replacement for a dispatched service. It refuses conflicting circuits/junctions without mutating the current reservation, retains all occupied consist circuits, and releases only obsolete unoccupied reservations. Multi-train reservation, active replan, and trailing-vehicle lock retention have targeted regressions.
+- Timetable runtime now tracks Pending / Dispatched / Completed / Cancelled states, permits pre-departure cancellation, retries blocked departures, recognizes completion after route release, and uses deterministic ordering for simultaneous departures.
+- AI speed governor combines signal-configured limits and track speedpost chainage limits into a single distance-aware braking envelope, with reverse-route and invalid-input coverage.
 - Route-wide acceptance must exercise the authorized Demo Model 1 content, not only fixtures.
 
 ## Terrain and scenery parity closure
@@ -24,6 +27,9 @@ This is a source audit, not a claim of completed parity or a substitute for a bu
 - Compare terrain parser, tile discovery, boundary sample resolution, patch LOD mesh generation, normals, texture/material/shader metadata, seasonal variants, and forest/vegetation behavior with upstream.
 - Verify WORLD object parsing, placement transforms, shape hierarchy, materials, ACE texture handling, animation, visibility, and tile boundaries.
 - Route-wide streaming needs bounded memory, progressive loading, cancellation, and deterministic unload/reload. Large desktop route packages are the target.
+- Implemented a bounded camera-visibility cache primitive with cancellation of superseded generations, a maximum concurrent loader count, entry/byte caps, visible-set unloading, and asynchronous asset disposal. The ZIP index context is also LRU-bounded to two imported archives and is released when an archive is deleted.
+- Important integration gap: RouteLoader still eagerly materializes terrain meshes and WORLD scenery before the viewer runs. The cache primitive is not yet the owner of the viewer's terrain/WORLD mesh and GPU texture lifecycle, so progressive viewport streaming and end-to-end memory ceilings remain open acceptance items.
+- WebGL renderer inspection confirms textures are deleted when their pixel payload set is replaced and on renderer cleanup; buffer and VAO allocations in the current draw path are paired with deletion. Continue auditing GPU resource lifetime when tile-level streaming is connected.
 - Acceptance: terrain/scenery visual comparison in multiple route locations and seasons; report all missing/failed assets without masking them.
 
 ## Rolling-stock parity closure
