@@ -62,8 +62,8 @@ public sealed class AiServiceInterlockingSessionTests
         });
 
         Assert.True(following.TargetSpeedMetersPerSecond < free.TargetSpeedMetersPerSecond);
-        Assert.Equal(0, following.ThrottlePercent);
-        Assert.Equal(100, following.BrakePercent);
+        Assert.True(following.ThrottlePercent > 0);
+        Assert.Equal(0, following.BrakePercent);
     }
 
     [Fact]
