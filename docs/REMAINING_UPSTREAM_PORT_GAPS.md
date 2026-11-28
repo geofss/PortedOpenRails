@@ -31,7 +31,7 @@ Implemented slices include signal configuration/script parsing, a bounded interp
 Remaining:
 - Native signal-position track circuits and circuit segmentation; vector-node approximations are not equivalent.
 - Parse and resolve native signal TrackItems from TDB.
-- Implement remaining signal-script externals and semantics, including `NEXT_SIG_LR`, timing triggers, call-on, train-path queries, and C# signal scripts.
+- Implement remaining signal-script externals and semantics. `THIS_SIG_LR/MR`, `NEXT_SIG_LR/MR`, `NEXT_NSIG_LR/MR`, `OPP_SIG_LR/MR`, signal-ID queries, route-set checks, and distance-based multi-signal aspect queries have browser implementations; timing triggers, call-on, train-path queries, and C# signal scripts remain open and require upstream-reference tests.
 - Complete native signal aspect/speed/draw-state semantics and route-wide evaluation.
 - Complete switch state/throw behavior, route locking, release rules, overlap/approach locking, and interlocking edge cases.
 - Validate signal placement and behavior across the actual SCE route, not just parser/topology fixtures.
