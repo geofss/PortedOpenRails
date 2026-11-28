@@ -23,11 +23,14 @@ public sealed class TrainCarMotionIntegrator
         if (!double.IsFinite(elapsedSeconds) || elapsedSeconds < 0)
             throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
 
-        if (elapsedSeconds == 0)
-            return new TrainCarMotionStepResult(state, totalForceNewtons / state.MassKg);
-
         var acceleration = totalForceNewtons / state.MassKg;
+        if (!double.IsFinite(acceleration))
+            throw new ArgumentOutOfRangeException(nameof(totalForceNewtons), "Calculated acceleration must be finite.");
+        if (elapsedSeconds == 0)
+            return new TrainCarMotionStepResult(state, acceleration);
         var nextSpeed = state.SpeedMetersPerSecond + acceleration * elapsedSeconds;
+        if (!double.IsFinite(nextSpeed))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds), "Calculated speed must be finite.");
         var motionSeconds = elapsedSeconds;
 
         // A resisting force can bring a car to rest partway through this step.
@@ -44,6 +47,8 @@ public sealed class TrainCarMotionIntegrator
         // portion of the step during which the car is actually moving.
         var nextDistance = state.DistanceMeters +
             (state.SpeedMetersPerSecond + nextSpeed) * 0.5 * motionSeconds;
+        if (!double.IsFinite(nextDistance))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds), "Calculated distance must be finite.");
         var nextState = state with
         {
             SpeedMetersPerSecond = nextSpeed,

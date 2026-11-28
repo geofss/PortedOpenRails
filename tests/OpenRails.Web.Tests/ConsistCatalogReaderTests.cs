@@ -242,6 +242,8 @@ public sealed class ConsistCatalogReaderTests
         Assert.Throws<InvalidDataException>((Action)(() => locator.Locate(store, "Freight", "../outside.s")));
     }
 
+
+
     private const string EngineFixture = WagonFixture + """
         Engine (
             MaxForce ( 200000 )

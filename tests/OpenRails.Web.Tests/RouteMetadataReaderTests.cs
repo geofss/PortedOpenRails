@@ -63,6 +63,26 @@ public sealed class RouteMetadataReaderTests
         Assert.Equal(new RouteStartCoordinates(-6144, 15144, 877.176, -869.309), metadata.RouteStart);
     }
 
+    [Theory]
+    [InlineData("NaN 0 0 0")]
+    [InlineData("0 Infinity 0 0")]
+    [InlineData("1e308 0 1e308 0")]
+    public void RejectsNonFiniteOrUnrepresentableRouteStart(string coordinates)
+    {
+        using var store = CreateStore(("ROUTES/TestRoute/TEST.trk", $"""
+            SIMISA@@@@@@@@@@JINX0T0t
+            Tr_RouteFile (
+                RouteID ( "TESTROUTE" )
+                Name ( "Test Route" )
+                Description ( "Invalid route start fixture" )
+                RouteStart ( {coordinates} )
+            )
+            """));
+
+        Assert.Throws<InvalidDataException>(() =>
+            new RouteMetadataReader().Read(store, "ROUTES/TestRoute/TEST.trk"));
+    }
+
     [Fact]
     public void RejectsRouteFileWithoutTrRouteFileBlock()
     {

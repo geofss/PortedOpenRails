@@ -240,6 +240,37 @@ input[type="file"] {
     background: #101d26;
 }
 .driving-settings h4 { margin-top: 0; }
+
+.or-options-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 8px 0 10px;
+    border-bottom: 1px solid #888;
+}
+.or-options-tabs button {
+    min-height: 25px;
+    margin: 0 2px -1px 0;
+    padding: 3px 9px;
+    border: 1px solid #888;
+    border-bottom-color: #888;
+    border-radius: 2px 2px 0 0;
+    background: #e8e8e8;
+    color: #555;
+    box-shadow: none;
+}
+.or-options-tabs button[aria-selected="true"] {
+    position: relative;
+    border-bottom-color: #fff;
+    background: #fff;
+    color: #111;
+    font-weight: 600;
+}
+.or-options-tabs button:disabled {
+    color: #888;
+    opacity: .65;
+}
+
 .driving-control-row { display: grid; gap: 6px; margin: 12px 0; }
 .driving-control-row label { color: #bdcbd4; font-weight: 650; }
 .driving-control-row input[type="range"] { width: 100%; accent-color: #8ee0ad; }
@@ -251,4 +282,681 @@ input[type="file"] {
     color: #edf3f7;
     font: inherit;
     cursor: pointer;
+}
+
+
+/* Browser port of the original Open Rails WinForms main-menu appearance.
+   The 3D route viewport remains dark; menu chrome follows the native
+   Windows Forms system palette, compact typography and square controls. */
+:root {
+    color-scheme: light;
+    font-family: "Microsoft Sans Serif", "Segoe UI", Tahoma, sans-serif;
+    color: #111;
+    background: #f0f0f0;
+}
+
+body {
+    margin: 0;
+    padding: 8px;
+    background: #f0f0f0;
+    color: #111;
+    font-family: "Microsoft Sans Serif", "Segoe UI", Tahoma, sans-serif;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.shell {
+    width: min(1180px, calc(100% - 16px));
+    margin: 8px auto;
+    padding: 8px;
+    border: 1px solid #898989;
+    border-radius: 0;
+    background: #f0f0f0;
+    box-shadow: none;
+}
+
+.or-mainform-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 28px;
+    margin: 0 0 6px;
+    padding: 0 2px 5px;
+    border-bottom: 1px solid #b6b6b6;
+}
+.or-mainform-heading h1 {
+    margin: 0;
+    color: #111;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+.or-mainform-heading span {
+    color: #555;
+    font-size: 11px;
+}
+.or-profile-strip {
+    display: grid;
+    grid-template-columns: 145px minmax(160px, 1fr);
+    align-items: baseline;
+    gap: 2px 8px;
+    margin: 6px 0 8px;
+    padding: 5px 7px;
+    border: 1px solid #aaa;
+    background: #fff;
+}
+.or-profile-strip strong { font-weight: 600; }
+.or-profile-strip small {
+    grid-column: 2;
+    color: #555;
+    font-size: 11px;
+}
+.or-route-picker {
+    display: grid;
+    grid-template-columns: 110px minmax(180px, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 6px 8px;
+    border: 1px solid #aaa;
+    background: #fff;
+}
+.or-route-picker label { font-weight: 600; }
+
+h1, h2, h3, h4 { color: #111; letter-spacing: 0; }
+h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+h3 { margin: 10px 0 6px; font-size: 13px; font-weight: 600; }
+h4 { font-size: 12px; font-weight: 600; }
+
+.note, .hint, .status { color: #444; }
+.success { color: #176b2c; }
+.error { color: #a00000; }
+code { color: #222; }
+
+button, input, select, textarea {
+    font: inherit;
+    color: #111;
+}
+button {
+    min-height: 23px;
+    padding: 2px 9px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+    box-shadow: inset 0 1px 0 #fff;
+    cursor: pointer;
+}
+button:hover:not(:disabled) {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: inset 0 1px 0 #fff;
+}
+button:active:not(:disabled) {
+    background: #dce8f5;
+    box-shadow: inset 0 1px 2px #aaa;
+}
+button:disabled { color: #888; cursor: default; opacity: .7; }
+input[type="file"], input:not([type="range"]), select, textarea {
+    max-width: 100%;
+    min-height: 23px;
+    border: 1px solid #888;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+}
+input[type="range"] { accent-color: #4776a8; }
+
+.route-choice, .import-panel, .route-details, .driving-settings,
+.package-summary, .consist-entry {
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+    box-shadow: none;
+}
+.route-choice { margin-top: 8px; padding: 9px; }
+.import-panel { margin-top: 8px; padding: 9px; }
+.route-details { margin-top: 8px; padding: 9px; }
+.route-options { gap: 6px; }
+.route-card, .route-row {
+    gap: 5px;
+    padding: 7px 8px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fdfdfd;
+    color: #111;
+    box-shadow: none;
+}
+.route-card-title { font-size: 13px; font-weight: 600; }
+.route-card-tag, .route-row span { color: #315c86; font-size: 11px; font-weight: 600; }
+.route-card-description, .route-row small { color: #444; line-height: 1.35; }
+.route-card:hover, .route-card.selected, .route-row.selected {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: inset 0 0 0 1px #c4d7eb;
+}
+.route-details dl { gap: 5px 12px; }
+.route-details dt { color: #333; }
+.route-details dd { color: #111; }
+.route-row { margin: 4px 0; }
+.package-summary { padding: 8px; }
+.path-list { max-height: 260px; }
+.path-list li { color: #333; }
+.path-list code { color: #222; }
+
+.package-actions { gap: 4px; }
+.package-actions button, .route-camera-presets button, .driving-settings button {
+    min-height: 22px;
+    padding: 2px 8px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+}
+.package-actions button:hover:not(:disabled),
+.route-camera-presets button:hover,
+.route-camera-presets button[aria-pressed="true"] {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+    box-shadow: none;
+}
+
+.keyboard-control-pad {
+    padding: 8px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #f7f7f7;
+    color: #333;
+}
+.keyboard-control-pad strong, .keyboard-control-state { color: #1e4f7a; }
+.keyboard-control-pad:focus-visible { outline-color: #4776a8; }
+
+.driving-settings { padding: 9px; }
+.driving-control-row label { color: #222; font-weight: 600; }
+.driving-control-row input[type="range"] { accent-color: #4776a8; }
+
+.or-mainform-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    margin-top: 10px;
+    padding: 6px 8px;
+    border-top: 1px solid #b6b6b6;
+    color: #333;
+}
+.or-mainform-footer strong {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding-left: 58px;
+    background-image: url("https://raw.githubusercontent.com/openrails/openrails/dfb5246ca9da46e352cfcd2a365d284ac55c1a1f/Source/ORTS.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 48px 48px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+.or-mainform-footer span { color: #555; font-size: 10px; }
+.or-mainform-footer .or-port-credit { margin-left: auto; text-align: right; color: #333; font-weight: 600; }
+
+.route-world-view {
+    border: 1px solid #777;
+    border-radius: 0;
+    background: #111820;
+}
+.route-world-canvas { border-radius: 0; }
+
+@media (max-width: 720px) {
+    .shell { width: auto; margin: 0; }
+    .or-mainform-heading { align-items: flex-start; flex-direction: column; }
+    .or-profile-strip { grid-template-columns: 1fr; }
+    .or-profile-strip small { grid-column: 1; }
+    .or-route-picker { grid-template-columns: 1fr; }
+}
+
+/* Compact original-application-style activity information panel. */
+.activity-summary {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #8b8b8b;
+    background: #f2f2f2;
+    color: #202020;
+}
+.activity-summary h4 { margin: 0 0 0.4rem; font-size: 1rem; }
+.activity-summary dl { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 0.2rem 0.8rem; }
+.activity-summary dt { font-weight: 600; }
+.activity-summary dd { margin: 0; }
+
+.or-cab-panel {
+    background: #151515;
+    border: 1px solid #777;
+    padding: 6px;
+    margin: 8px 0;
+    max-height: 520px;
+    overflow: auto;
+}
+.or-cab-panel img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 480px;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+.or-cab-live-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #555;
+}
+.or-cab-live-control {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px;
+    color: #eee;
+    background: #252525;
+    border: 1px solid #666;
+    font-size: 0.85rem;
+}
+.or-cab-live-control output {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.or-cab-live-control input,
+.or-cab-live-control select {
+    width: 100%;
+}
+
+
+/* Native MainForm command strip */
+
+.or-mainform-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 42px;
+    margin: 5px 0 8px;
+    padding: 5px 7px;
+    border: 1px solid #aaa;
+    background: #e8e8e8;
+}
+.or-menu-command {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 27px;
+    padding: 3px 13px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #111;
+    text-decoration: none;
+    box-shadow: inset 0 1px 0 #fff;
+}
+.or-menu-command:hover:not(.disabled) {
+    border-color: #4d78a8;
+    background: #eaf2fb;
+}
+.or-menu-command.primary {
+    min-width: 82px;
+    font-weight: 700;
+}
+.or-menu-command.disabled {
+    color: #888;
+    background: #eee;
+    cursor: not-allowed;
+}
+.or-menu-logging {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 0 5px;
+    color: #333;
+    font-size: 12px;
+}
+@media (max-width: 560px) {
+    .or-menu-logging { margin-left: 0; }
+}
+
+
+/* MainForm visual baseline: preserve the original Windows Forms character. */
+:root {
+    color-scheme: light;
+    font-family: Arial, "Segoe UI", sans-serif;
+    background: #e5e5e5;
+    color: #202020;
+}
+body {
+    display: block;
+    min-height: 100vh;
+    padding: 16px;
+    background: #e5e5e5;
+    color: #202020;
+}
+.shell {
+    width: min(900px, 100%);
+    min-height: 560px;
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px solid #8f8f8f;
+    border-radius: 0;
+    background: #f4f4f4;
+    box-shadow: 0 2px 8px #0002;
+    color: #202020;
+}
+.or-mainform-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 2px 8px 7px;
+    border-bottom: 1px solid #b7b7b7;
+    color: #333;
+}
+.or-mainform-heading h1 {
+    margin: 0;
+    color: #555;
+    font-size: 22px;
+    font-weight: 700;
+}
+.or-mainform-heading span {
+    color: #555;
+    font-size: 11px;
+}
+.route-choice,
+.import-panel {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: #fff;
+    color: #202020;
+}
+.route-card,
+.route-row,
+.route-details,
+.activity-summary,
+.driving-settings {
+    border: 1px solid #b5b5b5;
+    border-radius: 0;
+    background: #f8f8f8;
+    color: #202020;
+    box-shadow: none;
+}
+.route-card:hover,
+.route-card.selected,
+.route-row.selected {
+    border-color: #4776a8;
+    box-shadow: inset 0 0 0 1px #4776a8;
+}
+.route-card-tag,
+.route-row span,
+.route-details dt,
+.keyboard-control-pad strong {
+    color: #333;
+}
+.route-card-description,
+.route-row small,
+.note,
+.hint {
+    color: #555;
+}
+input[type="file"],
+select,
+input:not([type="checkbox"]):not([type="range"]),
+textarea {
+    border: 1px solid #888;
+    border-radius: 0;
+    background: #fff;
+    color: #202020;
+}
+button,
+.package-actions button,
+.route-camera-presets button {
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: linear-gradient(#fff, #e8e8e8);
+    color: #202020;
+    box-shadow: inset 0 1px 0 #fff;
+}
+button:hover:not(:disabled),
+.package-actions button:hover:not(:disabled),
+.route-camera-presets button:hover {
+    border-color: #4776a8;
+    background: #eaf2fb;
+}
+.or-mainform-footer {
+    border-top-color: #aaa;
+}
+@media (max-width: 720px) {
+    body { padding: 0; }
+    .shell {
+        width: 100%;
+        min-height: 100vh;
+        padding: 10px;
+        border-left: 0;
+        border-right: 0;
+        box-shadow: none;
+    }
+}
+
+
+/* Original MainForm two-column selection/details composition. */
+.or-mainform-workspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 34%) minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    margin: 8px 0;
+}
+.or-mainform-selection, .or-mainform-details {
+    min-width: 0;
+    border: 1px solid #9a9a9a;
+    background: #f7f7f7;
+    padding: 7px;
+}
+.or-mainform-group {
+    min-width: 0;
+    margin: 0 0 7px;
+    padding: 7px;
+    border: 1px solid #b0b0b0;
+    background: #fff;
+}
+.or-mainform-group h2 {
+    margin: -1px 0 7px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #d0d0d0;
+    font-size: 13px;
+}
+.or-mainform-group > label,
+.or-mode-panel > label {
+    display: block;
+    margin: 5px 0 3px;
+    font-weight: 600;
+}
+.or-mainform-group select,
+.or-mode-panel select {
+    width: 100%;
+}
+.or-mode-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 4px 0 8px;
+}
+.or-mode-switch label, .or-multiplayer-disabled label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.or-mode-panel {
+    display: grid;
+    gap: 5px;
+    padding: 7px;
+    border: 1px solid #c3c3c3;
+    background: #f6f6f6;
+}
+.or-compact-details {
+    display: grid;
+    grid-template-columns: minmax(80px, 0.45fr) minmax(0, 1fr);
+    gap: 3px 8px;
+    margin: 7px 0 0;
+}
+.or-compact-details dt { font-weight: 600; }
+.or-compact-details dd { margin: 0; overflow-wrap: anywhere; }
+.or-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+}
+.or-multiplayer-disabled {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+.or-multiplayer-disabled label:nth-child(n+3) { grid-column: 1 / -1; }
+.or-multiplayer-disabled input[type="text"] { width: 100%; }
+.or-mainform-command-groups {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.4fr);
+    gap: 7px;
+}
+.or-mainform-details .or-mainform-group { min-height: 95px; }
+.or-menu-dropdown { position: relative; }
+.or-menu-dropdown summary {
+    min-height: 27px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 13px;
+    border: 1px solid #888;
+    background: linear-gradient(#fff, #e8e8e8);
+    cursor: pointer;
+    list-style: none;
+}
+.or-menu-dropdown summary::-webkit-details-marker { display: none; }
+.or-dropdown-content {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 2px);
+    left: 0;
+    min-width: 190px;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #888;
+    background: #fff;
+    box-shadow: 0 3px 8px #0003;
+}
+.or-dropdown-content a, .or-dropdown-content button {
+    display: block;
+    width: 100%;
+    padding: 5px 7px;
+    border: 0;
+    background: #fff;
+    color: #111;
+    text-align: left;
+    text-decoration: none;
+    font: inherit;
+}
+.or-dropdown-content a:hover, .or-dropdown-content button:hover:not(:disabled) { background: #eaf2fb; }
+.or-logging-toggle { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; }
+.or-notification-indicator {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #aaa;
+    border-radius: 50%;
+    background: #eee;
+    color: #555;
+    font-weight: 700;
+}
+.or-options-dialog {
+    position: fixed;
+    z-index: 1000;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(720px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    margin: 0;
+    border: 1px solid #777;
+    background: #fff;
+    box-shadow: 0 2px 8px #0002;
+}
+.or-options-dialog::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: #0005;
+}
+.or-options-header, .or-options-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 7px;
+    background: #ededed;
+    border-bottom: 1px solid #aaa;
+}
+.or-options-header h2 { margin: 0; }
+.or-options-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 6px 0;
+    border-bottom: 1px solid #aaa;
+    background: #ededed;
+}
+.or-options-tabs button {
+    min-height: 26px;
+    padding: 3px 8px;
+    border: 1px solid #999;
+    border-bottom: 0;
+    background: #e4e4e4;
+    color: #222;
+    font-size: 12px;
+}
+.or-options-tabs button[aria-selected="true"] {
+    position: relative;
+    background: #fff;
+    font-weight: 700;
+}
+.or-options-page {
+    min-height: 180px;
+    padding: 12px;
+    display: grid;
+    align-content: start;
+    gap: 9px;
+}
+.or-options-page h3 { margin: 0; }
+.or-options-page label { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.or-options-page input[type="range"] { min-width: 140px; }
+.or-options-footer {
+    border-top: 1px solid #aaa;
+    border-bottom: 0;
+}
+.or-options-footer .hint { margin-right: auto; }
+@media (max-width: 780px) {
+    .or-mainform-workspace { grid-template-columns: 1fr; }
+    .or-mainform-command-groups { grid-template-columns: 1fr; }
+    .or-options-tabs { gap: 3px; }
 }

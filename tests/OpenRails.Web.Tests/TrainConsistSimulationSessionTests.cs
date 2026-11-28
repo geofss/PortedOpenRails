@@ -7,6 +7,65 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainConsistSimulationSessionTests
 {
     [Fact]
+    public void AppliesNativeTractionRampOnFixedStepsAndRestoresRampState()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "Ramping", 10_000, 10_000, 1_000_000, 100, 0, null, "ramping.eng",
+            TractionForceRampUpNewtonsPerSecond: 1_000,
+            TractionForceRampDownNewtonsPerSecond: 2_000,
+            TractionForceRampDownToZeroNewtonsPerSecond: 10_000);
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+        var rampSnapshot = session.CaptureState();
+
+        Assert.Equal(new[] { 100f }, rampSnapshot.AppliedTractionForceNewtonsByCar);
+        Assert.Equal(0.01, session.State.Cars[0].SpeedMetersPerSecond, 8);
+
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+        var expectedSpeed = session.State.Cars[0].SpeedMetersPerSecond;
+
+        session.RestoreState(rampSnapshot);
+        session.AdvanceWithBrakeCommands(0.1, new[] { 100f }, new[] { 0d }, new[] { 0d },
+            resistance, new[] { 0d });
+
+        Assert.Equal(expectedSpeed, session.State.Cars[0].SpeedMetersPerSecond, 8);
+    }
+
+    [Fact]
+    public void FailedFixedStepRollsBackPneumaticAndTractionAuxiliaryState()
+    {
+        var locomotive = new LocomotiveTractionMetadata(
+            "Transactional", 10_000, 10_000, 1_000_000, 100, 0, null, "transactional.eng",
+            TractionForceRampUpNewtonsPerSecond: 1_000);
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { locomotive },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        var pipeBefore = session.BrakePipeState.PressuresKPa.ToArray();
+        var cylinderBefore = session.BrakeCylinderState.PressuresKPa.ToArray();
+        var distributorBefore = session.BrakeDistributorState.AuxiliaryReservoirPressuresKPa.ToArray();
+
+        Assert.Throws<InvalidOperationException>(() => session.AdvanceWithPneumaticBrakes(
+            0.1, new[] { 100f }, 100, new[] { 5_000d },
+            (_, _) => throw new InvalidOperationException("fixture failure"),
+            new[] { 0d }));
+
+        Assert.Equal(0, session.SimulationTimeSeconds);
+        Assert.Equal(pipeBefore, session.BrakePipeState.PressuresKPa);
+        Assert.Equal(cylinderBefore, session.BrakeCylinderState.PressuresKPa);
+        Assert.Equal(distributorBefore, session.BrakeDistributorState.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(0, session.CaptureState().AppliedTractionForceNewtonsByCar![0]);
+    }
+
+    [Fact]
     public void BrakeCommandConsistScenarioRetardsTrainAcrossFixedSteps()
     {
         var initial = new TrainConsistMotionState(new[]
@@ -133,6 +192,32 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Equal(beforeTime, session.SimulationTimeSeconds, 8);
         Assert.Equal(beforeDropped, session.DroppedTimeSeconds, 8);
         Assert.Equal(beforePaused, session.IsPaused);
+    }
+
+    [Fact]
+    public void PneumaticBrakeTicksAlsoIntegrateDynamicSlackCouplerForces()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, 0, 0),
+            new TrainCarMotionState(1_000, 0, 2.2)
+        });
+        var session = new TrainConsistSimulationSession(initial,
+            new LocomotiveTractionMetadata?[] { null, null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+
+        var steps = session.AdvanceWithPneumaticBrakesAndDynamicCouplers(
+            0.1, new[] { 0f, 0f }, 0, new[] { 0d, 0d },
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0),
+            new[] { 2d }, new[] { 0.1d }, new[] { 1_000d },
+            new[] { 0d }, new[] { 5_000d }, new[] { 5_000d });
+
+        Assert.Equal(1, steps);
+        Assert.True(session.State.Cars[0].SpeedMetersPerSecond > 0);
+        Assert.True(session.State.Cars[1].SpeedMetersPerSecond < 0);
+        Assert.Equal(0,
+            session.State.Cars[0].SpeedMetersPerSecond + session.State.Cars[1].SpeedMetersPerSecond, 8);
+        Assert.All(session.BrakeCylinderState.PressuresKPa, pressure => Assert.Equal(0, pressure));
     }
 
     [Fact]
@@ -290,6 +375,34 @@ public sealed class TrainConsistSimulationSessionTests
     }
 
     [Fact]
+    public void RejectsOutOfRangeBrakeCommandsBeforeAdvancingOrWaitingForAFixedStep()
+    {
+        var initial = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });
+        var session = new TrainConsistSimulationSession(initial, new LocomotiveTractionMetadata?[] { null },
+            fixedStepSeconds: 0.1, maximumFrameSeconds: 0.5, maximumStepsPerFrame: 8);
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommands(
+            0, new[] { 0f }, new[] { -1d }, new[] { 1_000d }, resistance, new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithBrakeCommands(
+            0, new[] { 0f }, new[] { 101d }, new[] { 1_000d }, resistance, new[] { 0d }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithCommonAcceleration(
+            0, new[] { 0f }, resistance, 0, brakePercentByCar: new[] { 101d },
+            maximumBrakeForceNewtonsByCar: new[] { 1_000d }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
+    public void RejectsUnknownThrottleResponseAtConstruction()
+    {
+        var initial = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainConsistSimulationSession(
+            initial, new LocomotiveTractionMetadata?[] { null },
+            new[] { (LocomotiveThrottleResponse)99 }));
+    }
+
+    [Fact]
     public void RejectsInputArraySizesThatDoNotMatchTheConsist()
     {
         var initial = new TrainConsistMotionState(new[]
@@ -432,6 +545,22 @@ public sealed class TrainConsistSimulationSessionTests
         Assert.Throws<ArgumentException>(() => session.AdvanceWithCommonAcceleration(
             0.1, new[] { 0f }, (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0), 0,
             brakePercentByCar: new[] { 0d, 0d }, maximumBrakeForceNewtonsByCar: new[] { 1_000d }));
+        Assert.Equal(0, session.SimulationTimeSeconds);
+    }
+
+    [Fact]
+    public void AutomaticCouplerPathRejectsOutOfRangeBrakeCommandsWithoutAdvancing()
+    {
+        var session = new TrainConsistSimulationSession(
+            new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) }),
+            new LocomotiveTractionMetadata?[] { null });
+        Func<int, TrainCarMotionState, TrainCarResistanceForces> resistance =
+            (_, _) => new TrainCarResistanceForces(0, 0, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithAutomaticCouplers(
+            0, new[] { 0f }, new[] { -0.1d }, new[] { 1_000d }, resistance));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.AdvanceWithAutomaticCouplers(
+            0, new[] { 0f }, new[] { 100.1d }, new[] { 1_000d }, resistance));
         Assert.Equal(0, session.SimulationTimeSeconds);
     }
 

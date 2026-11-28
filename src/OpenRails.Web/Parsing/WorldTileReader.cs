@@ -31,8 +31,33 @@ public sealed class WorldTileReader
             switch (objectBlock.ID)
             {
                 case TokenID.Static:
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, "Static"));
+                    break;
                 case TokenID.CollideObject:
-                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics));
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, "CollideObject"));
+                    break;
+                // Open Rails treats these WORLD records as object instances with
+                // the common filename/position/orientation fields. Preserve them
+                // as scenery placements instead of silently discarding them.
+                case TokenID.CarSpawner:
+                case (TokenID)357:
+                case TokenID.Siding:
+                case (TokenID)361:
+                case TokenID.Platform:
+                case TokenID.Forest:
+                case TokenID.LevelCr:
+                case TokenID.Dyntrack:
+                case (TokenID)306:
+                case TokenID.Transfer:
+                case (TokenID)363:
+                case TokenID.Gantry:
+                case (TokenID)356:
+                case TokenID.Pickup:
+                case (TokenID)359:
+                case TokenID.Hazard:
+                case TokenID.Signal:
+                case TokenID.Speedpost:
+                    staticObjects.Add(ReadStaticObject(objectBlock, diagnostics, objectBlock.ID.ToString()));
                     break;
                 case TokenID.TrackObj:
                     trackObjects.Add(ReadTrackObject(objectBlock, diagnostics));
@@ -47,7 +72,7 @@ public sealed class WorldTileReader
         return new WorldTileData(normalized, tileX, tileZ, staticObjects, trackObjects, diagnostics);
     }
 
-    private static StaticWorldObject ReadStaticObject(SBR block, List<string> diagnostics)
+    private static StaticWorldObject ReadStaticObject(SBR block, List<string> diagnostics, string objectKind)
     {
         var uid = 0u;
         string? fileName = null;
@@ -56,6 +81,11 @@ public sealed class WorldTileReader
         WorldMatrix3x3? matrix = null;
         uint staticFlags = 0;
         uint worldDatabaseId = 0;
+        string? treeTexture = null;
+        WorldFloatRange? forestScaleRange = null;
+        WorldFloatPair? forestArea = null;
+        int? forestPopulation = null;
+        WorldFloatPair? forestTreeSize = null;
 
         while (!block.EndOfBlock())
         {
@@ -69,11 +99,33 @@ public sealed class WorldTileReader
                 case TokenID.Matrix3x3: matrix = ReadMatrix(field); break;
                 case TokenID.StaticFlags: staticFlags = field.ReadFlags(); break;
                 case TokenID.VDbId: worldDatabaseId = field.ReadUInt(); break;
+                case TokenID.TreeTexture: treeTexture = field.ReadString(); break;
+                case TokenID.ScaleRange: forestScaleRange = ReadFloatRange(field); break;
+                case TokenID.Area: forestArea = ReadFloatPair(field); break;
+                case TokenID.Population: forestPopulation = field.ReadInt(); break;
+                case TokenID.TreeSize: forestTreeSize = ReadFloatPair(field); break;
                 default: AddDiagnostic(diagnostics, $"Skipped unsupported STATIC field token 0x{(ushort)field.ID:X4}."); field.Skip(); break;
             }
         }
 
-        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags, worldDatabaseId);
+        return new StaticWorldObject(uid, fileName, position, direction, matrix, staticFlags,
+            worldDatabaseId, objectKind, treeTexture, forestScaleRange, forestArea, forestPopulation, forestTreeSize);
+    }
+
+    private static WorldFloatRange ReadFloatRange(SBR block)
+    {
+        block.VerifyID(TokenID.ScaleRange);
+        var value = new WorldFloatRange(block.ReadFloat(), block.ReadFloat());
+        block.VerifyEndOfBlock();
+        return value;
+    }
+
+    private static WorldFloatPair ReadFloatPair(SBR block)
+    {
+        var first = block.ReadFloat();
+        var second = block.ReadFloat();
+        block.VerifyEndOfBlock();
+        return new WorldFloatPair(first, second);
     }
 
     private static TrackWorldObject ReadTrackObject(SBR block, List<string> diagnostics)
@@ -208,6 +260,9 @@ public sealed record WorldMatrix3x3(
     float CX, float CY, float CZ);
 public sealed record WorldJunctionPosition(int TileX, int TileZ, float X, float Y, float Z);
 
+public sealed record WorldFloatRange(float Minimum, float Maximum);
+public sealed record WorldFloatPair(float First, float Second);
+
 public sealed record StaticWorldObject(
     uint Uid,
     string? FileName,
@@ -215,7 +270,13 @@ public sealed record StaticWorldObject(
     WorldQuaternion? Direction,
     WorldMatrix3x3? Matrix,
     uint StaticFlags,
-    uint WorldDatabaseId);
+    uint WorldDatabaseId,
+    string ObjectKind = "Static",
+    string? TreeTexture = null,
+    WorldFloatRange? ForestScaleRange = null,
+    WorldFloatPair? ForestArea = null,
+    int? ForestPopulation = null,
+    WorldFloatPair? ForestTreeSize = null);
 
 public sealed record TrackWorldObject(
     uint Uid,

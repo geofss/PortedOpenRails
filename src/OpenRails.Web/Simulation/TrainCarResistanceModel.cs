@@ -67,6 +67,10 @@ public sealed class TrainCarResistanceModel
         var gravity = state.MassKg * GravityMetersPerSecondSquared *
             Math.Sin(parameters.GradientRadians);
 
+        if (!double.IsFinite(rolling) || !double.IsFinite(wind) || !double.IsFinite(gravity))
+            throw new ArgumentOutOfRangeException(nameof(state),
+                "Calculated rolling, aerodynamic, or grade force exceeded the finite simulation range.");
+
         return new TrainCarResistanceForces(
             gravity,
             rolling,

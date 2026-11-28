@@ -21,7 +21,17 @@ public sealed record TrackNetworkRoute(
     IReadOnlyList<TrackNetworkRouteSegment> Segments,
     IReadOnlyList<string> Diagnostics,
     double LengthMeters,
-    int? PendingJunctionNodeIndex = null);
+    int? PendingJunctionNodeIndex = null)
+{
+    /// <summary>
+    /// True only when the selected traversal has a usable extent and no unresolved
+    /// junction, geometry gap, or traversal safety-limit diagnostic. A previewable
+    /// partial route is not automatically safe to expose as a drivable route.
+    /// </summary>
+    public bool IsDriveReady => Segments.Count > 0 &&
+        double.IsFinite(LengthMeters) && LengthMeters > 0 &&
+        PendingJunctionNodeIndex is null && Diagnostics.Count == 0;
+}
 
 /// <summary>
 /// Follows connected vector nodes through TDB pins instead of treating each
@@ -43,6 +53,9 @@ public sealed class TrackNetworkRouteBuilder
         ArgumentNullException.ThrowIfNull(network);
         if (maximumSegments <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumSegments));
+        if (network.VectorPaths.Any(path => path is null ||
+            !double.IsFinite(path.LengthMeters) || path.LengthMeters <= 0))
+            throw new InvalidDataException("Track network contains a vector path with invalid length metadata.");
 
         var byNode = network.VectorPaths.ToDictionary(path => path.TrackNodeIndex);
         if (!byNode.TryGetValue(startingTrackNodeIndex, out var first))
@@ -144,6 +157,14 @@ public sealed class TrackNetworkRouteBuilder
             }
 
             var next = candidates[0];
+            if (!preferredSelectedAtThisJunction && !double.IsFinite(next.Gap))
+            {
+                pendingJunctionNodeIndex = currentNode;
+                diagnostics.Add(
+                    $"Route traversal stopped at junction node {currentNode}: the only available continuation " +
+                    $"vector {next.Path.TrackNodeIndex} has no usable endpoint geometry.");
+                break;
+            }
             if (double.IsFinite(next.Gap) && next.Gap > 25)
             {
                 diagnostics.Add(
@@ -159,10 +180,15 @@ public sealed class TrackNetworkRouteBuilder
             currentPosition = GetEndPosition(next.Path, next.Reversed);
         }
 
-        if (segments.Count == maximumSegments)
+        if (segments.Count == maximumSegments &&
+            network.VectorPaths.Any(path => !visited.Contains(path.TrackNodeIndex) &&
+                path.ConnectedNodeIndices.Count == 2 &&
+                path.ConnectedNodeIndices.Contains(currentNode)))
             diagnostics.Add($"Route traversal reached the safety limit of {maximumSegments} vector nodes.");
 
         var length = segments.Sum(segment => segment.LengthMeters);
+        if (!double.IsFinite(length) || length <= 0)
+            throw new InvalidDataException("Connected route length exceeded the finite world-distance range.");
         return new TrackNetworkRoute(
             Array.AsReadOnly(segments.ToArray()),
             Array.AsReadOnly(diagnostics.ToArray()),

@@ -43,11 +43,21 @@ public sealed class TrainConsistMotionIntegrator
     }
 }
 
-[method: JsonConstructor]
-public sealed record TrainConsistMotionState(IReadOnlyList<TrainCarMotionState> Cars)
+/// <summary>
+/// Immutable snapshot of the ordered vehicle states in a consist. The public
+/// constructor defensively copies even IReadOnlyList inputs because that
+/// interface does not guarantee that the underlying collection is immutable.
+/// </summary>
+public sealed record TrainConsistMotionState
 {
-    public TrainConsistMotionState(IEnumerable<TrainCarMotionState> cars)
-        : this(Array.AsReadOnly(cars?.ToArray() ?? throw new ArgumentNullException(nameof(cars))))
+    public IReadOnlyList<TrainCarMotionState> Cars { get; }
+
+    [JsonConstructor]
+    public TrainConsistMotionState(IReadOnlyList<TrainCarMotionState> cars)
     {
+        ArgumentNullException.ThrowIfNull(cars);
+        if (cars.Any(car => car is null))
+            throw new ArgumentException("A consist snapshot cannot contain null car states.", nameof(cars));
+        Cars = Array.AsReadOnly(cars.ToArray());
     }
 }

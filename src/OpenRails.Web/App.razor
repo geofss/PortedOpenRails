@@ -3,33 +3,356 @@
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 @implements IDisposable
 
 <main class="shell">
-    <p class="eyebrow">OPEN RAILS · WEB PORT</p>
-    <h1>PortedOpenRails</h1>
-    <p class="status">Milestone 3 · Route track network</p>
-    <p class="note">Choose the built-in preview or import your own route ZIP. Imported route metadata, track databases, and track-section geometry are read through the browser virtual content pipeline.</p>
+    <header class="or-mainform-heading">
+        <h1>Open Rails</h1>
+        <span>Desktop browser edition</span>
+    </header>
+    <section class="or-mainform-workspace" aria-label="Open Rails main menu">
+        <aside class="or-mainform-selection">
+            <div class="or-mainform-group">
+                <h2>Installation profile</h2>
+                <label for="or-profile">Profile</label>
+                <select id="or-profile" disabled>
+                    <option>Browser content profile</option>
+                </select>
+                <p class="hint">Browser storage is the active content root. Imported packages are managed below.</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Route</h2>
+                <label for="or-main-route">Selected route</label>
+                <select id="or-main-route" value="@SelectedRouteIndex" @onchange="SelectRouteFromMenu" disabled="@(isLoading || routeChoices.Count == 0)">
+                    <option value="-1">Select a route…</option>
+                    @for (var routeIndex = 0; routeIndex < routeChoices.Count; routeIndex++)
+                    {
+                        var routeOption = routeChoices[routeIndex];
+                        <option value="@routeIndex">@routeOption.Metadata.Name</option>
+                    }
+                </select>
+                <p class="hint">@((selectedRoute is null) ? "Import a route package to populate this list." : selectedRoute.Metadata.RouteId + " · " + selectedRoute.Metadata.Name)</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Mode</h2>
+                <div class="or-mode-switch" role="radiogroup" aria-label="Game mode">
+                    <label><input type="radio" name="or-mode" value="activity" checked="@isActivityMode" @onchange="() => SetMode(true)" /> Activity</label>
+                    <label><input type="radio" name="or-mode" value="timetable" checked="@(!isActivityMode)" @onchange="() => SetMode(false)" /> Timetable</label>
+                </div>
+                @if (isActivityMode)
+                {
+                    <div class="or-mode-panel">
+                        <label for="or-main-activity">Activity</label>
+                        <select id="or-main-activity" value="@(isExploreMode ? "__explore__" : selectedActivityPath)" @onchange="SelectActivity" disabled="@(selectedRoute is null || isLoading)">
+                            <option value="">Select an activity…</option>
+                            <option value="__explore__">Explore</option>
+                            @foreach (var activityPath in ActivityChoices)
+                            {
+                                <option value="@activityPath">@System.IO.Path.GetFileNameWithoutExtension(activityPath)</option>
+                            }
+                        </select>
+                        @if (consistCatalog is { Consists.Count: > 0 })
+                        {
+                            <label for="or-main-locomotive">Locomotive</label>
+                            <select id="or-main-locomotive" value="@SelectedLocomotiveKey" @onchange="SelectLocomotive" disabled="@isLoading">
+                                <option value="">Select a locomotive…</option>
+                                @foreach (var locomotive in LocomotiveChoices)
+                                {
+                                    <option value="@($"{locomotive.ConsistName}|{locomotive.Uid}")">@locomotive.CarName · @locomotive.ConsistName</option>
+                                }
+                            </select>
+                            <label for="or-main-consist">Consist</label>
+                            <select id="or-main-consist" value="@SelectedConsist?.Name" @onchange="SelectConsist" disabled="@isLoading">
+                                @foreach (var consist in consistCatalog.Consists)
+                                {
+                                    <option value="@consist.Name">@consist.Name · @consist.Cars.Count cars</option>
+                                }
+                            </select>
+                        }
+                        @if (isExploreMode)
+                        {
+                            <label for="or-explore-start">Starting at</label>
+                            <select id="or-explore-start" value="@selectedExploreStart" @onchange="SelectExploreStart" disabled="@(ExploreStartChoices.Count == 0)">
+                                <option value="">Select a starting location…</option>
+                                @foreach (var start in ExploreStartChoices)
+                                {
+                                    <option value="@start">@start</option>
+                                }
+                            </select>
+                            <label for="or-explore-destination">Heading to</label>
+                            <select id="or-explore-destination" value="@selectedExplorePathId" @onchange="SelectExplorePath" disabled="@(ExploreDestinationChoices.Count == 0)">
+                                <option value="">Select a destination…</option>
+                                @foreach (var path in ExploreDestinationChoices)
+                                {
+                                    <option value="@path.PathId">@path.End · @path.Name</option>
+                                }
+                            </select>
+                            <p class="hint">Explore path selection is read from native .pat files. Start remains unavailable until the selected path is bound to the TDB driving traversal.</p>
+                        }
+                        @if (selectedActivityMetadata is { } activity)
+                        {
+                            <dl class="or-compact-details">
+                                <dt>Time</dt><dd>@activity.StartTime</dd>
+                                <dt>Duration</dt><dd>@(activity.DurationMinutes / 60) h @(activity.DurationMinutes % 60) min</dd>
+                                <dt>Season</dt><dd>@activity.SeasonName</dd>
+                                <dt>Weather</dt><dd>@activity.WeatherName</dd>
+                                <dt>Difficulty</dt><dd>@activity.DifficultyName</dd>
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="hint">Select a route and activity. Activity-specific locomotive, consist, start location and environment values are resolved from its native definition.</p>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="or-mode-panel">
+                        <label for="or-timetable-set">Timetable set</label>
+                        <select id="or-timetable-set" value="@selectedTimetableSetPath" @onchange="SelectTimetableSet" disabled="@(composite is null || isLoading)">
+                            <option value="">Select a timetable set…</option>
+                            @foreach (var timetableSet in TimetableSetChoices)
+                            {
+                                <option value="@timetableSet">@System.IO.Path.GetFileName(timetableSet)</option>
+                            }
+                        </select>
+                        <label for="or-timetable-file">Timetable</label>
+                        <select id="or-timetable-file" value="@selectedTimetablePath" @onchange="SelectTimetable" disabled="@(string.IsNullOrWhiteSpace(selectedTimetableSetPath) || isLoading)">
+                            <option value="">Select a timetable…</option>
+                            @foreach (var timetablePath in TimetablesInSelectedSet)
+                            {
+                                <option value="@timetablePath">@System.IO.Path.GetFileName(timetablePath)</option>
+                            }
+                        </select>
+                        <label for="or-timetable-day">Day</label>
+                        <select id="or-timetable-day" disabled><option>Native day selection not yet parsed</option></select>
+                        <label for="or-timetable-season">Season</label>
+                        <select id="or-timetable-season" disabled><option>Native season selection not yet connected</option></select>
+                        <label for="or-timetable-weather">Weather</label>
+                        <select id="or-timetable-weather" disabled><option>Native weather selection not yet connected</option></select>
+                        <label for="or-timetable-weather-file">Weather file</label>
+                        <select id="or-timetable-weather-file" disabled><option>Weather-file catalog not yet ported</option></select>
+                        <label for="or-timetable-train">Train</label>
+                        <select id="or-timetable-train" value="@selectedTimetableTrain" @onchange="SelectTimetableTrain" disabled="@(selectedTimetable is null)">
+                            <option value="">Select a train…</option>
+                            @foreach (var train in selectedTimetable?.Trains ?? Array.Empty<NativeTimetableTrainDefinition>())
+                            {
+                                <option value="@train.Train">@train.Train</option>
+                            }
+                        </select>
+                        @if (selectedTimetable is { } timetable)
+                        {
+                            <p class="hint">@timetable.Description</p>
+                            @if (!string.IsNullOrWhiteSpace(selectedTimetableTrainDefinition?.Briefing))
+                            {
+                                <p>@selectedTimetableTrainDefinition.Briefing</p>
+                            }
+                            <p class="hint">@timetable.Trains.Count train column(s) found · native timetable selection only; timetable dispatch is not yet wired to Start.</p>
+                        }
+                        else
+                        {
+                            <p class="hint">Timetable files are discovered from imported route and content packages.</p>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="or-mainform-group">
+                <h2>Singleplayer</h2>
+                <div class="or-action-row">
+                    <a class="or-menu-command primary @(CanStartSelectedMode ? "" : "disabled")" href="@(CanStartSelectedMode ? "#driving-controls" : "#route-heading")" aria-disabled="@(!CanStartSelectedMode)">Start</a>
+                    <button type="button" disabled title="Resume and replay save-state selection is not yet ported">Resume / Replay…</button>
+                </div>
+                <p class="hint">Start is enabled only when the selected route, connected track, consist and simulation session are ready.</p>
+            </div>
+            <div class="or-mainform-group">
+                <h2>Multiplayer</h2>
+                <fieldset disabled class="or-multiplayer-disabled">
+                    <label><input type="radio" name="or-mp-mode" checked /> Client</label>
+                    <label><input type="radio" name="or-mp-mode" /> Server</label>
+                    <label>User name <input type="text" /></label>
+                    <label>Host/port <input type="text" /></label>
+                    <div class="or-action-row"><button type="button">Start MP</button><button type="button">Resume MP</button></div>
+                </fieldset>
+                <p class="hint">Unavailable: the browser-compatible multiplayer transport and session lifecycle have not been ported.</p>
+            </div>
+        </aside>
+        <section class="or-mainform-details" aria-label="Main menu commands and details">
+            <div class="or-mainform-command-groups">
+                <div class="or-mainform-group">
+                    <h2>Open Rails</h2>
+                    <div class="or-action-row">
+                        <button type="button" @onclick="OpenOptionsDialog">Options</button>
+                        <a class="or-menu-command" href="#content-packages">Content</a>
+                        <details class="or-menu-dropdown">
+                            <summary>Tools ▼</summary>
+                            <div class="or-dropdown-content">
+                                <a href="#content-packages">Content packages</a>
+                                <a href="#route-heading">Route diagnostics</a>
+                                <button type="button" disabled title="The upstream TestingForm is not yet ported">Testing</button>
+                            </div>
+                        </details>
+                        <details class="or-menu-dropdown">
+                            <summary>Documents ▼</summary>
+                            <div class="or-dropdown-content">
+                                <a href="https://open-rails.readthedocs.io/" target="_blank" rel="noopener noreferrer">User guide</a>
+                                <a href="https://open-rails.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">Documentation</a>
+                                <a href="https://github.com/openrails/openrails" target="_blank" rel="noopener noreferrer">Source repository</a>
+                            </div>
+                        </details>
+                    </div>
+                    <label class="or-logging-toggle"><input type="checkbox" @bind="loggingEnabled" @bind:after="SaveBrowserPreferencesAsync" /> Logging</label>
+                    <p class="hint">Logging preference is currently a UI preference; native log-file routing is not yet ported to the browser.</p>
+                </div>
+                <div class="or-mainform-group or-notifications">
+                    <h2>Notifications</h2>
+                    <span class="or-notification-indicator" aria-label="Notifications unavailable">—</span>
+                    <p class="hint">Open Rails notification feed is not yet connected in this browser build.</p>
+                </div>
+            </div>
+            @if (showOptionsDialog)
+            {
+                <section class="or-options-dialog" role="dialog" aria-modal="true" aria-labelledby="or-options-title" tabindex="-1" @onkeydown="HandleOptionsDialogKeyDown">
+                    <header class="or-options-header">
+                        <h2 id="or-options-title">Options</h2>
+                        <button type="button" @onclick="CancelOptionsDialog" aria-label="Close Options">Close</button>
+                    </header>
+                    <nav class="or-options-tabs" role="tablist" aria-label="Options pages">
+                        @foreach (var tab in OptionTabs)
+                        {
+                            <button type="button" role="tab" id="@($"or-options-tab-{tab.Replace(" ", "-").ToLowerInvariant()}")" aria-controls="or-options-page" aria-selected="@(selectedOptionsTab == tab)" @onclick="() => SelectOptionsTab(tab)">@tab</button>
+                        }
+                    </nav>
+                    <div class="or-options-page" id="or-options-page" role="tabpanel" aria-labelledby="@($"or-options-tab-{selectedOptionsTab.Replace(" ", "-").ToLowerInvariant()}")">
+                        @switch (selectedOptionsTab)
+                        {
+                            case "General":
+                                <h3>General</h3>
+                                <p>Autosave, language, units, update mode, telemetry and general simulator preferences.</p>
+                                <label><input type="checkbox" @bind="browserAutosaveEnabled" @bind:after="SaveBrowserPreferencesAsync" /> Browser session autosave preference</label>
+                                <label>Autosave interval <select @bind="browserAutosaveMinutes" @bind:after="SaveBrowserPreferencesAsync"><option value="15">15 mins</option><option value="30">30 mins</option><option value="60">60 mins</option></select></label>
+                                <p class="hint">These browser preference controls are local UI state only; native save-game autosave is not yet connected.</p>
+                                break;
+                            case "Audio":
+                                <h3>Audio</h3>
+                                <p>Upstream controls: sound volume, external sound heard internally, sound detail level.</p>
+                                <label>Browser audio output <input type="range" min="0" max="100" @bind="browserAudioVolume" @bind:after="SaveBrowserPreferencesAsync" /> @browserAudioVolume%</label>
+                                <p class="hint">Volume preference is not yet wired to the simulator audio mixer.</p>
+                                break;
+                            case "Video":
+                                <h3>Video</h3>
+                                <p>Upstream controls: viewing distance, vertical FOV, object density, LOD bias, anti-aliasing, shadows, signal glow, overhead wires, distant mountains and VSync.</p>
+                                <p class="hint">The browser renderer currently exposes its own camera and quality controls in the route viewer. Native Open Rails video settings are not yet mapped to the WebGL renderer.</p>
+                                break;
+                            case "Simulation":
+                                <h3>Simulation</h3>
+                                <p>Upstream controls: locomotive start state, activity options, simple controls and physics, curve speed limits, coupler breakage, advanced adhesion, TCS scripts, alerter and air-brake options.</p>
+                                <p class="hint">The native option model and persistence have not yet been ported. Do not treat these as active simulator settings.</p>
+                                break;
+                            case "Keyboard":
+                                <h3>Keyboard</h3>
+                                <p>Native keyboard command mapping, export, defaults and conflict checking.</p>
+                                <p class="hint">Browser driving controls currently use the implemented keyboard bindings shown with the cab/driving panel. Full native command-map editing is pending.</p>
+                                break;
+                            case "RailDriver":
+                                <h3>RailDriver</h3>
+                                <p>Lever mapping, reverse directions, full-range throttle, export, defaults and calibration.</p>
+                                <p class="hint">Hardware integration is unavailable in this browser port.</p>
+                                break;
+                            case "Data logger":
+                                <h3>Data logger</h3>
+                                <p>Physics, performance, steam, station-stop and train-speed logging; separators and logging intervals.</p>
+                                <p class="hint">Native data logger output is not yet ported.</p>
+                                break;
+                            case "Evaluation":
+                                <h3>Evaluation</h3>
+                                <p>Evaluation logging intervals and event categories.</p>
+                                <p class="hint">Native evaluation logging is not yet ported.</p>
+                                break;
+                            case "System":
+                                <h3>System</h3>
+                                <p>Window size, windowed mode, language, update mode, performance tuner, web-server port and system confirmations.</p>
+                                <p class="hint">Browser viewport and runtime diagnostics are browser-managed; native system controls are not applicable or not yet ported.</p>
+                                break;
+                            case "Experimental":
+                                <h3>Experimental</h3>
+                                <p>Adhesion randomization, activity randomization, questionable braking parameter correction, shape warnings, MSTS environments and legacy superelevation.</p>
+                                <p class="hint">Experimental simulation flags are not yet connected to the native simulation model.</p>
+                                break;
+                        }
+                    </div>
+                    <footer class="or-options-footer">
+                        <span class="hint">Original Open Rails Options tab inventory; unsupported settings remain clearly identified.</span>
+                        <button type="button" @onclick="CommitOptionsDialog">OK</button>
+                        <button type="button" @onclick="CancelOptionsDialog">Cancel</button>
+                    </footer>
+                </section>
+            }
+        </section>
+    </section>
 
     <section class="route-choice" aria-labelledby="route-heading">
-        <h2 id="route-heading">Choose a route</h2>
+        <h2 id="route-heading">Route</h2>
         <div class="route-options">
-            <button class="route-card @(selectedDefault ? "selected" : "")" @onclick="SelectDefaultRoute">
-                <span class="route-card-title">Default Route</span>
-                <span class="route-card-tag">Built-in preview</span>
-                <span class="route-card-description">A starter route entry to explore the web-port interface. Track, scenery, and simulation are not included yet.</span>
-            </button>
             <label class="route-card upload-card">
-                <span class="route-card-title">Add Your Own Route</span>
-                <span class="route-card-tag">Import route ZIP</span>
-                <span class="route-card-description">Select ZIP content containing one or more .trk route metadata files.</span>
+                <span class="route-card-title">Browse route package…</span>
+                <span class="route-card-tag">Open Rails / MSTS ZIP</span>
+                <span class="route-card-description">Select a route archive containing its .trk, .tdb, TSECTION.DAT and route assets.</span>
                 <InputFile OnChange="HandleRouteZip" accept=".zip,application/zip" disabled="@isLoading" />
             </label>
         </div>
 
         @if (isLoading)
         {
-            <p class="status">Scanning ZIP and reading route metadata…</p>
+            <p class="status">@(largeUploadInProgress ? "Streaming large ZIP into browser disk storage…" : "Scanning ZIP and reading route metadata…")</p>
+        }
+        @if (largeUploadInProgress)
+        {
+            <p class="hint">Large archive upload: @((largeUploadBytes / 1_000_000_000d).ToString("N2")) / @((largeUploadTotalBytes / 1_000_000_000d).ToString("N2")) GB (@largeUploadPercent%)</p>
+            <progress max="100" value="@largeUploadPercent"></progress>
+        }
+        @if (!string.IsNullOrWhiteSpace(largePackageMessage))
+        {
+            <p class="success">@largePackageMessage</p>
+        }
+        @if (storedPackages.Count > 0)
+        {
+            <div class="route-details">
+                <h3>Large archives stored in this browser</h3>
+                @foreach (var package in storedPackages)
+                {
+                    <div class="route-row">
+                        <strong>@package.FileName</strong>
+                        <span>@((package.SizeBytes / 1_000_000_000d).ToString("N2")) GB</span>
+                        <small>OPFS · persistent protection: @(package.PersistentStorageGranted ? "granted" : "not granted")</small>
+                        <button type="button" @onclick="() => IndexStoredPackageAsync(package)" disabled="@isLoading">Index ZIP contents</button>
+                        <button type="button" @onclick="() => DeleteStoredPackageAsync(package)" disabled="@isLoading">Delete stored archive</button>
+                        @if (indexedPackages.TryGetValue(package.Id, out var archiveIndex))
+                        {
+                            <small>ZIP index: @archiveIndex.EntryCount files · @archiveIndex.RouteFiles.Count route metadata file(s) · @((archiveIndex.TotalUncompressedBytes / 1_000_000_000d).ToString("N2")) GB uncompressed</small>
+                            @foreach (var routeFile in archiveIndex.RouteFiles)
+                            {
+                                <small>Route candidate: <code>@routeFile</code></small>
+                                @if (stagedRouteMetadata.TryGetValue(package.Id, out var stagedRoutes))
+                                {
+                                    var stagedRoute = stagedRoutes.FirstOrDefault(route => route.Path == routeFile);
+                                    @if (stagedRoute is not null)
+                                    {
+                                        <small class="success">Parsed with upstream STFReader: @stagedRoute.Metadata.Name · ID @stagedRoute.Metadata.RouteId</small>
+                                        <small>@stagedRoute.Metadata.Description</small>
+                                        <button type="button" @onclick="() => LoadStagedRouteAsync(package, routeFile, stagedRoute.Metadata)" disabled="@isLoading">Load route into simulator</button>
+                                    }
+                                }
+                            }
+                            @if (archiveIndex.RouteFiles.Count == 0)
+                            {
+                                <small class="hint">No .trk route metadata files were found.</small>
+                            }
+                        }
+                    </div>
+                }
+            </div>
         }
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
@@ -37,29 +360,20 @@
         }
         @if (routeChoices.Count > 0)
         {
-            <div class="route-list">
-                <h3>Routes found</h3>
-                @foreach (var route in routeChoices)
-                {
-                    <button class="route-row @(selectedRoute?.Metadata.RouteId == route.Metadata.RouteId ? "selected" : "")" @onclick="() => SelectRoute(route)">
-                        <strong>@route.Metadata.Name</strong>
-                        <span>@route.Metadata.RouteId</span>
-                        <small>@route.Metadata.Description</small>
-                        <small>Source: @route.PackageName · @route.MetadataFile</small>
-                    </button>
-                }
+            <div class="or-route-picker">
+                <label for="or-route-select">Select route</label>
+                <select id="or-route-select" value="@SelectedRouteIndex" @onchange="SelectRouteFromMenu" disabled="@isLoading">
+                    <option value="-1">Select an installed route…</option>
+                    @for (var routeIndex = 0; routeIndex < routeChoices.Count; routeIndex++)
+                    {
+                        var routeOption = routeChoices[routeIndex];
+                        <option value="@routeIndex">@routeOption.Metadata.Name (@routeOption.Metadata.RouteId)</option>
+                    }
+                </select>
             </div>
         }
 
-        @if (selectedDefault)
-        {
-            <div class="route-details">
-                <h3>Default Route · Preview</h3>
-                <p>This built-in entry is a UI preview only. No route assets are bundled, and the simulator is not running yet.</p>
-                <p class="success">Default route selected</p>
-            </div>
-        }
-        else if (selectedRoute is not null)
+        @if (selectedRoute is not null)
         {
             <div class="route-details">
                 <h3>@selectedRoute.Metadata.Name</h3>
@@ -71,6 +385,10 @@
                     <dt>Metadata file</dt><dd><code>@selectedRoute.MetadataFile</code></dd>
                 </dl>
                 <p class="success">Route metadata loaded successfully 💚</p>
+                @if (string.Equals(selectedRoute.Metadata.RouteId, "SCE", StringComparison.OrdinalIgnoreCase))
+                {
+                    <p class="hint">Demo Model 1 © Making Tracks Ltd. Used and distributed with permission from the Open Rails Management Team.</p>
+                }
                 @if (isBuildingRoute)
                 {
                     <p class="status">Building route track network from the imported Open Rails data…</p>
@@ -93,10 +411,54 @@
                             </select>
                         </div>
                     }
+                    @if (serviceChoices.Count > 0)
+                    {
+                        <div class="route-details">
+                            <h3>Original service definitions</h3>
+                            <p class="hint">@loadedServices.Count service definitions parsed from TRAINS/SERVICES</p>
+                            <p class="hint">@loadedRoutePaths.Count route paths parsed · @loadedRoutePaths.Sum(path => path.Nodes.Count) linked path nodes</p>
+                            <label for="selected-service">Service consist profile</label>
+                            <select id="selected-service" value="@selectedServicePath" @onchange="SelectService">
+                                <option value="">Use manually selected consist</option>
+                                @foreach (var binding in serviceRouteBindings.Where(binding => binding.IsRunnable))
+                                {
+                                    <option value="@binding.Service.SourcePath">@binding.Service.Name · @binding.Consist!.Name · @binding.Service.InitialSpeedMetersPerSecond.ToString("N1") m/s</option>
+                                }
+                            </select>
+                            @if (SelectedServiceBinding is { } activeService)
+                            {
+                                <p class="hint">Driving service profile: @activeService.Service.Name · @activeService.Service.PathId · initial speed @((activeService.Service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h. The service path is validated and displayed above; movement currently follows the selected connected TDB route.</p>
+                            }
+                            @foreach (var path in loadedRoutePaths)
+                            {
+                                <p><strong>@path.Name</strong> · @path.Start → @path.End · @path.Nodes.Count nodes · @(path.IsPlayerPath ? "Player path" : "AI-only path")</p>
+                                @foreach (var diagnostic in path.Diagnostics)
+                                {
+                                    <p class="hint">@path.PathId: @diagnostic</p>
+                                }
+                            }
+                            @foreach (var binding in serviceRouteBindings)
+                            {
+                                <p><strong>@binding.Service.Name</strong> · consist @binding.Service.TrainConfig · path @binding.Service.PathId · initial speed @((binding.Service.InitialSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</p>
+                                @if (binding.Path is null)
+                                {
+                                    <p class="hint">@binding.Diagnostic</p>
+                                }
+                                else
+                                {
+                                    <p class="hint">Main route trace: @binding.MainTrace.NodeIndices.Count nodes, @binding.MainTrace.Points.Count positioned points · consist @(binding.Consist?.Name ?? "not found") · @(binding.IsRunnable ? "references resolved" : "not runnable")</p>
+                                    @foreach (var diagnostic in binding.MainTrace.Diagnostics)
+                                    {
+                                        <p class="hint">@diagnostic</p>
+                                    }
+                                }
+                            }
+                        </div>
+                    }
                     @if (ActivityChoices.Count > 0)
                     {
                         <div class="route-details">
-                            <label for="selected-activity">Activity file selection (not runnable yet)</label>
+                            <label for="selected-activity">Single-player activity</label>
                             <select id="selected-activity" value="@selectedActivityPath" @onchange="SelectActivity">
                                 <option value="">No activity selected · route preview</option>
                                 @foreach (var activityPath in ActivityChoices)
@@ -106,7 +468,95 @@
                             </select>
                             @if (!string.IsNullOrWhiteSpace(selectedActivityPath))
                             {
-                                <p class="hint">Selected activity file: <code>@selectedActivityPath</code>. Activity execution is not implemented yet.</p>
+                                @if (selectedActivityMetadata is not null)
+                                {
+                                    <div class="activity-summary">
+                                        <h4>@selectedActivityMetadata.Name</h4>
+                                        <p>@selectedActivityMetadata.Description</p>
+                                        @if (!string.IsNullOrWhiteSpace(selectedActivityMetadata.Briefing))
+                                        {
+                                            <p>@selectedActivityMetadata.Briefing</p>
+                                        }
+                                        <dl>
+                                            <dt>Mode</dt><dd>@selectedActivityMetadata.ModeName</dd>
+                                            <dt>Start time</dt><dd>@selectedActivityMetadata.StartTime</dd>
+                                            <dt>Season / weather</dt><dd>@selectedActivityMetadata.SeasonName / @selectedActivityMetadata.WeatherName</dd>
+                                            <dt>Duration</dt><dd>@(selectedActivityMetadata.DurationMinutes / 60) h @(selectedActivityMetadata.DurationMinutes % 60) min</dd>
+                                            <dt>Difficulty</dt><dd>@selectedActivityMetadata.DifficultyName</dd>
+                                            <dt>Path ID</dt><dd>@(selectedActivityMetadata.PathId ?? "Not specified")</dd>
+                                            <dt>Starting speed</dt><dd>@((selectedActivityMetadata.StartingSpeedMetersPerSecond * 3.6f).ToString("N1")) km/h</dd>
+                                        </dl>
+                                        @if (selectedActivityPassengerService is { Stops.Count: > 0 } passengerService)
+                                        {
+                                            <h4>Passenger timetable · @passengerService.ServiceName</h4>
+                                            <p class="hint">Player service starts at @TimeSpan.FromSeconds(passengerService.StartTimeSeconds).ToString(@"hh\:mm\:ss") · @passengerService.Stops.Count scheduled platform stops</p>
+                                            <div class="table-scroll">
+                                                <table>
+                                                    <thead><tr><th>Platform item</th><th>Arrival</th><th>Departure</th><th>Distance down path</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var stop in passengerService.Stops)
+                                                        {
+                                                            <tr>
+                                                                <td>@stop.PlatformStartId</td>
+                                                                <td>@DateTime.MinValue.AddSeconds(stop.ArrivalSeconds).ToString("HH:mm:ss")</td>
+                                                                <td>@DateTime.MinValue.AddSeconds(stop.DepartureSeconds).ToString("HH:mm:ss")</td>
+                                                                <td>@stop.DistanceDownPathMeters.ToString("N1") m</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                        @if (selectedActivityPassengerPlatformBinding is { } platformBinding)
+                                        {
+                                            <p class="hint">Passenger platforms resolved against route TDB: @platformBinding.Stops.Count / @platformBinding.Service.Stops.Count</p>
+                                            @foreach (var diagnostic in platformBinding.Diagnostics)
+                                            {
+                                                <p class="error">@diagnostic</p>
+                                            }
+                                        }
+                                        <p class="hint">Native activity events loaded: @(selectedActivityEvents?.Events.Count ?? 0).</p>
+                                        @if (!string.IsNullOrWhiteSpace(activityPathWarning))
+                                        {
+                                            <p class="hint">@activityPathWarning</p>
+                                        }
+                                        @if (activityStationStopProgress is { } stopProgress)
+                                        {
+                                            <p class="hint">Activity station stops: @stopProgress.VisitedStops / @stopProgress.TotalStops visited</p>
+                                            @if (!stopProgress.PathTraceComplete)
+                                            {
+                                                <p class="error">The activity path contains broken links; AllStops completion is disabled.</p>
+                                            }
+                                        }
+                                        @if (activityExecution is not null)
+                                        {
+                                            <div class="activity-summary">
+                                                <p class="hint">Activity elapsed time: @TimeSpan.FromSeconds(activityExecution.ElapsedSeconds).ToString()</p>
+                                                @if (activityExecution.PendingEvent is { } pendingEvent)
+                                                {
+                                                    <p class="success">Event @pendingEvent.EventId · @pendingEvent.EventName</p>
+                                                    @if (!string.IsNullOrWhiteSpace(pendingEvent.Message))
+                                                    {
+                                                        <p>@pendingEvent.Message</p>
+                                                    }
+                                                    <button type="button" @onclick="AcknowledgeActivityEvent">Acknowledge event</button>
+                                                }
+                                                @if (activityExecution.IsEnded)
+                                                {
+                                                    <p class="success">Activity ended · @(activityExecution.LastAcknowledgedEvent?.ActivitySucceeded == true ? "Success" : "Failed")</p>
+                                                }
+                                                @foreach (var unsupported in activityExecution.UnsupportedEvents.Take(8))
+                                                {
+                                                    <p class="hint">@unsupported</p>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(activityParseError))
+                                {
+                                    <p class="error">@activityParseError</p>
+                                }
                             }
                         </div>
                     }
@@ -170,12 +620,51 @@
                         <dt>World tiles found</dt><dd>@loadedRoute.WorldTiles.Found.Count</dd>
                         <dt>World tiles missing</dt><dd>@loadedRoute.WorldTiles.Missing.Count</dd>
                         <dt>Track shape placements</dt><dd>@loadedRoute.TrackShapePlacements.Count</dd>
-                        <dt>Terrain patch meshes</dt><dd>@loadedRoute.TerrainMeshes.Meshes.Sum(tile => tile.LodMeshes.FirstOrDefault()?.Patches.Count ?? 0)</dd>
-                        <dt>Terrain textures decoded</dt><dd>@loadedRoute.TerrainTextures.Loaded.Count</dd>
+                        <dt>Terrain patch meshes</dt><dd>Viewport streamed</dd>
+                        <dt>Terrain textures decoded</dt><dd>Viewport streamed</dd>
                         <dt>Track shape meshes loaded</dt><dd>@loadedRoute.TrackShapeMeshes.LoadedMeshes.Count</dd>
-                        <dt>Scenery tiles assembled</dt><dd>@loadedRoute.WorldScenery.Loaded.Count</dd>
-                        <dt>Scenery shape meshes</dt><dd>@loadedRoute.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
+                        <dt>Scenery tiles assembled</dt><dd>Viewport streamed</dd>
+                        <dt>Scenery shape meshes</dt><dd>Viewport streamed</dd>
                     </dl>
+
+                    <p class="hint">Terrain meshes, terrain textures, WORLD tiles, scenery shapes and scenery textures are decoded by the camera viewport streamer. The counters below cover route-open validation and do not imply that deferred assets have been loaded.</p>
+                    <div class="route-details">
+                        <h3>Route validation</h3>
+                        <p class="@(loadedRoute.Validation.TrackNetworkUsable ? "success" : "error")">
+                            @(loadedRoute.Validation.TrackNetworkUsable
+                                ? "Track topology passed structural validation."
+                                : "Track topology has critical issues; this route is not ready for a driving test.")
+                        </p>
+                        <dl>
+                            <dt>Track network</dt><dd>@(loadedRoute.Validation.TrackNetworkUsable ? "Usable" : "Not usable")</dd>
+                            <dt>Track diagnostics</dt><dd>@loadedRoute.Validation.TrackDiagnosticsCount</dd>
+                            <dt>Missing terrain</dt><dd>@loadedRoute.Validation.MissingTerrainTiles</dd>
+                            <dt>Failed terrain</dt><dd>@loadedRoute.Validation.FailedTerrainTiles</dd>
+                            <dt>Missing track shapes</dt><dd>@loadedRoute.Validation.MissingTrackShapes</dd>
+                            <dt>Failed track shapes</dt><dd>@loadedRoute.Validation.FailedTrackShapes</dd>
+                            <dt>Missing world tiles</dt><dd>@loadedRoute.Validation.MissingWorldTiles</dd>
+                            <dt>Failed world tiles</dt><dd>@loadedRoute.Validation.FailedWorldTiles</dd>
+                            <dt>Missing world shapes</dt><dd>@loadedRoute.Validation.MissingWorldShapes</dd>
+                            <dt>Failed world shapes</dt><dd>@loadedRoute.Validation.FailedWorldShapes</dd>
+                            <dt>Missing textures</dt><dd>@loadedRoute.Validation.MissingTextures</dd>
+                            <dt>Failed textures</dt><dd>@loadedRoute.Validation.FailedTextures</dd>
+                            <dt>Total diagnostics</dt><dd>@loadedRoute.Validation.Issues.Count</dd>
+                        </dl>
+                        @if (loadedRoute.Validation.Issues.Count > 0)
+                        {
+                            <h4>First 50 route diagnostics</h4>
+                            <ul class="path-list">
+                                @foreach (var issue in loadedRoute.Validation.Issues.Take(50))
+                                {
+                                    <li><strong>@issue.Category:</strong> @issue.Message</li>
+                                }
+                            </ul>
+                            @if (loadedRoute.Validation.Issues.Count > 50)
+                            {
+                                <p class="hint">Showing 50 of @loadedRoute.Validation.Issues.Count diagnostics.</p>
+                            }
+                        }
+                    </div>
                     @if (simulationSetup is not null)
                     {
                         <div class="route-details">
@@ -190,19 +679,78 @@
                             }
                         </div>
                     }
-                    @if (drivingController is not null)
+                    @if (SelectedCabView is { } cabView)
                     {
-                        <TrainDrivingControls @key="drivingController"
-                            Controller="drivingController"
-                            Consist="SelectedConsist"
-                            StorageKey="@SimulationSnapshotKey"
-                            MotionChanged="OnTrainMotionChanged" />
+                        <div class="route-details">
+                            <h3>Original locomotive cab</h3>
+                            <p class="hint">Loaded from @cabView.SourcePath · @cabView.Controls.Count original controls</p>
+                            <CabViewPanel Store="composite" Definition="cabView" Controller="drivingController" />
+                        </div>
+                    }
+                    @if (loadedRoute?.SignalConfiguration is { } signalConfiguration)
+                    {
+                        <div class="route-details">
+                            <h3>Route signal configuration</h3>
+                            <p>@signalConfiguration.SignalTypes.Count signal types · @signalConfiguration.ScriptFiles.Count declared script files · @loadedRoute.SignalScripts?.Scripts.Count indexed scripts · @signalConfiguration.NormalSubtypes.Count normal subtypes</p>
+                            @foreach (var signalType in signalConfiguration.SignalTypes.Values)
+                            {
+                                <p>@signalType.Name · @signalType.Function · @signalType.Aspects.Count aspects · @signalType.Script</p>
+                            }
+                            @foreach (var diagnostic in signalConfiguration.Diagnostics)
+                            {
+                                <p class="hint">@diagnostic</p>
+                            }
+                            @foreach (var diagnostic in loadedRoute.SignalScripts?.Diagnostics ?? Array.Empty<string>())
+                            {
+                                <p class="hint">@diagnostic</p>
+                            }
+                        </div>
+                    }
+                    @if (currentSignalIndications.Count > 0)
+                    {
+                        <div class="route-details">
+                            <h3>Live route signalling</h3>
+                            <p class="hint">Occupancy is derived from every vehicle body, including trailing cars, against the selected TDB vector-node route.</p>
+                            @foreach (var indication in currentSignalIndications)
+                            {
+                                <p class="@(indication.Aspect == RouteSignalAspect.Stop ? "error" : indication.Aspect == RouteSignalAspect.Approach ? "hint" : "success")">
+                                    Signal item @indication.Signal.TrackItemIndex · @indication.Signal.SignalType · @indication.Aspect
+                                    @if (!string.IsNullOrWhiteSpace(indication.NativeAspect))
+                                    {
+                                        <span> · native @indication.NativeAspect · draw state @indication.DrawState</span>
+                                    }
+                                    @if (indication.SpeedLimitMetersPerSecond is { } speedLimit)
+                                    {
+                                        <span> · @((speedLimit * 3.6f).ToString("N1")) km/h</span>
+                                    }
+                                    — @indication.Reason
+                                </p>
+                            }
+                        </div>
+                    }
+                    @if (CanDriveLoadedRoute)
+                    {
+                        <p class="success" role="status">Playable route test ready: track network, connected route, consist physics, and driving controller are initialized.</p>
+                        <div id="driving-controls">
+                            <TrainDrivingControls @key="drivingController"
+                                Controller="drivingController!"
+                                Consist="SelectedConsist"
+                                StorageKey="@SimulationSnapshotKey"
+                                AiServiceRoutePlan="(selectedServiceRoutePlan?.SupportsAiPathFollowing == true ? selectedServiceRoutePlan : null)"
+                                AiServiceSignalConstraints="AiServiceSignalConstraints"
+                                MotionChanged="OnTrainMotionChanged" />
+                        </div>
+                    }
+                    else if (drivingController is not null)
+                    {
+                        <p class="error" role="status">Driving controls are withheld until the route has a usable track network, a connected route, a resolved consist, and an initialized simulation session. The route preview remains available for diagnostics.</p>
                     }
                     <RouteTerrainViewer Route="loadedRoute" Store="composite"
                         Consist="SelectedConsist"
                         CarAssets="consistCatalog?.CarAssets ?? Array.Empty<ConsistCarAssetReference>()"
                         MotionRoute="traversedRoute"
-                        MotionState="currentMotionState ?? simulationSetup?.InitialState" />
+                        MotionState="currentMotionState ?? simulationSetup?.InitialState"
+                        SimulationTimeSeconds="drivingController?.SimulationTimeSeconds ?? 0" />
                     @if (loadedRoute.TrackNetwork.Diagnostics.Count > 0 || loadedRoute.TrackShapeAssets.Missing.Count > 0 || (traversedRoute?.Diagnostics.Count ?? 0) > 0)
                     {
                         <p class="hint">Route data diagnostics: @(loadedRoute.TrackNetwork.Diagnostics.Count + loadedRoute.TrackShapeAssets.Missing.Count + (traversedRoute?.Diagnostics.Count ?? 0))</p>
@@ -226,11 +774,11 @@
         }
     </section>
 
-    <section class="import-panel" aria-labelledby="import-heading">
+    <section id="content-packages" class="import-panel" aria-labelledby="import-heading">
         <h2 id="import-heading">Content packages</h2>
         <p class="note">Import additional ZIP packages to create a layered virtual content namespace. Earlier packages have higher priority.</p>
         <InputFile OnChange="HandleFilesSelected" accept=".zip,application/zip" multiple disabled="@isLoading" />
-        <p class="hint">ZIP only · Maximum @(ZipContentStore.DefaultMaxBrowserArchiveBytes / (1024 * 1024)) MiB per package · First selected package gets highest priority</p>
+        <p class="hint">ZIP only · Up to @(ZipContentStore.DefaultMaxBrowserArchiveBytes / (1024 * 1024)) MiB uses in-memory import; larger packages stream to browser disk (30 GB maximum) · First selected package gets highest priority</p>
 
         @if (layers.Count > 0)
         {
@@ -326,29 +874,287 @@
             }
         }
     </section>
+    <footer class="or-mainform-footer">
+        <strong>Open Rails</strong>
+        <span>© Open Rails project · GPL source distribution</span>
+        <span class="or-port-credit">Ported by geofss</span>
+    </footer>
 </main>
 
 @code {
+    private bool isActivityMode = true;
+    private bool isExploreMode;
+    private bool showOptionsDialog;
+    private bool loggingEnabled = true;
+    private bool browserAutosaveEnabled;
+    private int browserAutosaveMinutes = 30;
+    private int browserAudioVolume = 80;
+    private bool optionsSnapshotLogging;
+    private bool optionsSnapshotAutosave;
+    private int optionsSnapshotAutosaveMinutes;
+    private int optionsSnapshotAudioVolume;
+    private string selectedOptionsTab = "General";
+    private string? selectedExploreStart;
+    private string? selectedExplorePathId;
+    private string? selectedTimetableSetPath;
+    private string? selectedTimetablePath;
+    private string? selectedTimetableTrain;
+    private NativeTimetableDefinition? selectedTimetable;
+    private NativeTimetableTrainDefinition? selectedTimetableTrainDefinition;
+    private static readonly string[] OptionTabs =
+        ["General", "Audio", "Video", "Simulation", "Keyboard", "RailDriver", "Data logger", "Evaluation", "System", "Experimental"];
+    private const string BrowserPreferencesKey = "portedopenrails.mainform.preferences.v1";
+    private IReadOnlyList<ConsistCarAssetReference> LocomotiveChoices => consistCatalog?.CarAssets
+        .Where(asset => asset.IsEngine).ToArray() ?? Array.Empty<ConsistCarAssetReference>();
+    private string? SelectedLocomotiveKey
+    {
+        get
+        {
+            var engine = SelectedConsist?.Cars.FirstOrDefault(car => car.IsEngine);
+            return engine is null || SelectedConsist is null ? null : $"{SelectedConsist.Name}|{engine.Uid}";
+        }
+    }
+
+    private IReadOnlyList<string> ExploreStartChoices => loadedRoutePaths
+        .Select(path => path.Start).Where(start => !string.IsNullOrWhiteSpace(start))
+        .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(start => start, StringComparer.OrdinalIgnoreCase).ToArray();
+    private IReadOnlyList<RoutePathDefinition> ExploreDestinationChoices => loadedRoutePaths
+        .Where(path => string.Equals(path.Start, selectedExploreStart, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(path => path.End, StringComparer.OrdinalIgnoreCase).ThenBy(path => path.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+
+    private IReadOnlyList<string> TimetableChoices => composite?.Paths
+        .Where(path => path.EndsWith(".timetable", StringComparison.OrdinalIgnoreCase) ||
+                       path.EndsWith(".tt", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
+    private IReadOnlyList<string> TimetableSetChoices => TimetableChoices
+        .Select(path => System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/') ?? string.Empty)
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+    private IReadOnlyList<string> TimetablesInSelectedSet => TimetableChoices
+        .Where(path => string.Equals(
+            System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'),
+            selectedTimetableSetPath, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    private async Task SetMode(bool activityMode)
+    {
+        isActivityMode = activityMode;
+        if (activityMode)
+        {
+            selectedTimetableSetPath = null;
+            selectedTimetablePath = null;
+            selectedTimetable = null;
+            selectedTimetableTrain = null;
+            selectedTimetableTrainDefinition = null;
+        }
+        else
+        {
+            selectedActivityPath = null;
+            selectedActivityMetadata = null;
+            selectedActivityEvents = null;
+            selectedActivityPassengerService = null;
+            selectedActivityPassengerPlatformBinding = null;
+            activityExecution = null;
+            activityStationStopTracker = null;
+            activityStationStopProgress = null;
+            activityStartingSpeedMetersPerSecond = null;
+            InitializeSimulationSetup();
+        }
+        await SaveBrowserPreferencesAsync();
+    }
+
+    private void SelectExploreStart(ChangeEventArgs args)
+    {
+        selectedExploreStart = args.Value?.ToString();
+        selectedExplorePathId = ExploreDestinationChoices.FirstOrDefault()?.PathId;
+    }
+
+    private void SelectExplorePath(ChangeEventArgs args)
+    {
+        var pathId = args.Value?.ToString();
+        selectedExplorePathId = ExploreDestinationChoices.Any(path =>
+            string.Equals(path.PathId, pathId, StringComparison.OrdinalIgnoreCase)) ? pathId : null;
+    }
+
+    private void SelectLocomotive(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        var separator = value.LastIndexOf('|');
+        if (separator <= 0 || !int.TryParse(value[(separator + 1)..], out var uid))
+            return;
+        var consistName = value[..separator];
+        var consist = consistCatalog?.Consists.FirstOrDefault(item =>
+            string.Equals(item.Name, consistName, StringComparison.OrdinalIgnoreCase) &&
+            item.Cars.Any(car => car.Uid == uid && car.IsEngine));
+        if (consist is null)
+            return;
+        selectedConsistName = consist.Name;
+        selectedServicePath = null;
+        InitializeSimulationSetup();
+    }
+
+    private async Task SaveBrowserPreferencesAsync()
+    {
+        var preferences = new BrowserUiPreferences(loggingEnabled, browserAutosaveEnabled,
+            browserAutosaveMinutes, browserAudioVolume, isActivityMode);
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", BrowserPreferencesKey,
+                System.Text.Json.JsonSerializer.Serialize(preferences));
+        }
+        catch (JSException)
+        {
+            // Browser storage can be disabled; current-session settings remain usable.
+        }
+    }
+
+    private void OpenOptionsDialog()
+    {
+        optionsSnapshotLogging = loggingEnabled;
+        optionsSnapshotAutosave = browserAutosaveEnabled;
+        optionsSnapshotAutosaveMinutes = browserAutosaveMinutes;
+        optionsSnapshotAudioVolume = browserAudioVolume;
+        showOptionsDialog = true;
+    }
+
+    private async Task CommitOptionsDialog()
+    {
+        await SaveBrowserPreferencesAsync();
+        showOptionsDialog = false;
+    }
+
+    private async Task CancelOptionsDialog()
+    {
+        loggingEnabled = optionsSnapshotLogging;
+        browserAutosaveEnabled = optionsSnapshotAutosave;
+        browserAutosaveMinutes = optionsSnapshotAutosaveMinutes;
+        browserAudioVolume = optionsSnapshotAudioVolume;
+        await SaveBrowserPreferencesAsync();
+        showOptionsDialog = false;
+    }
+
+    private async Task HandleOptionsDialogKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Escape", StringComparison.OrdinalIgnoreCase))
+        {
+            await CancelOptionsDialog();
+            return;
+        }
+
+        if (OptionTabs.Length == 0)
+            return;
+
+        var currentIndex = Array.IndexOf(OptionTabs, selectedOptionsTab);
+        if (currentIndex < 0)
+            currentIndex = 0;
+
+        var nextIndex = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => (currentIndex + 1) % OptionTabs.Length,
+            "ArrowLeft" or "ArrowUp" => (currentIndex - 1 + OptionTabs.Length) % OptionTabs.Length,
+            "Home" => 0,
+            "End" => OptionTabs.Length - 1,
+            _ => currentIndex
+        };
+
+        if (nextIndex != currentIndex)
+            selectedOptionsTab = OptionTabs[nextIndex];
+    }
+
+    private void SelectOptionsTab(string tab)
+    {
+        if (OptionTabs.Contains(tab, StringComparer.Ordinal))
+            selectedOptionsTab = tab;
+    }
+
+    private void SelectTimetableSet(ChangeEventArgs args)
+    {
+        selectedTimetableSetPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetablePath = null;
+        selectedTimetable = null;
+        selectedTimetableTrain = null;
+        selectedTimetableTrainDefinition = null;
+        var firstTimetable = TimetablesInSelectedSet.FirstOrDefault();
+        if (firstTimetable is not null)
+            SelectTimetable(new ChangeEventArgs { Value = firstTimetable });
+    }
+
+    private void SelectTimetable(ChangeEventArgs args)
+    {
+        selectedTimetablePath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetable = null;
+        selectedTimetableTrain = null;
+        selectedTimetableTrainDefinition = null;
+        if (selectedTimetablePath is null || composite is null)
+            return;
+        try
+        {
+            selectedTimetable = new NativeTimetableDefinitionReader().Read(composite, selectedTimetablePath);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException)
+        {
+            errorMessage = $"Could not read timetable '{selectedTimetablePath}': {exception.Message}";
+        }
+    }
+
+    private void SelectTimetableTrain(ChangeEventArgs args)
+    {
+        selectedTimetableTrain = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedTimetableTrainDefinition = selectedTimetable?.Trains.FirstOrDefault(train =>
+            string.Equals(train.Train, selectedTimetableTrain, StringComparison.Ordinal));
+    }
+
     private readonly List<PackageLayer> layers = [];
     private readonly List<RouteChoice> routeChoices = [];
     private CompositeContentStore? composite;
     private RouteChoice? selectedRoute;
     private string? errorMessage;
     private bool isLoading;
+    private bool largeUploadInProgress;
+    private long largeUploadBytes;
+    private long largeUploadTotalBytes;
+    private int largeUploadPercent;
+    private string? largePackageMessage;
+    private readonly List<StoredBrowserPackage> storedPackages = [];
+    private readonly Dictionary<string, BrowserPackageArchiveIndex> indexedPackages = [];
+    private readonly Dictionary<string, List<StagedRouteMetadata>> stagedRouteMetadata = [];
+    private readonly Dictionary<string, string> loadedStagedPackageNames = new(StringComparer.Ordinal);
     private bool selectedDefault;
     private bool isBuildingRoute;
     private string? routeBuildMessage;
+    private readonly List<string> routeDiagnostics = [];
     private RouteLoadResult? loadedRoute;
     private TrackNetworkRoute? traversedRoute;
+    private TrackNetworkRouteProfile? activityRouteProfile;
     private ConsistCatalogResult? consistCatalog;
     private TrainConsistSimulationSetup? simulationSetup;
     private BrowserTrainDrivingController? drivingController;
     private TrainConsistMotionState? currentMotionState;
+    private IReadOnlyList<RouteSignalIndication> currentSignalIndications = Array.Empty<RouteSignalIndication>();
     private uint selectedTrackNodeIndex;
     private bool reverseRouteStart;
     private readonly Dictionary<int, uint> selectedBranchTrackNodeIndices = [];
     private string? selectedConsistName;
+    private string? selectedServicePath;
+    private ServiceRouteStartPosition? selectedServiceRoutePlan;
     private string? selectedActivityPath;
+    private double? activityStartingSpeedMetersPerSecond;
+    private IReadOnlyList<string> serviceChoices = Array.Empty<string>();
+    private IReadOnlyList<ServiceMetadata> loadedServices = Array.Empty<ServiceMetadata>();
+    private IReadOnlyList<string> availableRoutePathIds = Array.Empty<string>();
+    private IReadOnlyList<RoutePathDefinition> loadedRoutePaths = Array.Empty<RoutePathDefinition>();
+    private IReadOnlyList<ServiceRouteBinding> serviceRouteBindings = Array.Empty<ServiceRouteBinding>();
+    private ActivityMetadata? selectedActivityMetadata;
+    private string? activityParseError;
+    private ActivityEventSet? selectedActivityEvents;
+    private ActivityPassengerServiceDefinition? selectedActivityPassengerService;
+    private ActivityPassengerPlatformBindingResult? selectedActivityPassengerPlatformBinding;
+    private ActivityExecutionSession? activityExecution;
+    private ActivityStationStopTracker? activityStationStopTracker;
+    private ActivityStationStopProgress? activityStationStopProgress;
+    private string? activityPathWarning;
+    private double lastActivitySimulationTime;
     private IReadOnlyList<string> ActivityChoices => selectedRoute is not null && composite is not null
         ? ActivityFileLocator.FindForRoute(composite.Paths, selectedRoute.MetadataFile)
         : Array.Empty<string>();
@@ -363,6 +1169,40 @@
 
     private ConsistMetadata? SelectedConsist => consistCatalog?.Consists.FirstOrDefault(consist =>
         consist.Name == selectedConsistName) ?? consistCatalog?.Consists.FirstOrDefault();
+    private ServiceRouteBinding? SelectedServiceBinding => serviceRouteBindings.FirstOrDefault(binding =>
+        string.Equals(binding.Service.SourcePath, selectedServicePath, StringComparison.OrdinalIgnoreCase) &&
+        binding.IsRunnable);
+
+    private IReadOnlyList<AiServiceSignalConstraint> AiServiceSignalConstraints =>
+        activityRouteProfile is null
+            ? Array.Empty<AiServiceSignalConstraint>()
+            : currentSignalIndications.Select(indication =>
+            {
+                if (!activityRouteProfile.TryGetRouteDistanceForTrackNode(
+                        indication.Signal.TrackNodeIndex, indication.Signal.DistanceMeters, out var distance))
+                    return null;
+                return new AiServiceSignalConstraint(distance, indication.Aspect,
+                    indication.SpeedLimitMetersPerSecond);
+            }).Where(constraint => constraint is not null).Cast<AiServiceSignalConstraint>().ToArray();
+
+    private bool CanStartSelectedMode =>
+        isActivityMode &&
+        selectedActivityMetadata is not null &&
+        activityParseError is null &&
+        activityPathWarning is null &&
+        CanDriveLoadedRoute;
+
+    private bool CanDriveLoadedRoute =>
+        loadedRoute?.Validation.TrackNetworkUsable == true &&
+        traversedRoute is { IsDriveReady: true } &&
+        SelectedConsist is not null &&
+        simulationSetup is not null &&
+        drivingController is not null;
+
+    private CabViewDefinition? SelectedCabView => SelectedConsist is null
+        ? null
+        : consistCatalog?.CarAssets.FirstOrDefault(asset =>
+            asset.ConsistName == SelectedConsist.Name && asset.IsEngine && asset.CabView is not null)?.CabView;
 
     private int DavisResistanceCoverage => simulationSetup?.ResistanceParametersByCar.Count(parameters =>
         parameters.DavisA > 0 || parameters.DavisB > 0 || parameters.DavisC > 0) ?? 0;
@@ -422,6 +1262,12 @@
         selectedDefault = true;
         selectedRoute = null;
         selectedActivityPath = null;
+        selectedServicePath = null;
+        serviceChoices = Array.Empty<string>();
+        loadedServices = Array.Empty<ServiceMetadata>();
+        availableRoutePathIds = Array.Empty<string>();
+        loadedRoutePaths = Array.Empty<RoutePathDefinition>();
+        serviceRouteBindings = Array.Empty<ServiceRouteBinding>();
         errorMessage = null;
         loadedRoute = null;
         traversedRoute = null;
@@ -437,10 +1283,67 @@
     private async Task SelectRoute(RouteChoice route)
     {
         selectedRoute = route;
+        selectedExploreStart = null;
+        selectedExplorePathId = null;
+        isExploreMode = false;
+        selectedServicePath = null;
         selectedActivityPath = null;
+        selectedActivityMetadata = null;
+        selectedActivityEvents = null;
+        selectedActivityPassengerService = null;
+        selectedActivityPassengerPlatformBinding = null;
+        activityExecution = null;
+        activityStationStopTracker = null;
+        activityStationStopProgress = null;
+        activityStartingSpeedMetersPerSecond = null;
+        activityPathWarning = null;
         selectedDefault = false;
+        routeDiagnostics.Clear();
+        serviceChoices = ServiceFileLocator.FindServices(composite?.Paths ?? Array.Empty<string>());
+        loadedServices = serviceChoices.Select(path =>
+        {
+            try { return new ServiceMetadataReader().Read(composite!, path); }
+            catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+            {
+                routeDiagnostics.Add($"Service {path}: {exception.Message}");
+                return null;
+            }
+        }).Where(service => service is not null).Cast<ServiceMetadata>().ToArray();
+        availableRoutePathIds = ServiceFileLocator.FindPaths(composite?.Paths ?? Array.Empty<string>(),
+            selectedRoute?.MetadataFile ?? string.Empty)
+            .Select(path => System.IO.Path.GetFileNameWithoutExtension(path))
+            .ToArray();
+        loadedRoutePaths = ServiceFileLocator.FindPaths(composite?.Paths ?? Array.Empty<string>(),
+            selectedRoute?.MetadataFile ?? string.Empty)
+            .Select(path =>
+            {
+                try { return new RoutePathFileReader().Read(composite!, path); }
+                catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException)
+                {
+                    routeDiagnostics.Add($"Path {path}: {exception.Message}");
+                    return null;
+                }
+            }).Where(path => path is not null).Cast<RoutePathDefinition>().ToArray();
+        serviceRouteBindings = ServiceRouteBindingResolver.Resolve(
+            loadedServices, loadedRoutePaths, consistCatalog?.Consists ?? Array.Empty<ConsistMetadata>());
+        selectedExploreStart = ExploreStartChoices.FirstOrDefault();
+        selectedExplorePathId = ExploreDestinationChoices.FirstOrDefault()?.PathId;
         errorMessage = null;
         await BuildRouteNetworkAsync(route);
+    }
+
+    private int SelectedRouteIndex => selectedRoute is null ? -1 : routeChoices.IndexOf(selectedRoute);
+
+    private async Task SelectRouteFromMenu(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(),
+                System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var routeIndex) &&
+            routeIndex >= 0 && routeIndex < routeChoices.Count)
+        {
+            await SelectRoute(routeChoices[routeIndex]);
+        }
     }
 
     private async Task BuildRouteNetworkAsync(RouteChoice route)
@@ -461,7 +1364,7 @@
             if (composite is null)
                 throw new InvalidDataException("No route content package is loaded.");
 
-            loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata);
+            loadedRoute = new RouteLoader().Load(composite, route.MetadataFile, route.Metadata, RouteLoadOptions.ViewportStreaming);
             var traversalStart = RouteStartOptions.FirstOrDefault();
             selectedTrackNodeIndex = traversalStart?.TrackNodeIndex ?? 0;
             reverseRouteStart = traversalStart is not null &&
@@ -519,6 +1422,7 @@
         if (loadedRoute is null)
         {
             traversedRoute = null;
+            activityRouteProfile = null;
             InitializeSimulationSetup();
             return;
         }
@@ -531,6 +1435,7 @@
                     loadedRoute.TrackNetwork, selectedTrackNodeIndex,
                     startReversed: reverseRouteStart,
                     preferredNextTrackNodeIndices: selectedBranchTrackNodeIndices);
+            activityRouteProfile = traversedRoute is null ? null : TrackNetworkRouteProfile.Build(traversedRoute);
             routeBuildMessage = $"Route track network built from {loadedRoute.Assets.TrackDatabasePath}." +
                 (traversedRoute is null
                     ? " No two-ended vector path was available for connected traversal."
@@ -539,10 +1444,192 @@
         catch (Exception exception) when (exception is ArgumentException || exception is InvalidDataException)
         {
             traversedRoute = null;
+            activityRouteProfile = null;
             routeBuildMessage = $"Connected route traversal failed: {exception.Message}";
         }
 
         InitializeSimulationSetup();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var preferencesJson = await JS.InvokeAsync<string?>("localStorage.getItem", BrowserPreferencesKey);
+            if (!string.IsNullOrWhiteSpace(preferencesJson))
+            {
+                var preferences = System.Text.Json.JsonSerializer.Deserialize<BrowserUiPreferences>(preferencesJson);
+                if (preferences is not null)
+                {
+                    loggingEnabled = preferences.LoggingEnabled;
+                    browserAutosaveEnabled = preferences.AutosaveEnabled;
+                    browserAutosaveMinutes = preferences.AutosaveMinutes is 15 or 30 or 60 ? preferences.AutosaveMinutes : 30;
+                    browserAudioVolume = Math.Clamp(preferences.AudioVolume, 0, 100);
+                    isActivityMode = preferences.ActivityMode;
+                }
+            }
+        }
+        catch (JSException)
+        {
+            // Browser storage may be unavailable; use safe defaults.
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Ignore stale or malformed browser preference data.
+        }
+
+        try
+        {
+            storedPackages.AddRange(await BrowserPackageArchiveUploader.ListAsync(JS));
+        }
+        catch (JSException)
+        {
+            // OPFS may be unavailable or disabled; small in-memory route imports remain usable.
+        }
+    }
+
+    private async Task IndexStoredPackageAsync(StoredBrowserPackage package)
+    {
+        isLoading = true;
+        errorMessage = null;
+        stagedRouteMetadata.Remove(package.Id);
+        try
+        {
+            var index = await BrowserPackageArchiveIndexer.InspectAsync(JS, package.Id);
+            indexedPackages[package.Id] = index;
+
+            var parsedRoutes = new List<StagedRouteMetadata>();
+            var rejectedRoutes = new List<string>();
+            foreach (var routePath in index.RouteFiles)
+            {
+                try
+                {
+                    var metadata = await BrowserPackageRouteMetadataReader.ReadAsync(JS, package.Id, routePath);
+                    parsedRoutes.Add(new StagedRouteMetadata(routePath, metadata));
+                }
+                catch (Exception exception) when (exception is JSException || exception is IOException ||
+                    exception is InvalidDataException || exception is ArgumentException)
+                {
+                    rejectedRoutes.Add($"{routePath}: {exception.Message}");
+                }
+            }
+
+            stagedRouteMetadata[package.Id] = parsedRoutes;
+            largePackageMessage = $"Indexed {index.EntryCount:N0} files in {package.FileName}. " +
+                $"Upstream STFReader successfully parsed {parsedRoutes.Count}/{index.RouteFiles.Count} route metadata file(s). " +
+                "The archive remains disk-backed; full track, terrain, and scenery loading still needs the asynchronous content-store integration.";
+            if (rejectedRoutes.Count > 0)
+                errorMessage = string.Join(" | ", rejectedRoutes.Take(5));
+        }
+        catch (Exception exception) when (exception is JSException || exception is IOException || exception is InvalidDataException || exception is ArgumentException)
+        {
+            errorMessage = $"Could not index {package.FileName}: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadStagedRouteAsync(
+        StoredBrowserPackage package,
+        string routeFile,
+        RouteMetadata metadata)
+    {
+        if (isLoading)
+            return;
+
+        isLoading = true;
+        errorMessage = null;
+        if (loadedStagedPackageNames.TryGetValue(package.Id, out var existingPackageName))
+        {
+            var existingRoute = routeChoices.FirstOrDefault(item =>
+                item.PackageName.Equals(existingPackageName, StringComparison.OrdinalIgnoreCase) &&
+                item.MetadataFile.Equals(routeFile, StringComparison.OrdinalIgnoreCase));
+            if (existingRoute is null)
+            {
+                existingRoute = new RouteChoice(metadata, existingPackageName, VirtualPath.Normalize(routeFile));
+                routeChoices.Add(existingRoute);
+            }
+            await SelectRoute(existingRoute);
+            isLoading = false;
+            return;
+        }
+        largePackageMessage = $"Loading {package.FileName} entry-by-entry from OPFS. The current synchronous Open Rails readers require a bounded expanded-content compatibility store (maximum 2 GiB).";
+        try
+        {
+            if (indexedPackages.TryGetValue(package.Id, out var packageIndex) &&
+                packageIndex.TotalUncompressedBytes > BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes)
+                throw new InvalidDataException(
+                    $"Expanded archive size is {(packageIndex.TotalUncompressedBytes / (1024d * 1024 * 1024)):N2} GiB; " +
+                    $"the current route-reader compatibility bridge is limited to " +
+                    $"{BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes / (1024d * 1024 * 1024):N0} GiB.");
+
+            var progress = new Progress<(int Completed, int Total)>(value =>
+            {
+                _ = InvokeAsync(() =>
+                {
+                    largePackageMessage = $"Reading route package entries from OPFS: {value.Completed:N0}/{value.Total:N0}";
+                    StateHasChanged();
+                });
+            });
+            var store = await BrowserPackageVirtualContentStore.LoadAsync(JS, package.Id, progress);
+            var packageName = GetUniquePackageName(package.FileName);
+            layers.Insert(0, new PackageLayer(packageName, store));
+            loadedStagedPackageNames[package.Id] = packageName;
+            RebuildComposite();
+
+            var route = new RouteChoice(metadata, packageName, VirtualPath.Normalize(routeFile));
+            routeChoices.RemoveAll(item =>
+                item.PackageName.Equals(packageName, StringComparison.OrdinalIgnoreCase) &&
+                item.MetadataFile.Equals(route.MetadataFile, StringComparison.OrdinalIgnoreCase));
+            routeChoices.Add(route);
+            largePackageMessage = $"Loaded {store.Paths.Count:N0} route-package files into the browser content pipeline. Building the original route systems…";
+            await SelectRoute(route);
+        }
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
+            exception is ArgumentException || exception is JSException || exception is OverflowException)
+        {
+            errorMessage = $"Could not load staged route: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static void DisposePackageStore(IVirtualContentStore store)
+    {
+        if (store is IDisposable disposable)
+            disposable.Dispose();
+    }
+
+    private async Task DeleteStoredPackageAsync(StoredBrowserPackage package)
+    {
+        try
+        {
+            // If this OPFS package was already loaded, remove its in-memory content
+            // layer first so deleting the staged file also releases route memory.
+            if (loadedStagedPackageNames.TryGetValue(package.Id, out var packageName))
+            {
+                var loadedLayer = layers.FirstOrDefault(layer =>
+                    layer.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase));
+                if (loadedLayer is not null)
+                    await RemovePackageAsync(loadedLayer);
+                else
+                    loadedStagedPackageNames.Remove(package.Id);
+            }
+
+            await BrowserPackageArchiveUploader.DeleteAsync(JS, package.Id);
+            storedPackages.RemoveAll(item => item.Id == package.Id);
+            indexedPackages.Remove(package.Id);
+            stagedRouteMetadata.Remove(package.Id);
+            largePackageMessage = $"Deleted staged archive {package.FileName} and released its loaded route package.";
+        }
+        catch (JSException exception)
+        {
+            errorMessage = $"Could not delete the staged archive: {exception.Message}";
+        }
     }
 
     private async Task HandleRouteZip(InputFileChangeEventArgs args)
@@ -565,7 +1652,35 @@
         try
         {
             var file = args.File;
-            var store = await BrowserZipPackageLoader.LoadAsync(file);
+            largePackageMessage = null;
+            if (file.Size > BrowserZipPackageLoader.DefaultMaxArchiveBytes)
+            {
+                largeUploadInProgress = true;
+                largeUploadBytes = 0;
+                largeUploadTotalBytes = file.Size;
+                largeUploadPercent = 0;
+                var progress = new BrowserPackageUploadProgress((uploaded, total) =>
+                {
+                    _ = InvokeAsync(() =>
+                    {
+                        largeUploadBytes = uploaded;
+                        largeUploadTotalBytes = total;
+                        largeUploadPercent = total <= 0 ? 0 : (int)Math.Clamp(uploaded * 100d / total, 0, 100);
+                        StateHasChanged();
+                    });
+                });
+                using var progressReference = DotNetObjectReference.Create(progress);
+                var stored = await BrowserPackageArchiveUploader.StoreAsync(JS, file, progressReference);
+                storedPackages.RemoveAll(item => item.Id == stored.Id);
+                storedPackages.Insert(0, stored);
+                largePackageMessage = $"Uploaded {stored.FileName} ({(stored.SizeBytes / 1_000_000_000d):N2} GB) to browser OPFS storage. Persistent-storage protection: {(stored.PersistentStorageGranted ? "granted" : "not granted")}. Select Index ZIP contents, then Load route into simulator for supported packages.";
+                return;
+            }
+
+            var store = await BrowserZipPackageLoader.LoadAsync(
+                file,
+                maxEntryBytes: BrowserPackageVirtualContentStore.MaximumEntryBytes,
+                maxTotalBytes: BrowserPackageVirtualContentStore.MaximumExpandedPackageBytes);
             var packageName = GetUniquePackageName(file.Name);
             var layer = new PackageLayer(packageName, store);
             layers.Insert(0, layer);
@@ -598,13 +1713,14 @@
             if (routeChoices.Count == 1)
                 await SelectRoute(routeChoices[0]);
         }
-        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException)
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is ArgumentException || exception is JSException)
         {
             errorMessage = exception.Message;
         }
         finally
         {
             isLoading = false;
+            largeUploadInProgress = false;
         }
     }
 
@@ -647,7 +1763,7 @@
 
     private async Task MovePackageAsync(PackageLayer layer, int offset)
     {
-        if (isLoading)
+        if (isLoading || isBuildingRoute)
             return;
 
         var index = layers.IndexOf(layer);
@@ -655,38 +1771,61 @@
         if (index < 0 || targetIndex < 0 || targetIndex >= layers.Count)
             return;
 
-        layers.RemoveAt(index);
-        layers.Insert(targetIndex, layer);
-        RebuildComposite();
+        isLoading = true;
+        try
+        {
+            layers.RemoveAt(index);
+            layers.Insert(targetIndex, layer);
+            RebuildComposite();
 
-        if (selectedRoute is not null)
-            await BuildRouteNetworkAsync(selectedRoute);
+            if (selectedRoute is not null)
+                await BuildRouteNetworkAsync(selectedRoute);
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task RemovePackageAsync(PackageLayer layer)
     {
-        if (isLoading)
+        if (isLoading || isBuildingRoute)
             return;
 
-        var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
-        layers.Remove(layer);
-        layer.Store.Dispose();
+        var index = layers.IndexOf(layer);
+        if (index < 0)
+            return;
 
-        routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
-        if (removedSelectedRoute)
+        isLoading = true;
+        try
         {
-            selectedRoute = null;
-            loadedRoute = null;
-            traversedRoute = null;
-            selectedTrackNodeIndex = 0;
-            reverseRouteStart = false;
-            routeBuildMessage = null;
+            var removedSelectedRoute = selectedRoute?.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase) == true;
+            layers.RemoveAt(index);
+            foreach (var stagedId in loadedStagedPackageNames.Where(pair =>
+                pair.Value.Equals(layer.Name, StringComparison.OrdinalIgnoreCase)).Select(pair => pair.Key).ToArray())
+                loadedStagedPackageNames.Remove(stagedId);
+            DisposePackageStore(layer.Store);
+
+            routeChoices.RemoveAll(route => route.PackageName.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
+            if (removedSelectedRoute)
+            {
+                selectedRoute = null;
+                loadedRoute = null;
+                traversedRoute = null;
+                selectedTrackNodeIndex = 0;
+                reverseRouteStart = false;
+                routeBuildMessage = null;
+            }
+
+            RebuildComposite();
+
+            if (selectedRoute is not null)
+                await BuildRouteNetworkAsync(selectedRoute);
         }
-
-        RebuildComposite();
-
-        if (selectedRoute is not null)
-            await BuildRouteNetworkAsync(selectedRoute);
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void RebuildComposite()
@@ -706,17 +1845,30 @@
         simulationSetup = null;
         drivingController = null;
         currentMotionState = null;
-        var consist = SelectedConsist;
+        selectedServiceRoutePlan = null;
+        var serviceBinding = SelectedServiceBinding;
+        var consist = serviceBinding?.Consist ?? SelectedConsist;
         if (consist is null || traversedRoute is null || traversedRoute.LengthMeters <= 0)
             return;
         try
         {
+            var initialSpeed = activityStartingSpeedMetersPerSecond ??
+                serviceBinding?.Service.InitialSpeedMetersPerSecond ?? 0;
+            selectedServiceRoutePlan = serviceBinding is null
+                ? null
+                : ServiceRoutePositionResolver.Resolve(
+                    serviceBinding.MainTrace!, activityRouteProfile ??
+                    throw new InvalidDataException("The connected route has no usable position profile."),
+                    path: serviceBinding.Path);
+            var serviceStartDistance = selectedServiceRoutePlan?.DistanceMeters ?? 0;
             simulationSetup = new TrainConsistSimulationSetupBuilder().Build(
-                consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters);
+                consist, consistCatalog!.CarAssets, traversedRoute.LengthMeters,
+                startDistanceMeters: serviceStartDistance,
+                initialSpeedMetersPerSecond: initialSpeed);
             drivingController = new BrowserTrainDrivingController(simulationSetup, route: traversedRoute);
             currentMotionState = simulationSetup.InitialState;
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
         {
             routeBuildMessage = $"Simulation setup unavailable: {exception.Message}";
         }
@@ -724,27 +1876,156 @@
 
     private void SelectConsist(ChangeEventArgs args)
     {
+        selectedServicePath = null;
         selectedConsistName = args.Value?.ToString();
+        InitializeSimulationSetup();
+    }
+
+    private void SelectService(ChangeEventArgs args)
+    {
+        selectedServicePath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        if (SelectedServiceBinding?.Consist is { } consist)
+            selectedConsistName = consist.Name;
         InitializeSimulationSetup();
     }
 
     private void SelectActivity(ChangeEventArgs args)
     {
-        selectedActivityPath = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value.ToString();
+        selectedServicePath = null;
+        var selectedValue = args.Value?.ToString();
+        if (string.Equals(selectedValue, "__explore__", StringComparison.Ordinal))
+        {
+            isExploreMode = true;
+            selectedActivityPath = null;
+            selectedActivityMetadata = null;
+            selectedActivityEvents = null;
+            selectedActivityPassengerService = null;
+            selectedActivityPassengerPlatformBinding = null;
+            activityExecution = null;
+            activityStationStopTracker = null;
+            activityStationStopProgress = null;
+            activityPathWarning = null;
+            activityParseError = null;
+            activityStartingSpeedMetersPerSecond = null;
+            selectedExploreStart ??= ExploreStartChoices.FirstOrDefault();
+            selectedExplorePathId ??= ExploreDestinationChoices.FirstOrDefault()?.PathId;
+            InitializeSimulationSetup();
+            return;
+        }
+        isExploreMode = false;
+        selectedActivityPath = string.IsNullOrWhiteSpace(selectedValue) ? null : selectedValue;
+        selectedActivityMetadata = null;
+        selectedActivityEvents = null;
+        selectedActivityPassengerService = null;
+        selectedActivityPassengerPlatformBinding = null;
+        activityExecution = null;
+        activityStationStopTracker = null;
+        activityStationStopProgress = null;
+        activityPathWarning = null;
+        activityParseError = null;
+        activityStartingSpeedMetersPerSecond = null;
+        InitializeSimulationSetup();
+        lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
+        if (selectedActivityPath is null || composite is null)
+            return;
+
+        try
+        {
+            selectedActivityMetadata = new ActivityMetadataReader().Read(composite, selectedActivityPath);
+            selectedActivityEvents = new ActivityEventReader().Read(composite, selectedActivityPath);
+            selectedActivityPassengerService =
+                new ActivityPassengerServiceReader().Read(composite, selectedActivityPath);
+            if (selectedActivityPassengerService is not null && loadedRoute is not null)
+                selectedActivityPassengerPlatformBinding = ActivityPassengerPlatformBinding.Bind(
+                    selectedActivityPassengerService, loadedRoute.TrackDatabase);
+            if (!string.Equals(selectedActivityMetadata.RouteId, selectedRoute?.Metadata.RouteId,
+                    StringComparison.OrdinalIgnoreCase))
+                activityParseError = $"Activity RouteID '{selectedActivityMetadata.RouteId}' does not match the selected route.";
+            else
+            {
+                activityStartingSpeedMetersPerSecond = selectedActivityMetadata.StartingSpeedMetersPerSecond;
+                activityExecution = new ActivityExecutionSession(selectedActivityEvents);
+                var activityPath = loadedRoutePaths.FirstOrDefault(path =>
+                    string.Equals(path.PathId, selectedActivityMetadata.PathId, StringComparison.OrdinalIgnoreCase));
+                if (activityPath is not null)
+                    activityStationStopTracker = new ActivityStationStopTracker(activityPath);
+                else
+                    activityPathWarning = $"Activity PathID '{selectedActivityMetadata.PathId}' was not found in the selected route; AllStops actions cannot be evaluated.";
+                InitializeSimulationSetup();
+                lastActivitySimulationTime = drivingController?.SimulationTimeSeconds ?? 0;
+            }
+        }
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException ||
+            exception is ArgumentException)
+        {
+            activityParseError = $"Could not parse activity header: {exception.Message}";
+        }
     }
 
     private Task OnTrainMotionChanged(TrainConsistMotionState state)
     {
         currentMotionState = state;
+        if (loadedRoute is not null && traversedRoute is not null && state.Cars.Count > 0)
+        {
+            var selectedConsistCars = SelectedConsist?.Cars.Where(car => !car.IsEndOfTrain).ToArray()
+                ?? Array.Empty<ConsistCar>();
+            var carOccupancies = state.Cars.Select((carState, index) =>
+            {
+                var consistCar = index < selectedConsistCars.Length ? selectedConsistCars[index] : null;
+                var asset = consistCar is null ? null : consistCatalog?.CarAssets.FirstOrDefault(candidate =>
+                    candidate.Uid == consistCar.Uid &&
+                    string.Equals(candidate.CarName, consistCar.Name, StringComparison.OrdinalIgnoreCase));
+                var declaredLength = asset?.Metadata?.LengthM ?? 0;
+                var length = float.IsFinite(declaredLength) && declaredLength > 0 ? declaredLength : 10;
+                return new TrainCarRouteOccupancy(carState.DistanceMeters, length);
+            }).ToArray();
+            var occupiedNodes = SignalOccupancyResolver.Resolve(traversedRoute, carOccupancies);
+            var selectedBranches = selectedBranchTrackNodeIndices.ToDictionary(
+                pair => checked((uint)pair.Key), pair => pair.Value);
+            currentSignalIndications = loadedRoute.Signalling.Evaluate(occupiedNodes, selectedBranches, loadedRoute.SignalScripts);
+        }
+        else
+        {
+            currentSignalIndications = Array.Empty<RouteSignalIndication>();
+        }
+        if (activityExecution is not null && drivingController is not null)
+        {
+            var simulationTime = drivingController.SimulationTimeSeconds;
+            var elapsed = Math.Max(0, simulationTime - lastActivitySimulationTime);
+            lastActivitySimulationTime = simulationTime;
+            if (elapsed > 0 && state.Cars.Count > 0)
+                {
+                    var leadCar = state.Cars[0];
+                    var position = activityRouteProfile is null
+                        ? null
+                        : ActivityLocationResolver.Resolve(activityRouteProfile.Sample(leadCar.DistanceMeters).Position);
+                    if (position is not null && activityStationStopTracker is not null)
+                        activityStationStopProgress = activityStationStopTracker.Advance(
+                            position.TileX, position.TileZ, position.X, position.Z, leadCar.SpeedMetersPerSecond);
+                    activityExecution.Advance(elapsed, position is null
+                        ? new ActivityPlayerState(leadCar.SpeedMetersPerSecond)
+                        : new ActivityPlayerState(leadCar.SpeedMetersPerSecond,
+                            position.TileX, position.TileZ, position.X, position.Z,
+                            activityStationStopProgress?.StationStopReached ?? false,
+                            activityStationStopProgress?.AllStopsCompleted ?? false));
+                }
+        }
         return Task.CompletedTask;
+    }
+
+    private void AcknowledgeActivityEvent()
+    {
+        activityExecution?.Acknowledge();
     }
 
     public void Dispose()
     {
         composite?.Dispose();
         foreach (var layer in layers)
-            layer.Store.Dispose();
+            DisposePackageStore(layer.Store);
     }
 
+    private sealed record BrowserUiPreferences(bool LoggingEnabled, bool AutosaveEnabled, int AutosaveMinutes, int AudioVolume, bool ActivityMode);
     private sealed record RouteChoice(RouteMetadata Metadata, string PackageName, string MetadataFile);
+    private sealed record StagedRouteMetadata(string Path, RouteMetadata Metadata);
 }

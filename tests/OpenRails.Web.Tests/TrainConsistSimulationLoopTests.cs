@@ -54,6 +54,26 @@ public sealed class TrainConsistSimulationLoopTests
     }
 
     [Fact]
+    public void ClampsInitialAndResetPositionsToRouteBounds()
+    {
+        var initial = new TrainConsistMotionState(new[]
+        {
+            new TrainCarMotionState(1_000, -2, -5),
+            new TrainCarMotionState(1_000, 2, 105)
+        });
+        var loop = new TrainConsistSimulationLoop(initial, routeLengthMeters: 100);
+
+        Assert.Equal(0, loop.State.Cars[0].DistanceMeters);
+        Assert.Equal(0, loop.State.Cars[0].SpeedMetersPerSecond);
+        Assert.Equal(100, loop.State.Cars[1].DistanceMeters);
+        Assert.Equal(0, loop.State.Cars[1].SpeedMetersPerSecond);
+
+        loop.Reset(initial);
+        Assert.Equal(0, loop.State.Cars[0].DistanceMeters);
+        Assert.Equal(100, loop.State.Cars[1].DistanceMeters);
+    }
+
+    [Fact]
     public void RejectsInvalidRouteDistanceConstraint()
     {
         var state = new TrainConsistMotionState(new[] { new TrainCarMotionState(1_000, 0, 0) });

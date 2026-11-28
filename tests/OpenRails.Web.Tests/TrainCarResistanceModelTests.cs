@@ -87,4 +87,43 @@ public sealed class TrainCarResistanceModelTests
         Assert.Throws<ArgumentOutOfRangeException>(() => model.Calculate(
             state, new TrainCarResistanceParameters(GradientRadians: Math.PI / 2)));
     }
+
+    [Fact]
+    public void RejectsOverflowingDavisResistance()
+    {
+        var model = new TrainCarResistanceModel();
+        var state = new TrainCarMotionState(1_000, 1e200, 0);
+        var parameters = new TrainCarResistanceParameters(
+            RollingResistanceCoefficient: 0,
+            DavisC: 1,
+            AerodynamicDragAreaSquareMeters: 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Calculate(state, parameters));
+    }
+
+    [Fact]
+    public void RejectsOverflowingWindResistance()
+    {
+        var model = new TrainCarResistanceModel();
+        var state = new TrainCarMotionState(1_000, double.MaxValue, 0);
+        var parameters = new TrainCarResistanceParameters(
+            RollingResistanceCoefficient: 0,
+            AerodynamicDragAreaSquareMeters: 1,
+            WindSpeedMetersPerSecond: -double.MaxValue);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Calculate(state, parameters));
+    }
+
+    [Fact]
+    public void RejectsOverflowingGradeForce()
+    {
+        var model = new TrainCarResistanceModel();
+        var state = new TrainCarMotionState(double.MaxValue, 0, 0);
+        var parameters = new TrainCarResistanceParameters(
+            RollingResistanceCoefficient: 0,
+            AerodynamicDragAreaSquareMeters: 0,
+            GradientRadians: 0.5);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => model.Calculate(state, parameters));
+    }
 }

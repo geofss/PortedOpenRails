@@ -10,6 +10,19 @@ namespace OpenRails.Web.Tests;
 public sealed class RouteTerrainTileLocatorTests
 {
     [Fact]
+    public void TerrainMeshLoaderHonorsCancellationBeforeEmptyBatch()
+    {
+        using var store = CreateStore();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var discovery = new RouteTerrainTileDiscovery(
+            Array.Empty<TerrainTileReference>(), Array.Empty<(int, int, string)>());
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new RouteTerrainMeshLoader().Load(store, discovery, cancellation.Token));
+    }
+
+    [Fact]
     public void UsesUpstreamTileNameEncodingForSmallTerrainTiles()
     {
         var name = TerrainTileName.FromTileXZ(0, 0, TerrainTileZoom.Small);
@@ -17,6 +30,37 @@ public sealed class RouteTerrainTileLocatorTests
         Assert.StartsWith("-", name);
         Assert.Equal(9, name.Length);
         Assert.Equal("-7FFFFFFC", name);
+    }
+
+    [Theory]
+    [InlineData(-16384, -16384, TerrainTileZoom.DMLarge)]
+    [InlineData(-8192, 8192, TerrainTileZoom.DMSmall)]
+    [InlineData(0, 0, TerrainTileZoom.Large)]
+    [InlineData(1234, -5678, TerrainTileZoom.Small)]
+    public void TileNamesMatchThePinnedUpstreamImplementation(int tileX, int tileZ, TerrainTileZoom zoom)
+    {
+        var upstream = Orts.Formats.Msts.TileName.FromTileXZ(
+            tileX, tileZ, (Orts.Formats.Msts.TileName.Zoom)(int)zoom);
+
+        Assert.Equal(upstream, TerrainTileName.FromTileXZ(tileX, tileZ, zoom));
+    }
+
+    [Theory]
+    [InlineData(-123, 456, TerrainTileZoom.DMLarge)]
+    [InlineData(123, -456, TerrainTileZoom.DMSmall)]
+    [InlineData(-123, -456, TerrainTileZoom.Large)]
+    [InlineData(123, 456, TerrainTileZoom.Small)]
+    public void TileSnappingMatchesThePinnedUpstreamImplementation(int tileX, int tileZ, TerrainTileZoom zoom)
+    {
+        var expectedX = tileX;
+        var expectedZ = tileZ;
+        Orts.Formats.Msts.TileName.Snap(
+            ref expectedX, ref expectedZ, (Orts.Formats.Msts.TileName.Zoom)(int)zoom);
+
+        TerrainTileName.Snap(ref tileX, ref tileZ, zoom);
+
+        Assert.Equal(expectedX, tileX);
+        Assert.Equal(expectedZ, tileZ);
     }
 
     [Fact]
@@ -60,6 +104,36 @@ public sealed class RouteTerrainTileLocatorTests
 
         Assert.Equal(2, x);
         Assert.Equal(-4, z);
+    }
+
+    [Theory]
+    [InlineData(TerrainTileZoom.DMSmall)]
+    [InlineData(TerrainTileZoom.DMLarge)]
+    public void DiscoversDemoModelTerrainTileZooms(TerrainTileZoom zoom)
+    {
+        var source = new TrackVectorSection(1, 0, 0, 0, 0, 0, 1, "00", 0, 0, 0, 0, 0, 0, 0, 0);
+        var geometry = new TrackSectionGeometry(1, null, 10, null, null, false);
+        var placement = new TrackSectionPlacement(source, geometry, new TrackWorldPosition(0, 0, 0), 10);
+        var path = new TrackVectorPath(1, new[] { 2, 3 }, new[] { placement }, 10);
+        var vector = new TrackNode(1, TrackNodeKind.Vector, null, null, new[] { source },
+            new[] { new TrackPin(2, 0), new TrackPin(3, 1) });
+        var nodeA = new TrackNode(2, TrackNodeKind.End, null, null,
+            Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var nodeB = new TrackNode(3, TrackNodeKind.End, null, null,
+            Array.Empty<TrackVectorSection>(), Array.Empty<TrackPin>());
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null, vector, nodeA, nodeB }, Array.Empty<string>()),
+            new[] { path }, Array.Empty<string>());
+        var tileName = TerrainTileName.FromTileXZ(0, 0, zoom);
+        using var store = CreateStore(
+            ($"ROUTES/Test/TILES/{tileName}.t", "terrain fixture"),
+            ($"ROUTES/Test/TILES/{tileName}_y.raw", "altitude fixture"));
+
+        var result = new RouteTerrainTileLocator().Locate(store, "ROUTES/Test", network);
+
+        var tile = Assert.Single(result.Found);
+        Assert.Equal(tileName, System.IO.Path.GetFileNameWithoutExtension(tile.Path));
+        Assert.Empty(result.Missing);
     }
 
     private static ZipContentStore CreateStore(params (string Path, string Content)[] files)

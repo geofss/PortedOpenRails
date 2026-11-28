@@ -1,8 +1,11 @@
 let gl, program, canvasRef, storedVertices, storedIndices, storedTrackLines;
 let rotation = 0, pitch = 0.72, zoom = 1, dragging = false, lastX = 0, lastY = 0;
-let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver;
+let wheelHandler, pointerDownHandler, pointerMoveHandler, pointerUpHandler, resizeHandler, resizeObserver, contextLostHandler, contextRestoredHandler;
 const activePointers = new Map();
 let renderScale = 1;
+let cameraChangeCallback = null, cameraNotifyFrame = 0, cameraNotifyTimer = null;
+let lastSceneCameraPosition = null, lastNotifiedCameraPosition = null;
+let lastSceneSpan = 1, lastCameraNotifyAt = 0;
 const qualityStorageKey = "ported-openrails-preview-quality";
 const supportedQualityPresets = new Set(["low", "medium", "high"]);
 
@@ -66,6 +69,44 @@ export function setCameraPreset(name) {
 }
 export function getCameraPreset() { return activeCameraPreset; }
 
+export function getCameraWorldPosition() {
+  return lastSceneCameraPosition ? [...lastSceneCameraPosition] : null;
+}
+
+export function setCameraChangeCallback(callback) {
+  cameraChangeCallback = callback || null;
+  notifyCameraChanged();
+}
+
+function notifyCameraChanged() {
+  if (!cameraChangeCallback || !lastSceneCameraPosition || cameraNotifyFrame) return;
+  cameraNotifyFrame = requestAnimationFrame(() => {
+    cameraNotifyFrame = 0;
+    if (!cameraChangeCallback || !lastSceneCameraPosition) return;
+    const next = lastSceneCameraPosition;
+    if (lastNotifiedCameraPosition) {
+      const dx = next[0] - lastNotifiedCameraPosition[0];
+      const dy = next[1] - lastNotifiedCameraPosition[1];
+      const dz = next[2] - lastNotifiedCameraPosition[2];
+      const movement = Math.hypot(dx, dy, dz);
+      if (movement < Math.max(8, lastSceneSpan * 0.002)) return;
+      const now = performance.now();
+      const remaining = 250 - (now - lastCameraNotifyAt);
+      if (remaining > 0) {
+        if (cameraNotifyTimer) clearTimeout(cameraNotifyTimer);
+        cameraNotifyTimer = setTimeout(() => {
+          cameraNotifyTimer = null;
+          notifyCameraChanged();
+        }, remaining);
+        return;
+      }
+      lastCameraNotifyAt = now;
+    }
+    lastNotifiedCameraPosition = [...next];
+    cameraChangeCallback.invokeMethodAsync("OnCameraChanged", next[0], next[1], next[2]).catch(() => {});
+  });
+}
+
 
 export function initialize(canvas) {
   canvasRef = canvas;
@@ -90,9 +131,11 @@ export function initialize(canvas) {
     if (activePointers.size >= 2) {
       const points = [...activePointers.values()];
       const distance = pointerDistance(points[0], points[1]);
-      if (pinchStartDistance > 0)
-        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance)); activeCameraPreset = "custom";
-      redraw();
+      if (pinchStartDistance > 0) {
+        zoom = Math.max(0.35, Math.min(5, pinchStartZoom * distance / pinchStartDistance));
+        activeCameraPreset = "custom";
+        redraw();
+      }
     } else if (dragging) {
       rotation += (e.clientX-lastX)*0.008;
       pitch = Math.max(0.15, Math.min(1.45, pitch+(e.clientY-lastY)*0.006));
@@ -118,20 +161,27 @@ export function initialize(canvas) {
   if (typeof ResizeObserver !== 'undefined') { resizeObserver = new ResizeObserver(resizeHandler); resizeObserver.observe(canvas); }
   gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
   if (!gl) throw new Error("WebGL2 is not supported by this browser.");
-  const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
-    in vec3 position;
-    in vec3 color;
-    out vec3 vColor;
-    void main(){ gl_Position=vec4(position,1.0); vColor=color; }`);
-  const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
-    precision highp float;
-    in vec3 vColor;
-    out vec4 outColor;
-    void main(){ outColor=vec4(vColor,1.0); }`);
-  program=gl.createProgram(); gl.attachShader(program,vertex); gl.attachShader(program,fragment); gl.linkProgram(program);
-  if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
-  gl.deleteShader(vertex); gl.deleteShader(fragment);
-  gl.enable(gl.DEPTH_TEST);
+  createBaseProgram();
+  contextLostHandler = event => {
+    event.preventDefault();
+    gl = null;
+    program = terrainProgram = shapeProgram = null;
+    terrainTextures = [];
+    shapeTextures = [];
+    uploadedTerrainPixels = uploadedShapePixels = null;
+  };
+  contextRestoredHandler = () => {
+    gl = canvas.getContext("webgl2", { antialias: true, alpha: false });
+    if (!gl) return;
+    createBaseProgram();
+    terrainProgram = shapeProgram = null;
+    terrainTextures = [];
+    shapeTextures = [];
+    uploadedTerrainPixels = uploadedShapePixels = null;
+    redraw();
+  };
+  canvas.addEventListener("webglcontextlost", contextLostHandler, false);
+  canvas.addEventListener("webglcontextrestored", contextRestoredHandler, false);
 }
 export function cleanup() {
   if (canvasRef) {
@@ -142,6 +192,8 @@ export function cleanup() {
     canvasRef.removeEventListener('pointercancel', pointerUpHandler);
   }
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  if (canvasRef && contextLostHandler) canvasRef.removeEventListener('webglcontextlost', contextLostHandler);
+  if (canvasRef && contextRestoredHandler) canvasRef.removeEventListener('webglcontextrestored', contextRestoredHandler);
   if (resizeObserver) resizeObserver.disconnect();
   if (gl) {
     for (const texture of terrainTextures) gl.deleteTexture(texture);
@@ -155,10 +207,35 @@ export function cleanup() {
   uploadedTerrainPixels = storedTerrainPatches = storedTerrainPixels = storedTerrainLines = storedTrackMesh = storedShapeBatches = storedShapePixels = uploadedShapePixels = null;
   storedRollingStockBatches = [];
   storedVertices = storedIndices = storedTrackLines = null;
-  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = null;
+  wheelHandler = pointerDownHandler = pointerMoveHandler = pointerUpHandler = resizeHandler = resizeObserver = contextLostHandler = contextRestoredHandler = null;
   activePointers.clear(); pinchStartDistance = 0;
+  if (cameraNotifyFrame) cancelAnimationFrame(cameraNotifyFrame);
+  if (cameraNotifyTimer) clearTimeout(cameraNotifyTimer);
+  cameraNotifyFrame = 0; cameraNotifyTimer = null; cameraChangeCallback = null;
+  lastSceneCameraPosition = lastNotifiedCameraPosition = null;
+  lastSceneSpan = 1; lastCameraNotifyAt = 0;
   rotation = 0; pitch = 0.72; zoom = 1; activeCameraPreset = "overview"; dragging = false;
   renderScale = 1;
+}
+function createBaseProgram(){
+  const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
+    in vec3 position;
+    in vec3 color;
+    out vec3 vColor;
+    void main(){ gl_Position=vec4(position,1.0); vColor=color; }`);
+  const fragment = compile(gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
+    in vec3 vColor;
+    out vec4 outColor;
+    void main(){ outColor=vec4(vColor,1.0); }`);
+  program=gl.createProgram();
+  gl.attachShader(program,vertex);
+  gl.attachShader(program,fragment);
+  gl.linkProgram(program);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  gl.enable(gl.DEPTH_TEST);
 }
 function pointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
 function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
@@ -282,8 +359,15 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   }
   const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,centerZ=(minZ+maxZ)/2;
   const span=Math.max(1,maxX-minX,maxZ-minZ),aspect=canvasRef.width/canvasRef.height;
+  lastSceneSpan = span;
   const cos=Math.cos(rotation),sin=Math.sin(rotation);
   const cameraDistance=span*1.35/zoom,near=span*0.015,far=span*20,focal=cameraDistance*0.85;
+  const cameraRadius=cameraDistance*Math.cos(pitch);
+  lastSceneCameraPosition=[
+    centerX-Math.sin(rotation)*cameraRadius,
+    centerY+Math.sin(pitch)*cameraDistance,
+    centerZ-Math.cos(rotation)*cameraRadius
+  ];
   const project=(x,z,y=0)=>{
     const dx=x-centerX,dz=z-centerZ,dy=y-centerY;
     const rx=dx*cos-dz*sin,rz=dx*sin+dz*cos;
@@ -339,6 +423,12 @@ export function drawTerrainTextured(patches, textures, trackLines = [], trackMes
   if(trackLines.length) drawTrackOverlay(trackLines,project);
   if(shapeBatches.length || storedRollingStockBatches.length)
     drawTrackShapeBatches([...shapeBatches, ...storedRollingStockBatches],shapePixels,project);
+  notifyCameraChanged();
+}
+
+export function updateSceneGeometry(patches, textures, trackLines = [], trackMesh = null,
+  shapeBatches = [], shapePixels = [], rollingStockBatches = []) {
+  drawTerrainTextured(patches, textures, trackLines, trackMesh, shapeBatches, shapePixels, rollingStockBatches);
 }
 
 export function updateRollingStockBatches(batches = []) {
@@ -349,13 +439,37 @@ function drawTrackShapeBatches(batches,pixels,project){
   if(!batches.length) return;
   if(!shapeProgram){
     const vertex=compile(gl.VERTEX_SHADER,`#version 300 es
-      in vec3 position; in vec2 uv; out vec2 vUv;
-      void main(){ gl_Position=vec4(position,1.0); vUv=uv; }`);
+      in vec3 position; in vec2 uv0; in vec2 uv1; in vec2 uv2; in vec2 uv3;
+      out vec2 vUv0; out vec2 vUv1; out vec2 vUv2; out vec2 vUv3;
+      void main(){
+        gl_Position=vec4(position,1.0);
+        vUv0=uv0; vUv1=uv1; vUv2=uv2; vUv3=uv3;
+      }`);
     const fragment=compile(gl.FRAGMENT_SHADER,`#version 300 es
-      precision highp float; in vec2 vUv; uniform sampler2D shapeTexture;
-      uniform bool hasTexture; uniform bool alphaTest; out vec4 outColor;
-      void main(){ vec4 color=hasTexture ? texture(shapeTexture,vUv) : vec4(0.38,0.40,0.43,1.0);
-        if(alphaTest && color.a<0.5) discard; outColor=color; }`);
+      precision highp float;
+      in vec2 vUv0; in vec2 vUv1; in vec2 vUv2; in vec2 vUv3;
+      uniform sampler2D shapeTexture0; uniform sampler2D shapeTexture1;
+      uniform sampler2D shapeTexture2; uniform sampler2D shapeTexture3;
+      uniform bool hasTexture0; uniform bool hasTexture1; uniform bool hasTexture2; uniform bool hasTexture3;
+      uniform bool alphaTest;
+      uniform int uvSource0; uniform int uvSource1; uniform int uvSource2; uniform int uvSource3;
+      uniform vec2 uvScale0; uniform vec2 uvScale1; uniform vec2 uvScale2; uniform vec2 uvScale3;
+      out vec4 outColor;
+      vec2 sourceUv(int index){
+        if(index==1) return vUv1;
+        if(index==2) return vUv2;
+        if(index==3) return vUv3;
+        return vUv0;
+      }
+      void main(){
+        vec4 color=vec4(0.38,0.40,0.43,1.0);
+        if(hasTexture0) color=texture(shapeTexture0,sourceUv(uvSource0)*uvScale0);
+        if(hasTexture1) color*=texture(shapeTexture1,sourceUv(uvSource1)*uvScale1);
+        if(hasTexture2) color*=texture(shapeTexture2,sourceUv(uvSource2)*uvScale2);
+        if(hasTexture3) color*=texture(shapeTexture3,sourceUv(uvSource3)*uvScale3);
+        if(alphaTest && color.a<0.5) discard;
+        outColor=color;
+      }`);
     shapeProgram=gl.createProgram();gl.attachShader(shapeProgram,vertex);gl.attachShader(shapeProgram,fragment);gl.linkProgram(shapeProgram);
     if(!gl.getProgramParameter(shapeProgram,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(shapeProgram));
     gl.deleteShader(vertex);gl.deleteShader(fragment);
@@ -378,30 +492,87 @@ function drawTrackShapeBatches(batches,pixels,project){
   gl.useProgram(shapeProgram);
   const vao=gl.createVertexArray();gl.bindVertexArray(vao);
   const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);
-  const p=gl.getAttribLocation(shapeProgram,"position"),uv=gl.getAttribLocation(shapeProgram,"uv");
-  gl.enableVertexAttribArray(p);gl.enableVertexAttribArray(uv);
-  const sampler=gl.getUniformLocation(shapeProgram,"shapeTexture"),hasTexture=gl.getUniformLocation(shapeProgram,"hasTexture"),alphaTest=gl.getUniformLocation(shapeProgram,"alphaTest");
+  const attributeNames=["position","uv0","uv1","uv2","uv3"];
+  const attributeLocations=attributeNames.map(name=>gl.getAttribLocation(shapeProgram,name));
+  for(const location of attributeLocations) gl.enableVertexAttribArray(location);
+  const samplers=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`shapeTexture${index}`));
+  const textureFlags=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`hasTexture${index}`));
+  const uvSources=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`uvSource${index}`));
+  const uvScales=[0,1,2,3].map(index=>gl.getUniformLocation(shapeProgram,`uvScale${index}`));
+  const alphaTest=gl.getUniformLocation(shapeProgram,"alphaTest");
+  const textureParameter=(texture,slot,operation,binding,batch)=>{
+    gl.activeTexture(gl.TEXTURE0+slot);
+    gl.bindTexture(gl.TEXTURE_2D,texture);
+    const address=operation?.textureAddressMode ?? operation?.TextureAddressMode ?? batch.textureAddressMode;
+    const wrap=address===2?gl.MIRRORED_REPEAT:address===3||address===4?gl.CLAMP_TO_EDGE:gl.REPEAT;
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wrap);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wrap);
+    const filter=binding?.filterMode ?? binding?.FilterMode;
+    if(filter===0){
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    } else {
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    }
+  };
   for(const batch of batches){
     if(!batch.vertices.length||!batch.indices.length) continue;
-    const packed=new Float32Array(batch.vertices.length);
-    for(let i=0,j=0;i<batch.vertices.length;i+=5,j+=5){
-      const q=project(batch.vertices[i],batch.vertices[i+2],batch.vertices[i+1]);
-      packed[j]=q[0];packed[j+1]=q[1];packed[j+2]=q[2]-0.0002;
-      packed[j+3]=batch.vertices[i+3];packed[j+4]=batch.vertices[i+4];
+    const vertexCount=batch.vertices.length/5;
+    const channels=batch.textureCoordinateChannels ?? batch.TextureCoordinateChannels ?? [];
+    const channelValue=(channel,index,axis)=>{
+      const entry=channels[channel]?.[index];
+      if(entry===undefined||entry===null) return 0;
+      return Number(Array.isArray(entry)?entry[axis]:(axis===0?entry.x:entry.y))||0;
+    };
+    const packed=new Float32Array(vertexCount*11);
+    for(let vertex=0;vertex<vertexCount;vertex++){
+      const sourceOffset=vertex*5,targetOffset=vertex*11;
+      const q=project(batch.vertices[sourceOffset],batch.vertices[sourceOffset+2],batch.vertices[sourceOffset+1]);
+      packed[targetOffset]=q[0];packed[targetOffset+1]=q[1];packed[targetOffset+2]=q[2]-(Number(batch.zBias)||0.0002)*0.0001;
+      packed[targetOffset+3]=batch.vertices[sourceOffset+3];packed[targetOffset+4]=batch.vertices[sourceOffset+4];
+      for(let channel=1;channel<4;channel++){
+        packed[targetOffset+3+channel*2]=channelValue(channel,vertex,0);
+        packed[targetOffset+4+channel*2]=channelValue(channel,vertex,1);
+      }
     }
     gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STREAM_DRAW);
-    gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
-    const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(batch.indices),gl.STREAM_DRAW);
-    const valid=batch.textureIndex>=0&&shapeTextures[batch.textureIndex];
-    gl.uniform1i(hasTexture,valid?1:0);gl.uniform1i(alphaTest,batch.alphaTest?1:0);
-    if(valid){
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shapeTextures[batch.textureIndex]);gl.uniform1i(sampler,0);
-      const addressMode=batch.textureAddressMode;
-      const wrap=addressMode===2?gl.MIRRORED_REPEAT:addressMode===3||addressMode===4?gl.CLAMP_TO_EDGE:gl.REPEAT;
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wrap);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wrap);
+    const stride=44;
+    for(let index=0;index<5;index++)
+      gl.vertexAttribPointer(attributeLocations[index],index===0?3:2,gl.FLOAT,false,stride,index===0?0:12+(index-1)*8);
+    const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(batch.indices),gl.STREAM_DRAW);
+
+    const indexes=batch.textureIndexes ?? batch.TextureIndexes ?? [batch.textureIndex];
+    const material=batch.material ?? batch.Material ?? {};
+    const operations=material.uvOperations ?? material.UvOperations ?? [];
+    const bindings=material.textureBindings ?? material.TextureBindings ?? [];
+    const hasTexture=[];
+    for(let slot=0;slot<4;slot++){
+      const textureIndex=Number(indexes[slot] ?? -1);
+      const valid=textureIndex>=0&&!!shapeTextures[textureIndex];
+      hasTexture[slot]=valid;
+      gl.uniform1i(textureFlags[slot],valid?1:0);
+      const operation=operations[slot] ?? operations[0];
+      const kind=String(operation?.kind ?? operation?.Kind ?? "").toLowerCase();
+      const sourceIndex=Number(operation?.sourceUvIndex ?? operation?.SourceUvIndex ?? 0);
+      gl.uniform1i(uvSources[slot],sourceIndex>=0&&sourceIndex<4?sourceIndex:0);
+      const p3=Number(operation?.parameter3 ?? operation?.Parameter3 ?? 1);
+      const p4=Number(operation?.parameter4 ?? operation?.Parameter4 ?? p3);
+      let scale=[1,1];
+      if(kind.includes("nonuniformscale")) scale=[p3,p4];
+      else if(kind.includes("uniformscale")) scale=[p3,p3];
+      gl.uniform2f(uvScales[slot],scale[0],scale[1]);
+      if(valid){
+        textureParameter(shapeTextures[textureIndex],slot,operation,bindings[slot],batch);
+        gl.uniform1i(samplers[slot],slot);
+      }
     }
+    gl.uniform1i(alphaTest,batch.alphaTest?1:0);
+    const zBufferMode=Number(material.zBufferMode ?? material.ZBufferMode ?? 1);
+    gl.depthMask(zBufferMode!==0);
     gl.drawElements(gl.TRIANGLES,batch.indices.length,gl.UNSIGNED_INT,0);
+    gl.depthMask(true);
     gl.deleteBuffer(ib);
   }
   gl.bindVertexArray(null);gl.deleteBuffer(vb);gl.deleteVertexArray(vao);

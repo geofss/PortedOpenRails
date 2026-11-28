@@ -51,16 +51,26 @@ public sealed class TrainCarForceModel
 
         var drivingForce = forces.MotiveForceNewtons + forces.GravityForceNewtons;
         var resistance = forces.TotalResistanceNewtons;
+        if (!double.IsFinite(drivingForce))
+            throw new ArgumentOutOfRangeException(nameof(forces), "Combined motive and gravity force must be finite.");
         if (!double.IsFinite(resistance))
             throw new ArgumentOutOfRangeException(nameof(forces), "Combined resistance must be finite.");
 
         if (Math.Abs(state.SpeedMetersPerSecond) > 1e-9)
-            return drivingForce - Math.Sign(state.SpeedMetersPerSecond) * resistance;
+        {
+            var netForce = drivingForce - Math.Sign(state.SpeedMetersPerSecond) * resistance;
+            if (!double.IsFinite(netForce))
+                throw new ArgumentOutOfRangeException(nameof(forces), "Net longitudinal force must be finite.");
+            return netForce;
+        }
 
         var startingDirection = Math.Sign(drivingForce);
         if (startingDirection == 0 || Math.Abs(drivingForce) <= resistance)
             return 0;
 
-        return drivingForce - startingDirection * resistance;
+        var startingForce = drivingForce - startingDirection * resistance;
+        if (!double.IsFinite(startingForce))
+            throw new ArgumentOutOfRangeException(nameof(forces), "Starting longitudinal force must be finite.");
+        return startingForce;
     }
 }

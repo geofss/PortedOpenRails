@@ -27,6 +27,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.False(route.Segments[2].IsReversed);
         Assert.Equal(300, route.LengthMeters);
         Assert.Empty(route.Diagnostics);
+        Assert.True(route.IsDriveReady);
     }
 
     [Fact]
@@ -65,6 +66,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Single(route.Segments);
         Assert.Equal(2, route.PendingJunctionNodeIndex);
         Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("ambiguous"));
+        Assert.False(route.IsDriveReady);
     }
 
     [Fact]
@@ -84,6 +86,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Equal(new uint[] { 10, 30 },
             route.Segments.Select(segment => segment.Path.TrackNodeIndex));
         Assert.Empty(route.Diagnostics);
+        Assert.True(route.IsDriveReady);
     }
 
     [Fact]
@@ -128,6 +131,7 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Single(route.Segments);
         Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("geometry gap"));
         Assert.Equal(100, route.LengthMeters);
+        Assert.False(route.IsDriveReady);
     }
 
     [Fact]
@@ -169,6 +173,22 @@ public sealed class TrackNetworkRouteBuilderTests
     }
 
     [Fact]
+    public void StopsWhenTheOnlyContinuationHasNoEndpointGeometry()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var continuation = CreatePathWithoutGeometry(20, new[] { 2, 3 });
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, continuation }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10);
+
+        Assert.Single(route.Segments);
+        Assert.Equal(2, route.PendingJunctionNodeIndex);
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("no usable endpoint geometry"));
+    }
+
+    [Fact]
     public void StopsAtAmbiguousJunctionWhenOnlyOneBranchHasEndpointGeometry()
     {
         var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
@@ -206,6 +226,62 @@ public sealed class TrackNetworkRouteBuilderTests
         Assert.Contains(route.Diagnostics, diagnostic =>
             diagnostic.Contains("ambiguous") &&
             diagnostic.Contains("endpoint geometry is unavailable for at least one branch"));
+    }
+
+    [Fact]
+    public void DoesNotReportSafetyLimitWhenRouteEndsExactlyAtLimit()
+    {
+        var terminal = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { terminal }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10, maximumSegments: 1);
+
+        Assert.Single(route.Segments);
+        Assert.Empty(route.Diagnostics);
+    }
+
+    [Fact]
+    public void ReportsSafetyLimitOnlyWhenAnUnvisitedContinuationRemains()
+    {
+        var first = CreatePath(10, new[] { 1, 2 }, 0, 100);
+        var second = CreatePath(20, new[] { 2, 3 }, 100, 200);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, second }, Array.Empty<string>());
+
+        var route = new TrackNetworkRouteBuilder().Build(network, 10, maximumSegments: 1);
+
+        Assert.Single(route.Segments);
+        Assert.Contains(route.Diagnostics, diagnostic => diagnostic.Contains("safety limit"));
+    }
+
+    [Fact]
+    public void RejectsConnectedRouteLengthOverflow()
+    {
+        var first = new TrackVectorPath(10, new[] { 1, 2 },
+            Array.Empty<TrackSectionPlacement>(), double.MaxValue);
+        var second = new TrackVectorPath(20, new[] { 2, 3 },
+            Array.Empty<TrackSectionPlacement>(), double.MaxValue);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { first, second }, Array.Empty<string>());
+
+        Assert.Throws<InvalidDataException>(() => new TrackNetworkRouteBuilder().Build(
+            network, 10, maximumSegments: 2, preferredNextTrackNodeIndex: 20));
+    }
+
+    [Fact]
+    public void RejectsVectorPathsWithInvalidLengthMetadata()
+    {
+        var invalid = new TrackVectorPath(10, new[] { 1, 2 },
+            Array.Empty<TrackSectionPlacement>(), double.NaN, null);
+        var network = new TrackNetwork(
+            new TrackDatabase(new TrackNode?[] { null }, Array.Empty<string>()),
+            new[] { invalid }, Array.Empty<string>());
+
+        Assert.Throws<InvalidDataException>(() => new TrackNetworkRouteBuilder().Build(network, 10));
     }
 
     [Fact]

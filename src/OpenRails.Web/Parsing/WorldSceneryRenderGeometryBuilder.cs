@@ -30,9 +30,18 @@ public sealed class WorldSceneryRenderGeometryBuilder
         this.maximumIndices = maximumIndices;
     }
 
-    public WorldSceneryRenderGeometry Build(IEnumerable<LoadedWorldSceneryTile> tiles)
+    public WorldSceneryRenderGeometry Build(
+        IEnumerable<LoadedWorldSceneryTile> tiles,
+        string? seasonFolder = null,
+        int animationClipIndex = -1,
+        float animationFrame = 0,
+        Vector3? cameraPosition = null,
+        double? elapsedSeconds = null,
+        bool loopAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(tiles);
+        if (elapsedSeconds is { } elapsed && !double.IsFinite(elapsed))
+            throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
         var textureAssets = new List<LoadedTrackShapeTexture>();
         var texturePathIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var batchBuilders = new Dictionary<WorldBatchKey, WorldBatchBuilder>();
@@ -43,12 +52,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
         foreach (var tile in tiles)
         {
             var shapeTextureIndexes = new Dictionary<(uint ShapeIndex, string ImageName), int>(new ShapeImageKeyComparer());
-            foreach (var texture in tile.Textures.Loaded)
+            foreach (var texture in TrackShapeSeasonTextureSelector.Select(tile.Textures.Loaded, seasonFolder))
             {
-                if (texture.Reference.SeasonFolder is not null ||
-                    texture.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
-                    texture.Texture.MipLevels.Count == 0)
-                    continue;
 
                 if (!texturePathIndexes.TryGetValue(texture.Reference.Path, out var textureIndex))
                 {
@@ -69,9 +74,17 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
                 var worldTransform = BuildWorldTransform(placement);
                 var mesh = asset.Mesh;
-                var lod = mesh.Lods.FirstOrDefault();
-                if (lod is null) continue;
+                var frame = elapsedSeconds is { } animationElapsed && mesh.Animations is not null &&
+                    animationClipIndex >= 0 && animationClipIndex < mesh.Animations.Count
+                    ? TrackShapeAnimationClock.GetFrame(mesh.Animations[animationClipIndex], animationElapsed, loopAnimation)
+                    : animationFrame;
+                var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
+                var lodDistance = cameraPosition is { } camera
+                    ? Vector3.Distance(camera, worldTransform.Translation) : 0;
+                var lods = TrackShapeLodSelector.SelectAll(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
+                if (lods.Count == 0) continue;
 
+                foreach (var lod in lods)
                 foreach (var subObject in lod.SubObjects)
                 {
                     foreach (var primitive in subObject.Primitives)
@@ -87,17 +100,27 @@ public sealed class WorldSceneryRenderGeometryBuilder
                         var textureIndex = primitive.ImageName is not null &&
                             shapeTextureIndexes.TryGetValue((placement.Uid, primitive.ImageName), out var foundTexture)
                             ? foundTexture : -1;
+                        var textureSlotIndexes = primitive.TextureBindings?.Select(binding =>
+                            shapeTextureIndexes.TryGetValue((placement.Uid, binding.ImageName), out var slot)
+                                ? slot : -1).ToArray() ?? (textureIndex >= 0 ? new[] { textureIndex } : Array.Empty<int>());
                         var key = new WorldBatchKey(textureIndex, primitive.AlphaTest,
-                            primitive.TextureAddressMode, primitive.ZBias);
+                            primitive.TextureAddressMode, primitive.ZBias,
+                            primitive.PrimitiveStateIndex, string.Join(",", textureSlotIndexes), primitive.ShaderName,
+                            primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
+                            primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.ZBufferMode);
                         if (!batchBuilders.TryGetValue(key, out var batch))
                         {
-                            batch = new WorldBatchBuilder(key);
+                            batch = new WorldBatchBuilder(key, primitive, textureSlotIndexes);
                             batchBuilders.Add(key, batch);
                         }
 
-                        var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy);
+                        var localTransform = BuildHierarchyTransform(mesh.Matrices, primitive.MatrixIndex, primitive.Hierarchy, pose);
                         var transform = localTransform * worldTransform;
                         var baseIndex = batch.Vertices.Count / 5;
+                        var channelCount = subObject.Vertices.Count == 0 ? 0 :
+                            subObject.Vertices.Max(vertex => 1 + (vertex.AdditionalTextureCoordinates?.Count ?? 0));
+                        while (batch.TextureCoordinateChannels.Count < channelCount)
+                            batch.TextureCoordinateChannels.Add(Enumerable.Repeat(Vector2.Zero, baseIndex).ToList());
                         foreach (var vertex in subObject.Vertices)
                         {
                             var position = Vector3.Transform(vertex.Position, transform);
@@ -106,6 +129,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
                             batch.Vertices.Add(-position.Z);
                             batch.Vertices.Add(vertex.TextureCoordinate.X);
                             batch.Vertices.Add(vertex.TextureCoordinate.Y);
+                            for (var channel = 0; channel < batch.TextureCoordinateChannels.Count; channel++)
+                                batch.TextureCoordinateChannels[channel].Add(vertex.GetTextureCoordinate(channel));
                         }
 
                         foreach (var index in primitive.Indices)
@@ -122,6 +147,52 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 }
                 if (truncated) break;
             }
+            if (!truncated)
+            {
+                var forestTextureIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                foreach (var texture in TrackShapeSeasonTextureSelector.Select(tile.ForestTextures?.Loaded ?? Array.Empty<LoadedTrackShapeTexture>(), seasonFolder))
+                {
+                    if (!texturePathIndexes.TryGetValue(texture.Reference.Path, out var forestTextureIndex))
+                    {
+                        forestTextureIndex = textureAssets.Count;
+                        texturePathIndexes.Add(texture.Reference.Path, forestTextureIndex);
+                        textureAssets.Add(texture);
+                    }
+                    forestTextureIndexes.TryAdd(texture.Reference.ImageName, forestTextureIndex);
+                }
+
+                var forestBuilder = new ForestMeshBuilder();
+                foreach (var forest in tile.Placements.Where(item =>
+                    StringComparer.OrdinalIgnoreCase.Equals(item.ObjectKind, "Forest")))
+                {
+                    if (string.IsNullOrWhiteSpace(forest.TreeTexture) ||
+                        !forestTextureIndexes.TryGetValue(forest.TreeTexture, out var forestTextureIndex))
+                        continue;
+                    var forestMesh = forestBuilder.Build(forest);
+                    if (forestMesh.Indices.Length == 0)
+                        continue;
+                    var vertexCount = forestMesh.Vertices.Length / 5;
+                    if (totalVertices + vertexCount > maximumVertices ||
+                        totalIndices + forestMesh.Indices.Length > maximumIndices)
+                    {
+                        truncated = true;
+                        break;
+                    }
+
+                    var key = new WorldBatchKey(forestTextureIndex, true, 0, 0);
+                    if (!batchBuilders.TryGetValue(key, out var forestBatch))
+                    {
+                        forestBatch = new WorldBatchBuilder(key);
+                        batchBuilders.Add(key, forestBatch);
+                    }
+                    var baseIndex = forestBatch.Vertices.Count / 5;
+                    forestBatch.Vertices.AddRange(forestMesh.Vertices);
+                    foreach (var index in forestMesh.Indices)
+                        forestBatch.Indices.Add(baseIndex + index);
+                    totalVertices += vertexCount;
+                    totalIndices += forestMesh.Indices.Length;
+                }
+            }
             if (truncated) break;
         }
 
@@ -129,7 +200,11 @@ public sealed class WorldSceneryRenderGeometryBuilder
             .Where(batch => batch.Indices.Count > 0)
             .Select(batch => new TrackShapeTexturedRenderBatch(
                 batch.Vertices.ToArray(), batch.Indices.ToArray(), batch.Key.TextureIndex,
-                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias))
+                batch.Key.AlphaTest, batch.Key.TextureAddressMode, batch.Key.ZBias,
+                Array.AsReadOnly(batch.TextureCoordinateChannels
+                    .Select(channel => (IReadOnlyList<Vector2>)Array.AsReadOnly(channel.ToArray())).ToArray()),
+                batch.Material,
+                Array.AsReadOnly(batch.TextureIndexes)))
             .ToArray();
         return new WorldSceneryRenderGeometry(
             Array.AsReadOnly(textureAssets.ToArray()), Array.AsReadOnly(batches), truncated);
@@ -163,7 +238,8 @@ public sealed class WorldSceneryRenderGeometryBuilder
     private static Matrix4x4 BuildHierarchyTransform(
         IReadOnlyList<TrackShapeMatrix> matrices,
         int matrixIndex,
-        IReadOnlyList<int> hierarchy)
+        IReadOnlyList<int> hierarchy,
+        IReadOnlyDictionary<int, Matrix4x4>? animatedPose = null)
     {
         var transform = Matrix4x4.Identity;
         var node = matrixIndex;
@@ -174,7 +250,10 @@ public sealed class WorldSceneryRenderGeometryBuilder
                 throw new InvalidDataException("WORLD shape matrix hierarchy contains a cycle.");
             if ((uint)node >= (uint)matrices.Count)
                 throw new InvalidDataException($"WORLD shape hierarchy references missing matrix {node}.");
-            transform *= ToOpenRailsMatrix(matrices[node]);
+            var nodeTransform = ToOpenRailsMatrix(matrices[node]);
+            if (animatedPose is not null && animatedPose.TryGetValue(node, out var animationTransform))
+                nodeTransform *= animationTransform;
+            transform *= nodeTransform;
             node = hierarchy[node];
         }
         return transform;
@@ -186,13 +265,25 @@ public sealed class WorldSceneryRenderGeometryBuilder
         -m.CX, -m.CY, m.CZ, 0,
         m.DX, m.DY, -m.DZ, 1);
 
-    private sealed record WorldBatchKey(int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias);
+    private sealed record WorldBatchKey(
+        int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias,
+        int PrimitiveStateIndex = -1, string TextureSlotKey = "", string ShaderName = "",
+        int LightMaterialIndex = -1, int LightConfigurationIndex = -1,
+        int TextureFilterMode = 0, float MipMapLodBias = 0, int ZBufferMode = 1);
     private sealed class WorldBatchBuilder
     {
         public WorldBatchKey Key { get; }
+        public TrackShapePrimitiveMesh? Material { get; }
+        public int[] TextureIndexes { get; }
         public List<float> Vertices { get; } = new();
         public List<int> Indices { get; } = new();
-        public WorldBatchBuilder(WorldBatchKey key) => Key = key;
+        public List<List<Vector2>> TextureCoordinateChannels { get; } = new();
+        public WorldBatchBuilder(WorldBatchKey key, TrackShapePrimitiveMesh? material = null, int[]? textureIndexes = null)
+        {
+            Key = key;
+            Material = material;
+            TextureIndexes = textureIndexes ?? Array.Empty<int>();
+        }
     }
 
     private sealed class ShapeImageKeyComparer : IEqualityComparer<(uint ShapeIndex, string ImageName)>

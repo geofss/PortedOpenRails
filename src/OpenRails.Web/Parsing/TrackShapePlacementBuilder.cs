@@ -66,4 +66,7 @@ public sealed record TrackShapePlacement(
     TrackWorldPosition Anchor,
     double HeadingRadians,
     TrackShapeAssetMesh Asset,
-    Matrix4x4 WorldTransform);
+    Matrix4x4 WorldTransform,
+    int? VehicleUid = null,
+    double RouteDistanceMeters = 0,
+    IReadOnlyDictionary<int, Matrix4x4>? RuntimeMatrixOverrides = null);

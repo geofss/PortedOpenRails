@@ -32,6 +32,7 @@ public sealed class RollingStockTrackPlacementBuilder
             throw new ArgumentOutOfRangeException(nameof(startDistanceMeters));
 
         var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         if (centerline.Count < 2)
             return new RollingStockTrackPlacementResult(
                 Array.Empty<TrackShapePlacement>(),
@@ -88,7 +89,10 @@ public sealed class RollingStockTrackPlacementBuilder
                 position,
                 heading,
                 asset,
-                rotation * translation));
+                rotation * translation,
+                car.Uid,
+                centerDistance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, centerDistance, heading, car.Flipped)));
         }
 
         return new RollingStockTrackPlacementResult(
@@ -122,6 +126,7 @@ public sealed class RollingStockTrackPlacementBuilder
             throw new ArgumentException("The motion state must contain one entry for every non-EOT consist car.", nameof(motionState));
 
         var centerline = new TrackGeometryTessellator().BuildPolyline(path, maximumSegmentLengthMeters);
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         if (centerline.Count < 2)
             return new RollingStockTrackPlacementResult(
                 Array.Empty<TrackShapePlacement>(),
@@ -169,7 +174,10 @@ public sealed class RollingStockTrackPlacementBuilder
                 position,
                 heading,
                 asset,
-                rotation * translation));
+                rotation * translation,
+                car.Uid,
+                distance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);
@@ -301,6 +309,7 @@ public sealed class RollingStockTrackPlacementBuilder
             cumulative[i] = cumulative[i - 1] + TrackDistance(centerline[i - 1], centerline[i]);
 
         var availableLength = cumulative[^1];
+        var bogieCenterline = centerline.Select(point => new Vector3((float)point.X, (float)point.Y, (float)point.Z)).ToArray();
         var placements = new List<TrackShapePlacement>();
         var issues = new List<string>();
         var minimumDistance = double.PositiveInfinity;
@@ -353,7 +362,10 @@ public sealed class RollingStockTrackPlacementBuilder
                 position,
                 heading,
                 asset,
-                rotation * translation));
+                rotation * translation,
+                car.Uid,
+                distance,
+                RollingStockBogiePoseBuilder.Build(asset.Mesh, bogieCenterline, cumulative, distance, heading, car.Flipped)));
 
             minimumDistance = Math.Min(minimumDistance, distance);
             maximumDistance = Math.Max(maximumDistance, distance);

@@ -10,10 +10,16 @@ public sealed class RouteTerrainMeshLoader
 {
     public RouteTerrainMeshLoadResult Load(
         IVirtualContentStore store,
-        RouteTerrainTileDiscovery discovery)
+        RouteTerrainTileDiscovery discovery) => Load(store, discovery, CancellationToken.None);
+
+    public RouteTerrainMeshLoadResult Load(
+        IVirtualContentStore store,
+        RouteTerrainTileDiscovery discovery,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(discovery);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var loaded = new List<TerrainTileContent>();
         var failed = new List<RouteTerrainTileIssue>();
@@ -21,6 +27,7 @@ public sealed class RouteTerrainMeshLoader
 
         foreach (var reference in discovery.Found)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 loaded.Add(contentLoader.Load(store, reference));
@@ -37,6 +44,7 @@ public sealed class RouteTerrainMeshLoader
 
         foreach (var tile in loaded)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 var lodMeshes = tile.Terrain.PatchSets

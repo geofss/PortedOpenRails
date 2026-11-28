@@ -16,6 +16,7 @@ public sealed class RouteStartVectorSelector
         ArgumentNullException.ThrowIfNull(routeStart);
         if (maximumResults <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumResults));
+        ValidateRouteStart(routeStart);
 
         var targetX = routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X;
         var targetZ = routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z;
@@ -32,6 +33,7 @@ public sealed class RouteStartVectorSelector
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(routeStart);
+        ValidateRouteStart(routeStart);
         var targetX = routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X;
         var targetZ = routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z;
         var first = path.Sections.FirstOrDefault()?.Start;
@@ -41,6 +43,17 @@ public sealed class RouteStartVectorSelector
 
         return HorizontalDistance(end.X, end.Z, targetX, targetZ) <
             HorizontalDistance(first.X, first.Z, targetX, targetZ);
+    }
+
+    private static void ValidateRouteStart(OpenRails.Web.Parsing.RouteStartCoordinates routeStart)
+    {
+        var targetX = routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X;
+        var targetZ = routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z;
+        if (!double.IsFinite(routeStart.TileX) || !double.IsFinite(routeStart.TileZ) ||
+            !double.IsFinite(routeStart.X) || !double.IsFinite(routeStart.Z) ||
+            !double.IsFinite(targetX) || !double.IsFinite(targetZ))
+            throw new ArgumentOutOfRangeException(nameof(routeStart),
+                "RouteStart coordinates must be finite and representable in world space.");
     }
 
     private static double DistanceToRouteStart(TrackVectorPath path, double targetX, double targetZ)

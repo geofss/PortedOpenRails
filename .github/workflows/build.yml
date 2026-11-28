@@ -1,8 +1,9 @@
 name: Build and deploy WebAssembly app
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "port/*"]
   pull_request:
     branches: [main]
 
@@ -20,10 +21,10 @@ jobs:
         run: python3 tests/test_demo_model_1_package_audit.py
 
       - name: Validate renderer JavaScript syntax
-        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js
+        run: node --check src/OpenRails.Web/wwwroot/js/route-terrain-renderer.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-gamepad.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-audio.js && node --check src/OpenRails.Web/wwwroot/js/train-driving-settings.js && node --check src/OpenRails.Web/wwwroot/js/route-package-storage.js && node --check src/OpenRails.Web/wwwroot/js/route-package-indexer.js
 
       - name: Run gamepad reader unit tests
-        run: node tests/gamepad-reader.test.mjs && node tests/gamepad-audio.test.mjs && node tests/preview-quality-storage.test.mjs && node tests/route-camera-presets.test.mjs && node tests/train-driving-settings.test.mjs
+        run: node tests/gamepad-reader.test.mjs && node tests/gamepad-audio.test.mjs && node tests/preview-quality-storage.test.mjs && node tests/route-camera-presets.test.mjs && node tests/train-driving-settings.test.mjs && node tests/route-package-storage-validation.test.mjs
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -44,15 +45,79 @@ jobs:
 
       - name: Set GitHub Pages base path
         run: sed -i 's|<base href="/" />|<base href="/PortedOpenRails/" />|' artifacts/publish/wwwroot/index.html
+      - name: Set relative base path for downloadable preview
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: sed -i 's|<base href="/PortedOpenRails/" />|<base href="./" />|' artifacts/publish/wwwroot/index.html
+
+      - name: Include local preview instructions
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: |
+          cat > artifacts/publish/wwwroot/PREVIEW-README.txt <<'EOF'
+          PortedOpenRails browser preview
+
+          Do not open index.html directly as a file:// URL.
+          Extract this artifact, open a terminal in this folder, and run:
+              python -m http.server 8000
+          Then browse to:
+              http://localhost:8000/
+
+          This preview is for local testing only. It is not a production deployment.
+          EOF
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/publish/wwwroot
 
+      - name: Upload branch preview artifact
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortedOpenRails-preview-${{ github.sha }}
+          path: artifacts/publish/wwwroot
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Assemble Demo Model 1 ready-to-import bundle
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: |
+          mkdir -p artifacts/demo-model-1-preview/app artifacts/demo-model-1-preview/content
+          cp -a artifacts/publish/wwwroot/. artifacts/demo-model-1-preview/app/
+          curl --fail --location --retry 3 --output artifacts/demo-model-1-preview/content/DemoModel1.zip https://static.openrails.org/files/DemoModel1.zip
+          echo "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b  artifacts/demo-model-1-preview/content/DemoModel1.zip" | sha256sum --check
+          cat > artifacts/demo-model-1-preview/README.txt <<'EOF'
+          PortedOpenRails + authorized Demo Model 1 preview
+
+          1. Extract this bundle.
+          2. Open a terminal in the app folder and run:
+                 python -m http.server 8000
+          3. Browse to http://localhost:8000/
+          4. In Content packages, choose the route ZIP at ../content/DemoModel1.zip.
+          5. The 272 MB route is handled by the disk-backed OPFS importer. Index ZIP contents,
+             then choose the Scottish Capital Express route and Load route into simulator.
+
+          Do not open app/index.html directly using file://.
+          Target: desktop-class browsers. Browser storage quota and the 2 GiB expanded-content
+          compatibility limit still apply.
+
+          Route attribution: Demo Model 1 © Making Tracks Ltd. Distributed with permission
+          from the Open Rails Management Team.
+          Open Rails / PortedOpenRails source remains GPL-licensed; see the repository LICENSE.
+          EOF
+
+      - name: Upload Demo Model 1 ready-to-import bundle
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortedOpenRails-DemoModel1-desktop-preview-${{ github.sha }}
+          path: artifacts/demo-model-1-preview
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test-and-build
     concurrency:
       group: portedopenrails-pages

@@ -1172,6 +1172,9 @@ namespace Orts.Parsers.Msts
             /// </summary>            
             ResistanceDavisC = 1 << 26,
 
+            /// <summary>Valid Units: N/s, kN/s, lbf/s; scaled to newtons per second.</summary>
+            ForceRate = 1 << 27,
+
             // "Any" is used where units cannot easily be specified, such as generic routines for interpolating continuous data from point values.
             // or interpreting locomotive cab attributes from the ORTSExtendedCVF experimental mechanism.
             // "Any" should not be used where the dimensions of a unit are predictable.
@@ -1386,6 +1389,15 @@ namespace Orts.Parsers.Msts
                     case "kn": return 1e3f;
                     case "lbf": return 4.44822162f;
                     case "lb": return 4.44822162f;
+                }
+            if ((validUnits & UNITS.ForceRate) > 0)
+                switch (suffix)
+                {
+                    case "": return 1.0f;
+                    case "n/s": return 1;
+                    case "kn/s": return 1e3f;
+                    case "lbf/s": return 4.44822162f;
+                    case "lb/s": return 4.44822162f;
                 }
             if ((validUnits & UNITS.Power) > 0)
                 switch (suffix)

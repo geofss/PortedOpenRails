@@ -6,6 +6,55 @@ namespace OpenRails.Web.Tests;
 public sealed class TrainPneumaticBrakeSystemTests
 {
     [Fact]
+    public void DistributorStateConstructorsSupportSingleUseEnumerableInputs()
+    {
+        var reservoirs = new SingleUseEnumerable<double>(new[] { 450d, 440d });
+        var modes = new SingleUseEnumerable<TrainBrakeDistributorMode>(new[]
+        {
+            TrainBrakeDistributorMode.Lap, TrainBrakeDistributorMode.Apply
+        });
+
+        var state = new TrainBrakeDistributorState(reservoirs, modes);
+
+        Assert.Equal(new[] { 450d, 440d }, state.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(new[] { TrainBrakeDistributorMode.Lap, TrainBrakeDistributorMode.Apply }, state.Modes);
+        Assert.Equal(new[] { 500d, 500d }, state.ControlPressuresKPa);
+    }
+
+    [Fact]
+    public void DistributorStateThreeArgumentConstructorMaterializesEachInputOnce()
+    {
+        var reservoirs = new SingleUseEnumerable<double>(new[] { 450d });
+        var modes = new SingleUseEnumerable<TrainBrakeDistributorMode>(new[] { TrainBrakeDistributorMode.Apply });
+        var controls = new SingleUseEnumerable<double>(new[] { 470d });
+
+        var state = new TrainBrakeDistributorState(reservoirs, modes, controls);
+
+        Assert.Equal(new[] { 450d }, state.AuxiliaryReservoirPressuresKPa);
+        Assert.Equal(new[] { 470d }, state.ControlPressuresKPa);
+        Assert.Equal(new[] { 500d }, state.LastPipePressuresKPa);
+    }
+
+    private sealed class SingleUseEnumerable<T>(IEnumerable<T> values) : IEnumerable<T>
+    {
+        private bool enumerated;
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (enumerated) throw new InvalidOperationException("Sequence can only be enumerated once.");
+            enumerated = true;
+            return values.GetEnumerator();
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Fact]
+    public void ExplicitNullDistributorControlPressuresAreRejected()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TrainBrakeDistributorState(
+            new[] { 500d }, new[] { TrainBrakeDistributorMode.Lap }, null!));
+    }
+
+    [Fact]
     public void ServiceApplicationPropagatesThroughPipeBeforeBuildingEachCylinder()
     {
         var brakes = new TrainPneumaticBrakeSystem(4);

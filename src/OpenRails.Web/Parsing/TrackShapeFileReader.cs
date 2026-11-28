@@ -9,7 +9,7 @@ public sealed class TrackShapeFileReader
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(asset);
-        var stream = store.OpenRead(asset.Path);
+        using var stream = store.OpenRead(asset.Path);
         return new ShapeFile(stream, asset.Path, suppressShapeWarnings).shape;
     }
 }

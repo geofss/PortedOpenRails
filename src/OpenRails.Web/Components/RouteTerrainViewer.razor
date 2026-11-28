@@ -1,3 +1,4 @@
+@using System.Numerics
 @using OpenRails.Web.Content
 @using OpenRails.Web.Parsing
 @using OpenRails.Web.Simulation
@@ -9,7 +10,7 @@
     <h3>Route terrain · WebGL preview</h3>
     <section class="route-validation-summary" aria-label="Route structural validation">
         <strong>Route validation: @(Route.Validation.TrackNetworkUsable ? "Track network usable" : "Track network requires attention")</strong>
-        <p class="hint">@Route.Validation.VectorPathCount vector path(s) · @Route.Validation.TotalTrackLengthMeters.ToString("N0") m track · @Route.Validation.TrackDiagnosticsCount topology diagnostic(s) · @Route.Validation.AssetIssueCount missing/failed terrain, track, WORLD, or texture assets</p>
+        <p class="hint">@Route.Validation.VectorPathCount vector path(s) · @Route.Validation.TotalTrackLengthMeters.ToString("N0") m track · @Route.Validation.TrackDatabaseDiagnosticsCount TDB reference diagnostic(s) · @Route.Validation.TrackDiagnosticsCount topology diagnostic(s) · @Route.Validation.WorldParseDiagnosticsCount WORLD parse diagnostic(s) · @Route.Validation.AssetIssueCount missing/failed terrain, track, WORLD, or texture assets</p>
         @if (Route.Validation.Issues.Count > 0)
         {
             <details>
@@ -27,7 +28,7 @@
     <div class="route-preview-quality">
         <label for="route-preview-quality">Graphics quality</label>
         <select id="route-preview-quality" value="@qualityPreset" @onchange="ChangeQuality">
-            <option value="low">Low · mobile-friendly</option>
+            <option value="low">Low · reduced detail</option>
             <option value="medium">Medium</option>
             <option value="high">High · maximum preview detail</option>
         </select>
@@ -45,25 +46,29 @@
     </div>
     <canvas @ref="canvas" class="route-world-canvas" aria-label="3D route terrain mesh rendered with WebGL"></canvas>
     <dl class="route-render-stats">
-        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @Route.TerrainMeshes.Meshes.Count</dd>
-        <dt>Terrain textures loaded / failed</dt><dd>@Route.TerrainTextures.Loaded.Count / @Route.TerrainTextures.Failed.Count</dd>
+        <dt>Terrain tiles discovered / loaded</dt><dd>@Route.TerrainTiles.Found.Count / @ActiveTerrainMeshes.Count (failed @((terrainViewport?.Failed.Count) ?? Route.TerrainMeshes.Failed.Count))</dd>
+        <dt>Terrain textures loaded / failed</dt><dd>@ActiveTerrainTextures.Loaded.Count / @ActiveTerrainTextures.Failed.Count</dd>
         <dt>Track-shape assets loaded / failed</dt><dd>@Route.TrackShapeMeshes.LoadedMeshes.Count / @Route.TrackShapeMeshes.FailedMeshes.Count</dd>
         <dt>Track-shape textures loaded / missing / failed</dt><dd>@Route.TrackShapeMeshes.Textures.Loaded.Count / @Route.TrackShapeMeshes.Textures.Missing.Count / @Route.TrackShapeMeshes.Textures.Failed.Count</dd>
-        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
+        <dt>Track/world shape textures usable in preview</dt><dd>@(Route.TrackShapeMeshes.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0) + ActiveWorldScenery.Sum(tile => tile.Textures.Loaded.Count(asset => asset.Reference.SeasonFolder is null && asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 && asset.Texture.MipLevels.Count > 0)))</dd>
         <dt>Track/world shape render batches</dt><dd>@trackShapeBatchCount</dd>
         <dt>Track-shape placements</dt><dd>@Route.TrackShapePlacements.Count</dd>
         <dt>Geometry cap reached</dt><dd>@(trackGeometryTruncated ? "Yes — some geometry omitted" : "No")</dd>
-        <dt>World tiles loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Count / @Route.WorldScenery.Missing.Count / @Route.WorldScenery.Failed.Count</dd>
-        <dt>WORLD parse diagnostics</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Tile.Diagnostics.Count)</dd>
-        <dt>World shape meshes loaded</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeMeshes.Count)</dd>
-        <dt>World placements discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count)</dd>
-        <dt>World placements with positions</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
-        <dt>World placements with shape assets</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Placements.Count(placement => placement.FileName is not null && tile.ShapeMeshes.Any(mesh => string.Equals(mesh.FileName, placement.FileName, StringComparison.OrdinalIgnoreCase))))</dd>
-        <dt>World shape mesh load failures</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.FailedShapes.Count)</dd>
-        <dt>World shape assets missing</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
-        <dt>World shape assets discovered</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
-        <dt>World shape textures loaded / missing / failed</dt><dd>@Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Loaded.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Missing.Count) / @Route.WorldScenery.Loaded.Sum(tile => tile.Textures.Failed.Count)</dd>
-        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @Route.TerrainMeshes.Meshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · first LOD</dd>
+        <dt>World tiles loaded / missing / failed</dt><dd>@ActiveWorldScenery.Count / @Route.WorldScenery.Missing.Count / @ActiveWorldFailures.Count</dd>
+        <dt>WORLD parse diagnostics</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Tile.Diagnostics.Count)</dd>
+        <dt>World shape meshes loaded</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeMeshes.Count)</dd>
+        <dt>World placements discovered</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count)</dd>
+        <dt>World placements with positions</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(placement => placement.WorldPosition is not null))</dd>
+        <dt>World placements with shape assets</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(placement => placement.FileName is not null && tile.ShapeMeshes.Any(mesh => string.Equals(mesh.FileName, placement.FileName, StringComparison.OrdinalIgnoreCase))))</dd>
+        <dt>World shape mesh load failures</dt><dd>@ActiveWorldScenery.Sum(tile => tile.FailedShapes.Count)</dd>
+        <dt>World shape assets missing</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeDiscovery.Missing.Count)</dd>
+        <dt>World shape assets discovered</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ShapeDiscovery.Found.Count)</dd>
+        <dt>World shape textures loaded / missing / failed</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Textures.Loaded.Count) / @ActiveWorldScenery.Sum(tile => tile.Textures.Missing.Count) / @ActiveWorldScenery.Sum(tile => tile.Textures.Failed.Count)</dd>
+        <dt>Forest objects / generated tree billboards</dt><dd>@ActiveWorldScenery.Sum(tile => tile.Placements.Count(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase))) / @(ActiveWorldScenery.Sum(tile => tile.Placements.Where(item => item.ObjectKind.Equals("Forest", StringComparison.OrdinalIgnoreCase)).Sum(item => Math.Clamp(item.ForestPopulation ?? 0, 0, ForestMeshBuilder.MaximumTreesPerForest))))</dd>
+        <dt>Forest textures loaded / missing / failed</dt><dd>@ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Loaded.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Missing.Count ?? 0) / @ActiveWorldScenery.Sum(tile => tile.ForestTextures?.Failed.Count ?? 0)</dd>
+        <dt>Terrain preview coverage</dt><dd>@terrainTilesSent / @ActiveTerrainMeshes.Count tile(s) · @terrainPatchesSent patch(es) · @terrainVerticesSent / @TerrainVertexLimit vertices · camera-selected terrain LOD</dd>
+        <dt>Terrain CPU / GPU working set</dt><dd>@(((terrainStreaming?.ResidentBytes ?? 0) / (1024d * 1024)).ToString("N0")) / @(((terrainStreaming?.EstimatedGpuBytes ?? 0) / (1024d * 1024)).ToString("N0")) MiB</dd>
+        <dt>WORLD CPU working set</dt><dd>@(((worldStreaming?.ResidentBytes ?? 0) / (1024d * 1024)).ToString("N0")) MiB · @ActiveWorldScenery.Count visible tile(s)</dd>
     </dl>
     <details class="route-world-asset-diagnostics">
         <summary>Route and world scenery asset diagnostics</summary>
@@ -72,7 +77,7 @@
             {
                 <li>Missing WORLD tile: W@(tile.TileX) @(tile.TileZ)</li>
             }
-            @foreach (var issue in Route.WorldScenery.Failed)
+            @foreach (var issue in ActiveWorldFailures)
             {
                 <li>Failed WORLD tile: @issue.Path — @issue.Reason</li>
             }
@@ -92,7 +97,7 @@
             {
                 <li>Failed track texture: @issue.Path — @issue.Reason</li>
             }
-            @foreach (var tile in Route.WorldScenery.Loaded)
+            @foreach (var tile in ActiveWorldScenery)
             {
                 @foreach (var diagnostic in tile.Tile.Diagnostics)
                 {
@@ -113,6 +118,14 @@
                 @foreach (var issue in tile.Textures.Failed)
                 {
                     <li>Failed world texture: @issue.Path — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.ForestTextures?.Missing ?? Array.Empty<TrackShapeTextureAssetIssue>())
+                {
+                    <li>Missing forest texture: @issue.ImageName (forest @issue.ShapeIndex) — @issue.Reason</li>
+                }
+                @foreach (var issue in tile.ForestTextures?.Failed ?? Array.Empty<TrackShapeTextureLoadIssue>())
+                {
+                    <li>Failed forest texture: @issue.Path — @issue.Reason</li>
                 }
             }
         </ul>
@@ -145,6 +158,7 @@
     [Parameter] public ConsistMetadata? Consist { get; set; }
     [Parameter] public IReadOnlyList<ConsistCarAssetReference> CarAssets { get; set; } = Array.Empty<ConsistCarAssetReference>();
     [Parameter] public TrainConsistMotionState? MotionState { get; set; }
+    [Parameter] public double SimulationTimeSeconds { get; set; }
     [Parameter] public TrackNetworkRoute? MotionRoute { get; set; }
     private TrainConsistMotionState? lastMotionState;
     private RouteLoadResult? lastRoute;
@@ -156,18 +170,45 @@
     private readonly Dictionary<int, TrackShapeAssetMesh> rollingStockMeshesByUid = [];
     private IReadOnlyList<LoadedTrackShapeTexture> rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
     private int[] rollingStockTextureIndexes = [];
+    private readonly List<object> terrainTexturePayloads = [];
+    private readonly Dictionary<string, int> terrainTextureIndexes = new(StringComparer.OrdinalIgnoreCase);
+    private float[] routeTrackLines = Array.Empty<float>();
+    private Vector3? cameraPosition;
+    private RouteTerrainViewportStreamingSession? terrainStreaming;
+    private RouteTerrainViewportSnapshot? terrainViewport;
+    private RouteWorldViewportStreamingSession? worldStreaming;
+    private RouteWorldViewportSnapshot? worldViewport;
+    private IReadOnlyList<LoadedWorldSceneryTile> ActiveWorldScenery =>
+        worldViewport?.Loaded ?? Route.WorldScenery.Loaded;
+    private IReadOnlyList<RouteWorldSceneryIssue> ActiveWorldFailures =>
+        worldViewport?.Failed ?? Route.WorldScenery.Failed;
+    private IReadOnlyList<LoadedRouteTerrainTileMesh> ActiveTerrainMeshes =>
+        terrainViewport?.Meshes ?? Route.TerrainMeshes.Meshes;
+    private TerrainTextureAssetLoadResult ActiveTerrainTextures =>
+        terrainViewport?.Textures ?? Route.TerrainTextures;
+    private DotNetObjectReference<RouteTerrainViewer>? cameraCallback;
+    private bool sceneGeometryUpdatePending;
+    private double lastSimulationTimeSeconds = double.NaN;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (!ReferenceEquals(lastRoute, Route) || !ReferenceEquals(lastMotionRoute, MotionRoute) || !ReferenceEquals(lastStore, Store) ||
             !ReferenceEquals(lastConsist, Consist))
         {
+            if (terrainStreaming is not null)
+                await terrainStreaming.ClearAsync();
+            if (worldStreaming is not null)
+                await worldStreaming.ClearAsync();
+            terrainViewport = null;
+            worldViewport = null;
             lastRoute = Route;
             lastMotionRoute = MotionRoute;
             lastStore = Store;
             lastConsist = Consist;
             hasDrawn = false;
             motionUpdatePending = false;
+            sceneGeometryUpdatePending = false;
+            cameraPosition = null;
             rollingStockMeshesByUid.Clear();
             rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
             rollingStockTextureIndexes = [];
@@ -178,6 +219,63 @@
             if (hasDrawn)
                 motionUpdatePending = true;
         }
+        if (!double.IsFinite(SimulationTimeSeconds) || SimulationTimeSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(SimulationTimeSeconds));
+        if (!double.IsFinite(lastSimulationTimeSeconds) ||
+            Math.Abs(lastSimulationTimeSeconds - SimulationTimeSeconds) > 0.0001)
+        {
+            lastSimulationTimeSeconds = SimulationTimeSeconds;
+            if (hasDrawn)
+                motionUpdatePending = true;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnCameraChanged(double x, double y, double z)
+    {
+        if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
+            return;
+        var next = new Vector3((float)x, (float)y, (float)z);
+        if (cameraPosition is { } previous && Vector3.DistanceSquared(previous, next) < 64)
+            return;
+        cameraPosition = next;
+        if (!hasDrawn)
+            return;
+        if (Store is not null)
+        {
+            try { await Task.WhenAll(UpdateTerrainViewportAsync(next), UpdateWorldViewportAsync(next)); }
+            catch (OperationCanceledException) { return; }
+            catch (Exception exception) { renderError = $"Terrain streaming failed: {exception.Message}"; }
+        }
+        sceneGeometryUpdatePending = true;
+        motionUpdatePending = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateTerrainViewportAsync(Vector3 camera)
+    {
+        if (Store is null) return;
+        terrainStreaming ??= new RouteTerrainViewportStreamingSession(
+            maximumResidentTiles: 64,
+            maximumResidentBytes: 1024L * 1024 * 1024,
+            maximumConcurrentLoads: 2,
+            estimatedBytesPerTile: 32L * 1024 * 1024);
+        terrainViewport = await terrainStreaming.UpdateCameraAsync(
+            Store, Route.Assets.RouteRoot, Route.TerrainTiles,
+            camera.X, camera.Z, radiusMeters: 12_000);
+    }
+
+    private async Task UpdateWorldViewportAsync(Vector3 camera)
+    {
+        if (Store is null) return;
+        worldStreaming ??= new RouteWorldViewportStreamingSession(
+            maximumResidentTiles: 48,
+            maximumResidentBytes: 768L * 1024 * 1024,
+            maximumConcurrentLoads: 2,
+            estimatedBytesPerTile: 16L * 1024 * 1024);
+        worldViewport = await worldStreaming.UpdateCameraAsync(
+            Store, Route.Assets.RouteRoot, Route.WorldTiles,
+            camera.X, camera.Z, radiusMeters: 12_000);
     }
     private ElementReference canvas;
     private IJSObjectReference? module;
@@ -245,6 +343,8 @@
                 cameraPreset = await module.InvokeAsync<string>("getSavedCameraPreset");
                 await module.InvokeVoidAsync("setCameraPreset", cameraPreset);
                 await module.InvokeVoidAsync("setRenderScale", qualityPreset switch { "low" => 0.5, "medium" => 0.75, _ => 1.0 });
+                cameraCallback = DotNetObjectReference.Create(this);
+                await module.InvokeVoidAsync("setCameraChangeCallback", cameraCallback);
                 initialized = true;
             }
             catch (Exception ex) { renderError = $"WebGL renderer initialization failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
@@ -253,81 +353,20 @@
         {
             try
             {
-                var textures = new List<object>();
-                var textureIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                foreach (var asset in Route.TerrainTextures.Loaded)
+                var initialCamera = await module.InvokeAsync<double[]?>("getCameraWorldPosition");
+                if (initialCamera is { Length: 3 } && initialCamera.All(double.IsFinite))
                 {
-                    var texture = asset.Texture;
-                    if (texture.PixelFormat != AceTexturePixelFormat.Rgba8 || texture.MipLevels.Count == 0 || asset.Reference.SeasonFolder is not null)
-                        continue;
-                    if (!textureIndexes.ContainsKey(asset.Reference.Path))
-                    {
-                        textureIndexes.Add(asset.Reference.Path, textures.Count);
-                        textures.Add(new { width = texture.Width, height = texture.Height, pixels = texture.MipLevels[0] });
-                    }
+                    cameraPosition = new Vector3((float)initialCamera[0], (float)initialCamera[1], (float)initialCamera[2]);
+                    if (Store is not null)
+                        await Task.WhenAll(
+                            UpdateTerrainViewportAsync(cameraPosition.Value),
+                            UpdateWorldViewportAsync(cameraPosition.Value));
                 }
-
-                var patches = new List<object>();
-                var selectedTerrainVertices = 0;
-                var selectedTerrainPatches = 0;
-                var selectedTerrainTileIds = new HashSet<(int TileX, int TileZ)>();
-                var terrainCandidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch)>();
-                var maximumPatchCount = Route.TerrainMeshes.Meshes
-                    .Select(loaded => loaded.LodMeshes.FirstOrDefault()?.Patches.Count ?? 0)
-                    .DefaultIfEmpty(0)
-                    .Max();
-
-                // Round-robin patch selection gives every discovered tile a chance to
-                // contribute before any one tile consumes the route-wide vertex budget.
-                for (var patchIndex = 0; patchIndex < maximumPatchCount; patchIndex++)
-                foreach (var loaded in Route.TerrainMeshes.Meshes)
-                {
-                    var lod = loaded.LodMeshes.FirstOrDefault();
-                    if (lod is not null && patchIndex < lod.Patches.Count)
-                        terrainCandidates.Add((loaded, lod.Patches[patchIndex]));
-                }
-
-                foreach (var (loaded, patch) in terrainCandidates)
-                {
-                    if (selectedTerrainVertices + patch.Vertices.Count > TerrainVertexLimit)
-                        continue;
-                    var tileXOffset = loaded.Content.Reference.TileX * 2048f;
-                    var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
-                    var primaryAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
-                        asset.Reference.SeasonFolder is null &&
-                        asset.Reference.TextureSlotIndex == 0 &&
-                        string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(asset.Reference.FileName, patch.Material.PrimaryTextureFileName, StringComparison.OrdinalIgnoreCase));
-                    var overlayAsset = patch.Material is null ? null : Route.TerrainTextures.Loaded.FirstOrDefault(asset =>
-                        asset.Reference.SeasonFolder is null &&
-                        asset.Reference.TextureSlotIndex == 1 &&
-                        string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(asset.Reference.FileName, patch.Material.OverlayTextureFileName, StringComparison.OrdinalIgnoreCase));
-                    var textureIndex = primaryAsset is not null && textureIndexes.TryGetValue(primaryAsset.Reference.Path, out var foundIndex) ? foundIndex : -1;
-                    var overlayTextureIndex = overlayAsset is not null && textureIndexes.TryGetValue(overlayAsset.Reference.Path, out var overlayIndex) ? overlayIndex : -1;
-                    var vertices = new float[patch.Vertices.Count * 5];
-                    for (var i = 0; i < patch.Vertices.Count; i++)
-                    {
-                        var vertex = patch.Vertices[i];
-                        var offset = i * 5;
-                        vertices[offset] = vertex.Position.X + patch.PatchOrigin.X + tileXOffset;
-                        vertices[offset + 1] = vertex.Position.Y + patch.PatchOrigin.Y;
-                        vertices[offset + 2] = vertex.Position.Z + patch.PatchOrigin.Z + tileZOffset;
-                        vertices[offset + 3] = vertex.TextureCoordinate.X;
-                        vertices[offset + 4] = vertex.TextureCoordinate.Y;
-                    }
-                    patches.Add(new
-                    {
-                        vertices,
-                        indices = patch.Indices,
-                        textureIndex,
-                        overlayTextureIndex,
-                        overlayScale = patch.Material?.OverlayScale ?? 32
-                    });
-                    selectedTerrainVertices += patch.Vertices.Count;
-                    selectedTerrainPatches++;
-                    selectedTerrainTileIds.Add((loaded.Content.Reference.TileX, loaded.Content.Reference.TileZ));
-                }
+                var terrainSelection = BuildTerrainPatches();
+                // BuildTerrainPatches now materializes only the textures referenced
+                // by the selected camera-visible terrain LODs, not every route texture.
+                var textures = terrainTexturePayloads;
+                var patches = terrainSelection.Patches;
                 var trackLines = new List<float>();
                 var tessellator = new TrackGeometryTessellator();
                 foreach (var path in Route.TrackNetwork.VectorPaths)
@@ -340,15 +379,14 @@
                         trackLines.Add((float)points[i + 1].X); trackLines.Add((float)points[i + 1].Y); trackLines.Add((float)points[i + 1].Z);
                     }
                 }
-                var trackTextureAssets = Route.TrackShapeMeshes.Textures.Loaded
-                    .Where(asset => asset.Reference.SeasonFolder is null &&
-                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                        asset.Texture.MipLevels.Count > 0)
-                    .ToArray();
+                routeTrackLines = trackLines.ToArray();
+                var trackTextureAssets = TrackShapeSeasonTextureSelector.Select(Route.TrackShapeMeshes.Textures.Loaded).ToArray();
                 var trackShapeGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-                    .BuildTextured(Route.TrackShapePlacements, Route.TrackShapeMeshes.Textures.Loaded);
+                    .BuildTextured(Route.TrackShapePlacements, trackTextureAssets,
+                        cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
                 var worldShapeGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-                    .Build(Route.WorldScenery.Loaded);
+                    .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
+                        elapsedSeconds: SimulationTimeSeconds);
 
                 var rollingStockPlacements = new List<TrackShapePlacement>();
                 rollingStockTextureAssets = Array.Empty<LoadedTrackShapeTexture>();
@@ -415,14 +453,17 @@
                     var textureDiscovery = new TrackShapeTextureAssetDiscovery(
                         textureDiscoveries.SelectMany(discovery => discovery.Found),
                         textureDiscoveries.SelectMany(discovery => discovery.Missing));
-                    var textureLoad = new TrackShapeTextureAssetLoader().Load(Store, textureDiscovery);
-                    rollingStockTextureAssets = textureLoad.Loaded;
+                    var textureLoad = new TrackShapeTextureAssetLoader().Load(Store, textureDiscovery,
+                        maximumDecodedBytes: 256L * 1024 * 1024);
+                    rollingStockTextureAssets = TrackShapeSeasonTextureSelector.Select(textureLoad.Loaded);
                     rollingStockIssues.AddRange(textureLoad.Missing.Select(issue =>
                         $"{issue.ImageName}: {issue.Reason}"));
                     rollingStockIssues.AddRange(textureLoad.Failed.Select(issue =>
                         $"{issue.Path}: {issue.Reason}"));
-                    rollingStockGeometry = new TrackShapeRenderGeometryBuilder().BuildTextured(
-                        rollingStockPlacements, rollingStockTextureAssets);
+                    rollingStockGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit).BuildTextured(
+                        rollingStockPlacements, rollingStockTextureAssets, animationClipIndex: 0,
+                        cameraPosition: cameraPosition, elapsedSeconds: SimulationTimeSeconds,
+                        matrixOverridesProvider: BuildWheelOverrides);
 
                     var placementRouteDescription = MotionRoute is null
                         ? $"TrackNode {selectedTrackPath?.TrackNodeIndex.ToString() ?? "—"} ({selectedTrackPath?.LengthMeters.ToString("N0") ?? "0"} m path)"
@@ -445,12 +486,10 @@
                 }
                 var trackTextureIndexes = trackTextureAssets.Select(AddTexture).ToArray();
                 var worldTextureIndexes = worldShapeGeometry.Textures.Select(AddTexture).ToArray();
-                rollingStockTextureIndexes = rollingStockTextureAssets
-                    .Where(asset => asset.Reference.SeasonFolder is null &&
-                        asset.Texture.PixelFormat == AceTexturePixelFormat.Rgba8 &&
-                        asset.Texture.MipLevels.Count > 0)
-                    .Select(AddTexture).ToArray();
-                int RemapTexture(int index, IReadOnlyList<int> map) => index < 0 ? -1 : map[index];
+                rollingStockTextureIndexes = rollingStockTextureAssets.Select(AddTexture).ToArray();
+                int RemapTexture(int index, IReadOnlyList<int> map) => index < 0 || index >= map.Count ? -1 : map[index];
+                int[] RemapTextureSlots(IReadOnlyList<int>? indexes, IReadOnlyList<int> map) =>
+                    indexes?.Select(index => RemapTexture(index, map)).ToArray() ?? Array.Empty<int>();
 
                 var shapeTextures = combinedTextureAssets.Select(asset => new
                 {
@@ -462,19 +501,25 @@
                     rollingStockGeometry.WasTruncated;
                 trackShapeBatchCount = trackShapeGeometry.Batches.Count + worldShapeGeometry.Batches.Count +
                     rollingStockGeometry.Batches.Count;
-                var shapeBatches = trackShapeGeometry.Batches.Select(batch => new
+                var shapeBatches = trackShapeGeometry.Batches.Select(batch => (object)new
                 {
                     vertices = batch.Vertices,
                     indices = batch.Indices,
                     textureIndex = RemapTexture(batch.TextureIndex, trackTextureIndexes),
+                    textureIndexes = RemapTextureSlots(batch.TextureIndexes, trackTextureIndexes),
+                    textureCoordinateChannels = batch.TextureCoordinateChannels,
+                    material = batch.Material,
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
-                }).Concat(worldShapeGeometry.Batches.Select(batch => new
+                }).Concat(worldShapeGeometry.Batches.Select(batch => (object)new
                 {
                     vertices = batch.Vertices,
                     indices = batch.Indices,
                     textureIndex = RemapTexture(batch.TextureIndex, worldTextureIndexes),
+                    textureIndexes = RemapTextureSlots(batch.TextureIndexes, worldTextureIndexes),
+                    textureCoordinateChannels = batch.TextureCoordinateChannels,
+                    material = batch.Material,
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
@@ -484,20 +529,44 @@
                     vertices = batch.Vertices,
                     indices = batch.Indices,
                     textureIndex = RemapTexture(batch.TextureIndex, rollingStockTextureIndexes),
+                    textureIndexes = RemapTextureSlots(batch.TextureIndexes, rollingStockTextureIndexes),
+                    textureCoordinateChannels = batch.TextureCoordinateChannels,
+                    material = batch.Material,
                     alphaTest = batch.AlphaTest,
                     textureAddressMode = batch.TextureAddressMode,
                     zBias = batch.ZBias
                 }).ToArray();
                 rollingStockGeometryBatchCount = rollingStockBatches.Length;
-                terrainTilesSent = selectedTerrainTileIds.Count;
-                terrainPatchesSent = selectedTerrainPatches;
-                terrainVerticesSent = selectedTerrainVertices;
-                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, trackLines.ToArray(),
+                terrainTilesSent = terrainSelection.Tiles;
+                terrainPatchesSent = terrainSelection.PatchCount;
+                terrainVerticesSent = terrainSelection.Vertices;
+                await module.InvokeVoidAsync("drawTerrainTextured", patches, textures, routeTrackLines,
                     null, shapeBatches, shapeTextures, rollingStockBatches);
+                var camera = await module.InvokeAsync<double[]?>("getCameraWorldPosition");
+                if (camera is { Length: 3 } && camera.All(double.IsFinite))
+                    cameraPosition = new Vector3((float)camera[0], (float)camera[1], (float)camera[2]);
                 hasDrawn = true;
                 motionUpdatePending = false;
+                if (cameraPosition is not null)
+                {
+                    sceneGeometryUpdatePending = true;
+                    await InvokeAsync(StateHasChanged);
+                }
             }
             catch (Exception ex) { hasDrawn = true; renderError = $"Terrain rendering failed: {ex.Message}"; await InvokeAsync(StateHasChanged); }
+        }
+        else if (initialized && module is not null && sceneGeometryUpdatePending)
+        {
+            try
+            {
+                await UpdateDynamicSceneAsync();
+            }
+            catch (Exception ex)
+            {
+                renderError = $"Dynamic LOD update failed: {ex.Message}";
+                sceneGeometryUpdatePending = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
         else if (initialized && module is not null && motionUpdatePending)
         {
@@ -514,6 +583,212 @@
         }
     }
 
+    private (List<object> Patches, int Tiles, int PatchCount, int Vertices) BuildTerrainPatches()
+    {
+        terrainTexturePayloads.Clear();
+        terrainTextureIndexes.Clear();
+        int ResolveTerrainTexture(LoadedTerrainTextureAsset? asset)
+        {
+            if (asset is null || asset.Reference.SeasonFolder is not null ||
+                asset.Texture.PixelFormat != AceTexturePixelFormat.Rgba8 ||
+                asset.Texture.MipLevels.Count == 0)
+                return -1;
+            if (terrainTextureIndexes.TryGetValue(asset.Reference.Path, out var existing))
+                return existing;
+            var index = terrainTexturePayloads.Count;
+            terrainTextureIndexes.Add(asset.Reference.Path, index);
+            terrainTexturePayloads.Add(new
+            {
+                width = asset.Texture.Width,
+                height = asset.Texture.Height,
+                pixels = asset.Texture.MipLevels[0]
+            });
+            return index;
+        }
+
+        var patches = new List<object>();
+        var selectedVertices = 0;
+        var selectedPatches = 0;
+        var selectedTiles = new HashSet<(int TileX, int TileZ)>();
+        // Select the closest route tiles first so the geometry budget is spent
+        // around the current camera rather than on whichever tiles happened to
+        // appear first in the archive's directory order.
+        var candidates = new List<(LoadedRouteTerrainTileMesh Tile, TerrainPatchMesh Patch, float DistanceSquared)>();
+        foreach (var loaded in ActiveTerrainMeshes)
+        {
+            var reference = loaded.Content.Reference;
+            var tileCenter = new Vector3(reference.TileX * 2048f + 1024f,
+                loaded.Content.Terrain.Samples.Floor, reference.TileZ * 2048f + 1024f);
+            var distanceSquared = cameraPosition is { } camera
+                ? Vector3.DistanceSquared(camera, tileCenter) : 0;
+            var lod = TerrainLodSelector.Select(loaded.LodMeshes, MathF.Sqrt(distanceSquared));
+            if (lod is null) continue;
+            foreach (var patch in lod.Patches)
+                candidates.Add((loaded, patch, distanceSquared));
+        }
+
+        candidates.Sort((left, right) =>
+        {
+            var distance = left.DistanceSquared.CompareTo(right.DistanceSquared);
+            if (distance != 0) return distance;
+            var z = left.Tile.Content.Reference.TileZ.CompareTo(right.Tile.Content.Reference.TileZ);
+            return z != 0 ? z : left.Tile.Content.Reference.TileX.CompareTo(right.Tile.Content.Reference.TileX);
+        });
+
+        foreach (var (loaded, patch, _) in candidates)
+        {
+            if (selectedVertices + patch.Vertices.Count > TerrainVertexLimit)
+                continue;
+            var tileXOffset = loaded.Content.Reference.TileX * 2048f;
+            var tileZOffset = loaded.Content.Reference.TileZ * 2048f;
+            var primaryAsset = patch.Material is null ? null : ActiveTerrainTextures.Loaded.FirstOrDefault(asset =>
+                asset.Reference.SeasonFolder is null &&
+                asset.Reference.TextureSlotIndex == 0 &&
+                string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(asset.Reference.FileName, patch.Material.PrimaryTextureFileName, StringComparison.OrdinalIgnoreCase));
+            var overlayAsset = patch.Material is null ? null : ActiveTerrainTextures.Loaded.FirstOrDefault(asset =>
+                asset.Reference.SeasonFolder is null &&
+                asset.Reference.TextureSlotIndex == 1 &&
+                string.Equals(asset.Reference.ShaderName, patch.Material.ShaderName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(asset.Reference.FileName, patch.Material.OverlayTextureFileName, StringComparison.OrdinalIgnoreCase));
+            var textureIndex = ResolveTerrainTexture(primaryAsset);
+            var overlayTextureIndex = ResolveTerrainTexture(overlayAsset);
+            var vertices = new float[patch.Vertices.Count * 5];
+            for (var i = 0; i < patch.Vertices.Count; i++)
+            {
+                var vertex = patch.Vertices[i];
+                var offset = i * 5;
+                vertices[offset] = vertex.Position.X + patch.PatchOrigin.X + tileXOffset;
+                vertices[offset + 1] = vertex.Position.Y + patch.PatchOrigin.Y;
+                vertices[offset + 2] = vertex.Position.Z + patch.PatchOrigin.Z + tileZOffset;
+                vertices[offset + 3] = vertex.TextureCoordinate.X;
+                vertices[offset + 4] = vertex.TextureCoordinate.Y;
+            }
+            patches.Add(new
+            {
+                vertices,
+                indices = patch.Indices,
+                textureIndex,
+                overlayTextureIndex,
+                overlayScale = patch.Material?.OverlayScale ?? 32
+            });
+            selectedVertices += patch.Vertices.Count;
+            selectedPatches++;
+            selectedTiles.Add((loaded.Content.Reference.TileX, loaded.Content.Reference.TileZ));
+        }
+        return (patches, selectedTiles.Count, selectedPatches, selectedVertices);
+    }
+
+    private async Task UpdateDynamicSceneAsync()
+    {
+        sceneGeometryUpdatePending = false;
+        if (module is null) return;
+
+        var terrainSelection = BuildTerrainPatches();
+        var trackTextureAssets = TrackShapeSeasonTextureSelector.Select(Route.TrackShapeMeshes.Textures.Loaded).ToArray();
+        var trackGeometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
+            .BuildTextured(Route.TrackShapePlacements, trackTextureAssets,
+                cameraPosition: cameraPosition, animationClipIndex: 0, elapsedSeconds: SimulationTimeSeconds);
+        var worldGeometry = new WorldSceneryRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
+            .Build(ActiveWorldScenery, animationClipIndex: 0, cameraPosition: cameraPosition,
+                elapsedSeconds: SimulationTimeSeconds);
+
+        var rollingPlacement = BuildRollingStockPlacement();
+        var rollingGeometry = rollingPlacement is null
+            ? new TrackShapeTexturedRenderGeometry(Array.Empty<TrackShapeTexturedRenderBatch>(), false)
+            : new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
+                .BuildTextured(rollingPlacement.Placements, rollingStockTextureAssets,
+                    animationClipIndex: 0, cameraPosition: cameraPosition,
+                    elapsedSeconds: SimulationTimeSeconds, matrixOverridesProvider: BuildWheelOverrides);
+
+        var combinedTextures = new List<LoadedTrackShapeTexture>();
+        var pathIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        int AddTexture(LoadedTrackShapeTexture asset)
+        {
+            if (pathIndexes.TryGetValue(asset.Reference.Path, out var existing)) return existing;
+            var index = combinedTextures.Count;
+            combinedTextures.Add(asset);
+            pathIndexes.Add(asset.Reference.Path, index);
+            return index;
+        }
+        var trackMap = trackTextureAssets.Select(AddTexture).ToArray();
+        var worldMap = worldGeometry.Textures.Select(AddTexture).ToArray();
+        rollingStockTextureIndexes = rollingStockTextureAssets.Select(AddTexture).ToArray();
+        int Remap(int index, IReadOnlyList<int> map) =>
+            index < 0 || index >= map.Count ? -1 : map[index];
+        int[] RemapSlots(IReadOnlyList<int>? slots, IReadOnlyList<int> map) =>
+            slots?.Select(index => Remap(index, map)).ToArray() ?? Array.Empty<int>();
+        object Batch(TrackShapeTexturedRenderBatch batch, IReadOnlyList<int> map) => new
+        {
+            vertices = batch.Vertices,
+            indices = batch.Indices,
+            textureIndex = Remap(batch.TextureIndex, map),
+            textureIndexes = RemapSlots(batch.TextureIndexes, map),
+            textureCoordinateChannels = batch.TextureCoordinateChannels,
+            material = batch.Material,
+            alphaTest = batch.AlphaTest,
+            textureAddressMode = batch.TextureAddressMode,
+            zBias = batch.ZBias
+        };
+
+        var shapeBatches = trackGeometry.Batches.Select(batch => Batch(batch, trackMap))
+            .Concat(worldGeometry.Batches.Select(batch => Batch(batch, worldMap))).ToArray();
+        var rollingBatches = rollingGeometry.Batches.Select(batch => Batch(batch, rollingStockTextureIndexes)).ToArray();
+        var shapePixels = combinedTextures.Select(asset => new
+        {
+            width = asset.Texture.Width,
+            height = asset.Texture.Height,
+            pixels = asset.Texture.MipLevels[0]
+        }).ToArray();
+
+        await module.InvokeVoidAsync("updateSceneGeometry", terrainSelection.Patches,
+            terrainTexturePayloads, routeTrackLines, null, shapeBatches, shapePixels, rollingBatches);
+        terrainTilesSent = terrainSelection.Tiles;
+        terrainPatchesSent = terrainSelection.PatchCount;
+        terrainVerticesSent = terrainSelection.Vertices;
+        rollingStockGeometryBatchCount = rollingBatches.Length;
+        trackShapeBatchCount = shapeBatches.Length + rollingBatches.Length;
+        trackGeometryTruncated = trackGeometryTruncated || trackGeometry.WasTruncated ||
+            worldGeometry.WasTruncated || rollingGeometry.WasTruncated;
+        if (rollingPlacement is not null)
+        {
+            foreach (var issue in rollingPlacement.Issues)
+                if (!rollingStockIssues.Contains(issue)) rollingStockIssues.Add(issue);
+            rollingStockSummary = $"{rollingPlacement.Placements.Count} vehicle(s) rendered with camera-selected LOD and simulation-time animation";
+        }
+        motionUpdatePending = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyDictionary<int, Matrix4x4>? BuildWheelOverrides(TrackShapePlacement placement)
+    {
+        if (Consist is null || placement.VehicleUid is not { } uid)
+            return null;
+        var car = Consist.Cars.FirstOrDefault(item => item.Uid == uid);
+        var reference = CarAssets.FirstOrDefault(item => item.Uid == uid &&
+            string.Equals(item.ConsistName, Consist.Name, StringComparison.OrdinalIgnoreCase));
+        return RollingStockWheelPoseBuilder.Build(placement.Asset.Mesh, reference?.Metadata,
+            car?.IsEngine ?? false, placement.RouteDistanceMeters, placement.RuntimeMatrixOverrides);
+    }
+
+    private RollingStockTrackPlacementResult? BuildRollingStockPlacement()
+    {
+        if (Store is null || Consist is null || rollingStockMeshesByUid.Count == 0)
+            return null;
+        var builder = new RollingStockTrackPlacementBuilder();
+        if (MotionState is not null)
+        {
+            if (MotionRoute is not null)
+                return builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute, MotionState);
+            if (selectedTrackPath is not null)
+                return builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath, MotionState);
+        }
+        if (MotionRoute is not null)
+            return builder.Build(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute);
+        return selectedTrackPath is null ? null :
+            builder.Build(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath);
+    }
+
     private int rollingStockGeometryBatchCount;
 
     private async Task UpdateRollingStockAsync()
@@ -523,41 +798,65 @@
             rollingStockMeshesByUid.Count == 0)
             return;
 
-        var builder = new RollingStockTrackPlacementBuilder();
-        var placement = MotionRoute is not null
-            ? builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute, MotionState)
-            : selectedTrackPath is not null
-                ? builder.BuildAtMotionState(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath, MotionState)
-                : null;
-        if (placement is null)
-            return;
+        var frameBuilder = new RollingStockRenderFrameBuilder();
+        RollingStockRenderFrame frame;
+        if (MotionRoute is not null)
+        {
+            frame = frameBuilder.Build(Consist, CarAssets, rollingStockMeshesByUid, MotionRoute,
+                MotionState, rollingStockTextureAssets, SimulationTimeSeconds,
+                animationClipIndex: 0, cameraPosition: cameraPosition);
+        }
+        else if (selectedTrackPath is not null)
+        {
+            frame = frameBuilder.Build(Consist, CarAssets, rollingStockMeshesByUid, selectedTrackPath,
+                MotionState, rollingStockTextureAssets, SimulationTimeSeconds,
+                animationClipIndex: 0, cameraPosition: cameraPosition);
+        }
+        else return;
 
-        var geometry = new TrackShapeRenderGeometryBuilder(GeometryVertexLimit, GeometryIndexLimit)
-            .BuildTextured(placement.Placements, rollingStockTextureAssets);
-        var batches = geometry.Batches.Select(batch => new
+        var batches = frame.Geometry.Batches.Select(batch => new
         {
             vertices = batch.Vertices,
             indices = batch.Indices,
-            textureIndex = batch.TextureIndex < 0 ? -1 : rollingStockTextureIndexes[batch.TextureIndex],
+            textureIndex = batch.TextureIndex < 0 || batch.TextureIndex >= rollingStockTextureIndexes.Length
+                ? -1 : rollingStockTextureIndexes[batch.TextureIndex],
+            textureIndexes = batch.TextureIndexes?.Select(index =>
+                index < 0 || index >= rollingStockTextureIndexes.Length ? -1 : rollingStockTextureIndexes[index]).ToArray()
+                ?? Array.Empty<int>(),
+            textureCoordinateChannels = batch.TextureCoordinateChannels,
+            material = batch.Material,
             alphaTest = batch.AlphaTest,
             textureAddressMode = batch.TextureAddressMode,
             zBias = batch.ZBias
         }).ToArray();
 
         await module.InvokeVoidAsync("updateRollingStockBatches", batches);
-        foreach (var issue in placement.Issues)
+        foreach (var issue in frame.Placement.Issues)
             if (!rollingStockIssues.Contains(issue))
                 rollingStockIssues.Add(issue);
-        trackShapeBatchCount = trackShapeBatchCount - rollingStockGeometryBatchCount + geometry.Batches.Count;
-        rollingStockGeometryBatchCount = geometry.Batches.Count;
-        trackGeometryTruncated = trackGeometryTruncated || geometry.WasTruncated;
-        rollingStockSummary = $"{placement.Placements.Count} vehicle(s) updated from live consist motion · {(MotionState.Cars[0].SpeedMetersPerSecond * 3.6):N1} km/h";
+        trackShapeBatchCount = trackShapeBatchCount - rollingStockGeometryBatchCount + frame.Geometry.Batches.Count;
+        rollingStockGeometryBatchCount = frame.Geometry.Batches.Count;
+        trackGeometryTruncated = trackGeometryTruncated || frame.Geometry.WasTruncated;
+        rollingStockSummary = $"{frame.Placement.Placements.Count} vehicle(s) updated from live consist motion · " +
+            $"{(MotionState.Cars[0].SpeedMetersPerSecond * 3.6):N1} km/h · {frame.SimulationTimeSeconds:N1} s";
         lastMotionState = MotionState;
         await InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (terrainStreaming is not null)
+        {
+            await terrainStreaming.DisposeAsync();
+            terrainStreaming = null;
+        }
+        if (worldStreaming is not null)
+        {
+            await worldStreaming.DisposeAsync();
+            worldStreaming = null;
+        }
+        cameraCallback?.Dispose();
+        cameraCallback = null;
         if (module is not null)
         {
             try { await module.InvokeVoidAsync("cleanup"); } catch { }

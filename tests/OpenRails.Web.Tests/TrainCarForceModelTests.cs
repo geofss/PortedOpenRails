@@ -45,6 +45,28 @@ public sealed class TrainCarForceModelTests
     }
 
     [Fact]
+    public void RejectsOverflowingCombinedMotiveAndGravityForce()
+    {
+        var state = new TrainCarMotionState(1_000, 0, 0);
+        var forces = new TrainCarForceBreakdown(
+            double.MaxValue, double.MaxValue, 0, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrainCarForceModel().CalculateNetLongitudinalForce(state, forces));
+    }
+
+    [Fact]
+    public void RejectsOverflowingNetForceAfterResistanceSubtraction()
+    {
+        var state = new TrainCarMotionState(1_000, 1, 0);
+        var forces = new TrainCarForceBreakdown(
+            -double.MaxValue, 0, double.MaxValue, 0, 0, 0, 0);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TrainCarForceModel().CalculateNetLongitudinalForce(state, forces));
+    }
+
+    [Fact]
     public void RejectsNegativeResistanceTerms()
     {
         var state = new TrainCarMotionState(1_000, 0, 0);

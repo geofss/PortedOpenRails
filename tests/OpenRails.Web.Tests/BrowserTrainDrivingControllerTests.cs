@@ -48,6 +48,48 @@ public sealed class BrowserTrainDrivingControllerTests
     }
 
     [Fact]
+    public void MechanicalHandbrakeAddsRatedVehicleRetardingForceAndRoundTrips()
+    {
+        var consist = new ConsistMetadata("MechanicalHandbrake", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "mechanical-handbrake.con");
+        var asset = CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null);
+        asset = asset with { Metadata = asset.Metadata! with { MaxHandBrakeForceN = 4_000 } };
+        var setup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200,
+            initialSpeedMetersPerSecond: 5);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        controller.SetHandbrake(50);
+        var snapshot = controller.CaptureState();
+        Assert.Equal(50, snapshot.HandbrakePercent);
+        controller.Advance(0.2);
+
+        Assert.True(controller.State.Cars[0].SpeedMetersPerSecond < 5);
+        var targetSetup = new TrainConsistSimulationSetupBuilder().Build(consist, new[] { asset }, 200,
+            initialSpeedMetersPerSecond: 5);
+        var restored = new BrowserTrainDrivingController(targetSetup);
+        restored.RestoreState(snapshot);
+        Assert.Equal(50, restored.HandbrakePercent);
+    }
+
+    [Fact]
+    public void RejectsInvalidHandbrakeCommandAndSnapshot()
+    {
+        var consist = new ConsistMetadata("HandbrakeValidation", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "handbrake-validation.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => controller.SetHandbrake(double.NaN));
+        Assert.Throws<ArgumentException>(() =>
+            controller.RestoreState(controller.CaptureState() with { HandbrakePercent = 101 }));
+    }
+
+    [Fact]
     public void BrowserControllerSnapshotSurvivesJsonPersistenceRoundTrip()
     {
         var consist = new ConsistMetadata("JsonSnapshot", new[]
@@ -156,6 +198,25 @@ public sealed class BrowserTrainDrivingControllerTests
         Assert.Equal(12, controller.ThrottlePercent);
         Assert.Equal(timeBeforeRestore, controller.SimulationTimeSeconds);
         Assert.Equal(motionBeforeRestore, controller.State.Cars);
+    }
+
+    [Fact]
+    public void RejectsSnapshotWithMissingSessionComponentsBeforeReadingMotion()
+    {
+        var consist = new ConsistMetadata("NullSessionSnapshot", new[]
+        {
+            new ConsistCar("Wagon", "Freight", 1, false, false, false)
+        }, "null-session-snapshot.con");
+        var setup = new TrainConsistSimulationSetupBuilder().Build(
+            consist, new[] { CreateAsset(1, "Wagon", false, 2_000, 20, 8_000, null) }, 200);
+        var controller = new BrowserTrainDrivingController(setup);
+        var captured = controller.CaptureState();
+        var invalid = captured with
+        {
+            SessionState = captured.SessionState with { MotionState = null! }
+        };
+
+        Assert.Throws<ArgumentNullException>(() => controller.RestoreState(invalid));
     }
 
     [Fact]
@@ -842,7 +903,7 @@ public sealed class BrowserTrainDrivingControllerTests
         new("DriveTest", uid, name, "Freight", isEngine, false, name + (isEngine ? ".eng" : ".wag"),
             true, null,
             new RollingStockMetadata(name, "Freight", mass, 3, 4, length, 4, 8,
-                null, null, brake, name + (isEngine ? ".eng" : ".wag"),
+                "air_single_pipe", "distributor", brake, name + (isEngine ? ".eng" : ".wag"),
                 MinCouplerStrengthN: couplerStrength,
                 DavisAForceN: davisA, DavisBResistance: davisB, DavisCResistance: davisC),
             name + ".s", true, null, traction);

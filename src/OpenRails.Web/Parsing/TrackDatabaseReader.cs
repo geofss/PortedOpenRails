@@ -123,6 +123,30 @@ public sealed class TrackDatabaseReader
             }
         }
 
+        // Preserve the upstream TDB references and validate their targets before
+        // downstream route, signal, and junction systems attempt to resolve them.
+        foreach (var item in trackItems)
+        {
+            if (item is null)
+                continue;
+
+            if (item.LinkedItemId is { } linkedItemId && linkedItemId >= trackItemCount)
+                diagnostics.Add($"Track item {item.Index} links to missing track item {linkedItemId} (table size {trackItemCount}).");
+
+            if (item.CrossoverTrackNode is { } crossoverNode &&
+                (crossoverNode == 0 || crossoverNode >= nodes.Length || nodes[crossoverNode] is null))
+                diagnostics.Add($"Crossover track item {item.Index} references missing TrackNode {crossoverNode}.");
+
+            if (item.SignalDirections is null)
+                continue;
+
+            foreach (var direction in item.SignalDirections)
+            {
+                if (direction.TrackNode == 0 || direction.TrackNode >= nodes.Length || nodes[direction.TrackNode] is null)
+                    diagnostics.Add($"Signal track item {item.Index} references missing direction TrackNode {direction.TrackNode}.");
+            }
+        }
+
         return new TrackDatabase(nodes, trackItems, diagnostics);
     }
 
@@ -147,6 +171,20 @@ public sealed class TrackDatabaseReader
         uint? linkedItemId = null;
         uint? minimumWaitingTime = null;
         uint? passengersWaiting = null;
+        uint? speedPostFlags = null;
+        float? speedIndicator = null;
+        int? speedDisplayNumber = null;
+        float? speedPostAngle = null;
+        uint? soundRegionData1 = null;
+        uint? soundRegionData2 = null;
+        float? soundRegionData3 = null;
+        uint? crossoverTrackNode = null;
+        uint? crossoverShapeId = null;
+        string? signalFlags = null;
+        uint? signalDirection = null;
+        float? signalData = null;
+        string? signalType = null;
+        var signalDirections = new List<TrackSignalDirection>();
         reader.ParseBlock(new[]
         {
             new STFReader.TokenProcessor("tritemid", () =>
@@ -186,6 +224,76 @@ public sealed class TrackDatabaseReader
             new STFReader.TokenProcessor("station", () => station = reader.ReadStringBlock(string.Empty)),
             new STFReader.TokenProcessor("platformminwaitingtime", () => minimumWaitingTime = reader.ReadUIntBlock(null)),
             new STFReader.TokenProcessor("platformnumpassengerswaiting", () => passengersWaiting = reader.ReadUIntBlock(null)),
+            new STFReader.TokenProcessor("speedposttritemdata", () =>
+            {
+                reader.MustMatch("(");
+                var rawFlags = reader.ReadUInt(null);
+                speedPostFlags = rawFlags;
+                var isWarning = (rawFlags & 1) != 0;
+                var isLimit = (rawFlags & (1u << 1)) != 0;
+                var isMilePost = !isWarning && !isLimit;
+                var isResume = isWarning && isLimit;
+                var showNumber = (rawFlags & (1u << 4)) != 0;
+                if (!isResume)
+                {
+                    speedIndicator = isMilePost && (rawFlags & (1u << 9)) == 0
+                        ? (float)Math.Truncate(reader.ReadDouble(null))
+                        : reader.ReadFloat(STFReader.UNITS.None, null);
+                }
+                if (showNumber)
+                    speedDisplayNumber = reader.ReadInt(null);
+                speedPostAngle = reader.ReadFloat(STFReader.UNITS.None, null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("trsignaltype", () =>
+            {
+                reader.MustMatch("(");
+                signalFlags = reader.ReadString();
+                signalDirection = reader.ReadUInt(null);
+                signalData = reader.ReadFloat(STFReader.UNITS.None, null);
+                signalType = reader.ReadString().ToLowerInvariant();
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("trsignaldirs", () =>
+            {
+                reader.MustMatch("(");
+                var count = reader.ReadUInt(null);
+                if (count > 4096)
+                    throw new InvalidDataException($"Signal item declares too many junction directions: {count}.");
+                signalDirections.Clear();
+                reader.ParseBlock(new[]
+                {
+                    new STFReader.TokenProcessor("trsignaldir", () =>
+                    {
+                        if (signalDirections.Count >= count)
+                            throw new InvalidDataException("Signal item contains more TrSignalDir records than declared.");
+                        reader.MustMatch("(");
+                        var node = reader.ReadUInt(null);
+                        var sd1 = reader.ReadUInt(null);
+                        var link = reader.ReadUInt(null);
+                        var sd3 = reader.ReadUInt(null);
+                        reader.SkipRestOfBlock();
+                        signalDirections.Add(new TrackSignalDirection(node, sd1, link, sd3));
+                    })
+                });
+                if (signalDirections.Count != count)
+                    throw new InvalidDataException($"Signal item declares {count} junction directions but contains {signalDirections.Count}.");
+            }),
+            new STFReader.TokenProcessor("crossovertritemdata", () =>
+            {
+                reader.MustMatch("(");
+                crossoverTrackNode = reader.ReadUInt(null);
+                crossoverShapeId = reader.ReadUInt(null);
+                reader.SkipRestOfBlock();
+            }),
+            new STFReader.TokenProcessor("tritemsrdata", () =>
+            {
+                reader.MustMatch("(");
+                soundRegionData1 = reader.ReadUInt(null);
+                soundRegionData2 = reader.ReadUInt(null);
+                soundRegionData3 = reader.ReadFloat(STFReader.UNITS.None, null);
+                reader.SkipRestOfBlock();
+            }),
             new STFReader.TokenProcessor("platformtritemdata", () =>
             {
                 reader.MustMatch("(");
@@ -206,7 +314,9 @@ public sealed class TrackDatabaseReader
             throw new InvalidDataException($"Track item index mismatch: expected {expectedIndex}, found {(id.HasValue ? id.Value : uint.MaxValue)}.");
         return new TrackItem(expectedIndex, type, tileX, tileZ, x, y, z,
             tilePX, tilePZ, px, pz, distance, data2, name, station, flags, linkedItemId,
-            minimumWaitingTime, passengersWaiting);
+            minimumWaitingTime, passengersWaiting, speedPostFlags, speedIndicator,
+            speedDisplayNumber, speedPostAngle, soundRegionData1, soundRegionData2, soundRegionData3,
+            crossoverTrackNode, crossoverShapeId, signalFlags, signalDirection, signalData, signalType, signalDirections);
     }
 
     private static TrackNode ReadTrackNode(STFReader reader)
@@ -421,7 +531,14 @@ public sealed class TrackNode
 
 public sealed record TrackItem(int Index, string Type, int TileX, int TileZ, float X, float Y, float Z,
     int TilePX, int TilePZ, float PX, float PZ, float DistanceAlongTrack, string Data2, string Name, string Station,
-    string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting);
+    string Flags, uint? LinkedItemId, uint? PlatformMinimumWaitingTime, uint? PlatformPassengersWaiting,
+    uint? SpeedPostFlags = null, float? SpeedIndicator = null, int? SpeedDisplayNumber = null,
+    float? SpeedPostAngle = null, uint? SoundRegionData1 = null, uint? SoundRegionData2 = null,
+    float? SoundRegionData3 = null, uint? CrossoverTrackNode = null, uint? CrossoverShapeId = null,
+    string? SignalFlags = null, uint? SignalDirection = null, float? SignalData = null, string? SignalType = null,
+    IReadOnlyList<TrackSignalDirection>? SignalDirections = null);
+
+public sealed record TrackSignalDirection(uint TrackNode, uint Sd1, uint LinkLeftRightPath, uint Sd3);
 
 public sealed class TrackDatabase
 {

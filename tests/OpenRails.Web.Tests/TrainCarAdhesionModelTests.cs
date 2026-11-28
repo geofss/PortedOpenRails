@@ -23,6 +23,13 @@ public sealed class TrainCarAdhesionModelTests
     }
 
     [Fact]
+    public void RejectsOverflowingAdhesionLimit()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            model.LimitTractiveForce(1_000, double.MaxValue));
+    }
+
+    [Fact]
     public void RejectsInvalidMassAndAdhesionInputs()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => model.LimitTractiveForce(1, 0));

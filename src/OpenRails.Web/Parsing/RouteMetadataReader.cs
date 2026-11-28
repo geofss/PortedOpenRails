@@ -1,4 +1,5 @@
 using OpenRails.Web.Content;
+using OpenRails.Web.Simulation;
 using Orts.Parsers.Msts;
 
 namespace OpenRails.Web.Parsing;
@@ -76,6 +77,11 @@ public sealed class RouteMetadataReader
             throw new InvalidDataException("The route metadata is missing Description.");
         if (routeStart is null)
             throw new InvalidDataException("The route metadata is missing RouteStart.");
+        if (!double.IsFinite(routeStart.TileX) || !double.IsFinite(routeStart.TileZ) ||
+            !double.IsFinite(routeStart.X) || !double.IsFinite(routeStart.Z) ||
+            !double.IsFinite(routeStart.TileX * TrackNetworkBuilder.TileSizeMeters + routeStart.X) ||
+            !double.IsFinite(routeStart.TileZ * TrackNetworkBuilder.TileSizeMeters + routeStart.Z))
+            throw new InvalidDataException("RouteStart coordinates must be finite and representable in world space.");
 
         return new RouteMetadata(
             routeId, name, description, electrified, maxLineVoltage, routeStart, fileName,

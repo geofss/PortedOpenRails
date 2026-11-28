@@ -3,7 +3,7 @@ name: Route pipeline regression tests
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "port/upstream-core-files"]
     paths:
       - "src/OpenRails.Web/Parsing/**"
       - "src/OpenRails.Web/Simulation/TrackNetwork*.cs"
@@ -41,4 +41,37 @@ jobs:
           --configuration Release
           --no-restore
           --filter
-          "FullyQualifiedName~RouteLoaderTests|FullyQualifiedName~RouteAssetLocatorTests|FullyQualifiedName~RouteMetadataReaderTests|FullyQualifiedName~RouteTerrainTileLocatorTests|FullyQualifiedName~RouteWorldTileLoaderTests|FullyQualifiedName~RouteWorldTileLocatorTests|FullyQualifiedName~TerrainMeshBuilderTests|FullyQualifiedName~TerrainPatchMaterialBuilderTests|FullyQualifiedName~TerrainRawFileReadersTests|FullyQualifiedName~TerrainTextureAssetLocatorTests|FullyQualifiedName~TerrainTileReaderTests|FullyQualifiedName~TerrainTileSampleResolverTests|FullyQualifiedName~TrackDatabaseReaderTests|FullyQualifiedName~TrackGeometryTessellatorTests|FullyQualifiedName~TrackNetworkRouteBuilderTests|FullyQualifiedName~TrackNetworkRouteProfileTests|FullyQualifiedName~TrackSectionGeometryReaderTests|FullyQualifiedName~WorldShapeAssetLocatorTests|FullyQualifiedName~WorldTileReaderTests|FullyQualifiedName~AceTextureReaderTests|FullyQualifiedName~RollingStockTextureAssetLocatorTests|FullyQualifiedName~RollingStockTrackPlacementBuilderTests|FullyQualifiedName~TrackShapeAssetLocatorTests|FullyQualifiedName~TrackShapeFileReaderTests|FullyQualifiedName~TrackShapeMeshBuilderTests|FullyQualifiedName~TrackShapePlacementBuilderTests|FullyQualifiedName~TrackShapeRenderGeometryBuilderTests|FullyQualifiedName~TrackShapeTextureAssetLoaderTests|FullyQualifiedName~TrackShapeTextureAssetLocatorTests|FullyQualifiedName~WorldSceneryRenderGeometryBuilderTests|FullyQualifiedName~WorldSceneryTileLoaderTests"
+          "FullyQualifiedName~RouteTileStreamingCacheTests|FullyQualifiedName~RouteLoaderTests|FullyQualifiedName~RouteAssetLocatorTests|FullyQualifiedName~RouteMetadataReaderTests|FullyQualifiedName~RouteTerrainTileLocatorTests|FullyQualifiedName~RouteWorldTileLoaderTests|FullyQualifiedName~RouteWorldTileLocatorTests|FullyQualifiedName~TerrainLodSelectorTests|FullyQualifiedName~TerrainMeshBuilderTests|FullyQualifiedName~TerrainPatchMaterialBuilderTests|FullyQualifiedName~TerrainRawFileReadersTests|FullyQualifiedName~TerrainTextureAssetLocatorTests|FullyQualifiedName~TerrainTileReaderTests|FullyQualifiedName~TerrainTileSampleResolverTests|FullyQualifiedName~TrackDatabaseReaderTests|FullyQualifiedName~TrackGeometryTessellatorTests|FullyQualifiedName~TrackNetworkRouteBuilderTests|FullyQualifiedName~TrackNetworkBuilderTests|FullyQualifiedName~TrackNetworkRouteProfileTests|FullyQualifiedName~TrackSectionGeometryReaderTests|FullyQualifiedName~WorldShapeAssetLocatorTests|FullyQualifiedName~WorldTileReaderTests|FullyQualifiedName~AceTextureReaderTests|FullyQualifiedName~RollingStockTextureAssetLocatorTests|FullyQualifiedName~RollingStockTrackPlacementBuilderTests|FullyQualifiedName~RollingStockBogiePoseBuilderTests|FullyQualifiedName~RollingStockWheelPoseBuilderTests|FullyQualifiedName~RollingStockWheelMetadataReaderTests|FullyQualifiedName~RollingStockWheelPoseBuilderTests|FullyQualifiedName~RollingStockWheelMetadataReaderTests|FullyQualifiedName~TrackShapeAssetLocatorTests|FullyQualifiedName~TrackShapeFileReaderTests|FullyQualifiedName~TrackShapeLodSelectorTests|FullyQualifiedName~TrackShapeMeshBuilderTests|FullyQualifiedName~TrackShapePlacementBuilderTests|FullyQualifiedName~TrackShapeRenderGeometryBuilderTests|FullyQualifiedName~TrackShapeTextureAssetLoaderTests|FullyQualifiedName~TrackShapeTextureAssetLocatorTests|FullyQualifiedName~WorldSceneryRenderGeometryBuilderTests|FullyQualifiedName~WorldSceneryTileLoaderTests"
+  demo-model1-acceptance:
+    name: Authorized Demo Model 1 route acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download authorized Demo Model 1 source
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://github.com/cjakeman/Demo-Model-1/archive/e85ecb6d5397e1a5ae899b469cbe60841be065ab.zip" \
+            --output demo-model-1.zip
+          unzip -q demo-model-1.zip
+          route_dir="$(find "$GITHUB_WORKSPACE" -type d -path '*/Demo Model 1/ROUTES/SCE' -print -quit)"
+          test -n "$route_dir"
+          echo "DEMO_MODEL1_ROOT=${route_dir%/ROUTES/SCE}" >> "$GITHUB_ENV"
+
+      - name: Restore route acceptance dependencies
+        run: dotnet restore tests/OpenRails.Web.Tests/OpenRails.Web.Tests.csproj
+
+      - name: Load and validate the real Scottish Capital Express route
+        run: >-
+          dotnet test tests/OpenRails.Web.Tests/OpenRails.Web.Tests.csproj
+          --configuration Release
+          --no-restore
+          --filter "FullyQualifiedName~DemoModel1AcceptanceTests"

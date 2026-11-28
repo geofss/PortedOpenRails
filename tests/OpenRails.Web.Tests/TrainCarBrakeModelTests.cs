@@ -11,12 +11,29 @@ public sealed class TrainCarBrakeModelTests
     [InlineData(12, 50, 20_000, 10_000)]
     [InlineData(-12, 50, 20_000, -10_000)]
     [InlineData(12, 0, 20_000, 0)]
-    [InlineData(0, 100, 20_000, 0)]
+    [InlineData(0, 100, 20_000, 20_000)]
     [InlineData(12, 150, 20_000, 20_000)]
     [InlineData(12, -20, 20_000, 0)]
     public void CalculatesSignedRetardingForce(double speed, double command, double rating, double expected)
     {
         Assert.Equal(expected, model.CalculateBrakeRetardForceNewtons(speed, command, rating), 8);
+    }
+
+    [Fact]
+    public void BrakeCapacityRemainsAvailableAtStandstillToHoldOnAStationaryGrade()
+    {
+        var brake = model.CalculateBrakeRetardForceNewtons(0, 100, 20_000);
+        var forces = new TrainCarForceBreakdown(
+            MotiveForceNewtons: 0,
+            GravityForceNewtons: 15_000,
+            RollingFrictionForceNewtons: 0,
+            BrakeRetardForceNewtons: Math.Abs(brake),
+            CurveResistanceForceNewtons: 0,
+            WindResistanceForceNewtons: 0,
+            TunnelResistanceForceNewtons: 0);
+
+        Assert.Equal(0, new TrainCarForceModel().CalculateNetLongitudinalForce(
+            new TrainCarMotionState(10_000, 0, 0), forces));
     }
 
     [Fact]

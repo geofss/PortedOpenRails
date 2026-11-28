@@ -29,6 +29,8 @@ public sealed class TrainConsistSimulationLoop
             (!double.IsFinite(routeLengthMeters.Value) || routeLengthMeters.Value <= 0))
             throw new ArgumentOutOfRangeException(nameof(routeLengthMeters));
         this.routeLengthMeters = routeLengthMeters;
+        if (routeLengthMeters is not null)
+            State = ClampCarsToRoute(State, routeLengthMeters.Value);
         scheduler = new FixedStepSimulationScheduler(
             fixedStepSeconds, maximumFrameSeconds, maximumStepsPerFrame);
     }
@@ -36,18 +38,37 @@ public sealed class TrainConsistSimulationLoop
     public int Advance(
         double elapsedFrameSeconds,
         Func<TrainConsistMotionState, TrainConsistForceFrame> forceProvider,
-        Action<double>? beforeStep = null)
+        Action<double>? beforeStep = null,
+        Action? onStepFailure = null)
     {
         ArgumentNullException.ThrowIfNull(forceProvider);
         return scheduler.Advance(elapsedFrameSeconds, stepSeconds =>
         {
-            beforeStep?.Invoke(stepSeconds);
-            var frame = forceProvider(State);
-            ArgumentNullException.ThrowIfNull(frame);
-            State = integrator.Step(
-                State, frame.CarForces, frame.CouplerForcesNewtons, stepSeconds);
-            if (routeLengthMeters is not null)
-                State = ClampCarsToRoute(State, routeLengthMeters.Value);
+            try
+            {
+                beforeStep?.Invoke(stepSeconds);
+                var frame = forceProvider(State);
+                ArgumentNullException.ThrowIfNull(frame);
+                var nextState = integrator.Step(
+                    State, frame.CarForces, frame.CouplerForcesNewtons, stepSeconds);
+                if (routeLengthMeters is not null)
+                    nextState = ClampCarsToRoute(nextState, routeLengthMeters.Value);
+                State = nextState;
+            }
+            catch (Exception stepException)
+            {
+                try
+                {
+                    onStepFailure?.Invoke();
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new AggregateException(
+                        "A consist fixed step failed and its auxiliary state rollback also failed.",
+                        stepException, rollbackException);
+                }
+                throw;
+            }
         });
     }
 
@@ -74,7 +95,10 @@ public sealed class TrainConsistSimulationLoop
 
     public void Reset(TrainConsistMotionState initialState)
     {
-        State = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
+        var resetState = ValidateState(initialState ?? throw new ArgumentNullException(nameof(initialState)));
+        State = routeLengthMeters is null
+            ? resetState
+            : ClampCarsToRoute(resetState, routeLengthMeters.Value);
         scheduler.Reset();
     }
 
@@ -121,4 +145,5 @@ public sealed record TrainConsistSimulationSnapshot(
     FixedStepSchedulerSnapshot ClockState,
     TrainBrakePipeState? BrakePipeState = null,
     TrainBrakeCylinderState? BrakeCylinderState = null,
-    TrainBrakeDistributorState? BrakeDistributorState = null);
+    TrainBrakeDistributorState? BrakeDistributorState = null,
+    IReadOnlyList<float>? AppliedTractionForceNewtonsByCar = null);
