@@ -195,7 +195,7 @@ public sealed class DemoModel1AcceptanceTests
                         new ServiceRouteWaypoint(selectedPath.LengthMeters, false, false)
                     });
 
-            var waitDistance = distance + 10;
+            var waitDistance = distance + 1;
             Assert.True(waitDistance < selectedPath.LengthMeters);
             return new ServiceRouteStartPosition(distance, 0, pathStart,
                 new[] { distance, waitDistance, selectedPath.LengthMeters }, 1,
