@@ -297,6 +297,19 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void KeepsMostRecentlyPassedSpeedpostLimitActiveUntilNextPost()
+    {
+        var decision = controller.Calculate(Plan(0, 500), 60, 0, 20,
+            speedRestrictions: new[]
+            {
+                new AiServiceSpeedRestriction(50, 6),
+                new AiServiceSpeedRestriction(200, 12)
+            });
+
+        Assert.Equal(6, decision.TargetSpeedMetersPerSecond, 3);
+    }
+
+    [Fact]
     public void CombinesSignalAndTrackSpeedRestrictionsUsingTheMostRestrictiveEnvelope()
     {
         var decision = controller.Calculate(Plan(0, 100), 10, 0, 20,
