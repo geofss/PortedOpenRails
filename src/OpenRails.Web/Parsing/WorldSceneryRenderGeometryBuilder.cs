@@ -103,7 +103,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
                             shapeTextureIndexes.TryGetValue((placement.Uid, binding.ImageName), out var slot)
                                 ? slot : -1).ToArray() ?? (textureIndex >= 0 ? new[] { textureIndex } : Array.Empty<int>());
                         var key = new WorldBatchKey(textureIndex, primitive.AlphaTest,
-                            primitive.TextureAddressMode, primitive.ZBias, placement.Uid,
+                            primitive.TextureAddressMode, primitive.ZBias,
                             primitive.PrimitiveStateIndex, string.Join(",", textureSlotIndexes), primitive.ShaderName,
                             primitive.LightMaterialIndex, primitive.LightConfigurationIndex,
                             primitive.TextureFilterMode, primitive.MipMapLodBias, primitive.ZBufferMode);
@@ -266,7 +266,7 @@ public sealed class WorldSceneryRenderGeometryBuilder
 
     private sealed record WorldBatchKey(
         int TextureIndex, bool AlphaTest, int TextureAddressMode, float ZBias,
-        uint ShapeIndex = 0, int PrimitiveStateIndex = -1, string TextureSlotKey = "", string ShaderName = "",
+        int PrimitiveStateIndex = -1, string TextureSlotKey = "", string ShaderName = "",
         int LightMaterialIndex = -1, int LightConfigurationIndex = -1,
         int TextureFilterMode = 0, float MipMapLodBias = 0, int ZBufferMode = 1);
     private sealed class WorldBatchBuilder
