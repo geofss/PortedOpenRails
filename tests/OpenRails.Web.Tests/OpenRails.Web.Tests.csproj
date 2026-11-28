@@ -106,7 +106,6 @@
     <Compile Include="../../src/OpenRails.Web/Simulation/ServiceRoutePositionResolver.cs" Link="Simulation/ServiceRoutePositionResolver.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiServiceDrivingController.cs" Link="Simulation/AiServiceDrivingController.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTrainFollowingResolver.cs" Link="Simulation/AiTrainFollowingResolver.cs" />
-    <Compile Include="../../tests/OpenRails.Web.Tests/AiTrainFollowingResolverTests.cs" Link="Simulation/AiTrainFollowingResolverTests.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiServiceInterlockingSession.cs" Link="Simulation/AiServiceInterlockingSession.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/AiTimetableDispatcher.cs" Link="Simulation/AiTimetableDispatcher.cs" />
     <Compile Include="../../src/OpenRails.Web/Simulation/ActivityStationStopTracker.cs" Link="Simulation/ActivityStationStopTracker.cs" />
