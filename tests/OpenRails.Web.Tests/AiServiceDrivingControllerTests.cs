@@ -288,6 +288,34 @@ public sealed class AiServiceDrivingControllerTests
     }
 
     [Fact]
+    public void AppliesNativeTrackSpeedpostBrakingEnvelope()
+    {
+        var decision = controller.Calculate(Plan(0, 100), 10, 0, 20,
+            speedRestrictions: new[] { new AiServiceSpeedRestriction(50, 6) });
+
+        Assert.Equal(Math.Sqrt(6 * 6 + 2 * 0.65 * 40), decision.TargetSpeedMetersPerSecond, 3);
+    }
+
+    [Fact]
+    public void CombinesSignalAndTrackSpeedRestrictionsUsingTheMostRestrictiveEnvelope()
+    {
+        var decision = controller.Calculate(Plan(0, 100), 10, 0, 20,
+            signalConstraints: new[] { new AiServiceSignalConstraint(70, RouteSignalAspect.Clear2, 8) },
+            speedRestrictions: new[] { new AiServiceSpeedRestriction(50, 6) });
+
+        Assert.Equal(Math.Sqrt(6 * 6 + 2 * 0.65 * 40), decision.TargetSpeedMetersPerSecond, 3);
+    }
+
+    [Fact]
+    public void RejectsInvalidNativeTrackSpeedRestrictions()
+    {
+        Assert.Throws<ArgumentException>(() => controller.Calculate(Plan(0, 100), 0, 0, 10,
+            speedRestrictions: new[] { new AiServiceSpeedRestriction(10, double.NaN) }));
+        Assert.Throws<ArgumentException>(() => controller.Calculate(Plan(0, 100), 0, 0, 10,
+            speedRestrictions: new[] { new AiServiceSpeedRestriction(10, 0) }));
+    }
+
+    [Fact]
     public void DistantSpeedRestrictionDoesNotPrematurelyLimitCruisingSpeed()
     {
         var route = Plan(0, 2_000);
