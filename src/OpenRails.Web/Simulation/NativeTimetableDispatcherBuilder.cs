@@ -9,14 +9,16 @@ namespace OpenRails.Web.Simulation;
 public sealed record NativeTimetableServiceRegistration(
     AiServiceInterlockingSession Session,
     IReadOnlyList<uint> RouteCircuitIds,
-    IReadOnlyDictionary<uint, uint> RequiredJunctionBranches);
+    IReadOnlyDictionary<uint, uint> RequiredJunctionBranches,
+    AiTimetableTrainRuntimeBinding? RuntimeBinding = null);
 
 public sealed record NativeTimetableDispatchIssue(string Train, string Message);
 
 public sealed record NativeTimetableDispatcherBuildResult(
     AiTimetableDispatcher Dispatcher,
     IReadOnlyList<string> RegisteredServiceIds,
-    IReadOnlyList<NativeTimetableDispatchIssue> Issues);
+    IReadOnlyList<NativeTimetableDispatchIssue> Issues,
+    IReadOnlyList<AiTimetableTrainRuntimeBinding> RuntimeBindings);
 
 /// <summary>
 /// Converts parsed native timetable columns into dispatcher registrations. The
@@ -35,6 +37,7 @@ public sealed class NativeTimetableDispatcherBuilder
         var dispatcher = new AiTimetableDispatcher();
         var registered = new List<string>();
         var issues = new List<NativeTimetableDispatchIssue>();
+        var runtimeBindings = new List<AiTimetableTrainRuntimeBinding>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var train in timetable.Trains)
@@ -71,10 +74,16 @@ public sealed class NativeTimetableDispatcherBuilder
                 ArgumentNullException.ThrowIfNull(registration.RequiredJunctionBranches);
                 if (registration.RouteCircuitIds.Count == 0)
                     throw new InvalidDataException("Resolved native service has no route track circuits.");
+                if (registration.RuntimeBinding is { } runtimeBinding &&
+                    (!runtimeBinding.ServiceId.Equals(train.Train, StringComparison.OrdinalIgnoreCase) ||
+                     !ReferenceEquals(runtimeBinding.Session, registration.Session)))
+                    throw new InvalidDataException("Native timetable runtime binding must match the registered service identity and interlocking session.");
 
                 dispatcher.AddService(train.Train, departureSeconds, registration.Session,
                     registration.RouteCircuitIds, registration.RequiredJunctionBranches);
                 registered.Add(train.Train);
+                if (registration.RuntimeBinding is { } binding)
+                    runtimeBindings.Add(binding);
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidDataException or
                 InvalidOperationException or KeyNotFoundException)
@@ -86,6 +95,7 @@ public sealed class NativeTimetableDispatcherBuilder
         return new NativeTimetableDispatcherBuildResult(
             dispatcher,
             Array.AsReadOnly(registered.ToArray()),
-            Array.AsReadOnly(issues.ToArray()));
+            Array.AsReadOnly(issues.ToArray()),
+            Array.AsReadOnly(runtimeBindings.ToArray()));
     }
 }
