@@ -113,7 +113,8 @@ public sealed class AiServiceInterlockingSession
         BrowserTrainDrivingController train,
         ServiceRouteStartPosition route,
         double targetSpeedMetersPerSecond,
-        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null)
+        IReadOnlyList<AiServiceSignalConstraint>? signalConstraints = null,
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
     {
         ArgumentNullException.ThrowIfNull(train);
         ArgumentNullException.ThrowIfNull(route);
@@ -123,7 +124,7 @@ public sealed class AiServiceInterlockingSession
             train.SetBrake(100);
             return new AiServiceControlDecision(0, 100, 0, -1, false, 0);
         }
-        return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints);
+        return driver.Apply(train, route, targetSpeedMetersPerSecond, signalConstraints, speedRestrictions);
     }
 
     /// <summary>
@@ -155,10 +156,11 @@ public sealed class AiServiceInterlockingSession
         double targetSpeedMetersPerSecond,
         SignalNetwork signalNetwork,
         IReadOnlyDictionary<int, double> signalRouteDistancesMeters,
-        SignalScriptLibrary? scripts = null)
+        SignalScriptLibrary? scripts = null,
+        IReadOnlyList<AiServiceSpeedRestriction>? speedRestrictions = null)
     {
         var constraints = ResolveSignalConstraints(signalNetwork, signalRouteDistancesMeters, scripts);
-        return Drive(train, route, targetSpeedMetersPerSecond, constraints);
+        return Drive(train, route, targetSpeedMetersPerSecond, constraints, speedRestrictions);
     }
 
     /// <summary>Completes dispatch only after all occupied circuits have cleared.</summary>
