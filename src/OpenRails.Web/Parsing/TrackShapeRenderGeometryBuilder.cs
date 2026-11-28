@@ -109,9 +109,10 @@ public sealed class TrackShapeRenderGeometryBuilder
             var pose = TrackShapeAnimationPoseBuilder.Build(mesh.Matrices, mesh.Animations, animationClipIndex, frame);
             var lodDistance = cameraPosition is { } camera
                 ? Vector3.Distance(camera, placement.WorldTransform.Translation) : 0;
-            var lod = TrackShapeLodSelector.Select(mesh.Lods, lodDistance);
-            if (lod is null) continue;
+            var lods = TrackShapeLodSelector.SelectAll(mesh.Lods, lodDistance, mesh.ViewSphereRadius);
+            if (lods.Count == 0) continue;
 
+            foreach (var lod in lods)
             foreach (var subObject in lod.SubObjects)
             {
                 foreach (var primitive in subObject.Primitives)
